@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #0e1116;
+
+  /* MGM Laboratory brand tokens — see /DESIGN_SYSTEM.md */
+  --brand-blue: #3a6dc5;
+  --brand-yellow: #f7bf33;
+  --brand-red: #f94141;
+  --brand-green: #0f8657;
+
+  --brand-blue-50: #ecf1fa;
+  --brand-yellow-50: #fef6e0;
+  --brand-red-50: #fee5e5;
+  --brand-green-50: #e2f1ea;
+
+  --ink-2: #3b4150;
+  --ink-3: #6b7280;
+  --line: #ececea;
+}
+
+.dark {
+  --background: #0e1116;
+  --foreground: #ededed;
+  --line: #262a33;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-red: var(--brand-red);
+  --color-brand-green: var(--brand-green);
+  --color-brand-blue-50: var(--brand-blue-50);
+  --color-brand-yellow-50: var(--brand-yellow-50);
+  --color-brand-red-50: var(--brand-red-50);
+  --color-brand-green-50: var(--brand-green-50);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bricolage);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
