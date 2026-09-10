@@ -27,9 +27,6 @@
     "typescript": "^7.0.2"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix"
-    ],
     "*.{ts,tsx,js,jsx,json,md,yml,yaml,css}": [
       "prettier --write"
     ]
