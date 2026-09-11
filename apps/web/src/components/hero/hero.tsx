@@ -11,6 +11,7 @@ import { ArrowDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { lockScroll, unlockScroll } from "@/lib/scroll-gate";
+import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 
 import {
   ArrowConnector,
@@ -827,7 +828,7 @@ export function Hero() {
           const target = document.getElementById("process");
           if (!target) return;
           const smoother = ScrollSmoother.get();
-          if (smoother) smoother.scrollTo(target, true, "top top");
+          if (smoother) smoother.scrollTo(target, true, `top ${SITE_HEADER_HEIGHT}px`);
           else target.scrollIntoView({ behavior: "smooth" });
         }}
       >

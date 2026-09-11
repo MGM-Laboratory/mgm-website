@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 
 import { Providers } from "@/components/providers";
+import { SiteHeader } from "@/components/site-header";
 import { SmoothScroll } from "@/components/smooth-scroll";
 
 const geistSans = Geist({
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <Providers>
+          <SiteHeader />
           <SmoothScroll>{children}</SmoothScroll>
         </Providers>
       </body>
