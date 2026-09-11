@@ -11,13 +11,13 @@ import { cn } from "@/lib/utils";
 import {
   ArrowConnector,
   Circle,
+  DomesMotif,
   Dot,
-  DoubleChevron,
-  Hourglass,
+  FansMotif,
+  LeavesMotif,
   LogoMark,
   PlusMotif,
   RingMotif,
-  SparkleStar,
   Square,
   ToggleChip,
   TriangleShape,
@@ -35,6 +35,8 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 const headlineType =
   "font-display font-extrabold leading-[0.95] tracking-tight text-foreground text-[clamp(2.5rem,6.2vw,4.75rem)]";
 const headline = cn("reveal-hidden opacity-0", headlineType);
+
+const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
 
 function setupParallax(root: HTMLElement) {
   if (!window.matchMedia("(pointer: fine)").matches) return () => {};
@@ -64,15 +66,20 @@ function setupParallax(root: HTMLElement) {
 function startIdleLoops(): gsap.core.Animation[] {
   const loops: gsap.core.Animation[] = [];
 
-  // Toggle chip — the yellow ring keeps sliding off <-> on.
+  // Toggle chip — track desaturates to grey and the ring slides back off, forever.
   loops.push(
     gsap
       .timeline({ repeat: -1, repeatDelay: 1.5, delay: 0.7, yoyo: true })
       .to(".toggle-switch [data-part='knob']", {
-        attr: { cx: 160 },
+        attr: { cx: 155 },
         duration: 0.55,
         ease: "power2.inOut",
-      }),
+      })
+      .to(
+        ".toggle-switch [data-part='track']",
+        { attr: { fill: "#f94141" }, duration: 0.5, ease: "power2.inOut" },
+        "<",
+      ),
   );
 
   loops.push(
@@ -91,18 +98,38 @@ function startIdleLoops(): gsap.core.Animation[] {
       repeat: -1,
       delay: 0.3,
     }),
-    gsap.to(".shape-triangle", { rotate: 360, duration: 24, ease: "none", repeat: -1 }),
-    gsap.to(".shape-x", { rotate: 8, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: -1 }),
-    gsap.to(".sparkle-star", {
-      rotate: 22,
-      scale: 1.08,
-      transformOrigin: "50% 50%",
-      duration: 1.3,
+    gsap.to(".shape-square", {
+      rotate: 6,
+      duration: 2.2,
       ease: "sine.inOut",
       yoyo: true,
       repeat: -1,
     }),
-    gsap.to(".double-chevron", { x: 6, duration: 0.8, ease: "sine.inOut", yoyo: true, repeat: -1 }),
+    gsap.to(".shape-triangle", { y: -5, duration: 2, ease: "sine.inOut", yoyo: true, repeat: -1 }),
+    gsap.to(".shape-x", { rotate: 8, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: -1 }),
+    gsap.to(".leaves-motif-wrap", {
+      y: -5,
+      duration: 1.8,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
+    }),
+    gsap.to(".fans-motif-wrap", {
+      rotate: 18,
+      duration: 1.5,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
+      delay: 0.2,
+    }),
+    gsap.to(".domes-motif-wrap", {
+      scale: 1.08,
+      transformOrigin: "50% 50%",
+      duration: 1.7,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
+    }),
     gsap.to(".hero-logo", {
       scale: 1.05,
       transformOrigin: "50% 50%",
@@ -120,36 +147,34 @@ function startIdleLoops(): gsap.core.Animation[] {
     }),
   );
 
-  // Hourglass occasionally "turns over".
-  loops.push(
-    gsap.to(".hourglass-shape", {
-      rotate: 180,
-      duration: 0.7,
-      ease: "back.inOut(1.6)",
-      repeat: -1,
-      repeatDelay: 3.2,
-      transformOrigin: "50% 50%",
-    }),
-  );
-
-  const sparkTl = gsap.timeline({ repeat: -1, repeatDelay: 0.9 });
+  // Arrow — a spark keeps traveling the path, tracing it over and over.
+  const sparkTl = gsap.timeline({ repeat: -1, repeatDelay: 1 });
   sparkTl
-    .set(".arrow-connector [data-part='arrow-spark']", { opacity: 0 })
-    .to(".arrow-connector [data-part='arrow-spark']", { opacity: 1, duration: 0.2 })
-    .to(
+    .set(".arrow-connector [data-part='arrow-spark']", { opacity: 1 })
+    .fromTo(
       ".arrow-connector [data-part='arrow-spark']",
       {
         motionPath: {
           path: ".arrow-connector [data-part='arrow-path']",
           align: ".arrow-connector [data-part='arrow-path']",
           alignOrigin: [0.5, 0.5],
+          start: 0,
+          end: 0,
         },
-        duration: 2.2,
+      },
+      {
+        motionPath: {
+          path: ".arrow-connector [data-part='arrow-path']",
+          align: ".arrow-connector [data-part='arrow-path']",
+          alignOrigin: [0.5, 0.5],
+          start: 0,
+          end: 1,
+        },
+        duration: 2,
         ease: "power1.inOut",
       },
-      "<",
     )
-    .to(".arrow-connector [data-part='arrow-spark']", { opacity: 0, duration: 0.3 }, "-=0.3");
+    .to(".arrow-connector [data-part='arrow-spark']", { opacity: 0, duration: 0.3 });
   loops.push(sparkTl);
 
   gsap.utils.toArray<HTMLElement>(".bg-motif").forEach((el, i) => {
@@ -170,8 +195,13 @@ function startIdleLoops(): gsap.core.Animation[] {
   return loops;
 }
 
-function buildEntranceTimeline(mediaSplit: SplitText, mobileSplit: SplitText) {
+function buildEntranceTimeline(
+  mediaSplit: SplitText,
+  gameSplit: SplitText,
+  mobileSplit: SplitText,
+) {
   const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+  const iChar = mediaSplit.chars[MEDIA_I_INDEX];
 
   tl.addLabel("media")
     .set(".line-media", { opacity: 1 }, "media")
@@ -180,13 +210,14 @@ function buildEntranceTimeline(mediaSplit: SplitText, mobileSplit: SplitText) {
       {
         opacity: 0,
         y: (i: number) => (i % 2 === 0 ? -70 : 70),
-        rotate: () => gsap.utils.random(-28, 28),
+        // The "i" pops in rotated a clean 180deg so its dot/stem read as "!".
+        rotate: (i: number) => (i === MEDIA_I_INDEX ? 180 : gsap.utils.random(-28, 28)),
         scale: 0.4,
       },
       {
         opacity: 1,
         y: 0,
-        rotate: 0,
+        rotate: (i: number) => (i === MEDIA_I_INDEX ? 180 : 0),
         scale: 1,
         duration: 0.7,
         ease: "back.out(2.4)",
@@ -194,6 +225,13 @@ function buildEntranceTimeline(mediaSplit: SplitText, mobileSplit: SplitText) {
       },
       "media",
     )
+    // ...once the whole word has landed, the "!" spins back into an "i".
+    .to(
+      iChar,
+      { rotate: 360, transformOrigin: "50% 50%", duration: 0.8, ease: "elastic.out(1, 0.4)" },
+      "+=0.3",
+    )
+    .set(iChar, { rotate: 0 })
     // Row 1 shapes — each with its own entrance personality
     .fromTo(
       ".shape-square",
@@ -209,8 +247,13 @@ function buildEntranceTimeline(mediaSplit: SplitText, mobileSplit: SplitText) {
     )
     .to(
       ".toggle-switch [data-part='knob']",
-      { attr: { cx: 160 }, duration: 0.45, ease: "power2.inOut" },
+      { attr: { cx: 155 }, duration: 0.45, ease: "power2.inOut" },
       "+=0.05",
+    )
+    .to(
+      ".toggle-switch [data-part='track']",
+      { attr: { fill: "#f94141" }, duration: 0.45, ease: "power2.inOut" },
+      "<",
     )
     .fromTo(
       ".shape-triangle",
@@ -236,88 +279,92 @@ function buildEntranceTimeline(mediaSplit: SplitText, mobileSplit: SplitText) {
       { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2.8)" },
       "-=0.15",
     )
-    // GAME — pops in already flipped, then rights itself with a horizontal flip
+    // GAME — reveals mirrored ("emaG", right-to-left) then turns to face forward
     .addLabel("game", "+=0.2")
+    .set(".line-game", { opacity: 1, scaleX: -1 }, "game")
     .fromTo(
-      ".game-flip",
-      { opacity: 0, scale: 0.5, y: -30 },
-      { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(2.2)" },
+      gameSplit.chars,
+      {
+        opacity: 0,
+        y: (i: number) => (i % 2 === 0 ? -70 : 70),
+        rotate: () => gsap.utils.random(-24, 24),
+        scale: 0.4,
+      },
+      {
+        opacity: 1,
+        y: 0,
+        rotate: 0,
+        scale: 1,
+        duration: 0.6,
+        ease: "back.out(2.4)",
+        stagger: 0.09,
+      },
       "game",
     )
-    .to(".game-flip-inner", { rotateY: 180, duration: 0.7, ease: "power2.inOut" }, "+=0.4")
-    .to(".game-flip", { scale: 1.08, duration: 0.16, ease: "power1.out" }, "-=0.05")
-    .to(".game-flip", { scale: 1, duration: 0.22, ease: "back.out(3)" })
-    // Row 2 shapes — lead GAME, animate in after it lands
+    .to(".line-game", { scaleX: 1, duration: 0.6, ease: "power2.inOut" }, "+=0.35")
+    .to(".line-game", { scale: 1.06, duration: 0.14, ease: "power1.out" }, "-=0.04")
+    .to(".line-game", { scale: 1, duration: 0.2, ease: "back.out(3)" })
+    // Row 2 shapes — right-to-left, closest to GAME first
     .addLabel("shapesB", "+=0.15")
-    .set(".double-chevron", { opacity: 1 }, "shapesB")
     .fromTo(
-      ".double-chevron [data-part='chevron-1']",
-      { opacity: 0, x: -30 },
-      { opacity: 1, x: 0, duration: 0.35, ease: "back.out(2.4)" },
+      ".domes-motif-wrap",
+      { opacity: 0, scale: 0, rotate: -140 },
+      { opacity: 1, scale: 1, rotate: 0, duration: 0.5, ease: "back.out(2.2)" },
       "shapesB",
     )
     .fromTo(
-      ".double-chevron [data-part='chevron-2']",
-      { opacity: 0, x: -30 },
-      { opacity: 1, x: 0, duration: 0.35, ease: "back.out(2.4)" },
-      "-=0.2",
+      ".fans-motif-wrap",
+      { opacity: 0, scale: 0, rotate: 90 },
+      { opacity: 1, scale: 1, rotate: 0, duration: 0.5, ease: "back.out(2.4)" },
+      "-=0.25",
     )
     .fromTo(
-      ".sparkle-tile",
+      ".leaves-motif-wrap",
       { opacity: 0, scale: 0 },
-      { opacity: 1, scale: 1, duration: 0.1 },
-      "shapesB+=0.2",
+      { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2.6)" },
+      "-=0.25",
     )
-    .fromTo(
-      ".sparkle-star",
-      { opacity: 0, scale: 0, rotate: -100 },
-      { opacity: 1, scale: 1, rotate: 0, duration: 0.5, ease: "back.out(2.6)" },
-      "<",
-    )
-    .fromTo(
-      ".hourglass-shape",
-      { opacity: 0, scale: 0, rotate: -180 },
-      { opacity: 1, scale: 1, rotate: 0, duration: 0.55, ease: "back.out(1.8)" },
-      "shapesB+=0.35",
-    )
-    // Arrow — finds its way, then settles with a little impact
+    // Arrow — a spark draws the line as it travels, then a simple arrowhead lands
     .addLabel("arrow", "+=0.2")
-    .fromTo(
-      ".hero-arrow-wrap",
-      { opacity: 0, scale: 0.85 },
-      { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" },
-      "arrow",
-    )
+    .fromTo(".hero-arrow-wrap", { opacity: 0 }, { opacity: 1, duration: 0.2 }, "arrow")
     .fromTo(
       ".arrow-connector [data-part='arrow-path']",
       { drawSVG: "0%" },
-      { drawSVG: "100%", duration: 0.9, ease: "power2.inOut" },
-      "arrow+=0.05",
+      { drawSVG: "100%", duration: 1, ease: "power2.inOut" },
+      "arrow",
     )
-    .fromTo(
-      ".arrow-connector [data-part='arrow-head']",
-      { opacity: 0, scale: 0 },
-      { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(3)" },
-      "-=0.15",
-    )
-    .to(".arrow-connector [data-part='arrow-head']", {
-      rotate: -10,
-      duration: 0.09,
-      yoyo: true,
-      repeat: 3,
-      ease: "power1.inOut",
-    })
     .fromTo(
       ".arrow-connector [data-part='arrow-spark']",
-      { opacity: 0, scale: 0.6 },
-      { opacity: 1, scale: 1.8, duration: 0.22, ease: "power1.out" },
-      "-=0.25",
+      {
+        opacity: 1,
+        motionPath: {
+          path: ".arrow-connector [data-part='arrow-path']",
+          align: ".arrow-connector [data-part='arrow-path']",
+          alignOrigin: [0.5, 0.5],
+          start: 0,
+          end: 0,
+        },
+      },
+      {
+        motionPath: {
+          path: ".arrow-connector [data-part='arrow-path']",
+          align: ".arrow-connector [data-part='arrow-path']",
+          alignOrigin: [0.5, 0.5],
+          start: 0,
+          end: 1,
+        },
+        duration: 1,
+        ease: "power2.inOut",
+      },
+      "arrow",
     )
-    .to(".arrow-connector [data-part='arrow-spark']", {
-      opacity: 0,
-      duration: 0.35,
-      ease: "power1.in",
-    })
+    .to(".arrow-connector [data-part='arrow-spark']", { opacity: 0, duration: 0.2 })
+    .fromTo(
+      ".arrow-connector [data-part='arrow-head']",
+      { opacity: 0 },
+      { opacity: 1, duration: 0.2 },
+      "-=0.1",
+    )
     // Outro — "& Mobile Laboratory", the logo assembling, tagline, and the last flourishes
     .addLabel("outro", "+=0.15")
     .set(".line-mobile", { opacity: 1 }, "outro")
@@ -366,6 +413,51 @@ function buildEntranceTimeline(mediaSplit: SplitText, mobileSplit: SplitText) {
 
 export function Hero() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const row1Ref = useRef<HTMLDivElement>(null);
+  const row2Ref = useRef<HTMLDivElement>(null);
+  const row3Ref = useRef<HTMLDivElement>(null);
+  const bridgeRef = useRef<HTMLDivElement>(null);
+  const arrowWrapRef = useRef<HTMLDivElement>(null);
+
+  // Row 2 (shapes + GAME) always matches row 1's rendered width, so GAME's
+  // right edge lines up with circle B's right edge above it. The arrow is
+  // measured to run from row 2's mid-height to row 3's mid-height exactly,
+  // rather than guessing at percentages of an assumed row height.
+  useIsomorphicLayoutEffect(() => {
+    const row1 = row1Ref.current;
+    const row2 = row2Ref.current;
+    const row3 = row3Ref.current;
+    const bridge = bridgeRef.current;
+    const arrowWrap = arrowWrapRef.current;
+    if (!row1 || !row2 || !row3 || !bridge || !arrowWrap) return;
+
+    function measure() {
+      // Only ever WRITE row2's width if it actually needs to change —
+      // writing on every call (even to the same value) can make a
+      // ResizeObserver that also watches row2 re-fire indefinitely.
+      const targetWidth = `${row1!.offsetWidth}px`;
+      if (row2!.style.width !== targetWidth) row2!.style.width = targetWidth;
+
+      const bridgeRect = bridge!.getBoundingClientRect();
+      const row2Rect = row2!.getBoundingClientRect();
+      const row3Rect = row3!.getBoundingClientRect();
+      const top = row2Rect.top + row2Rect.height / 2 - bridgeRect.top;
+      const bottom = row3Rect.top + row3Rect.height / 2 - bridgeRect.top;
+      arrowWrap!.style.top = `${top}px`;
+      arrowWrap!.style.height = `${Math.max(bottom - top, 0)}px`;
+    }
+
+    measure();
+    // Only row1 is observed: it's the sole driver of row2's width, and
+    // font/viewport reflows that move row2/row3 always move row1 too.
+    const ro = new ResizeObserver(measure);
+    ro.observe(row1);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   useIsomorphicLayoutEffect(() => {
     const root = rootRef.current;
@@ -373,6 +465,7 @@ export function Hero() {
 
     let cancelled = false;
     let mediaSplit: SplitText | undefined;
+    let gameSplit: SplitText | undefined;
     let mobileSplit: SplitText | undefined;
     const mm = gsap.matchMedia();
 
@@ -380,6 +473,7 @@ export function Hero() {
       if (cancelled) return;
 
       mediaSplit = SplitText.create(".line-media", { type: "chars", charsClass: "media-char" });
+      gameSplit = SplitText.create(".line-game", { type: "chars", charsClass: "game-char" });
       mobileSplit = SplitText.create(".line-mobile", {
         type: "words, chars",
         charsClass: "mobile-char",
@@ -396,7 +490,7 @@ export function Hero() {
 
           if (reduced) {
             gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-            gsap.set([mediaSplit!.chars, mobileSplit!.chars], {
+            gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
               opacity: 1,
               x: 0,
               y: 0,
@@ -404,14 +498,15 @@ export function Hero() {
               rotateX: 0,
               scale: 1,
             });
-            gsap.set(".game-flip-inner", { rotateY: 180 });
-            gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 160 } });
+            gsap.set(".line-game", { scaleX: 1 });
+            gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 155 } });
+            gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
             gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
             gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
             return;
           }
 
-          const tl = buildEntranceTimeline(mediaSplit!, mobileSplit!);
+          const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
           let idleLoops: gsap.core.Animation[] = [];
 
           tl.eventCallback("onComplete", () => {
@@ -456,6 +551,7 @@ export function Hero() {
       window.removeEventListener("keydown", onKeydown);
       mm.revert();
       mediaSplit?.revert();
+      gameSplit?.revert();
       mobileSplit?.revert();
     };
   }, []);
@@ -463,7 +559,7 @@ export function Hero() {
   return (
     <div
       ref={rootRef}
-      className="hero relative flex flex-1 flex-col bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
+      className="hero relative flex flex-1 flex-col justify-center bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
     >
       {/* Ambient background motifs — pure whitespace flourish, idle-floating */}
       <Dot className="bg-motif reveal-hidden opacity-0 absolute top-[10%] left-[5%] size-3 text-brand-yellow sm:size-4" />
@@ -480,12 +576,9 @@ export function Hero() {
 
       <h1 className="sr-only">Media, Game &amp; Mobile Laboratory</h1>
 
-      <div
-        className="mx-auto flex w-full max-w-[1400px] flex-col gap-3 sm:gap-4"
-        aria-hidden="true"
-      >
-        {/* Media, */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
+      <div className="mx-auto flex w-fit max-w-full flex-col gap-3 sm:gap-4" aria-hidden="true">
+        {/* Row 1 — Media, */}
+        <div ref={row1Ref} className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
           <span className={cn("line-media", headline)}>Media,</span>
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="parallax-el" data-depth="0.7">
@@ -494,8 +587,8 @@ export function Hero() {
               </div>
             </div>
             <div className="parallax-el" data-depth="0.85">
-              <div className="shape-toggle reveal-hidden opacity-0 w-[clamp(4.25rem,8.5vw,6.75rem)]">
-                <ToggleChip className="w-full" />
+              <div className="shape-toggle reveal-hidden opacity-0 aspect-[200/90] h-[clamp(2.75rem,5.5vw,4.25rem)] w-auto">
+                <ToggleChip className="h-full w-full" />
               </div>
             </div>
             <div className="parallax-el" data-depth="0.6">
@@ -521,69 +614,47 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Game, with the shapes that lead it */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="parallax-el" data-depth="0.7">
-              <div className="double-chevron reveal-hidden opacity-0 w-[clamp(3.5rem,7vw,5.5rem)]">
-                <DoubleChevron className="w-full" />
+        {/* Row 2 (shapes + GAME, right-anchored) + Row 3, bridged by the arrow */}
+        <div ref={bridgeRef} className="relative">
+          <div
+            ref={arrowWrapRef}
+            className="hero-arrow-wrap reveal-hidden opacity-0 parallax-el absolute left-0 w-[clamp(9rem,20vw,15rem)]"
+            data-depth="0.5"
+          >
+            <ArrowConnector className="arrow-connector h-full w-full text-foreground" />
+          </div>
+
+          <div
+            ref={row2Ref}
+            className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3 sm:gap-x-6"
+          >
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="parallax-el" data-depth="0.7">
+                <div className="leaves-motif-wrap reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+                  <LeavesMotif className="w-full" />
+                </div>
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.9">
-              <div className="sparkle-tile reveal-hidden opacity-0 rounded-md bg-white/70 p-2 dark:bg-white/5">
-                <div className="sparkle-star w-[clamp(2rem,4vw,3rem)]">
-                  <SparkleStar className="w-full" />
+              <div className="parallax-el" data-depth="0.9">
+                <div className="fans-motif-wrap reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+                  <FansMotif className="w-full" />
+                </div>
+              </div>
+              <div className="parallax-el" data-depth="0.6">
+                <div className="domes-motif-wrap reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+                  <DomesMotif className="w-full" />
                 </div>
               </div>
             </div>
-            <div className="parallax-el" data-depth="0.6">
-              <div className="hourglass-shape reveal-hidden opacity-0 w-[clamp(2.5rem,5vw,3.75rem)]">
-                <Hourglass className="w-full" />
-              </div>
-            </div>
+            <span className={cn("line-game", headline)}>Game,</span>
           </div>
-          <div className="game-flip reveal-hidden opacity-0 relative inline-block [perspective:1100px]">
-            <span aria-hidden className={cn("invisible block", headlineType)}>
-              Game,
+
+          <div ref={row3Ref} className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-4 sm:mt-4">
+            <span className={cn("line-mobile [perspective:600px]", headline)}>
+              &amp; Mobile Laboratory
             </span>
-            <div className="game-flip-inner absolute inset-0 [transform-style:preserve-3d]">
-              <span
-                className={cn(
-                  "game-face absolute inset-0 flex items-center [backface-visibility:hidden] [transform:rotate(180deg)]",
-                  headlineType,
-                )}
-              >
-                Game,
-              </span>
-              <span
-                className={cn(
-                  "game-face absolute inset-0 flex items-center [backface-visibility:hidden] [transform:rotateY(180deg)]",
-                  headlineType,
-                )}
-              >
-                Game,
-              </span>
+            <div className="parallax-el" data-depth="0.4">
+              <LogoMark className="hero-logo w-[clamp(2.5rem,5.5vw,4rem)]" />
             </div>
-          </div>
-        </div>
-
-        {/* Arrow, finding its way down to the closing line */}
-        <div className="hero-arrow-row flex justify-start py-1">
-          <div
-            className="hero-arrow-wrap reveal-hidden opacity-0 parallax-el w-[clamp(12rem,26vw,20rem)]"
-            data-depth="0.5"
-          >
-            <ArrowConnector className="arrow-connector w-full text-foreground" />
-          </div>
-        </div>
-
-        {/* & Mobile Laboratory, and the mark */}
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-4">
-          <span className={cn("line-mobile [perspective:600px]", headline)}>
-            &amp; Mobile Laboratory
-          </span>
-          <div className="parallax-el" data-depth="0.4">
-            <LogoMark className="hero-logo w-[clamp(2.5rem,5.5vw,4rem)]" />
           </div>
         </div>
       </div>

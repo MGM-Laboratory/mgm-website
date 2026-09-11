@@ -19,7 +19,12 @@ export function Square({ className }: { className?: string }) {
   );
 }
 
-/** A red pill "track" with a yellow ring "knob" that slides between off/on. */
+/**
+ * A pill "track" (grey when off, red when on) with a ring "knob" whose
+ * hole is filled to match the page background — sliding left <-> right.
+ * Track geometry: x=55 y=5 w=140 h=80 rx=40, so the rounded end-caps
+ * are centered at x=95 (left/off) and x=155 (right/on).
+ */
 export function ToggleChip({ className }: { className?: string }) {
   return (
     <svg
@@ -27,23 +32,15 @@ export function ToggleChip({ className }: { className?: string }) {
       className={cn("toggle-switch overflow-visible", className)}
       aria-hidden
     >
-      <rect
-        data-part="track"
-        x="55"
-        y="5"
-        width="140"
-        height="80"
-        rx="40"
-        fill="var(--brand-red)"
-      />
+      <rect data-part="track" x="55" y="5" width="140" height="80" rx="40" fill="#9aa3ad" />
       <circle
         data-part="knob"
-        cx="55"
+        cx="95"
         cy="45"
-        r="32"
-        fill="none"
+        r="33"
+        fill="var(--surface-muted)"
         stroke="var(--brand-yellow)"
-        strokeWidth="19"
+        strokeWidth="18"
       />
     </svg>
   );
@@ -98,91 +95,112 @@ export function XMark({ className }: { className?: string }) {
   );
 }
 
-/** Two rounded chevrons forming a "»" — a fast-forward flourish. */
-export function DoubleChevron({ className }: { className?: string }) {
+/** Two opposing "dome" arcs meeting at a point — from patterns/domes-yellow-on-white.svg. */
+export function DomesMotif({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 160 100"
-      className={cn("double-chevron overflow-visible", className)}
+      viewBox="0 0 100 100"
+      className={cn("domes-motif overflow-visible", className)}
       aria-hidden
-      fill="none"
     >
       <path
-        data-part="chevron-1"
-        d="M18 14 L72 50 L18 86"
-        stroke="var(--brand-blue)"
-        strokeWidth="22"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        data-part="dome-top"
+        d="M100 0C100 27.6142 77.6142 50 50 50C22.3858 50 0 27.6142 0 0Z"
+        fill="var(--brand-yellow)"
       />
       <path
-        data-part="chevron-2"
-        d="M78 14 L132 50 L78 86"
-        stroke="var(--brand-blue)"
-        strokeWidth="22"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        data-part="dome-bottom"
+        d="M100 100C100 72.3858 77.6142 50 50 50C22.3858 50 0 72.3858 0 100Z"
+        fill="var(--brand-yellow)"
       />
     </svg>
   );
 }
 
-export function SparkleStar({ className }: { className?: string }) {
+/**
+ * A four-pointed concave "fan" star — the same square-minus-four-corner-
+ * circles silhouette as patterns/fans-white-on-red.svg, traced directly as
+ * one closed outline (tips at each edge midpoint, arcs pulled in toward
+ * each corner) so it stays within its own bounds with a transparent
+ * background, instead of relying on an evenodd cutout.
+ */
+export function FansMotif({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 100 100"
-      className={cn("sparkle-star overflow-visible", className)}
-      aria-hidden
-    >
+    <svg viewBox="0 0 100 100" className={cn("fans-motif overflow-visible", className)} aria-hidden>
       <path
-        data-part="sparkle"
-        d="M50 4C56 40 60 44 96 50C60 56 56 60 50 96C44 60 40 56 4 50C40 44 44 40 50 4Z"
+        data-part="fan"
+        d="M50 0A50 50 0 0 0 100 50A50 50 0 0 0 50 100A50 50 0 0 0 0 50A50 50 0 0 0 50 0Z"
         fill="var(--brand-red)"
       />
     </svg>
   );
 }
 
-/** Two triangles meeting at a point — an hourglass silhouette. */
-export function Hourglass({ className }: { className?: string }) {
+/** A four-petal clover — from patterns/leaves-blue-on-white.svg. */
+export function LeavesMotif({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 100 100"
-      className={cn("hourglass-shape overflow-visible", className)}
+      className={cn("leaves-motif overflow-visible", className)}
       aria-hidden
     >
-      <polygon data-part="hourglass-top" points="10,8 90,8 50,50" fill="var(--brand-yellow)" />
-      <polygon data-part="hourglass-bottom" points="10,92 90,92 50,50" fill="var(--brand-yellow)" />
+      <path
+        data-part="leaf-1"
+        d="M0 0C27.6142 0 50 22.3858 50 50C22.3858 50 0 27.6142 0 0Z"
+        fill="var(--brand-blue)"
+      />
+      <path
+        data-part="leaf-2"
+        d="M0 100C27.6142 100 50 77.6142 50 50C22.3858 50 0 72.3858 0 100Z"
+        fill="var(--brand-blue)"
+      />
+      <path
+        data-part="leaf-3"
+        d="M50 0C77.6142 0 100 22.3858 100 50C72.3858 50 50 27.6142 50 0Z"
+        fill="var(--brand-blue)"
+      />
+      <path
+        data-part="leaf-4"
+        d="M50 100C77.6142 100 100 77.6142 100 50C72.3858 50 50 72.3858 50 100Z"
+        fill="var(--brand-blue)"
+      />
     </svg>
   );
 }
 
-/** A rounded, right-angled connector that "finds its way" down to the closing line. */
+/**
+ * A rounded, right-angled connector that bridges the shapes/GAME line
+ * down to the closing line. The wrapper is positioned by hero.tsx so
+ * y=0 lands exactly on the GAME row's mid-height and y=100 on the
+ * closing line's mid-height — this component just draws straight
+ * across that normalized 0-100 span, non-uniformly stretched to fit.
+ */
 export function ArrowConnector({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 440 200"
+      viewBox="0 0 300 100"
+      preserveAspectRatio="none"
       className={cn("arrow-connector overflow-visible", className)}
       aria-hidden
       fill="none"
     >
       <path
         data-part="arrow-path"
-        d="M410 20H60Q40 20 40 40V140Q40 160 60 160H170"
+        d="M280 6H20V94"
         stroke="currentColor"
-        strokeWidth="8"
+        strokeWidth="6"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <g data-part="arrow-head" style={{ transformOrigin: "170px 160px" }}>
-        <path
-          d="M155 143L173 160L155 177"
-          stroke="currentColor"
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </g>
-      <circle data-part="arrow-spark" cx="170" cy="160" r="6" fill="var(--brand-red)" opacity="0" />
+      <path
+        data-part="arrow-head"
+        d="M7 81L20 94L7 107"
+        stroke="currentColor"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle data-part="arrow-spark" cx="280" cy="6" r="4" fill="var(--brand-red)" opacity="0" />
     </svg>
   );
 }
