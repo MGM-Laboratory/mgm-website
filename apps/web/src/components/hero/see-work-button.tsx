@@ -9,88 +9,78 @@ import { FlairShape, type PatternKind, type PatternTone } from "@/components/pro
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 
 // Every shape's whole trajectory is hand-tuned and fixed, not randomized.
-// Each one pops in at the gap, rises while decelerating (thrown against
-// gravity), then falls back down accelerating — landing back on the gap,
-// where the button's own solid background (a higher z-index) hides it.
-// There's no opacity fade for the disappearance; it's covered up, not
-// dissolved. `at` staggers them: some launch solo, two launch together as
-// a pair, one closes it out alone.
+// Each one pops in at the gap and travels straight up its own narrow lane
+// then straight back down it — a real projectile arc (one tween with
+// yoyo/repeat, so the fall is the exact mirror of the rise: decelerating
+// up to the peak, accelerating back down), never drifting sideways. It
+// lands back exactly where it started, under the button's own solid
+// background (a higher z-index), which is what hides it — no fade, no
+// snapping sideways to get there. `at` staggers them: some launch solo,
+// two launch together as a pair, one closes it out alone.
 const FLAIRS: {
   kind: PatternKind;
   tone: PatternTone;
   size: number;
   x: number;
   peakY: number;
-  riseRotate: number;
-  fallRotate: number;
+  rotate: number;
   scale: number;
   riseDuration: number;
-  fallDuration: number;
   at: number;
 }[] = [
   {
     kind: "fans",
     tone: "red",
     size: 26,
-    x: -60,
-    peakY: -85,
-    riseRotate: -110,
-    fallRotate: -200,
+    x: -32,
+    peakY: -80,
+    rotate: 260,
     scale: 1.05,
     riseDuration: 0.42,
-    fallDuration: 0.38,
     at: 0,
   },
   {
     kind: "circle",
     tone: "blue",
     size: 28,
-    x: -20,
-    peakY: -105,
-    riseRotate: 90,
-    fallRotate: 170,
+    x: -12,
+    peakY: -100,
+    rotate: -220,
     scale: 0.8,
     riseDuration: 0.46,
-    fallDuration: 0.4,
     at: 0.16,
   },
   {
     kind: "leaves",
     tone: "green",
     size: 32,
-    x: 25,
-    peakY: -95,
-    riseRotate: -70,
-    fallRotate: -140,
+    x: 14,
+    peakY: -90,
+    rotate: 200,
     scale: 1,
     riseDuration: 0.44,
-    fallDuration: 0.4,
     at: 0.16,
   },
   {
     kind: "x",
     tone: "yellow",
     size: 22,
-    x: 60,
-    peakY: -75,
-    riseRotate: 150,
-    fallRotate: 260,
+    x: 34,
+    peakY: -70,
+    rotate: -260,
     scale: 0.85,
     riseDuration: 0.4,
-    fallDuration: 0.36,
     at: 0.32,
   },
   {
     kind: "clover",
     tone: "red",
     size: 26,
-    x: 5,
-    peakY: -115,
-    riseRotate: 60,
-    fallRotate: 130,
+    x: 0,
+    peakY: -110,
+    rotate: 180,
     scale: 1.15,
     riseDuration: 0.48,
-    fallDuration: 0.42,
     at: 0.48,
   },
 ];
@@ -150,38 +140,21 @@ export function SeeWorkButton() {
       const el = flairRefs.current[i];
       if (!el) return;
       const popAt = f.at;
-      const fallAt = f.at + f.riseDuration;
+      const totalDuration = f.riseDuration * 2;
       master
-        .set(el, { opacity: 0, scale: 0, x: 0, y: 0, rotate: 0 }, popAt)
+        .set(el, { opacity: 0, scale: 0, x: f.x, y: 0, rotate: 0 }, popAt)
         .to(el, { opacity: 1, scale: f.scale, duration: 0.16, ease: "back.out(2)" }, popAt)
+        // One tween, mirrored by yoyo — the fall is the rise played
+        // backwards, so decelerating up becomes accelerating down for
+        // free, with no seam between two separately-eased tweens.
         .to(
           el,
-          {
-            x: f.x,
-            y: f.peakY,
-            rotate: f.riseRotate,
-            duration: f.riseDuration,
-            ease: "power2.out",
-          },
+          { y: f.peakY, duration: f.riseDuration, ease: "power2.out", yoyo: true, repeat: 1 },
           popAt,
         )
-        .to(
-          el,
-          {
-            // Converges back to the origin's exact x, not wherever the
-            // rise drifted to — guarantees it lands back under the
-            // button's own solid fill regardless of how wide the rise
-            // spread it, instead of risking a sliver poking out past
-            // the button's rounded edge.
-            x: 0,
-            y: 4,
-            rotate: f.fallRotate,
-            scale: f.scale * 0.6,
-            duration: f.fallDuration,
-            ease: "power2.in",
-          },
-          fallAt,
-        );
+        // A steady, continuous tumble — unrelated to gravity, so it
+        // doesn't need to ease at all — spanning the full up-and-down trip.
+        .to(el, { rotate: f.rotate, duration: totalDuration, ease: "none" }, popAt);
     });
 
     masterTimeline.current = master;
@@ -201,9 +174,9 @@ export function SeeWorkButton() {
       className="hero-cta reveal-hidden relative mt-10 inline-flex opacity-0 sm:mt-14"
     >
       {/* Hidden at rest — repositioned onto the gap between the two words
-          right as it opens, then each shape rises and falls back along its
-          own fixed path, disappearing behind the button (z-index) rather
-          than fading out. */}
+          right as it opens, then each shape rises and falls straight back
+          down its own lane, disappearing behind the button (z-index)
+          rather than fading out. */}
       <div className="pointer-events-none absolute inset-0">
         {FLAIRS.map((f, i) => (
           <div
