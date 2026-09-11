@@ -349,19 +349,22 @@ function buildEntranceTimeline(
         y: 0,
         rotate: 0,
         scale: 1,
-        duration: 0.6,
+        // Tuned so every letter (5 chars, this stagger) has landed at
+        // ~0.5s after "game" starts — that's the instant row 2's shapes
+        // below launch, so this duration directly sets that gap.
+        duration: 0.35,
         ease: "back.out(2.4)",
-        stagger: 0.09,
+        stagger: 0.04,
       },
       "game",
     )
-    // The instant every letter has landed (still mirrored) — the flip and
-    // row 2's shapes both fire from here in parallel, instead of making the
-    // shapes wait for the flip/bounce polish to play out first.
+    // The instant every letter has landed (still mirrored, ~0.5s in) — the
+    // flip and row 2's shapes both fire from here in parallel, instead of
+    // making the shapes wait for the flip/bounce polish to play out first.
     .addLabel("gameTyped")
-    .to(".line-game", { scaleX: 1, duration: 0.4, ease: "power2.inOut" }, "gameTyped")
-    .to(".line-game", { scale: 1.06, duration: 0.14, ease: "power1.out" }, "-=0.04")
-    .to(".line-game", { scale: 1, duration: 0.2, ease: "back.out(3)" })
+    .to(".line-game", { scaleX: 1, duration: 0.22, ease: "power2.inOut" }, "gameTyped")
+    .to(".line-game", { scale: 1.06, duration: 0.08, ease: "power1.out" }, "-=0.03")
+    .to(".line-game", { scale: 1, duration: 0.12, ease: "back.out(3)" })
     // Row 2 shapes — right-to-left, closest to GAME first, launching the
     // moment GAME is done typing rather than waiting on its flip.
     .addLabel("shapesB", "gameTyped")
