@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import { PatternTile, type PatternKind, type PatternTone } from "./pattern-tile";
+import { PatternTile, toneColor, type PatternKind, type PatternTone } from "./pattern-tile";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -27,7 +27,7 @@ const ROWS: Step[][] = [
   [
     { word: "Test.", kind: "plus", bg: "red", fg: "canvas" },
     { word: "Learn.", kind: "clover", bg: "yellow", fg: "canvas" },
-    { word: "Code.", kind: "fans", bg: "canvas", fg: "red" },
+    { word: "Code.", kind: "fans", bg: "canvas", fg: "blue" },
   ],
   [
     { word: "Iterate.", kind: "domes", bg: "canvas", fg: "red" },
@@ -60,7 +60,34 @@ const MOSAIC: Step[] = [
 
 const wordType =
   "font-display font-semibold tracking-tight text-foreground text-[clamp(2.25rem,4vw_+_0.5rem,3.75rem)]";
-const tileClass = "process-tile aspect-square w-[clamp(2.75rem,5.5vw,4.75rem)] shrink-0 rounded-xl";
+// The tile's box matches the word's font-size exactly, so it reads as tall
+// as the text sitting next to it rather than a bigger accent shape.
+const tileWrapClass =
+  "process-tile shrink-0 overflow-hidden rounded-md aspect-square w-[clamp(2.25rem,4vw_+_0.5rem,3.75rem)]";
+
+// Every tile's outline is its own accent color (the one real brand color
+// it uses, whichever of bg/fg isn't the canvas tone) — a canvas-background
+// tile would otherwise blend straight into the section's identical
+// background with no visible edge.
+function accentOf(tile: { bg: PatternTone; fg: PatternTone }): PatternTone {
+  return tile.bg === "canvas" ? tile.fg : tile.bg;
+}
+
+function TileOutline({
+  children,
+  accent,
+  className,
+}: {
+  children: React.ReactNode;
+  accent: PatternTone;
+  className: string;
+}) {
+  return (
+    <div className={className} style={{ border: `2px solid ${toneColor(accent)}` }}>
+      {children}
+    </div>
+  );
+}
 
 export function ProcessSection() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -146,7 +173,14 @@ export function ProcessSection() {
                 className="process-item reveal-hidden flex items-center gap-4 opacity-0 sm:gap-5"
               >
                 <span className={wordType}>{step.word}</span>
-                <PatternTile kind={step.kind} bg={step.bg} fg={step.fg} className={tileClass} />
+                <TileOutline accent={accentOf(step)} className={tileWrapClass}>
+                  <PatternTile
+                    kind={step.kind}
+                    bg={step.bg}
+                    fg={step.fg}
+                    className="block h-full w-full"
+                  />
+                </TileOutline>
               </div>
             ))}
           </div>
@@ -155,13 +189,18 @@ export function ProcessSection() {
 
       <div className="mosaic-strip mt-16 flex max-w-5xl flex-wrap gap-2 sm:mt-24">
         {MOSAIC.map((tile, i) => (
-          <PatternTile
+          <TileOutline
             key={i}
-            kind={tile.kind}
-            bg={tile.bg}
-            fg={tile.fg}
-            className="mosaic-tile reveal-hidden size-11 shrink-0 opacity-0 sm:size-14"
-          />
+            accent={accentOf(tile)}
+            className="mosaic-tile reveal-hidden size-8 shrink-0 overflow-hidden rounded-md opacity-0 sm:size-10"
+          >
+            <PatternTile
+              kind={tile.kind}
+              bg={tile.bg}
+              fg={tile.fg}
+              className="block h-full w-full"
+            />
+          </TileOutline>
         ))}
       </div>
     </section>

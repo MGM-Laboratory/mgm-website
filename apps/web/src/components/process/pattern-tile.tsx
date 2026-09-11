@@ -27,6 +27,10 @@ const TONE_VAR: Record<PatternTone, string> = {
   white: "#ffffff",
 };
 
+export function toneColor(tone: PatternTone): string {
+  return TONE_VAR[tone];
+}
+
 function PatternShape({ kind, fg }: { kind: PatternKind; fg: string }) {
   switch (kind) {
     case "fans":
