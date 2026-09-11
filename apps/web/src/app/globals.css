@@ -76,10 +76,14 @@ body {
    shows as a thin rim (see /src/components/hero/see-work-button). Sliding
    background-position rather than rotating the div keeps the rim an even
    thickness all the way around a non-circular pill — rotating a rectangular
-   conic-gradient distorts unevenly on a shape this elongated. */
+   conic-gradient distorts unevenly on a shape this elongated. The gradient
+   runs on the diagonal (not 90deg) and slides on both axes, so the top and
+   bottom edges show different colors at any given moment instead of
+   marching in lockstep.
+*/
 .cta-ring-spin {
   background: linear-gradient(
-    90deg,
+    128deg,
     var(--brand-red),
     var(--brand-yellow),
     var(--brand-blue),
@@ -89,13 +93,13 @@ body {
     var(--brand-blue),
     var(--brand-green)
   );
-  background-size: 200% 100%;
-  animation: cta-ring-spin 4s linear infinite;
+  background-size: 320% 320%;
+  animation: cta-ring-spin 5s linear infinite;
 }
 
 @keyframes cta-ring-spin {
   to {
-    background-position: -200% 0;
+    background-position: -320% -320%;
   }
 }
 

@@ -837,7 +837,7 @@ export function Hero() {
       <button
         type="button"
         aria-label="Scroll to next section"
-        className="scroll-indicator reveal-hidden absolute bottom-2 left-1/2 -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 sm:bottom-4"
+        className="scroll-indicator reveal-hidden absolute bottom-0 left-1/2 -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 sm:-bottom-1"
         onClick={() => {
           const target = document.getElementById("process");
           if (!target) return;

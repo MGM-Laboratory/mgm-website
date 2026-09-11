@@ -8,23 +8,14 @@ import { ArrowRight } from "lucide-react";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 
-const FLAIR_KINDS: PatternKind[] = [
-  "fans",
-  "square",
-  "circle",
-  "leaves",
-  "plus",
-  "clover",
-  "x",
-  "quads",
-];
-const FLAIR_TONES: PatternTone[] = ["red", "yellow", "blue", "green"];
+const FLAIR_KINDS: PatternKind[] = ["fans", "circle", "leaves", "x", "clover"];
+const FLAIR_TONES: PatternTone[] = ["red", "blue", "green", "yellow", "red"];
 
 // Fixed per-flair kind/tone/size — only their flung position, rotation and
 // scale randomize per hover (below). Keeping the roster itself static
 // avoids picking randomly at render time, which would mismatch between
 // server and client.
-const FLAIRS = Array.from({ length: 8 }, (_, i) => ({
+const FLAIRS = Array.from({ length: 5 }, (_, i) => ({
   kind: FLAIR_KINDS[i % FLAIR_KINDS.length],
   tone: FLAIR_TONES[i % FLAIR_TONES.length],
   size: 22 + ((i * 7) % 5) * 6,
@@ -35,16 +26,32 @@ function reducedMotion() {
 }
 
 export function SeeWorkButton() {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const flairRefs = useRef<(HTMLDivElement | null)[]>([]);
   const wordARef = useRef<HTMLSpanElement>(null);
   const wordBRef = useRef<HTMLSpanElement>(null);
 
   function handleEnter() {
     if (reducedMotion()) return;
-    gsap.to(wordARef.current, { x: -7, duration: 0.35, ease: "power3.out" });
-    gsap.to(wordBRef.current, { x: 7, duration: 0.35, ease: "power3.out" });
-    flairRefs.current.forEach((el, i) => {
-      if (!el) return;
+    const wrap = wrapRef.current;
+    const a = wordARef.current;
+    const b = wordBRef.current;
+    const flairs = flairRefs.current.filter((el): el is HTMLDivElement => !!el);
+    if (!wrap || !a || !b || !flairs.length) return;
+
+    // Measured before the words move — the widening gap between them is
+    // where the shapes launch from, as if it's flinging them out.
+    const wrapRect = wrap.getBoundingClientRect();
+    const aRect = a.getBoundingClientRect();
+    const bRect = b.getBoundingClientRect();
+    const originX = (aRect.right + bRect.left) / 2 - wrapRect.left;
+    const originY = (aRect.top + aRect.bottom) / 2 - wrapRect.top;
+    gsap.set(flairs, { left: originX, top: originY });
+
+    gsap.to(a, { x: -20, duration: 0.4, ease: "power3.out" });
+    gsap.to(b, { x: 20, duration: 0.4, ease: "power3.out" });
+
+    flairs.forEach((el) => {
       gsap.to(el, {
         opacity: 1,
         scale: gsap.utils.random(0.8, 1.3),
@@ -53,7 +60,7 @@ export function SeeWorkButton() {
         rotate: gsap.utils.random(-200, 200),
         duration: gsap.utils.random(0.6, 0.95),
         ease: "back.out(1.7)",
-        delay: i * 0.03,
+        delay: gsap.utils.random(0, 0.22),
         overwrite: true,
       });
     });
@@ -76,9 +83,13 @@ export function SeeWorkButton() {
   }
 
   return (
-    <div className="hero-cta reveal-hidden relative mt-10 inline-flex opacity-0 sm:mt-14">
-      {/* Hidden at rest — bursts outward from the button's own footprint
-          on hover, retracts on leave. */}
+    <div
+      ref={wrapRef}
+      className="hero-cta reveal-hidden relative mt-10 inline-flex opacity-0 sm:mt-14"
+    >
+      {/* Hidden at rest — repositioned onto the gap between the two words
+          right as it opens, then bursts outward from there, retracting on
+          leave. */}
       <div className="pointer-events-none absolute inset-0">
         {FLAIRS.map((f, i) => (
           <div
@@ -86,8 +97,10 @@ export function SeeWorkButton() {
             ref={(el) => {
               flairRefs.current[i] = el;
             }}
-            className="absolute top-1/2 left-1/2 opacity-0"
+            className="absolute opacity-0"
             style={{
+              left: 0,
+              top: 0,
               width: f.size,
               height: f.size,
               marginLeft: -f.size / 2,
