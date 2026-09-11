@@ -383,8 +383,9 @@ function buildEntranceTimeline(
       { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2.6)" },
       "-=0.25",
     )
-    // Arrow — a spark draws the line as it travels, then a simple arrowhead lands
-    .addLabel("arrow", "+=0.2")
+    // Arrow — a spark draws the line as it travels, then a simple arrowhead
+    // lands. No pause after row 2's last shape — starts the instant it lands.
+    .addLabel("arrow")
     .fromTo(".hero-arrow-wrap", { opacity: 0 }, { opacity: 1, duration: 0.2 }, "arrow")
     .fromTo(
       ".arrow-connector [data-part='arrow-path']",
@@ -429,8 +430,11 @@ function buildEntranceTimeline(
       { opacity: 1, duration: 0.2 },
       "-=0.1",
     )
-    // Outro — "& Mobile Laboratory", the logo assembling, tagline, and the last flourishes
-    .addLabel("outro", "+=0.15")
+    // Outro — "& Mobile Laboratory", the logo assembling, tagline, and the
+    // last flourishes. Fires the instant the arrow starts drawing rather
+    // than waiting for it to finish — the arrow, the text, and the logo all
+    // land together instead of one after another.
+    .addLabel("outro", "arrow")
     .set(".line-mobile", { opacity: 1 }, "outro")
     .fromTo(
       mobileSplit.chars,
