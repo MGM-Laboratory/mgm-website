@@ -24,6 +24,14 @@ const KINDS: PatternKind[] = [
 ];
 const COLORS: ("red" | "yellow" | "blue" | "green")[] = ["red", "yellow", "blue", "green"];
 
+// Some kinds draw a shape that covers most of the tile (fans/leaves/clover
+// are big blobby petals reaching ~80% of the area); others draw a thin
+// stroke or a small corner accent that covers only a fraction of it. To
+// keep the field reading as color-dominant rather than white-dominant, the
+// accent color always goes on whichever side — background or the drawn
+// shape — actually covers most of the tile for that particular kind.
+const BIG_SHAPE_KINDS = new Set<PatternKind>(["fans", "leaves", "clover"]);
+
 // A small deterministic PRNG (not Math.random) so the "random" layout below
 // is identical between server and client render — no hydration mismatch,
 // no flash of re-shuffled tiles on load.
@@ -116,10 +124,11 @@ function buildMosaic(): Tile[] {
       };
     placed.set(key(row, col), choice);
     const color = choice.color as "red" | "yellow" | "blue" | "green";
-    // Skewed toward color-background tiles (white shape on a color field)
-    // rather than color-shape-on-white — the field should read as mostly
-    // colorful, with white/canvas as the accent, not the other way round.
-    const canvasIsBg = rand() < 0.25;
+    // For big-blob kinds, the drawn shape itself is most of the tile, so
+    // it needs to carry the color (canvas stays the background sliver).
+    // For every other kind, the background rect is most of the tile, so
+    // the color belongs there instead (canvas becomes the small accent).
+    const canvasIsBg = BIG_SHAPE_KINDS.has(choice.kind) ? true : rand() < 0.12;
     tiles.push({
       row,
       col,

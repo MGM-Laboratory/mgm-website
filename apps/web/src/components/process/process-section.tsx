@@ -152,7 +152,10 @@ export function ProcessSection() {
         ))}
       </div>
 
-      <div className="mt-16 sm:mt-24">
+      {/* Negative margins cancel this section's own side padding so the
+          marquee bleeds edge-to-edge with the viewport instead of stopping
+          at the section's text margin. */}
+      <div className="-mx-6 mt-16 sm:-mx-10 sm:mt-24 lg:-mx-16">
         <MosaicMarquee />
       </div>
     </section>
