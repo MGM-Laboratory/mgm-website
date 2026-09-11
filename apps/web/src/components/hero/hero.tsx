@@ -33,7 +33,7 @@ if (typeof window !== "undefined") {
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const headlineType =
-  "font-display font-extrabold leading-[0.95] tracking-tight text-foreground text-[clamp(2.75rem,6.5vw,5rem)]";
+  "font-display font-medium leading-[0.95] tracking-tight text-foreground text-[clamp(2.75rem,6.5vw,5rem)]";
 const headline = cn("reveal-hidden opacity-0", headlineType);
 
 // Shapes read a little larger and taller than the headline type, like the
