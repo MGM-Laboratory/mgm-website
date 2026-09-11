@@ -116,7 +116,10 @@ function buildMosaic(): Tile[] {
       };
     placed.set(key(row, col), choice);
     const color = choice.color as "red" | "yellow" | "blue" | "green";
-    const canvasIsBg = rand() < 0.5;
+    // Skewed toward color-background tiles (white shape on a color field)
+    // rather than color-shape-on-white — the field should read as mostly
+    // colorful, with white/canvas as the accent, not the other way round.
+    const canvasIsBg = rand() < 0.25;
     tiles.push({
       row,
       col,
@@ -129,7 +132,7 @@ function buildMosaic(): Tile[] {
 }
 
 const MOSAIC = buildMosaic();
-const TILE_PX = 56;
+const TILE_PX = 76;
 
 function MosaicCopy() {
   return (
@@ -168,7 +171,6 @@ export function MosaicMarquee() {
       return;
     }
 
-    const tiles = gsap.utils.toArray<HTMLElement>(".mosaic-tile", track);
     const idleLoops: gsap.core.Animation[] = [];
 
     const tl = gsap.timeline({
@@ -178,26 +180,14 @@ export function MosaicMarquee() {
     tl.eventCallback("onComplete", () => {
       // Endless sideways drift — the track is two copies of the same
       // layout side by side, so sliding exactly one copy-width (-50%)
-      // loops with no visible seam.
+      // loops with no visible seam. The tiles themselves stay still —
+      // only the strip as a whole moves.
       idleLoops.push(
         gsap.to(track, {
           xPercent: -50,
           duration: 42,
           ease: "none",
           repeat: -1,
-        }),
-      );
-      // A slow, staggered "breathing" pulse across the whole field so it
-      // reads as alive even while the marquee is mid-drift.
-      idleLoops.push(
-        gsap.to(tiles, {
-          scale: 1.16,
-          rotate: () => gsap.utils.random(-8, 8),
-          duration: 1.6,
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-          stagger: { each: 0.05, from: "random" },
         }),
       );
     });
