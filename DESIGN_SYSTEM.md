@@ -83,7 +83,7 @@ We pair a **characterful display face** with a **clean, modern UI face**. Both a
 
 ```css
 :root {
-  --font-display: "Bricolage Grotesque", "Söhne", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Hanken Grotesk", "Söhne", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Geist", "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
 }
@@ -95,12 +95,12 @@ Load from Google Fonts / Vercel:
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
-  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap"
+  href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..800&family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap"
   rel="stylesheet"
 />
 ```
 
-- **Bricolage Grotesque** — display, headlines, hero, and short editorial moments. Set tight (-2% to -3% tracking) at large sizes for an Apple-keynote feel. Weight 600 for hero, 500 for section headings.
+- **Hanken Grotesk** — display, headlines, hero, and short editorial moments. Set tight (-2% to -3% tracking) at large sizes for an Apple-keynote feel. Weight 600 for hero, 500 for section headings.
 - **Geist** — everything else. Body, UI, labels, captions, navigation, buttons. Weight 400 default, 500 for buttons / labels, 600 for emphasis.
 - **Geist Mono** — code blocks, version numbers, technical numerals only.
 
