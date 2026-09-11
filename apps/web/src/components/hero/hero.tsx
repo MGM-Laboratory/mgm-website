@@ -12,6 +12,7 @@ import { ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lockScroll, unlockScroll } from "@/lib/scroll-gate";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
+import { SeeWorkButton } from "@/components/hero/see-work-button";
 
 import {
   ArrowConnector,
@@ -217,7 +218,7 @@ function startIdleLoops(): gsap.core.Animation[] {
 
   // Scroll indicator — idle bounce once the page has unlocked and it's visible.
   loops.push(
-    gsap.to(".scroll-indicator [data-part='arrow']", {
+    gsap.to(".scroll-indicator [data-part='content']", {
       y: 6,
       duration: 1,
       ease: "sine.inOut",
@@ -454,7 +455,12 @@ function buildEntranceTimeline(
     )
     .to(".hero-logo", { scale: 1.12, duration: 0.14, ease: "power1.out" }, "+=0.02")
     .to(".hero-logo", { scale: 1, duration: 0.25, ease: "back.out(3)" })
-    .fromTo(".hero-tagline", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 }, "-=0.5")
+    .fromTo(
+      ".hero-cta",
+      { opacity: 0, y: 16, scale: 0.9 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: "back.out(2.2)" },
+      "-=0.5",
+    )
     .fromTo(
       ".bg-motif",
       { opacity: 0, scale: 0.4 },
@@ -818,9 +824,9 @@ export function Hero() {
         </div>
       </div>
 
-      <p className="hero-tagline reveal-hidden opacity-0 mx-auto mt-10 max-w-md text-center text-sm text-foreground/60 sm:mt-14">
-        A calm, premium product surface — built for MGM Laboratory.
-      </p>
+      <div className="flex justify-center">
+        <SeeWorkButton />
+      </div>
 
       <div className="corner-pattern reveal-hidden opacity-0 pointer-events-none absolute -right-6 -bottom-6 dark:hidden">
         <svg width="120" height="120" viewBox="0 0 100 100" aria-hidden>
@@ -831,7 +837,7 @@ export function Hero() {
       <button
         type="button"
         aria-label="Scroll to next section"
-        className="scroll-indicator reveal-hidden absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 sm:bottom-9"
+        className="scroll-indicator reveal-hidden absolute bottom-2 left-1/2 -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 sm:bottom-4"
         onClick={() => {
           const target = document.getElementById("process");
           if (!target) return;
@@ -840,8 +846,10 @@ export function Hero() {
           else target.scrollIntoView({ behavior: "smooth" });
         }}
       >
-        <span className="text-xs font-medium tracking-wide">Scroll</span>
-        <ArrowDown data-part="arrow" className="size-4" strokeWidth={2.25} />
+        <span data-part="content" className="flex flex-col items-center gap-1.5">
+          <span className="text-xs font-medium tracking-wide">Scroll</span>
+          <ArrowDown className="size-4" strokeWidth={2.25} />
+        </span>
       </button>
     </div>
   );

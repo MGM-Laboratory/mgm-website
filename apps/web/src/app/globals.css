@@ -70,3 +70,37 @@ body {
 .parallax-el {
   will-change: transform;
 }
+
+/* "See our work" CTA — a rainbow gradient flowing behind the button's own
+   solid background, which is inset by a few px so the gradient only ever
+   shows as a thin rim (see /src/components/hero/see-work-button). Sliding
+   background-position rather than rotating the div keeps the rim an even
+   thickness all the way around a non-circular pill — rotating a rectangular
+   conic-gradient distorts unevenly on a shape this elongated. */
+.cta-ring-spin {
+  background: linear-gradient(
+    90deg,
+    var(--brand-red),
+    var(--brand-yellow),
+    var(--brand-blue),
+    var(--brand-green),
+    var(--brand-red),
+    var(--brand-yellow),
+    var(--brand-blue),
+    var(--brand-green)
+  );
+  background-size: 200% 100%;
+  animation: cta-ring-spin 4s linear infinite;
+}
+
+@keyframes cta-ring-spin {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-ring-spin {
+    animation: none;
+  }
+}

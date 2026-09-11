@@ -153,6 +153,25 @@ function PatternShape({ kind, fg }: { kind: PatternKind; fg: string }) {
   }
 }
 
+// Same shape geometry, no background rect — just the colored motif on a
+// transparent field. Used where a pattern needs to float freely (e.g. the
+// hero CTA's hover burst) instead of sitting inside its own tile.
+export function FlairShape({
+  kind,
+  tone,
+  className,
+}: {
+  kind: PatternKind;
+  tone: PatternTone;
+  className?: string;
+}) {
+  return (
+    <svg viewBox="0 0 100 100" className={cn("overflow-visible", className)} aria-hidden>
+      <PatternShape kind={kind} fg={TONE_VAR[tone]} />
+    </svg>
+  );
+}
+
 export function PatternTile({
   kind,
   bg,
