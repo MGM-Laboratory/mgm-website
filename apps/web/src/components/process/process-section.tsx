@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { PatternTile, toneColor, type PatternKind, type PatternTone } from "./pattern-tile";
+import { MosaicMarquee } from "./mosaic-marquee";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -33,29 +34,6 @@ const ROWS: Step[][] = [
     { word: "Iterate.", kind: "square", bg: "canvas", fg: "blue" },
     { word: "Grow.", kind: "leaves", bg: "red", fg: "canvas" },
   ],
-];
-
-// Purely decorative — the pattern-as-signature strip from the design
-// system, no words attached, just a wide band of the brand's motifs.
-const MOSAIC: Step[] = [
-  { word: "", kind: "circle", bg: "canvas", fg: "yellow" },
-  { word: "", kind: "arcs", bg: "canvas", fg: "red" },
-  { word: "", kind: "fans", bg: "green", fg: "canvas" },
-  { word: "", kind: "x", bg: "canvas", fg: "blue" },
-  { word: "", kind: "circle", bg: "canvas", fg: "red" },
-  { word: "", kind: "x", bg: "yellow", fg: "canvas" },
-  { word: "", kind: "quads", bg: "canvas", fg: "green" },
-  { word: "", kind: "circle", bg: "canvas", fg: "red" },
-  { word: "", kind: "square", bg: "canvas", fg: "yellow" },
-  { word: "", kind: "clover", bg: "canvas", fg: "red" },
-  { word: "", kind: "leaves", bg: "canvas", fg: "green" },
-  { word: "", kind: "plus", bg: "canvas", fg: "yellow" },
-  { word: "", kind: "plus", bg: "yellow", fg: "canvas" },
-  { word: "", kind: "clover", bg: "canvas", fg: "blue" },
-  { word: "", kind: "arcs", bg: "canvas", fg: "green" },
-  { word: "", kind: "x", bg: "canvas", fg: "blue" },
-  { word: "", kind: "circle", bg: "canvas", fg: "yellow" },
-  { word: "", kind: "x", bg: "canvas", fg: "blue" },
 ];
 
 const wordType =
@@ -97,7 +75,7 @@ export function ProcessSection() {
     if (!root) return;
 
     if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
-      gsap.set(gsap.utils.toArray(".process-item, .mosaic-tile", root), {
+      gsap.set(gsap.utils.toArray(".process-item", root), {
         opacity: 1,
         y: 0,
         scale: 1,
@@ -132,19 +110,6 @@ export function ProcessSection() {
       );
       if (tl.scrollTrigger) triggers.push(tl.scrollTrigger);
     });
-
-    const mosaicTiles = gsap.utils.toArray<HTMLElement>(".mosaic-tile", root);
-    if (mosaicTiles.length) {
-      const mosaicTl = gsap.timeline({
-        scrollTrigger: { trigger: ".mosaic-strip", start: "top 88%", once: true },
-      });
-      mosaicTl.fromTo(
-        mosaicTiles,
-        { opacity: 0, scale: 0, rotate: -14 },
-        { opacity: 1, scale: 1, rotate: 0, duration: 0.4, ease: "back.out(2.2)", stagger: 0.035 },
-      );
-      if (mosaicTl.scrollTrigger) triggers.push(mosaicTl.scrollTrigger);
-    }
 
     return () => {
       triggers.forEach((t) => t.kill());
@@ -187,21 +152,8 @@ export function ProcessSection() {
         ))}
       </div>
 
-      <div className="mosaic-strip mt-16 flex max-w-5xl flex-wrap gap-2 sm:mt-24">
-        {MOSAIC.map((tile, i) => (
-          <TileOutline
-            key={i}
-            accent={accentOf(tile)}
-            className="mosaic-tile reveal-hidden size-8 shrink-0 overflow-hidden rounded-md opacity-0 sm:size-10"
-          >
-            <PatternTile
-              kind={tile.kind}
-              bg={tile.bg}
-              fg={tile.fg}
-              className="block h-full w-full"
-            />
-          </TileOutline>
-        ))}
+      <div className="mt-16 sm:mt-24">
+        <MosaicMarquee />
       </div>
     </section>
   );
