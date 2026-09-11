@@ -479,7 +479,7 @@ export function Hero() {
       // The top arm reaches just short of the leaves shape; the bottom arm
       // reaches just short of the closing line's text — independently of
       // each other, so neither is held back by whichever is further away.
-      const gap = 20;
+      const gap = 32;
       const topEndX = Math.max(shapesBRect.left - bridgeRect.left - gap, 48);
       const bottomEndX = Math.max(mobileTextRect.left - bridgeRect.left - gap, 48);
       const width = Math.max(topEndX, bottomEndX, 1);
@@ -499,7 +499,7 @@ export function Hero() {
       // y=height (row 3's mid-height); the vertical stays flush with the
       // shared left margin ("Media,"/"&"'s column), rounded at both ends.
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-      const r = 16;
+      const r = 26;
       path.setAttribute(
         "d",
         `M${topEndX} 0H${r}A${r} ${r} 0 0 0 0 ${r}V${height - r}A${r} ${r} 0 0 0 ${r} ${height}H${bottomEndX}`,

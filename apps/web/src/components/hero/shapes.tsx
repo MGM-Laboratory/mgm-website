@@ -193,7 +193,7 @@ export function ArrowConnector({ className }: { className?: string }) {
         data-part="arrow-path"
         d="M280 8H44A16 16 0 0 0 28 24V76A16 16 0 0 0 44 92H80"
         stroke="currentColor"
-        strokeWidth="6"
+        strokeWidth="4"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -201,7 +201,7 @@ export function ArrowConnector({ className }: { className?: string }) {
         data-part="arrow-head"
         d="M67 79L80 92L67 105"
         stroke="currentColor"
-        strokeWidth="6"
+        strokeWidth="4"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
