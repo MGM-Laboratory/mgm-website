@@ -5,8 +5,12 @@ import gsap from "gsap";
 import { SplitText } from "gsap/SplitText";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ScrollSmoother } from "gsap/ScrollSmoother";
+import { ArrowDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { lockScroll, unlockScroll } from "@/lib/scroll-gate";
 
 import {
   ArrowConnector,
@@ -25,8 +29,13 @@ import {
 } from "./shapes";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(SplitText, DrawSVGPlugin, MotionPathPlugin);
+  gsap.registerPlugin(SplitText, DrawSVGPlugin, MotionPathPlugin, ScrollTrigger, ScrollSmoother);
 }
+
+// If the entrance timeline never reaches onComplete for any reason (a
+// thrown error mid-build, fonts.ready never resolving), this guarantees the
+// page doesn't stay permanently scroll-locked.
+const SCROLL_LOCK_FAILSAFE_MS = 12000;
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so the reveal
 // timeline is wired up before first paint.
@@ -204,6 +213,17 @@ function startIdleLoops(): gsap.core.Animation[] {
       }),
     );
   });
+
+  // Scroll indicator — idle bounce once the page has unlocked and it's visible.
+  loops.push(
+    gsap.to(".scroll-indicator [data-part='arrow']", {
+      y: 6,
+      duration: 1,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
+    }),
+  );
 
   return loops;
 }
@@ -546,77 +566,114 @@ export function Hero() {
     const root = rootRef.current;
     if (!root) return;
 
+    // Locked the instant the hero mounts — the fail-safe timer guarantees
+    // the page can't stay frozen if the animation setup below ever throws
+    // or fonts.ready never resolves.
+    lockScroll();
+    let failSafeTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
+      unlockScroll();
+      gsap.set(".scroll-indicator", { opacity: 1, y: 0 });
+      ScrollTrigger.refresh();
+    }, SCROLL_LOCK_FAILSAFE_MS);
+
+    function unlockAndReveal(animated: boolean) {
+      if (failSafeTimer) {
+        clearTimeout(failSafeTimer);
+        failSafeTimer = undefined;
+      }
+      unlockScroll();
+      ScrollTrigger.refresh();
+      if (animated) {
+        gsap.fromTo(
+          ".scroll-indicator",
+          { opacity: 0, y: 14 },
+          { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        );
+      } else {
+        gsap.set(".scroll-indicator", { opacity: 1, y: 0 });
+      }
+    }
+
     let cancelled = false;
     let mediaSplit: SplitText | undefined;
     let gameSplit: SplitText | undefined;
     let mobileSplit: SplitText | undefined;
     const mm = gsap.matchMedia();
 
-    document.fonts.ready.then(() => {
-      if (cancelled) return;
+    document.fonts.ready
+      .then(() => {
+        if (cancelled) return;
 
-      mediaSplit = SplitText.create(".line-media", { type: "chars", charsClass: "media-char" });
-      gameSplit = SplitText.create(".line-game", { type: "chars", charsClass: "game-char" });
-      mobileSplit = SplitText.create(".line-mobile", {
-        type: "words, chars",
-        charsClass: "mobile-char",
+        mediaSplit = SplitText.create(".line-media", { type: "chars", charsClass: "media-char" });
+        gameSplit = SplitText.create(".line-game", { type: "chars", charsClass: "game-char" });
+        mobileSplit = SplitText.create(".line-mobile", {
+          type: "words, chars",
+          charsClass: "mobile-char",
+        });
+
+        mm.add(
+          {
+            reduced: "(prefers-reduced-motion: reduce)",
+            full: "(prefers-reduced-motion: no-preference)",
+          },
+          (context) => {
+            const { reduced } = context.conditions as { reduced: boolean };
+            const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
+
+            if (reduced) {
+              gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+              gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
+                opacity: 1,
+                x: 0,
+                y: 0,
+                rotate: 0,
+                rotateX: 0,
+                scale: 1,
+              });
+              gsap.set(".line-game", { scaleX: 1 });
+              gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
+              gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
+              gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
+              gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
+              unlockAndReveal(false);
+              return;
+            }
+
+            const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
+            let idleLoops: gsap.core.Animation[] = [];
+
+            tl.eventCallback("onComplete", () => {
+              idleLoops = startIdleLoops();
+              unlockAndReveal(true);
+            });
+
+            const removeParallax = setupParallax(root);
+
+            if (process.env.NODE_ENV !== "production") {
+              Object.assign(window, {
+                __heroTl: tl,
+                __heroReplay: () => {
+                  idleLoops.forEach((loop) => loop.kill());
+                  idleLoops = [];
+                  lockScroll();
+                  gsap.set(".scroll-indicator", { opacity: 0, y: 14 });
+                  tl.restart();
+                },
+              });
+            }
+
+            return () => {
+              tl.kill();
+              idleLoops.forEach((loop) => loop.kill());
+              removeParallax();
+            };
+          },
+        );
+      })
+      .catch((err) => {
+        console.error("Hero entrance setup failed; unlocking scroll.", err);
+        unlockAndReveal(false);
       });
-
-      mm.add(
-        {
-          reduced: "(prefers-reduced-motion: reduce)",
-          full: "(prefers-reduced-motion: no-preference)",
-        },
-        (context) => {
-          const { reduced } = context.conditions as { reduced: boolean };
-          const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
-
-          if (reduced) {
-            gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-            gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
-              opacity: 1,
-              x: 0,
-              y: 0,
-              rotate: 0,
-              rotateX: 0,
-              scale: 1,
-            });
-            gsap.set(".line-game", { scaleX: 1 });
-            gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
-            gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
-            gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
-            gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
-            return;
-          }
-
-          const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
-          let idleLoops: gsap.core.Animation[] = [];
-
-          tl.eventCallback("onComplete", () => {
-            idleLoops = startIdleLoops();
-          });
-
-          const removeParallax = setupParallax(root);
-
-          if (process.env.NODE_ENV !== "production") {
-            Object.assign(window, {
-              __heroTl: tl,
-              __heroReplay: () => {
-                idleLoops.forEach((loop) => loop.kill());
-                idleLoops = [];
-                tl.restart();
-              },
-            });
-          }
-
-          return () => {
-            tl.kill();
-            idleLoops.forEach((loop) => loop.kill());
-            removeParallax();
-          };
-        },
-      );
-    });
 
     function onKeydown(e: KeyboardEvent) {
       if (process.env.NODE_ENV === "production") return;
@@ -631,6 +688,8 @@ export function Hero() {
 
     return () => {
       cancelled = true;
+      if (failSafeTimer) clearTimeout(failSafeTimer);
+      unlockScroll();
       window.removeEventListener("keydown", onKeydown);
       mm.revert();
       mediaSplit?.revert();
@@ -759,6 +818,22 @@ export function Hero() {
           <circle cx="50" cy="50" r="40" fill="none" stroke="var(--brand-blue)" strokeWidth="20" />
         </svg>
       </div>
+
+      <button
+        type="button"
+        aria-label="Scroll to next section"
+        className="scroll-indicator reveal-hidden absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 sm:bottom-9"
+        onClick={() => {
+          const target = document.getElementById("process");
+          if (!target) return;
+          const smoother = ScrollSmoother.get();
+          if (smoother) smoother.scrollTo(target, true, "top top");
+          else target.scrollIntoView({ behavior: "smooth" });
+        }}
+      >
+        <span className="text-xs font-medium tracking-wide">Scroll</span>
+        <ArrowDown data-part="arrow" className="size-4" strokeWidth={2.25} />
+      </button>
     </div>
   );
 }
