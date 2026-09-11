@@ -23,6 +23,11 @@ export function fadeUpOnScroll(
   const targets = gsap.utils.toArray<HTMLElement>(selector, root);
   if (!targets.length) return null;
 
+  if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+    gsap.set(targets, { opacity: 1, y: 0 });
+    return null;
+  }
+
   return gsap.fromTo(
     targets,
     { opacity: 0, y },

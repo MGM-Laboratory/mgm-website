@@ -69,6 +69,16 @@ export function ProcessSection() {
     const root = rootRef.current;
     if (!root) return;
 
+    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+      gsap.set(gsap.utils.toArray(".process-item, .mosaic-tile", root), {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        rotate: 0,
+      });
+      return;
+    }
+
     const triggers: ScrollTrigger[] = [];
 
     gsap.utils.toArray<HTMLElement>(".process-row", root).forEach((row) => {
