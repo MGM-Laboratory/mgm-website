@@ -74,16 +74,22 @@ body {
 /* "See our work" CTA — a rainbow gradient flowing behind the button's own
    solid background, which is inset by a few px so the gradient only ever
    shows as a thin rim (see /src/components/hero/see-work-button). Sliding
-   background-position rather than rotating the div keeps the rim an even
-   thickness all the way around a non-circular pill — rotating a rectangular
-   conic-gradient distorts unevenly on a shape this elongated. The gradient
-   runs on the diagonal (not 90deg) and slides on both axes, so the top and
-   bottom edges show different colors at any given moment instead of
-   marching in lockstep.
+   background-position (rather than rotating the div) keeps the rim an even
+   thickness all the way around a non-circular pill, and sliding on a single
+   axis (rather than a diagonal on both axes) keeps the slide perfectly
+   smooth — a diagonal slide on an elongated pill sped up and slowed down
+   unevenly around the ring and read as a stagger/pulse instead of a flow.
+   To still make the top and bottom read as unsynced, the same smooth
+   animation is rendered twice — once per half of the ring, one of them
+   started half a cycle into the loop — rather than by distorting the
+   animation itself.
 */
 .cta-ring-spin {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
   background: linear-gradient(
-    128deg,
+    90deg,
     var(--brand-red),
     var(--brand-yellow),
     var(--brand-blue),
@@ -93,13 +99,22 @@ body {
     var(--brand-blue),
     var(--brand-green)
   );
-  background-size: 320% 320%;
+  background-size: 200% 100%;
   animation: cta-ring-spin 5s linear infinite;
+}
+
+.cta-ring-spin--top {
+  clip-path: inset(0 0 50% 0);
+}
+
+.cta-ring-spin--bottom {
+  clip-path: inset(50% 0 0 0);
+  animation-delay: -2.5s;
 }
 
 @keyframes cta-ring-spin {
   to {
-    background-position: -320% -320%;
+    background-position: -200% 0;
   }
 }
 

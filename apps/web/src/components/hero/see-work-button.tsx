@@ -119,7 +119,11 @@ export function SeeWorkButton() {
         onMouseLeave={handleLeave}
         className="relative z-10 inline-flex rounded-full transition-transform duration-300 hover:scale-[1.03]"
       >
-        <span className="cta-ring-spin absolute inset-0 rounded-full" aria-hidden />
+        {/* Same smooth flow rendered twice, one half-cycle out of phase
+            between the top and bottom half of the ring, so they read as
+            unsynced without distorting the animation itself. */}
+        <span className="cta-ring-spin cta-ring-spin--top" aria-hidden />
+        <span className="cta-ring-spin cta-ring-spin--bottom" aria-hidden />
         <span className="relative m-[3px] inline-flex items-center gap-2 rounded-full bg-[var(--surface-muted)] px-6 py-3 text-sm font-semibold text-foreground sm:px-7 sm:py-3.5 sm:text-base">
           <span ref={wordARef} className="inline-block">
             See
