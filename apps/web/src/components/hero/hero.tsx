@@ -37,9 +37,9 @@ const headlineType =
 const headline = cn("reveal-hidden opacity-0", headlineType);
 
 // Shapes read a little larger and taller than the headline type, like the
-// reference composition — a modest bump over their previous size, not huge.
-const shapeBoxClass = "w-[clamp(3.25rem,6.5vw,5.25rem)]";
-const shapeHeightClass = "h-[clamp(3.25rem,6.5vw,5.25rem)]";
+// reference composition.
+const shapeBoxClass = "w-[clamp(4rem,8vw,6.5rem)]";
+const shapeHeightClass = "h-[clamp(4rem,8vw,6.5rem)]";
 
 const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
 
@@ -76,7 +76,7 @@ function startIdleLoops(): gsap.core.Animation[] {
     gsap
       .timeline({ repeat: -1, repeatDelay: 1.5, delay: 0.7, yoyo: true })
       .to(".toggle-switch [data-part='knob']", {
-        attr: { cx: 155 },
+        attr: { cx: 175 },
         duration: 0.55,
         ease: "power2.inOut",
       })
@@ -256,7 +256,7 @@ function buildEntranceTimeline(
     )
     .to(
       ".toggle-switch [data-part='knob']",
-      { attr: { cx: 155 }, duration: 0.45, ease: "power2.inOut" },
+      { attr: { cx: 175 }, duration: 0.45, ease: "power2.inOut" },
       "+=0.05",
     )
     .to(
@@ -427,37 +427,53 @@ export function Hero() {
   const row3Ref = useRef<HTMLDivElement>(null);
   const bridgeRef = useRef<HTMLDivElement>(null);
   const arrowWrapRef = useRef<HTMLDivElement>(null);
+  const shapesBGroupRef = useRef<HTMLDivElement>(null);
+  const mobileTextRef = useRef<HTMLSpanElement>(null);
 
-  // Row 2 (shapes + GAME) always matches row 1's rendered width, so GAME's
-  // right edge lines up with circle B's right edge above it. The arrow is
-  // measured to run from row 2's mid-height to row 3's mid-height exactly,
-  // rather than guessing at percentages of an assumed row height.
+  // Rows 2 and 3 both match row 1's rendered width and right-align their
+  // content, so GAME lines up under circle B and "& Mobile Laboratory"
+  // lines up under GAME/circle B too. The arrow is measured to run from
+  // row 2's mid-height to row 3's mid-height, and stretched as wide as it
+  // can go without overlapping either the leaves shape or the closing
+  // line's text — none of this is guessed at with fixed clamp values.
   useIsomorphicLayoutEffect(() => {
     const row1 = row1Ref.current;
     const row2 = row2Ref.current;
     const row3 = row3Ref.current;
     const bridge = bridgeRef.current;
     const arrowWrap = arrowWrapRef.current;
-    if (!row1 || !row2 || !row3 || !bridge || !arrowWrap) return;
+    const shapesBGroup = shapesBGroupRef.current;
+    const mobileText = mobileTextRef.current;
+    if (!row1 || !row2 || !row3 || !bridge || !arrowWrap || !shapesBGroup || !mobileText) return;
 
     function measure() {
-      // Only ever WRITE row2's width if it actually needs to change —
+      // Only ever WRITE a row's width if it actually needs to change —
       // writing on every call (even to the same value) can make a
-      // ResizeObserver that also watches row2 re-fire indefinitely.
+      // ResizeObserver that also watches these rows re-fire indefinitely.
       const targetWidth = `${row1!.offsetWidth}px`;
       if (row2!.style.width !== targetWidth) row2!.style.width = targetWidth;
+      if (row3!.style.width !== targetWidth) row3!.style.width = targetWidth;
 
       const bridgeRect = bridge!.getBoundingClientRect();
       const row2Rect = row2!.getBoundingClientRect();
       const row3Rect = row3!.getBoundingClientRect();
+      const shapesBRect = shapesBGroup!.getBoundingClientRect();
+      const mobileTextRect = mobileText!.getBoundingClientRect();
       const top = row2Rect.top + row2Rect.height / 2 - bridgeRect.top;
       const bottom = row3Rect.top + row3Rect.height / 2 - bridgeRect.top;
       arrowWrap!.style.top = `${top}px`;
       arrowWrap!.style.height = `${Math.max(bottom - top, 0)}px`;
+      // Extend as far right as possible without touching the leaves shape
+      // (row 2) or the closing line's text (row 3) — whichever is closer.
+      const gap = 20;
+      const widthToShapes = shapesBRect.left - bridgeRect.left - gap;
+      const widthToText = mobileTextRect.left - bridgeRect.left - gap;
+      const width = Math.min(widthToShapes, widthToText);
+      arrowWrap!.style.width = `${Math.max(width, 48)}px`;
     }
 
     measure();
-    // Only row1 is observed: it's the sole driver of row2's width, and
+    // Only row1 is observed: it's the sole driver of row2/row3's width, and
     // font/viewport reflows that move row2/row3 always move row1 too.
     const ro = new ResizeObserver(measure);
     ro.observe(row1);
@@ -508,7 +524,7 @@ export function Hero() {
               scale: 1,
             });
             gsap.set(".line-game", { scaleX: 1 });
-            gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 155 } });
+            gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
             gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
             gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
             gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
@@ -589,7 +605,7 @@ export function Hero() {
         {/* Row 1 — Media, */}
         <div ref={row1Ref} className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
           <span className={cn("line-media [perspective:500px]", headline)}>Media,</span>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             <div className="parallax-el" data-depth="0.7">
               <div className={`shape-square reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Square className="w-full" />
@@ -597,7 +613,7 @@ export function Hero() {
             </div>
             <div className="parallax-el" data-depth="0.85">
               <div
-                className={`shape-toggle reveal-hidden opacity-0 aspect-[200/90] w-auto ${shapeHeightClass}`}
+                className={`shape-toggle reveal-hidden opacity-0 aspect-[220/90] w-auto ${shapeHeightClass}`}
               >
                 <ToggleChip className="h-full w-full" />
               </div>
@@ -629,7 +645,7 @@ export function Hero() {
         <div ref={bridgeRef} className="relative">
           <div
             ref={arrowWrapRef}
-            className="hero-arrow-wrap reveal-hidden opacity-0 parallax-el absolute left-0 w-[clamp(9rem,20vw,15rem)]"
+            className="hero-arrow-wrap reveal-hidden opacity-0 parallax-el absolute left-0 w-40"
             data-depth="0.5"
           >
             <ArrowConnector className="arrow-connector h-full w-full text-foreground" />
@@ -639,7 +655,7 @@ export function Hero() {
             ref={row2Ref}
             className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3 sm:gap-x-6"
           >
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div ref={shapesBGroupRef} className="flex flex-wrap items-center gap-5 sm:gap-8">
               <div className="parallax-el" data-depth="0.7">
                 <div className={`leaves-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <LeavesMotif className="w-full" />
@@ -659,17 +675,18 @@ export function Hero() {
             <span className={cn("line-game", headline)}>Game,</span>
           </div>
 
-          <div ref={row3Ref} className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-4 sm:mt-4">
+          <div
+            ref={row3Ref}
+            className="mt-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-4 sm:mt-4"
+          >
             <span
-              className={cn(
-                "line-mobile ml-[clamp(4.5rem,10vw,7rem)] [perspective:600px]",
-                headline,
-              )}
+              ref={mobileTextRef}
+              className={cn("line-mobile text-right [perspective:600px]", headline)}
             >
               &amp; Mobile Laboratory
             </span>
             <div className="parallax-el" data-depth="0.4">
-              <LogoMark className="hero-logo w-[clamp(2.5rem,5.5vw,4rem)]" />
+              <LogoMark className={`hero-logo ${shapeBoxClass}`} />
             </div>
           </div>
         </div>

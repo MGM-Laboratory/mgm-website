@@ -20,24 +20,28 @@ export function Square({ className }: { className?: string }) {
 }
 
 /**
- * A pill "track" (grey when off, red when on) with a ring "knob" whose
- * hole is filled to match the page background — sliding left <-> right.
- * Track geometry: x=55 y=5 w=140 h=80 rx=40, so the rounded end-caps
- * are centered at x=95 (left/off) and x=155 (right/on).
+ * A pill "track" (grey when off, red when on) with a ring "knob"
+ * sized to fill the track's full height — sliding left <-> right. Track
+ * geometry: x=4 y=4 w=212 h=82 rx=41, with only a slim, symmetric margin
+ * on every side (matching the other shapes) so it sits flush against its
+ * neighbors instead of reading as inset. The rounded end-caps are
+ * centered at x=45 (left/off) and x=175 (right/on); the ring's radius
+ * plus half its stroke exactly equals 41, the cap radius, so the knob
+ * fills the cap edge-to-edge instead of floating inside it.
  */
 export function ToggleChip({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 200 90"
+      viewBox="0 0 220 90"
       className={cn("toggle-switch overflow-visible", className)}
       aria-hidden
     >
-      <rect data-part="track" x="55" y="5" width="140" height="80" rx="40" fill="#9aa3ad" />
+      <rect data-part="track" x="4" y="4" width="212" height="82" rx="41" fill="#9aa3ad" />
       <circle
         data-part="knob"
-        cx="95"
+        cx="45"
         cy="45"
-        r="33"
+        r="32"
         fill="var(--surface-muted)"
         stroke="var(--brand-yellow)"
         strokeWidth="18"
