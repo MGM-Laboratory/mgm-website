@@ -8,84 +8,89 @@ import { ArrowRight } from "lucide-react";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 
-// Every shape's whole trajectory is hand-tuned and fixed, not randomized —
-// matched frame-by-frame against a recording of gsap.com's own "Get GSAP"
-// button: shapes pop in at the gap in a narrow column (not a wide burst),
-// rise fast then decelerate like they're fighting gravity, and fade out on
-// their own near the top of that rise — the whole thing plays out once and
-// finishes regardless of whether the pointer is still hovering. `at`
-// staggers them into the same rhythm as that reference: some launch solo,
-// two launch together as a pair, one closes it out alone.
+// Every shape's whole trajectory is hand-tuned and fixed, not randomized.
+// Each one pops in at the gap, rises while decelerating (thrown against
+// gravity), then falls back down accelerating — landing back on the gap,
+// where the button's own solid background (a higher z-index) hides it.
+// There's no opacity fade for the disappearance; it's covered up, not
+// dissolved. `at` staggers them: some launch solo, two launch together as
+// a pair, one closes it out alone.
 const FLAIRS: {
   kind: PatternKind;
   tone: PatternTone;
   size: number;
   x: number;
-  y: number;
-  rotate: number;
+  peakY: number;
+  riseRotate: number;
+  fallRotate: number;
   scale: number;
-  duration: number;
-  fadeDuration: number;
+  riseDuration: number;
+  fallDuration: number;
   at: number;
 }[] = [
   {
     kind: "fans",
     tone: "red",
     size: 26,
-    x: -25,
-    y: -190,
-    rotate: -160,
+    x: -60,
+    peakY: -85,
+    riseRotate: -110,
+    fallRotate: -200,
     scale: 1.05,
-    duration: 0.9,
-    fadeDuration: 0.35,
+    riseDuration: 0.42,
+    fallDuration: 0.38,
     at: 0,
   },
   {
     kind: "circle",
     tone: "blue",
     size: 28,
-    x: 12,
-    y: -230,
-    rotate: 120,
+    x: -20,
+    peakY: -105,
+    riseRotate: 90,
+    fallRotate: 170,
     scale: 0.8,
-    duration: 0.85,
-    fadeDuration: 0.3,
+    riseDuration: 0.46,
+    fallDuration: 0.4,
     at: 0.16,
   },
   {
     kind: "leaves",
     tone: "green",
     size: 32,
-    x: -18,
-    y: -212,
-    rotate: -80,
+    x: 25,
+    peakY: -95,
+    riseRotate: -70,
+    fallRotate: -140,
     scale: 1,
-    duration: 0.95,
-    fadeDuration: 0.35,
+    riseDuration: 0.44,
+    fallDuration: 0.4,
     at: 0.16,
   },
   {
     kind: "x",
     tone: "yellow",
     size: 22,
-    x: 32,
-    y: -172,
-    rotate: 200,
+    x: 60,
+    peakY: -75,
+    riseRotate: 150,
+    fallRotate: 260,
     scale: 0.85,
-    duration: 0.8,
-    fadeDuration: 0.3,
+    riseDuration: 0.4,
+    fallDuration: 0.36,
     at: 0.32,
   },
   {
     kind: "clover",
     tone: "red",
     size: 26,
-    x: -6,
-    y: -248,
-    rotate: 50,
+    x: 5,
+    peakY: -115,
+    riseRotate: 60,
+    fallRotate: 130,
     scale: 1.15,
-    duration: 1,
-    fadeDuration: 0.4,
+    riseDuration: 0.48,
+    fallDuration: 0.42,
     at: 0.48,
   },
 ];
@@ -97,12 +102,17 @@ function reducedMotion() {
 export function SeeWorkButton() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const flairRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const flairTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
+  const masterTimeline = useRef<gsap.core.Timeline | null>(null);
+  const isAnimating = useRef(false);
   const wordARef = useRef<HTMLSpanElement>(null);
   const wordBRef = useRef<HTMLSpanElement>(null);
 
   function handleEnter() {
     if (reducedMotion()) return;
+    // Ignore hovers while a cycle is already running — it plays out fully
+    // regardless of the pointer leaving and re-entering in the meantime.
+    if (isAnimating.current) return;
+
     const wrap = wrapRef.current;
     const a = wordARef.current;
     const b = wordBRef.current;
@@ -120,45 +130,61 @@ export function SeeWorkButton() {
       { left: originX, top: originY },
     );
 
-    // A quick pulse, not a hover-held state — it spreads and snaps back on
-    // its own, the same way the reference's "Get"/"GSAP" words do.
-    gsap.to(a, { x: -20, duration: 0.35, ease: "power3.out", overwrite: true });
-    gsap.to(b, { x: 20, duration: 0.35, ease: "power3.out", overwrite: true });
-    gsap.to(a, { x: 0, duration: 0.4, ease: "power2.inOut", delay: 0.35, overwrite: true });
-    gsap.to(b, { x: 0, duration: 0.4, ease: "power2.inOut", delay: 0.35, overwrite: true });
+    isAnimating.current = true;
+    const master = gsap.timeline({
+      onComplete: () => {
+        isAnimating.current = false;
+      },
+    });
+
+    // The words pull apart to open the gap, then close back over it — a
+    // single timeline so the "close" tween can't overwrite the "open" one
+    // before it ever plays.
+    master
+      .to(a, { x: -20, duration: 0.35, ease: "power3.out" }, 0)
+      .to(b, { x: 20, duration: 0.35, ease: "power3.out" }, 0)
+      .to(a, { x: 0, duration: 0.4, ease: "power2.inOut" }, 0.35)
+      .to(b, { x: 0, duration: 0.4, ease: "power2.inOut" }, 0.35);
 
     FLAIRS.forEach((f, i) => {
       const el = flairRefs.current[i];
       if (!el) return;
-
-      // A one-shot sequence per shape: pop in at the gap, rise while
-      // decelerating (gravity), fade out before the rise finishes. Killed
-      // and rebuilt fresh on every hover so re-entering mid-flight resets
-      // cleanly instead of fighting the previous run.
-      flairTimelines.current[i]?.kill();
-      const tl = gsap.timeline({ delay: f.at });
-      tl.set(el, { opacity: 0, scale: 0, x: 0, y: 0, rotate: 0 })
-        .to(el, { opacity: 1, scale: f.scale, duration: 0.16, ease: "back.out(2)" }, 0)
-        .to(el, { x: f.x, y: f.y, rotate: f.rotate, duration: f.duration, ease: "power2.out" }, 0)
+      const popAt = f.at;
+      const fallAt = f.at + f.riseDuration;
+      master
+        .set(el, { opacity: 0, scale: 0, x: 0, y: 0, rotate: 0 }, popAt)
+        .to(el, { opacity: 1, scale: f.scale, duration: 0.16, ease: "back.out(2)" }, popAt)
         .to(
           el,
-          { opacity: 0, duration: f.fadeDuration, ease: "power1.in" },
-          Math.max(f.duration - f.fadeDuration, 0),
+          {
+            x: f.x,
+            y: f.peakY,
+            rotate: f.riseRotate,
+            duration: f.riseDuration,
+            ease: "power2.out",
+          },
+          popAt,
+        )
+        .to(
+          el,
+          {
+            // Converges back to the origin's exact x, not wherever the
+            // rise drifted to — guarantees it lands back under the
+            // button's own solid fill regardless of how wide the rise
+            // spread it, instead of risking a sliver poking out past
+            // the button's rounded edge.
+            x: 0,
+            y: 4,
+            rotate: f.fallRotate,
+            scale: f.scale * 0.6,
+            duration: f.fallDuration,
+            ease: "power2.in",
+          },
+          fallAt,
         );
-      flairTimelines.current[i] = tl;
     });
-  }
 
-  function handleLeave() {
-    // The flair shapes are a fire-and-forget sequence (see handleEnter) —
-    // they finish and fade on their own, so only the word pulse needs a
-    // safety reset here in case the pointer leaves mid-pulse.
-    gsap.to([wordARef.current, wordBRef.current], {
-      x: 0,
-      duration: 0.3,
-      ease: "power2.out",
-      overwrite: true,
-    });
+    masterTimeline.current = master;
   }
 
   function handleClick() {
@@ -175,8 +201,9 @@ export function SeeWorkButton() {
       className="hero-cta reveal-hidden relative mt-10 inline-flex opacity-0 sm:mt-14"
     >
       {/* Hidden at rest — repositioned onto the gap between the two words
-          right as it opens, then each shape rises and fades along its own
-          fixed path from there. */}
+          right as it opens, then each shape rises and falls back along its
+          own fixed path, disappearing behind the button (z-index) rather
+          than fading out. */}
       <div className="pointer-events-none absolute inset-0">
         {FLAIRS.map((f, i) => (
           <div
@@ -203,7 +230,6 @@ export function SeeWorkButton() {
         type="button"
         onClick={handleClick}
         onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
         className="relative z-10 inline-flex rounded-full transition-transform duration-300 hover:scale-[1.03]"
       >
         {/* Same smooth flow rendered twice, one half-cycle out of phase
