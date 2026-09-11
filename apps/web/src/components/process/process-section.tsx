@@ -83,7 +83,7 @@ function TileOutline({
   className: string;
 }) {
   return (
-    <div className={className} style={{ border: `2px solid ${toneColor(accent)}` }}>
+    <div className={className} style={{ border: `8px solid ${toneColor(accent)}` }}>
       {children}
     </div>
   );

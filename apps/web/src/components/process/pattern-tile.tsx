@@ -34,11 +34,29 @@ export function toneColor(tone: PatternTone): string {
 function PatternShape({ kind, fg }: { kind: PatternKind; fg: string }) {
   switch (kind) {
     case "fans":
+      // Four circles (radius 50), one centered on each corner of the tile,
+      // clipped to the tile's edges. The uncovered middle reads as a
+      // four-pointed star in the base/background color — the fg color
+      // wraps around it from every corner, not the other way around.
       return (
-        <path
-          d="M50 0A50 50 0 0 0 100 50A50 50 0 0 0 50 100A50 50 0 0 0 0 50A50 50 0 0 0 50 0Z"
-          fill={fg}
-        />
+        <>
+          <path
+            d="M150 0C150 27.6142 127.614 50 100 50C72.3858 50 50 27.6142 50 0C50 -27.6142 72.3858 -50 100 -50C127.614 -50 150 -27.6142 150 0Z"
+            fill={fg}
+          />
+          <path
+            d="M150 100C150 127.614 127.614 150 100 150C72.3858 150 50 127.614 50 100C50 72.3858 72.3858 50 100 50C127.614 50 150 72.3858 150 100Z"
+            fill={fg}
+          />
+          <path
+            d="M50 0C50 27.6142 27.6142 50 0 50C-27.6142 50 -50 27.6142 -50 0C-50 -27.6142 -27.6142 -50 0 -50C27.6142 -50 50 -27.6142 50 0Z"
+            fill={fg}
+          />
+          <path
+            d="M50 100C50 127.614 27.6142 150 0 150C-27.6142 150 -50 127.614 -50 100C-50 72.3858 -27.6142 50 0 50C27.6142 50 50 72.3858 50 100Z"
+            fill={fg}
+          />
+        </>
       );
     case "square":
       return <rect x="10" y="10" width="80" height="80" fill="none" stroke={fg} strokeWidth="20" />;
