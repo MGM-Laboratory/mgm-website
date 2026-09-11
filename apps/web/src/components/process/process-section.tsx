@@ -30,8 +30,8 @@ const ROWS: Step[][] = [
     { word: "Code.", kind: "fans", bg: "canvas", fg: "blue" },
   ],
   [
-    { word: "Iterate.", kind: "domes", bg: "canvas", fg: "red" },
-    { word: "Grow.", kind: "quads", bg: "canvas", fg: "green" },
+    { word: "Iterate.", kind: "square", bg: "canvas", fg: "blue" },
+    { word: "Grow.", kind: "leaves", bg: "red", fg: "canvas" },
   ],
 ];
 
@@ -83,7 +83,7 @@ function TileOutline({
   className: string;
 }) {
   return (
-    <div className={className} style={{ border: `8px solid ${toneColor(accent)}` }}>
+    <div className={className} style={{ border: `4px solid ${toneColor(accent)}` }}>
       {children}
     </div>
   );
