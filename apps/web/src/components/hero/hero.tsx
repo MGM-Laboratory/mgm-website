@@ -567,15 +567,23 @@ export function Hero() {
     const root = rootRef.current;
     if (!root) return;
 
+    // A reload (or a link) can land the browser scrolled past the hero —
+    // browsers restore scroll position on reload before this effect runs,
+    // so this read is reliable. Don't lock scrolling for an entrance the
+    // user isn't even looking at.
+    const startedScrolled = window.scrollY > 40;
+
     // Locked the instant the hero mounts — the fail-safe timer guarantees
     // the page can't stay frozen if the animation setup below ever throws
     // or fonts.ready never resolves.
-    lockScroll();
-    let failSafeTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
-      unlockScroll();
-      gsap.set(".scroll-indicator", { opacity: 1, y: 0 });
-      ScrollTrigger.refresh();
-    }, SCROLL_LOCK_FAILSAFE_MS);
+    if (!startedScrolled) lockScroll();
+    let failSafeTimer: ReturnType<typeof setTimeout> | undefined = startedScrolled
+      ? undefined
+      : setTimeout(() => {
+          unlockScroll();
+          gsap.set(".scroll-indicator", { opacity: 1, y: 0 });
+          ScrollTrigger.refresh();
+        }, SCROLL_LOCK_FAILSAFE_MS);
 
     function unlockAndReveal(animated: boolean) {
       if (failSafeTimer) {
@@ -621,7 +629,7 @@ export function Hero() {
             const { reduced } = context.conditions as { reduced: boolean };
             const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
 
-            if (reduced) {
+            if (reduced || startedScrolled) {
               gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
               gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
                 opacity: 1,
