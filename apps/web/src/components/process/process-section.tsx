@@ -59,8 +59,8 @@ const MOSAIC: Step[] = [
 ];
 
 const wordType =
-  "font-display font-semibold tracking-tight text-foreground text-[clamp(1.75rem,3vw_+_1rem,2.5rem)]";
-const tileClass = "process-tile size-10 shrink-0 rounded-lg sm:size-12";
+  "font-display font-semibold tracking-tight text-foreground text-[clamp(2.25rem,4vw_+_0.5rem,3.75rem)]";
+const tileClass = "process-tile aspect-square w-[clamp(2.75rem,5.5vw,4.75rem)] shrink-0 rounded-xl";
 
 export function ProcessSection() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -134,16 +134,16 @@ export function ProcessSection() {
         <style>{".reveal-hidden{opacity:1 !important}"}</style>
       </noscript>
 
-      <div className="mx-auto flex max-w-4xl flex-col gap-5 sm:gap-7">
+      <div className="flex max-w-5xl flex-col gap-6 sm:gap-8">
         {ROWS.map((row, ri) => (
           <div
             key={ri}
-            className="process-row flex flex-wrap items-center gap-x-10 gap-y-5 sm:gap-x-14"
+            className="process-row flex flex-wrap items-center gap-x-12 gap-y-6 sm:gap-x-16"
           >
             {row.map((step) => (
               <div
                 key={step.word}
-                className="process-item reveal-hidden flex items-center gap-3 opacity-0 sm:gap-4"
+                className="process-item reveal-hidden flex items-center gap-4 opacity-0 sm:gap-5"
               >
                 <span className={wordType}>{step.word}</span>
                 <PatternTile kind={step.kind} bg={step.bg} fg={step.fg} className={tileClass} />
@@ -153,14 +153,14 @@ export function ProcessSection() {
         ))}
       </div>
 
-      <div className="mosaic-strip mx-auto mt-16 flex max-w-5xl flex-wrap justify-center gap-1.5 sm:mt-24">
+      <div className="mosaic-strip mt-16 flex max-w-5xl flex-wrap gap-2 sm:mt-24">
         {MOSAIC.map((tile, i) => (
           <PatternTile
             key={i}
             kind={tile.kind}
             bg={tile.bg}
             fg={tile.fg}
-            className="mosaic-tile reveal-hidden size-9 shrink-0 opacity-0 sm:size-12"
+            className="mosaic-tile reveal-hidden size-11 shrink-0 opacity-0 sm:size-14"
           />
         ))}
       </div>
