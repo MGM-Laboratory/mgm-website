@@ -14,11 +14,12 @@ import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 // one tween with yoyo/repeat so the fall mirrors the rise exactly:
 // decelerating up to the peak, accelerating back down — and drops behind
 // the button (z-index flipped below it right at the peak) to disappear
-// into the gap it came from. `xDrift` gives a couple of them an angled
-// throw to the right: constant horizontal velocity for the whole flight
-// (no easing on it, the way real projectile motion doesn't), so they land
-// off to one side instead of straight down. `at` staggers the launches:
-// some solo, two together as a pair, one closing it out alone.
+// into the gap it came from. `xDrift` throws every shape a little to the
+// right — constant horizontal velocity for the whole flight (no easing on
+// it, the way real projectile motion doesn't) — with the drift amount
+// varied per shape so they land spread across the right side instead of
+// stacking on top of each other. `at` staggers the launches: some solo,
+// two together as a pair, one closing it out alone.
 //
 // Kinds are picked deliberately from the ones built from a small number of
 // smooth, simple curves (a ring, a cross, a star, corner arcs, a square) —
@@ -47,8 +48,8 @@ const FLAIRS: {
     kind: "fans",
     tone: "red",
     size: 18,
-    x: -30,
-    xDrift: 0,
+    x: -25,
+    xDrift: 40,
     peakY: -80,
     rotate: 220,
     scale: 1.05,
@@ -59,8 +60,8 @@ const FLAIRS: {
     kind: "circle",
     tone: "blue",
     size: 18,
-    x: -12,
-    xDrift: 32,
+    x: -10,
+    xDrift: 35,
     peakY: -100,
     rotate: -200,
     scale: 0.85,
@@ -71,8 +72,8 @@ const FLAIRS: {
     kind: "arcs",
     tone: "green",
     size: 20,
-    x: 8,
-    xDrift: 32,
+    x: 5,
+    xDrift: 35,
     peakY: -90,
     rotate: 180,
     scale: 1,
@@ -83,8 +84,8 @@ const FLAIRS: {
     kind: "x",
     tone: "yellow",
     size: 15,
-    x: 15,
-    xDrift: 28,
+    x: 12,
+    xDrift: 30,
     peakY: -72,
     rotate: -220,
     scale: 0.85,
@@ -95,8 +96,8 @@ const FLAIRS: {
     kind: "square",
     tone: "red",
     size: 17,
-    x: -15,
-    xDrift: 0,
+    x: -10,
+    xDrift: 40,
     peakY: -112,
     rotate: 160,
     scale: 1.1,
