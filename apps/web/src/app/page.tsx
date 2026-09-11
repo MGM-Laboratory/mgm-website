@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Hero } from "@/components/hero/hero";
+import { ProcessSection } from "@/components/process/process-section";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV_LINKS = [
@@ -51,6 +52,7 @@ export default function Home() {
 
       <main className="flex flex-1 flex-col">
         <Hero />
+        <ProcessSection />
       </main>
     </div>
   );

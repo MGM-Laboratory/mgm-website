@@ -21,6 +21,11 @@
   --ink-3: #6b7280;
   --line: #ececea;
   --surface-muted: #f7f7f5;
+
+  /* The "white" half of every pattern tile (patterns/*.svg) — swaps with
+     the section surface it sits on so tiles never render as a literal
+     white square against a dark background. */
+  --pattern-canvas: var(--surface-muted);
 }
 
 .dark {
