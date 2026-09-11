@@ -186,7 +186,7 @@ export function ArrowConnector({ className }: { className?: string }) {
     >
       <path
         data-part="arrow-path"
-        d="M280 6H20V94"
+        d="M280 8H44A16 16 0 0 0 28 24V76A16 16 0 0 0 44 92H80"
         stroke="currentColor"
         strokeWidth="6"
         strokeLinecap="round"
@@ -194,13 +194,13 @@ export function ArrowConnector({ className }: { className?: string }) {
       />
       <path
         data-part="arrow-head"
-        d="M7 81L20 94L7 107"
+        d="M67 79L80 92L67 105"
         stroke="currentColor"
         strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle data-part="arrow-spark" cx="280" cy="6" r="4" fill="var(--brand-red)" opacity="0" />
+      <circle data-part="arrow-spark" cx="280" cy="8" r="4" fill="var(--brand-red)" opacity="0" />
     </svg>
   );
 }

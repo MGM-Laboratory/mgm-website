@@ -33,8 +33,13 @@ if (typeof window !== "undefined") {
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const headlineType =
-  "font-display font-extrabold leading-[0.95] tracking-tight text-foreground text-[clamp(2.5rem,6.2vw,4.75rem)]";
+  "font-display font-extrabold leading-[0.95] tracking-tight text-foreground text-[clamp(2.75rem,6.5vw,5rem)]";
 const headline = cn("reveal-hidden opacity-0", headlineType);
+
+// Shapes read a little larger and taller than the headline type, like the
+// reference composition — a modest bump over their previous size, not huge.
+const shapeBoxClass = "w-[clamp(3.25rem,6.5vw,5.25rem)]";
+const shapeHeightClass = "h-[clamp(3.25rem,6.5vw,5.25rem)]";
 
 const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
 
@@ -210,14 +215,17 @@ function buildEntranceTimeline(
       {
         opacity: 0,
         y: (i: number) => (i % 2 === 0 ? -70 : 70),
-        // The "i" pops in rotated a clean 180deg so its dot/stem read as "!".
-        rotate: (i: number) => (i === MEDIA_I_INDEX ? 180 : gsap.utils.random(-28, 28)),
+        rotate: (i: number) => (i === MEDIA_I_INDEX ? 0 : gsap.utils.random(-28, 28)),
+        // The "i" tumbles toward the camera a clean 180deg (top edge
+        // swinging under) so its dot/stem land reading as "!".
+        rotateX: (i: number) => (i === MEDIA_I_INDEX ? 180 : 0),
         scale: 0.4,
       },
       {
         opacity: 1,
         y: 0,
-        rotate: (i: number) => (i === MEDIA_I_INDEX ? 180 : 0),
+        rotate: 0,
+        rotateX: (i: number) => (i === MEDIA_I_INDEX ? 180 : 0),
         scale: 1,
         duration: 0.7,
         ease: "back.out(2.4)",
@@ -225,13 +233,14 @@ function buildEntranceTimeline(
       },
       "media",
     )
-    // ...once the whole word has landed, the "!" spins back into an "i".
+    // ...once the whole word has landed, the "!" tumbles back into an "i",
+    // rotating in place toward the camera again with a springy overshoot.
     .to(
       iChar,
-      { rotate: 360, transformOrigin: "50% 50%", duration: 0.8, ease: "elastic.out(1, 0.4)" },
+      { rotateX: 360, transformOrigin: "50% 50%", duration: 0.8, ease: "elastic.out(1, 0.4)" },
       "+=0.3",
     )
-    .set(iChar, { rotate: 0 })
+    .set(iChar, { rotateX: 0 })
     // Row 1 shapes — each with its own entrance personality
     .fromTo(
       ".shape-square",
@@ -579,35 +588,37 @@ export function Hero() {
       <div className="mx-auto flex w-fit max-w-full flex-col gap-3 sm:gap-4" aria-hidden="true">
         {/* Row 1 — Media, */}
         <div ref={row1Ref} className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
-          <span className={cn("line-media", headline)}>Media,</span>
-          <div className="flex items-center gap-3 sm:gap-4">
+          <span className={cn("line-media [perspective:500px]", headline)}>Media,</span>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="parallax-el" data-depth="0.7">
-              <div className="shape-square reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+              <div className={`shape-square reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Square className="w-full" />
               </div>
             </div>
             <div className="parallax-el" data-depth="0.85">
-              <div className="shape-toggle reveal-hidden opacity-0 aspect-[200/90] h-[clamp(2.75rem,5.5vw,4.25rem)] w-auto">
+              <div
+                className={`shape-toggle reveal-hidden opacity-0 aspect-[200/90] w-auto ${shapeHeightClass}`}
+              >
                 <ToggleChip className="h-full w-full" />
               </div>
             </div>
             <div className="parallax-el" data-depth="0.6">
-              <div className="shape-triangle reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+              <div className={`shape-triangle reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <TriangleShape className="w-full" />
               </div>
             </div>
             <div className="parallax-el" data-depth="0.9">
-              <div className="shape-circle-yellow reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+              <div className={`shape-circle-yellow reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Circle className="w-full" color="var(--brand-yellow)" />
               </div>
             </div>
             <div className="parallax-el" data-depth="1">
-              <div className="shape-x reveal-hidden opacity-0 w-[clamp(2rem,4vw,3rem)] text-foreground">
+              <div className="shape-x reveal-hidden opacity-0 w-[clamp(2.25rem,4.5vw,3.5rem)] text-foreground">
                 <XMark className="w-full" />
               </div>
             </div>
             <div className="parallax-el" data-depth="0.75">
-              <div className="shape-circle-red reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+              <div className={`shape-circle-red reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Circle className="w-full" color="var(--brand-red)" />
               </div>
             </div>
@@ -628,19 +639,19 @@ export function Hero() {
             ref={row2Ref}
             className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3 sm:gap-x-6"
           >
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <div className="parallax-el" data-depth="0.7">
-                <div className="leaves-motif-wrap reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+                <div className={`leaves-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <LeavesMotif className="w-full" />
                 </div>
               </div>
               <div className="parallax-el" data-depth="0.9">
-                <div className="fans-motif-wrap reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+                <div className={`fans-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <FansMotif className="w-full" />
                 </div>
               </div>
               <div className="parallax-el" data-depth="0.6">
-                <div className="domes-motif-wrap reveal-hidden opacity-0 w-[clamp(2.75rem,5.5vw,4.25rem)]">
+                <div className={`domes-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <DomesMotif className="w-full" />
                 </div>
               </div>
@@ -649,7 +660,12 @@ export function Hero() {
           </div>
 
           <div ref={row3Ref} className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-4 sm:mt-4">
-            <span className={cn("line-mobile [perspective:600px]", headline)}>
+            <span
+              className={cn(
+                "line-mobile ml-[clamp(4.5rem,10vw,7rem)] [perspective:600px]",
+                headline,
+              )}
+            >
               &amp; Mobile Laboratory
             </span>
             <div className="parallax-el" data-depth="0.4">
