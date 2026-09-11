@@ -332,8 +332,9 @@ function buildEntranceTimeline(
       { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2.8)" },
       "-=0.15",
     )
-    // GAME — reveals mirrored ("emaG", right-to-left) then turns to face forward
-    .addLabel("game", "+=0.2")
+    // GAME — reveals mirrored ("emaG", right-to-left) then turns to face forward.
+    // No pause after row 1's last shape — starts the instant it lands.
+    .addLabel("game")
     .set(".line-game", { opacity: 1, scaleX: -1 }, "game")
     .fromTo(
       gameSplit.chars,
@@ -354,13 +355,16 @@ function buildEntranceTimeline(
       },
       "game",
     )
-    // ...flips the instant the last letter lands — no extra wait.
-    .to(".line-game", { scaleX: 1, duration: 0.4, ease: "power2.inOut" })
+    // The instant every letter has landed (still mirrored) — the flip and
+    // row 2's shapes both fire from here in parallel, instead of making the
+    // shapes wait for the flip/bounce polish to play out first.
+    .addLabel("gameTyped")
+    .to(".line-game", { scaleX: 1, duration: 0.4, ease: "power2.inOut" }, "gameTyped")
     .to(".line-game", { scale: 1.06, duration: 0.14, ease: "power1.out" }, "-=0.04")
     .to(".line-game", { scale: 1, duration: 0.2, ease: "back.out(3)" })
-    // Row 2 shapes — right-to-left, closest to GAME first, landing right as
-    // GAME's bump settles so it reads as the bump kicking them off.
-    .addLabel("shapesB")
+    // Row 2 shapes — right-to-left, closest to GAME first, launching the
+    // moment GAME is done typing rather than waiting on its flip.
+    .addLabel("shapesB", "gameTyped")
     .fromTo(
       ".domes-motif-wrap",
       { opacity: 0, scale: 0, rotate: -140 },
