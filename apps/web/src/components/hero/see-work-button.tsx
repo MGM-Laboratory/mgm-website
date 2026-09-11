@@ -14,11 +14,23 @@ import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 // one tween with yoyo/repeat so the fall mirrors the rise exactly:
 // decelerating up to the peak, accelerating back down — and drops behind
 // the button (z-index flipped below it right at the peak) to disappear
-// into the gap it came from. `xDrift` gives a few of them an angled throw:
-// constant horizontal velocity for the whole flight (no easing on it, the
-// way real projectile motion doesn't), so they land off to one side
-// instead of straight down. `at` staggers the launches: some solo, two
-// together as a pair, one closing it out alone.
+// into the gap it came from. `xDrift` gives a couple of them an angled
+// throw to the right: constant horizontal velocity for the whole flight
+// (no easing on it, the way real projectile motion doesn't), so they land
+// off to one side instead of straight down. `at` staggers the launches:
+// some solo, two together as a pair, one closing it out alone.
+//
+// Kinds are picked deliberately from the ones built from a small number of
+// smooth, simple curves (a ring, a cross, a star, corner arcs, a square) —
+// the four-petal kinds (leaves/clover/quads) read fine sitting still in a
+// tile, but a big one spinning through arbitrary in-between angles looks
+// like a broken blob instead of a clean icon, since their petals meet at a
+// single cusp point rather than flowing continuously.
+//
+// Sizes are kept small on purpose — a shape only reads as "tucked away
+// behind the button" if it's fully covered by the button's own opaque
+// pill once it lands there, so oversized shapes would still peek out at
+// the moment the z-index flips behind it.
 const FLAIRS: {
   kind: PatternKind;
   tone: PatternTone;
@@ -34,11 +46,11 @@ const FLAIRS: {
   {
     kind: "fans",
     tone: "red",
-    size: 26,
-    x: -32,
+    size: 18,
+    x: -30,
     xDrift: 0,
     peakY: -80,
-    rotate: 260,
+    rotate: 220,
     scale: 1.05,
     riseDuration: 0.42,
     at: 0,
@@ -46,23 +58,23 @@ const FLAIRS: {
   {
     kind: "circle",
     tone: "blue",
-    size: 28,
-    x: -25,
-    xDrift: 55,
+    size: 18,
+    x: -12,
+    xDrift: 32,
     peakY: -100,
-    rotate: -220,
-    scale: 0.8,
+    rotate: -200,
+    scale: 0.85,
     riseDuration: 0.46,
     at: 0.16,
   },
   {
-    kind: "leaves",
+    kind: "arcs",
     tone: "green",
-    size: 32,
-    x: 14,
-    xDrift: 0,
+    size: 20,
+    x: 8,
+    xDrift: 32,
     peakY: -90,
-    rotate: 200,
+    rotate: 180,
     scale: 1,
     riseDuration: 0.44,
     at: 0.16,
@@ -70,24 +82,24 @@ const FLAIRS: {
   {
     kind: "x",
     tone: "yellow",
-    size: 22,
-    x: 40,
-    xDrift: -50,
-    peakY: -70,
-    rotate: -260,
+    size: 15,
+    x: 15,
+    xDrift: 28,
+    peakY: -72,
+    rotate: -220,
     scale: 0.85,
     riseDuration: 0.4,
     at: 0.32,
   },
   {
-    kind: "clover",
+    kind: "square",
     tone: "red",
-    size: 26,
-    x: 0,
+    size: 17,
+    x: -15,
     xDrift: 0,
-    peakY: -110,
-    rotate: 180,
-    scale: 1.15,
+    peakY: -112,
+    rotate: 160,
+    scale: 1.1,
     riseDuration: 0.48,
     at: 0.48,
   },
@@ -100,6 +112,14 @@ const FLAIRS: {
 const FLAIR_Z_FRONT = 20;
 const FLAIR_Z_BEHIND = 5;
 
+// The button's own side padding never changes — instead of sliding the
+// words apart with a transform (which would just push them closer to a
+// fixed-width button's edges), the flex gap between them grows, and
+// because the button is sized to its content, the pill itself widens to
+// match, keeping the padding constant on both sides.
+const REST_GAP = 8;
+const PEAK_GAP = 34;
+
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
 }
@@ -109,6 +129,7 @@ export function SeeWorkButton() {
   const flairRefs = useRef<(HTMLDivElement | null)[]>([]);
   const masterTimeline = useRef<gsap.core.Timeline | null>(null);
   const isAnimating = useRef(false);
+  const contentRef = useRef<HTMLSpanElement>(null);
   const wordARef = useRef<HTMLSpanElement>(null);
   const wordBRef = useRef<HTMLSpanElement>(null);
 
@@ -143,13 +164,14 @@ export function SeeWorkButton() {
     });
 
     // The gap stays open for the whole show — it only closes once the
-    // very last shape has landed back behind the button.
+    // very last shape has landed back behind the button. Widening the
+    // flex gap (rather than sliding the words with a transform) lets the
+    // inline-flex button grow to fit it, so the padding on either side
+    // never changes.
     const showDuration = Math.max(...FLAIRS.map((f) => f.at + f.riseDuration * 2));
     master
-      .to(a, { x: -20, duration: 0.35, ease: "power3.out" }, 0)
-      .to(b, { x: 20, duration: 0.35, ease: "power3.out" }, 0)
-      .to(a, { x: 0, duration: 0.4, ease: "power2.inOut" }, showDuration)
-      .to(b, { x: 0, duration: 0.4, ease: "power2.inOut" }, showDuration);
+      .to(contentRef.current, { gap: PEAK_GAP, duration: 0.35, ease: "power3.out" }, 0)
+      .to(contentRef.current, { gap: REST_GAP, duration: 0.4, ease: "power2.inOut" }, showDuration);
 
     FLAIRS.forEach((f, i) => {
       const el = flairRefs.current[i];
@@ -236,7 +258,11 @@ export function SeeWorkButton() {
             unsynced without distorting the animation itself. */}
         <span className="cta-ring-spin cta-ring-spin--top" aria-hidden />
         <span className="cta-ring-spin cta-ring-spin--bottom" aria-hidden />
-        <span className="relative m-[3px] inline-flex items-center gap-2 rounded-full bg-[var(--surface-muted)] px-6 py-3 text-sm font-semibold text-foreground sm:px-7 sm:py-3.5 sm:text-base">
+        <span
+          ref={contentRef}
+          className="relative m-[3px] inline-flex items-center rounded-full bg-[var(--surface-muted)] px-6 py-3 text-sm font-semibold text-foreground sm:px-7 sm:py-3.5 sm:text-base"
+          style={{ gap: REST_GAP }}
+        >
           <span ref={wordARef} className="inline-block">
             See
           </span>
