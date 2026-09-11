@@ -4,23 +4,7 @@ import { CoreCompetenciesSection } from "@/components/sections/core-competencies
 import { ShowcaseSection } from "@/components/sections/showcase-section";
 import { ArticlesSection } from "@/components/sections/articles-section";
 import { CtaFooter } from "@/components/sections/cta-footer";
-
-const PROJECTS = [
-  {
-    title: "Rensa",
-    description:
-      "A focused social platform for photographers to share the exact camera settings behind every shot.",
-  },
-  {
-    title: "Fieldnote",
-    description:
-      "A lightweight research journal for capturing observations during usability studies.",
-  },
-  {
-    title: "Loopcast",
-    description: "An interactive media player built for short-form research documentaries.",
-  },
-];
+import { PROJECTS } from "@/data/projects";
 
 const ACHIEVEMENTS = [
   {

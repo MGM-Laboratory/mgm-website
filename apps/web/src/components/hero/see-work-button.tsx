@@ -1,12 +1,11 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import gsap from "gsap";
-import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ArrowRight } from "lucide-react";
 
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
-import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 
 // Every shape's whole trajectory is hand-tuned and fixed, not randomized.
 // Each pops in above the gap in front of the button (a higher z-index than
@@ -209,14 +208,6 @@ export function SeeWorkButton() {
     masterTimeline.current = master;
   }
 
-  function handleClick() {
-    const target = document.getElementById("projects");
-    if (!target) return;
-    const smoother = ScrollSmoother.get();
-    if (smoother) smoother.scrollTo(target, true, `top ${SITE_HEADER_HEIGHT}px`);
-    else target.scrollIntoView({ behavior: "smooth" });
-  }
-
   return (
     <div
       ref={wrapRef}
@@ -248,9 +239,8 @@ export function SeeWorkButton() {
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={handleClick}
+      <Link
+        href="/projects"
         onMouseEnter={handleEnter}
         className="relative z-10 inline-flex rounded-full transition-transform duration-300 hover:scale-[1.03]"
       >
@@ -272,7 +262,7 @@ export function SeeWorkButton() {
             <ArrowRight className="size-4" strokeWidth={2.25} />
           </span>
         </span>
-      </button>
+      </Link>
     </div>
   );
 }
