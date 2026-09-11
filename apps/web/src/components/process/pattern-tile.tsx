@@ -11,14 +11,20 @@ import { cn } from "@/lib/utils";
 export type PatternKind =
   "fans" | "square" | "arcs" | "circle" | "leaves" | "plus" | "clover" | "domes" | "quads" | "x";
 
-export type PatternTone = "red" | "yellow" | "blue" | "green" | "canvas";
+export type PatternTone = "red" | "yellow" | "blue" | "green" | "canvas" | "white";
 
 const TONE_VAR: Record<PatternTone, string> = {
   red: "var(--brand-red)",
   yellow: "var(--brand-yellow)",
   blue: "var(--brand-blue)",
   green: "var(--brand-green)",
+  // Tracks light/dark mode — for tiles sitting on a surface that itself
+  // flips with the theme (the "We./Research./…" section).
   canvas: "var(--pattern-canvas)",
+  // Literal white — for tiles on a surface that stays dark regardless of
+  // site theme (the footer's --surface-inverse), where "white" always means
+  // white for contrast, not "whatever the page background is right now".
+  white: "#ffffff",
 };
 
 function PatternShape({ kind, fg }: { kind: PatternKind; fg: string }) {

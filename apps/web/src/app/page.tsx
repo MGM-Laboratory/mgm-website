@@ -3,7 +3,43 @@ import Link from "next/link";
 
 import { Hero } from "@/components/hero/hero";
 import { ProcessSection } from "@/components/process/process-section";
+import { CoreCompetenciesSection } from "@/components/sections/core-competencies";
+import { ShowcaseSection } from "@/components/sections/showcase-section";
+import { ArticlesSection } from "@/components/sections/articles-section";
+import { CtaFooter } from "@/components/sections/cta-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+const PROJECTS = [
+  {
+    title: "Rensa",
+    description:
+      "A focused social platform for photographers to share the exact camera settings behind every shot.",
+  },
+  {
+    title: "Fieldnote",
+    description:
+      "A lightweight research journal for capturing observations during usability studies.",
+  },
+  {
+    title: "Loopcast",
+    description: "An interactive media player built for short-form research documentaries.",
+  },
+];
+
+const ACHIEVEMENTS = [
+  {
+    title: "Best Research Prototype",
+    description: "Recognized at a national interactive-media showcase for early prototype work.",
+  },
+  {
+    title: "Campus Innovation Award",
+    description: "Awarded for a mobile-first research tool built with the local community.",
+  },
+  {
+    title: "Published Case Study",
+    description: "A usability study from the lab was featured in a regional design publication.",
+  },
+];
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -53,7 +89,22 @@ export default function Home() {
       <main className="flex flex-1 flex-col">
         <Hero />
         <ProcessSection />
+        <CoreCompetenciesSection />
+        <ShowcaseSection
+          id="projects"
+          title="Projects"
+          intro="A selection of research-driven products the lab has built end to end."
+          items={PROJECTS}
+        />
+        <ShowcaseSection
+          id="achievements"
+          title="Achievements"
+          intro="Milestones the lab has reached along the way."
+          items={ACHIEVEMENTS}
+        />
+        <ArticlesSection />
       </main>
+      <CtaFooter />
     </div>
   );
 }
