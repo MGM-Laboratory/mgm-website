@@ -215,6 +215,12 @@ function buildEntranceTimeline(
 ) {
   const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
   const iChar = mediaSplit.chars[MEDIA_I_INDEX];
+  const MEDIA_CHAR_DURATION = 0.7;
+  const MEDIA_CHAR_STAGGER = 0.055;
+  // The moment the "i" itself lands (mid-stagger), not when the whole word
+  // finishes — the spin-back kicks off immediately off that, independent of
+  // the rest of the timeline.
+  const iOwnFinish = MEDIA_I_INDEX * MEDIA_CHAR_STAGGER + MEDIA_CHAR_DURATION;
 
   tl.addLabel("media")
     .set(".line-media", { opacity: 1 }, "media")
@@ -235,20 +241,29 @@ function buildEntranceTimeline(
         rotate: 0,
         rotateX: (i: number) => (i === MEDIA_I_INDEX ? 180 : 0),
         scale: 1,
-        duration: 0.7,
+        duration: MEDIA_CHAR_DURATION,
         ease: "back.out(2.4)",
-        stagger: 0.055,
+        stagger: MEDIA_CHAR_STAGGER,
       },
       "media",
     )
-    // ...once the whole word has landed, the "!" tumbles back into an "i",
-    // rotating in place toward the camera again with a springy overshoot.
-    .to(
-      iChar,
-      { rotateX: 360, transformOrigin: "50% 50%", duration: 0.8, ease: "elastic.out(1, 0.4)" },
-      "+=0.3",
+    // The "!" spins back into an "i" the instant its own entrance lands —
+    // spawned as its own free-running tween so nothing else in the timeline
+    // waits on it. A few decelerating spins (not just the one flip), easing
+    // down like a coin settling, instead of a single snap.
+    .call(
+      () => {
+        gsap.to(iChar, {
+          rotateX: 360 * 4,
+          transformOrigin: "50% 50%",
+          duration: 1.6,
+          ease: "power2.out",
+          onComplete: () => gsap.set(iChar, { rotateX: 0 }),
+        });
+      },
+      [],
+      `media+=${iOwnFinish}`,
     )
-    .set(iChar, { rotateX: 0 })
     // Row 1 shapes — each with its own entrance personality
     .fromTo(
       ".shape-square",
@@ -318,11 +333,13 @@ function buildEntranceTimeline(
       },
       "game",
     )
-    .to(".line-game", { scaleX: 1, duration: 0.6, ease: "power2.inOut" }, "+=0.35")
+    // ...flips the instant the last letter lands — no extra wait.
+    .to(".line-game", { scaleX: 1, duration: 0.4, ease: "power2.inOut" })
     .to(".line-game", { scale: 1.06, duration: 0.14, ease: "power1.out" }, "-=0.04")
     .to(".line-game", { scale: 1, duration: 0.2, ease: "back.out(3)" })
-    // Row 2 shapes — right-to-left, closest to GAME first
-    .addLabel("shapesB", "+=0.15")
+    // Row 2 shapes — right-to-left, closest to GAME first, landing right as
+    // GAME's bump settles so it reads as the bump kicking them off.
+    .addLabel("shapesB")
     .fromTo(
       ".domes-motif-wrap",
       { opacity: 0, scale: 0, rotate: -140 },
