@@ -152,7 +152,10 @@ function startIdleLoops(): gsap.core.Animation[] {
     }),
   );
 
-  // Arrow — a spark keeps traveling the path, tracing it over and over.
+  // Arrow — a spark keeps traveling the path, tracing it over and over,
+  // staying fully visible until 75% of the way along and then fading out
+  // gradually over the last stretch so it never just "pops" away.
+  const sparkTravelDuration = 2;
   const sparkTl = gsap.timeline({ repeat: -1, repeatDelay: 1 });
   sparkTl
     .set(".arrow-connector [data-part='arrow-spark']", { opacity: 1 })
@@ -175,11 +178,16 @@ function startIdleLoops(): gsap.core.Animation[] {
           start: 0,
           end: 1,
         },
-        duration: 2,
+        duration: sparkTravelDuration,
         ease: "power1.inOut",
       },
+      0,
     )
-    .to(".arrow-connector [data-part='arrow-spark']", { opacity: 0, duration: 0.3 });
+    .to(
+      ".arrow-connector [data-part='arrow-spark']",
+      { opacity: 0, ease: "power1.in", duration: sparkTravelDuration * 0.25 },
+      sparkTravelDuration * 0.75,
+    );
   loops.push(sparkTl);
 
   gsap.utils.toArray<HTMLElement>(".bg-motif").forEach((el, i) => {
@@ -367,7 +375,12 @@ function buildEntranceTimeline(
       },
       "arrow",
     )
-    .to(".arrow-connector [data-part='arrow-spark']", { opacity: 0, duration: 0.2 })
+    // ...staying fully visible until 75% of the way along, then fading out.
+    .to(
+      ".arrow-connector [data-part='arrow-spark']",
+      { opacity: 0, ease: "power1.in", duration: 0.25 },
+      "arrow+=0.75",
+    )
     .fromTo(
       ".arrow-connector [data-part='arrow-head']",
       { opacity: 0 },
@@ -461,15 +474,43 @@ export function Hero() {
       const mobileTextRect = mobileText!.getBoundingClientRect();
       const top = row2Rect.top + row2Rect.height / 2 - bridgeRect.top;
       const bottom = row3Rect.top + row3Rect.height / 2 - bridgeRect.top;
-      arrowWrap!.style.top = `${top}px`;
-      arrowWrap!.style.height = `${Math.max(bottom - top, 0)}px`;
-      // Extend as far right as possible without touching the leaves shape
-      // (row 2) or the closing line's text (row 3) — whichever is closer.
+      const height = Math.max(bottom - top, 1);
+
+      // The top arm reaches just short of the leaves shape; the bottom arm
+      // reaches just short of the closing line's text — independently of
+      // each other, so neither is held back by whichever is further away.
       const gap = 20;
-      const widthToShapes = shapesBRect.left - bridgeRect.left - gap;
-      const widthToText = mobileTextRect.left - bridgeRect.left - gap;
-      const width = Math.min(widthToShapes, widthToText);
-      arrowWrap!.style.width = `${Math.max(width, 48)}px`;
+      const topEndX = Math.max(shapesBRect.left - bridgeRect.left - gap, 48);
+      const bottomEndX = Math.max(mobileTextRect.left - bridgeRect.left - gap, 48);
+      const width = Math.max(topEndX, bottomEndX, 1);
+
+      arrowWrap!.style.top = `${top}px`;
+      arrowWrap!.style.height = `${height}px`;
+      arrowWrap!.style.width = `${width}px`;
+
+      const svg = arrowWrap!.querySelector("svg.arrow-connector");
+      const path = arrowWrap!.querySelector("[data-part='arrow-path']");
+      const head = arrowWrap!.querySelector("[data-part='arrow-head']");
+      const spark = arrowWrap!.querySelector("[data-part='arrow-spark']");
+      if (!svg || !path || !head || !spark) return;
+
+      // Real pixel coordinates from here on — no scaling trick. The
+      // horizontal arms sit exactly at y=0 (row 2's mid-height) and
+      // y=height (row 3's mid-height); the vertical stays flush with the
+      // shared left margin ("Media,"/"&"'s column), rounded at both ends.
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      const r = 16;
+      path.setAttribute(
+        "d",
+        `M${topEndX} 0H${r}A${r} ${r} 0 0 0 0 ${r}V${height - r}A${r} ${r} 0 0 0 ${r} ${height}H${bottomEndX}`,
+      );
+      const hs = 13;
+      head.setAttribute(
+        "d",
+        `M${bottomEndX - hs} ${height - hs}L${bottomEndX} ${height}L${bottomEndX - hs} ${height + hs}`,
+      );
+      spark.setAttribute("cx", `${topEndX}`);
+      spark.setAttribute("cy", "0");
     }
 
     measure();

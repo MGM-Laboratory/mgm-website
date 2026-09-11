@@ -174,16 +174,17 @@ export function LeavesMotif({ className }: { className?: string }) {
 
 /**
  * A rounded, right-angled connector that bridges the shapes/GAME line
- * down to the closing line. The wrapper is positioned by hero.tsx so
- * y=0 lands exactly on the GAME row's mid-height and y=100 on the
- * closing line's mid-height — this component just draws straight
- * across that normalized 0-100 span, non-uniformly stretched to fit.
+ * down to the closing line. Its geometry is recomputed and written
+ * directly onto `path`/`d` and the viewBox by hero.tsx's measure() —
+ * the top arm's reach (toward the leaves shape) and the bottom arm's
+ * reach (toward the closing line's text) are independent, so this
+ * component just renders a reasonable static placeholder shape; no
+ * scaling trick here, every coordinate hero.tsx writes is a real pixel.
  */
 export function ArrowConnector({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 300 100"
-      preserveAspectRatio="none"
       className={cn("arrow-connector overflow-visible", className)}
       aria-hidden
       fill="none"
