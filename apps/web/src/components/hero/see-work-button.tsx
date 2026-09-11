@@ -8,18 +8,78 @@ import { ArrowRight } from "lucide-react";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 
-const FLAIR_KINDS: PatternKind[] = ["fans", "circle", "leaves", "x", "clover"];
-const FLAIR_TONES: PatternTone[] = ["red", "blue", "green", "yellow", "red"];
-
-// Fixed per-flair kind/tone/size — only their flung position, rotation and
-// scale randomize per hover (below). Keeping the roster itself static
-// avoids picking randomly at render time, which would mismatch between
-// server and client.
-const FLAIRS = Array.from({ length: 5 }, (_, i) => ({
-  kind: FLAIR_KINDS[i % FLAIR_KINDS.length],
-  tone: FLAIR_TONES[i % FLAIR_TONES.length],
-  size: 22 + ((i * 7) % 5) * 6,
-}));
+// Every shape's whole trajectory is hand-tuned and fixed, not randomized —
+// the burst plays out identically every hover, the way gsap.com's own
+// "Get GSAP" button flair does. `at` staggers them into the same rhythm as
+// that reference: some launch solo, two launch together as a pair, one
+// closes it out alone.
+const FLAIRS: {
+  kind: PatternKind;
+  tone: PatternTone;
+  size: number;
+  x: number;
+  y: number;
+  rotate: number;
+  scale: number;
+  duration: number;
+  at: number;
+}[] = [
+  {
+    kind: "fans",
+    tone: "red",
+    size: 26,
+    x: -85,
+    y: -60,
+    rotate: -160,
+    scale: 1.05,
+    duration: 0.7,
+    at: 0,
+  },
+  {
+    kind: "circle",
+    tone: "blue",
+    size: 30,
+    x: -18,
+    y: -108,
+    rotate: 120,
+    scale: 0.8,
+    duration: 0.65,
+    at: 0.14,
+  },
+  {
+    kind: "leaves",
+    tone: "green",
+    size: 34,
+    x: 48,
+    y: -88,
+    rotate: -80,
+    scale: 1,
+    duration: 0.75,
+    at: 0.14,
+  },
+  {
+    kind: "x",
+    tone: "yellow",
+    size: 22,
+    x: 102,
+    y: -38,
+    rotate: 200,
+    scale: 0.85,
+    duration: 0.6,
+    at: 0.27,
+  },
+  {
+    kind: "clover",
+    tone: "red",
+    size: 28,
+    x: 14,
+    y: -132,
+    rotate: 50,
+    scale: 1.15,
+    duration: 0.8,
+    at: 0.4,
+  },
+];
 
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -36,8 +96,7 @@ export function SeeWorkButton() {
     const wrap = wrapRef.current;
     const a = wordARef.current;
     const b = wordBRef.current;
-    const flairs = flairRefs.current.filter((el): el is HTMLDivElement => !!el);
-    if (!wrap || !a || !b || !flairs.length) return;
+    if (!wrap || !a || !b) return;
 
     // Measured before the words move — the widening gap between them is
     // where the shapes launch from, as if it's flinging them out.
@@ -46,28 +105,38 @@ export function SeeWorkButton() {
     const bRect = b.getBoundingClientRect();
     const originX = (aRect.right + bRect.left) / 2 - wrapRect.left;
     const originY = (aRect.top + aRect.bottom) / 2 - wrapRect.top;
-    gsap.set(flairs, { left: originX, top: originY });
+    gsap.set(
+      flairRefs.current.filter((el): el is HTMLDivElement => !!el),
+      { left: originX, top: originY },
+    );
 
-    gsap.to(a, { x: -20, duration: 0.4, ease: "power3.out" });
-    gsap.to(b, { x: 20, duration: 0.4, ease: "power3.out" });
+    gsap.to(a, { x: -20, duration: 0.4, ease: "power3.out", overwrite: true });
+    gsap.to(b, { x: 20, duration: 0.4, ease: "power3.out", overwrite: true });
 
-    flairs.forEach((el) => {
+    FLAIRS.forEach((f, i) => {
+      const el = flairRefs.current[i];
+      if (!el) return;
       gsap.to(el, {
         opacity: 1,
-        scale: gsap.utils.random(0.8, 1.3),
-        x: gsap.utils.random(-120, 120),
-        y: gsap.utils.random(-95, -15),
-        rotate: gsap.utils.random(-200, 200),
-        duration: gsap.utils.random(0.6, 0.95),
+        scale: f.scale,
+        x: f.x,
+        y: f.y,
+        rotate: f.rotate,
+        duration: f.duration,
         ease: "back.out(1.7)",
-        delay: gsap.utils.random(0, 0.22),
+        delay: f.at,
         overwrite: true,
       });
     });
   }
 
   function handleLeave() {
-    gsap.to([wordARef.current, wordBRef.current], { x: 0, duration: 0.3, ease: "power2.out" });
+    gsap.to([wordARef.current, wordBRef.current], {
+      x: 0,
+      duration: 0.3,
+      ease: "power2.out",
+      overwrite: true,
+    });
     flairRefs.current.forEach((el) => {
       if (!el) return;
       gsap.to(el, { opacity: 0, scale: 0, duration: 0.3, ease: "power2.in", overwrite: true });
@@ -88,8 +157,8 @@ export function SeeWorkButton() {
       className="hero-cta reveal-hidden relative mt-10 inline-flex opacity-0 sm:mt-14"
     >
       {/* Hidden at rest — repositioned onto the gap between the two words
-          right as it opens, then bursts outward from there, retracting on
-          leave. */}
+          right as it opens, then bursts outward along each shape's own
+          fixed path from there, retracting together on leave. */}
       <div className="pointer-events-none absolute inset-0">
         {FLAIRS.map((f, i) => (
           <div
