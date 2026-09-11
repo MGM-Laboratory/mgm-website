@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 
-import { isScrollLocked, onLockChange } from "@/lib/scroll-gate";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 
 if (typeof window !== "undefined") {
@@ -34,16 +33,12 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     }
     const smoother =
       ScrollSmoother.get() ?? ScrollSmoother.create({ smooth: 1.1, smoothTouch: 0.1 });
-    smoother.paused(isScrollLocked());
 
     if (process.env.NODE_ENV !== "production") {
       Object.assign(window, { __smoother: smoother });
     }
 
-    const unsubscribe = onLockChange((locked) => smoother.paused(locked));
-
     return () => {
-      unsubscribe();
       // Deferred to the next tick: if this is Strict Mode's remount (which
       // happens synchronously, before any timer fires), the effect above
       // cancels this and reuses `smoother`. Only a genuine unmount lets it

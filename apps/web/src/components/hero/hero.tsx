@@ -10,7 +10,6 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ArrowDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { lockScroll, unlockScroll } from "@/lib/scroll-gate";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
 
@@ -36,8 +35,8 @@ if (typeof window !== "undefined") {
 
 // If the entrance timeline never reaches onComplete for any reason (a
 // thrown error mid-build, fonts.ready never resolving), this guarantees the
-// page doesn't stay permanently scroll-locked.
-const SCROLL_LOCK_FAILSAFE_MS = 12000;
+// scroll indicator still shows up rather than never appearing at all.
+const REVEAL_FAILSAFE_MS = 12000;
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so the reveal
 // timeline is wired up before first paint.
@@ -575,28 +574,23 @@ export function Hero() {
 
     // A reload (or a link) can land the browser scrolled past the hero —
     // browsers restore scroll position on reload before this effect runs,
-    // so this read is reliable. Don't lock scrolling for an entrance the
-    // user isn't even looking at.
+    // so this read is reliable. Don't bother animating an entrance the user
+    // isn't even looking at.
     const startedScrolled = window.scrollY > 40;
 
-    // Locked the instant the hero mounts — the fail-safe timer guarantees
-    // the page can't stay frozen if the animation setup below ever throws
-    // or fonts.ready never resolves.
-    if (!startedScrolled) lockScroll();
-    let failSafeTimer: ReturnType<typeof setTimeout> | undefined = startedScrolled
-      ? undefined
-      : setTimeout(() => {
-          unlockScroll();
-          gsap.set(".scroll-indicator", { opacity: 1, y: 0 });
-          ScrollTrigger.refresh();
-        }, SCROLL_LOCK_FAILSAFE_MS);
+    // The user can scroll away at any point — the entrance timeline below
+    // keeps playing regardless, entirely decoupled from scroll position.
+    // This failsafe only guarantees the scroll indicator still shows up if
+    // the animation setup below ever throws or fonts.ready never resolves.
+    let failSafeTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
+      gsap.set(".scroll-indicator", { opacity: 1, y: 0 });
+    }, REVEAL_FAILSAFE_MS);
 
-    function unlockAndReveal(animated: boolean) {
+    function reveal(animated: boolean) {
       if (failSafeTimer) {
         clearTimeout(failSafeTimer);
         failSafeTimer = undefined;
       }
-      unlockScroll();
       ScrollTrigger.refresh();
       if (animated) {
         gsap.fromTo(
@@ -650,7 +644,7 @@ export function Hero() {
               gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
               gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
               gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
-              unlockAndReveal(false);
+              reveal(false);
               return;
             }
 
@@ -659,7 +653,7 @@ export function Hero() {
 
             tl.eventCallback("onComplete", () => {
               idleLoops = startIdleLoops();
-              unlockAndReveal(true);
+              reveal(true);
             });
 
             const removeParallax = setupParallax(root);
@@ -670,7 +664,6 @@ export function Hero() {
                 __heroReplay: () => {
                   idleLoops.forEach((loop) => loop.kill());
                   idleLoops = [];
-                  lockScroll();
                   gsap.set(".scroll-indicator", { opacity: 0, y: 14 });
                   tl.restart();
                 },
@@ -686,8 +679,8 @@ export function Hero() {
         );
       })
       .catch((err) => {
-        console.error("Hero entrance setup failed; unlocking scroll.", err);
-        unlockAndReveal(false);
+        console.error("Hero entrance setup failed; revealing scroll indicator.", err);
+        reveal(false);
       });
 
     function onKeydown(e: KeyboardEvent) {
@@ -704,7 +697,6 @@ export function Hero() {
     return () => {
       cancelled = true;
       if (failSafeTimer) clearTimeout(failSafeTimer);
-      unlockScroll();
       window.removeEventListener("keydown", onKeydown);
       mm.revert();
       mediaSplit?.revert();
@@ -828,7 +820,7 @@ export function Hero() {
         <SeeWorkButton />
       </div>
 
-      <div className="corner-pattern reveal-hidden opacity-0 pointer-events-none absolute -right-6 -bottom-6 dark:hidden">
+      <div className="corner-pattern reveal-hidden opacity-0 pointer-events-none absolute -right-6 -bottom-6 z-10 dark:hidden">
         <svg width="120" height="120" viewBox="0 0 100 100" aria-hidden>
           <circle cx="50" cy="50" r="40" fill="none" stroke="var(--brand-blue)" strokeWidth="20" />
         </svg>
@@ -837,7 +829,7 @@ export function Hero() {
       <button
         type="button"
         aria-label="Scroll to next section"
-        className="scroll-indicator reveal-hidden absolute bottom-0 left-1/2 -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 sm:-bottom-1"
+        className="scroll-indicator reveal-hidden absolute bottom-1 left-1/2 z-10 -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80"
         onClick={() => {
           const target = document.getElementById("process");
           if (!target) return;
