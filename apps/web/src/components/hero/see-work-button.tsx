@@ -9,19 +9,22 @@ import { FlairShape, type PatternKind, type PatternTone } from "@/components/pro
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 
 // Every shape's whole trajectory is hand-tuned and fixed, not randomized.
-// Each one pops in at the gap and travels straight up its own narrow lane
-// then straight back down it — a real projectile arc (one tween with
-// yoyo/repeat, so the fall is the exact mirror of the rise: decelerating
-// up to the peak, accelerating back down), never drifting sideways. It
-// lands back exactly where it started, under the button's own solid
-// background (a higher z-index), which is what hides it — no fade, no
-// snapping sideways to get there. `at` staggers them: some launch solo,
-// two launch together as a pair, one closes it out alone.
+// Each pops in above the gap in front of the button (a higher z-index than
+// it, so the launch is actually visible), follows a real projectile arc —
+// one tween with yoyo/repeat so the fall mirrors the rise exactly:
+// decelerating up to the peak, accelerating back down — and drops behind
+// the button (z-index flipped below it right at the peak) to disappear
+// into the gap it came from. `xDrift` gives a few of them an angled throw:
+// constant horizontal velocity for the whole flight (no easing on it, the
+// way real projectile motion doesn't), so they land off to one side
+// instead of straight down. `at` staggers the launches: some solo, two
+// together as a pair, one closing it out alone.
 const FLAIRS: {
   kind: PatternKind;
   tone: PatternTone;
   size: number;
   x: number;
+  xDrift: number;
   peakY: number;
   rotate: number;
   scale: number;
@@ -33,6 +36,7 @@ const FLAIRS: {
     tone: "red",
     size: 26,
     x: -32,
+    xDrift: 0,
     peakY: -80,
     rotate: 260,
     scale: 1.05,
@@ -43,7 +47,8 @@ const FLAIRS: {
     kind: "circle",
     tone: "blue",
     size: 28,
-    x: -12,
+    x: -25,
+    xDrift: 55,
     peakY: -100,
     rotate: -220,
     scale: 0.8,
@@ -55,6 +60,7 @@ const FLAIRS: {
     tone: "green",
     size: 32,
     x: 14,
+    xDrift: 0,
     peakY: -90,
     rotate: 200,
     scale: 1,
@@ -65,7 +71,8 @@ const FLAIRS: {
     kind: "x",
     tone: "yellow",
     size: 22,
-    x: 34,
+    x: 40,
+    xDrift: -50,
     peakY: -70,
     rotate: -260,
     scale: 0.85,
@@ -77,6 +84,7 @@ const FLAIRS: {
     tone: "red",
     size: 26,
     x: 0,
+    xDrift: 0,
     peakY: -110,
     rotate: 180,
     scale: 1.15,
@@ -84,6 +92,13 @@ const FLAIRS: {
     at: 0.48,
   },
 ];
+
+// The z-index each shape sits at while airborne (above the button, z-10,
+// so the launch out of the gap is visible) vs. once it's falling back
+// through the button's own height (below it, so it visibly tucks away
+// instead of popping out the other side).
+const FLAIR_Z_FRONT = 20;
+const FLAIR_Z_BEHIND = 5;
 
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -127,22 +142,23 @@ export function SeeWorkButton() {
       },
     });
 
-    // The words pull apart to open the gap, then close back over it — a
-    // single timeline so the "close" tween can't overwrite the "open" one
-    // before it ever plays.
+    // The gap stays open for the whole show — it only closes once the
+    // very last shape has landed back behind the button.
+    const showDuration = Math.max(...FLAIRS.map((f) => f.at + f.riseDuration * 2));
     master
       .to(a, { x: -20, duration: 0.35, ease: "power3.out" }, 0)
       .to(b, { x: 20, duration: 0.35, ease: "power3.out" }, 0)
-      .to(a, { x: 0, duration: 0.4, ease: "power2.inOut" }, 0.35)
-      .to(b, { x: 0, duration: 0.4, ease: "power2.inOut" }, 0.35);
+      .to(a, { x: 0, duration: 0.4, ease: "power2.inOut" }, showDuration)
+      .to(b, { x: 0, duration: 0.4, ease: "power2.inOut" }, showDuration);
 
     FLAIRS.forEach((f, i) => {
       const el = flairRefs.current[i];
       if (!el) return;
       const popAt = f.at;
+      const peakAt = f.at + f.riseDuration;
       const totalDuration = f.riseDuration * 2;
       master
-        .set(el, { opacity: 0, scale: 0, x: f.x, y: 0, rotate: 0 }, popAt)
+        .set(el, { opacity: 0, scale: 0, x: f.x, y: 0, rotate: 0, zIndex: FLAIR_Z_FRONT }, popAt)
         .to(el, { opacity: 1, scale: f.scale, duration: 0.16, ease: "back.out(2)" }, popAt)
         // One tween, mirrored by yoyo — the fall is the rise played
         // backwards, so decelerating up becomes accelerating down for
@@ -154,7 +170,17 @@ export function SeeWorkButton() {
         )
         // A steady, continuous tumble — unrelated to gravity, so it
         // doesn't need to ease at all — spanning the full up-and-down trip.
-        .to(el, { rotate: f.rotate, duration: totalDuration, ease: "none" }, popAt);
+        .to(el, { rotate: f.rotate, duration: totalDuration, ease: "none" }, popAt)
+        // Tucks behind the button right at the peak, so it's in front for
+        // the whole rise and behind for the whole fall.
+        .set(el, { zIndex: FLAIR_Z_BEHIND }, peakAt);
+
+      if (f.xDrift) {
+        // Constant velocity, no ease — real projectile motion doesn't
+        // accelerate sideways, only vertically (gravity). Spans the whole
+        // flight so it lands off to one side instead of straight down.
+        master.to(el, { x: f.x + f.xDrift, duration: totalDuration, ease: "none" }, popAt);
+      }
     });
 
     masterTimeline.current = master;
@@ -174,9 +200,9 @@ export function SeeWorkButton() {
       className="hero-cta reveal-hidden relative mt-10 inline-flex opacity-0 sm:mt-14"
     >
       {/* Hidden at rest — repositioned onto the gap between the two words
-          right as it opens, then each shape rises and falls straight back
-          down its own lane, disappearing behind the button (z-index)
-          rather than fading out. */}
+          right as it opens, then each shape rises in front of the button
+          and falls back behind it along its own path, some straight,
+          some drifting sideways like an angled throw. */}
       <div className="pointer-events-none absolute inset-0">
         {FLAIRS.map((f, i) => (
           <div
