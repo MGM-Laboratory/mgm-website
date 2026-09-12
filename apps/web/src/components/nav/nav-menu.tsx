@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import gsap from "gsap";
@@ -9,6 +9,21 @@ import { ChevronDown, ArrowUpRight } from "lucide-react";
 
 import { NAV_ITEMS, NAV_SOCIALS } from "@/data/nav";
 import { toneColor } from "@/components/process/pattern-tile";
+import {
+  DiscordGlyph,
+  InstagramGlyph,
+  LinkedinGlyph,
+  XGlyph,
+  YoutubeGlyph,
+} from "@/components/social-icons";
+
+const SOCIAL_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  Instagram: InstagramGlyph,
+  "X (Formerly Twitter)": XGlyph,
+  YouTube: YoutubeGlyph,
+  LinkedIn: LinkedinGlyph,
+  Discord: DiscordGlyph,
+};
 
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -408,11 +423,18 @@ export function NavMenu() {
           ref={panelRef}
           aria-hidden={!open}
           inert={!open ? true : undefined}
-          className="pointer-events-auto absolute inset-0 flex flex-col overflow-y-auto bg-[var(--surface-inverse)] px-6 pt-10 pb-8 text-white sm:px-10"
+          className="pointer-events-auto absolute inset-0 flex flex-col overflow-y-auto border-l border-[var(--line)] bg-[var(--surface-muted)] px-6 pt-[clamp(1rem,4dvh,2rem)] pb-[clamp(0.75rem,3dvh,1.5rem)] text-foreground sm:px-10"
         >
-          <p className="text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">Menu</p>
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-foreground/40 uppercase">
+            Menu
+          </p>
 
-          <nav className="mt-6 flex flex-col">
+          {/* Every item's font-size, gap, and padding below is in `em` off
+              this one viewport-height-driven clamp, so the whole list scales
+              as one unit — on a short viewport it shrinks enough that all
+              eight items plus socials and the legal row fit with no scroll,
+              instead of overflowing at a fixed size. */}
+          <nav className="mt-[2dvh] flex flex-col text-[clamp(0.8rem,2.3dvh,1.45rem)]">
             {NAV_ITEMS.map((item, i) => {
               const accentVar = toneColor(item.accent);
               return (
@@ -421,7 +443,7 @@ export function NavMenu() {
                   ref={(el) => {
                     itemRefs.current[i] = el;
                   }}
-                  className="border-b border-white/10 py-1 first:pt-0"
+                  className="border-b border-[var(--line)] last:border-b-0"
                 >
                   {item.kind === "link" ? (
                     <Link
@@ -434,7 +456,7 @@ export function NavMenu() {
                       onFocus={() => hoverIn(i)}
                       onBlur={() => hoverOut(i)}
                       onClick={closeMenu}
-                      className="group relative flex items-baseline gap-4 py-3"
+                      className="group relative flex items-baseline gap-[0.6em] py-[0.2em]"
                     >
                       <ItemFill
                         setRef={(el) => {
@@ -446,7 +468,7 @@ export function NavMenu() {
                         ref={(el) => {
                           numberRefs.current[i] = el;
                         }}
-                        className="font-mono text-xs text-white/30 tabular-nums"
+                        className="font-mono text-[0.45em] text-foreground/30 tabular-nums"
                       >
                         {pad(i + 1)}
                       </span>
@@ -454,7 +476,7 @@ export function NavMenu() {
                         ref={(el) => {
                           labelRefs.current[i] = el;
                         }}
-                        className="font-display text-[clamp(1.6rem,4.2vw,2.5rem)] font-semibold tracking-tight text-white"
+                        className="font-display text-[1em] font-semibold tracking-tight text-foreground"
                       >
                         {item.label}
                       </span>
@@ -462,7 +484,7 @@ export function NavMenu() {
                         ref={(el) => {
                           arrowRefs.current[i] = el;
                         }}
-                        className="size-5 -translate-x-2 text-white opacity-0"
+                        className="size-[0.7em] -translate-x-2 text-foreground opacity-0"
                       />
                     </Link>
                   ) : (
@@ -478,7 +500,7 @@ export function NavMenu() {
                       onBlur={() => hoverOut(i)}
                       aria-expanded={expandedIndex === i}
                       aria-controls={`nav-dropdown-${i}`}
-                      className="group relative flex w-full items-baseline gap-4 py-3 text-left"
+                      className="group relative flex w-full items-baseline gap-[0.6em] py-[0.2em] text-left"
                     >
                       <ItemFill
                         setRef={(el) => {
@@ -490,7 +512,7 @@ export function NavMenu() {
                         ref={(el) => {
                           numberRefs.current[i] = el;
                         }}
-                        className="font-mono text-xs text-white/30 tabular-nums"
+                        className="font-mono text-[0.45em] text-foreground/30 tabular-nums"
                       >
                         {pad(i + 1)}
                       </span>
@@ -498,7 +520,7 @@ export function NavMenu() {
                         ref={(el) => {
                           labelRefs.current[i] = el;
                         }}
-                        className="font-display text-[clamp(1.6rem,4.2vw,2.5rem)] font-semibold tracking-tight text-white"
+                        className="font-display text-[1em] font-semibold tracking-tight text-foreground"
                       >
                         {item.label}
                       </span>
@@ -506,7 +528,7 @@ export function NavMenu() {
                         ref={(el) => {
                           chevronRefs.current[i] = el;
                         }}
-                        className="size-5 text-white/40"
+                        className="size-[0.7em] text-foreground/40"
                       />
                     </button>
                   )}
@@ -517,10 +539,10 @@ export function NavMenu() {
                       ref={(el) => {
                         clipRefs.current[i] = el;
                       }}
-                      className="overflow-hidden pl-[3.25rem]"
+                      className="overflow-hidden pl-[2.6em]"
                       style={{ height: 0 }}
                     >
-                      <div className="flex flex-col gap-1 pt-1 pb-4">
+                      <div className="flex flex-col gap-[0.1em] pt-[0.1em] pb-[0.6em]">
                         {item.items.map((sub, si) => (
                           <Link
                             key={sub.href}
@@ -530,7 +552,7 @@ export function NavMenu() {
                             }}
                             href={sub.href}
                             onClick={closeMenu}
-                            className="w-fit py-1 text-lg font-medium text-white/60 transition-colors hover:text-white"
+                            className="w-fit py-[0.15em] text-[0.65em] font-medium text-foreground/60 transition-colors hover:text-foreground"
                           >
                             {sub.label}
                           </Link>
@@ -543,20 +565,35 @@ export function NavMenu() {
             })}
           </nav>
 
-          <div className="mt-auto flex flex-col gap-4 pt-10">
-            <p className="text-xs font-semibold tracking-wide text-white/40 uppercase">Socials</p>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {NAV_SOCIALS.map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-white/70 transition-colors hover:text-white"
-                >
-                  {s.label}
-                </a>
-              ))}
+          <div className="mt-auto flex flex-col gap-[clamp(0.4rem,1.2dvh,1rem)] pt-[clamp(0.5rem,1.5dvh,1.5rem)]">
+            <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)] border-t border-[var(--line)] pt-[clamp(0.5rem,1.5dvh,1.25rem)]">
+              <p className="text-[11px] font-semibold tracking-wide text-foreground/40 uppercase">
+                Socials
+              </p>
+              <div className="flex flex-wrap items-center gap-[clamp(0.6rem,1.6dvh,1.1rem)]">
+                {NAV_SOCIALS.map((s) => {
+                  const Icon = SOCIAL_ICONS[s.label];
+                  return (
+                    <a
+                      key={s.label}
+                      href={s.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={s.label}
+                      className="text-foreground/60 transition-colors hover:text-foreground"
+                    >
+                      {Icon && <Icon className="size-[clamp(0.9rem,2.2dvh,1.375rem)]" />}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* No destination yet — plain, non-interactive text rather than
+                a link that would 404. */}
+            <div className="flex items-center gap-[clamp(0.75rem,2dvh,1.25rem)] border-t border-[var(--line)] pt-[clamp(0.35rem,1dvh,0.75rem)] text-[clamp(0.6rem,1.5dvh,0.75rem)] text-foreground/40">
+              <span>Privacy Policy</span>
+              <span>Terms of Service</span>
             </div>
           </div>
         </aside>

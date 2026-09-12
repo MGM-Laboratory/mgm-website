@@ -33,11 +33,17 @@ export const NAV_ITEMS: (NavItem & { accent: PatternTone })[] = [
     ],
   },
   { kind: "link", label: "Member", href: "/member", accent: "blue" },
-  { kind: "link", label: "Careers", href: "/careers", accent: "red" },
-  { kind: "link", label: "Events", href: "/events", accent: "yellow" },
+  { kind: "link", label: "Articles", href: "/articles", accent: "red" },
+  { kind: "link", label: "Careers", href: "/careers", accent: "yellow" },
+  { kind: "link", label: "Contact", href: "/contact", accent: "green" },
 ];
 
+// Icon-only in the panel — matched to a glyph in nav-menu.tsx by label.
+// Placeholder hrefs until real accounts exist.
 export const NAV_SOCIALS: NavLink[] = [
-  { label: "LinkedIn", href: "https://linkedin.com" },
   { label: "Instagram", href: "https://instagram.com" },
+  { label: "X (Formerly Twitter)", href: "https://x.com" },
+  { label: "YouTube", href: "https://youtube.com" },
+  { label: "LinkedIn", href: "https://linkedin.com" },
+  { label: "Discord", href: "https://discord.com" },
 ];
