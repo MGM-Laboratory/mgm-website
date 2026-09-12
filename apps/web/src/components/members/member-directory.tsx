@@ -281,19 +281,15 @@ export function MemberDirectory() {
   return (
     <section ref={root} className="relative px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
       <div className="member-directory-reveal mx-auto max-w-[1440px]">
-        <div className="flex flex-col gap-5 border-b border-[var(--line)] pb-8 sm:flex-row sm:items-end sm:justify-between">
+        <div className="border-b border-[var(--line)] pb-8">
           <div>
             <p className="font-mono text-xs tracking-[0.16em] text-brand-blue uppercase">
               Find your collaborator
             </p>
-            <h2 className="mt-3 max-w-xl font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-tight text-[var(--ink)] dark:text-white">
-              Search the people behind the work.
+            <h2 className="mt-3 max-w-none whitespace-nowrap font-display text-[clamp(1.75rem,4vw,3.5rem)] font-semibold tracking-tight text-[var(--ink)] dark:text-white">
+              Search our geniuses
             </h2>
           </div>
-          <p className="max-w-md text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
-            Search names, divisions, or lab focus. Fuzzy matching helps with imperfect spelling and
-            related terms.
-          </p>
         </div>
 
         <div className="member-directory-reveal group/search relative mt-8">
