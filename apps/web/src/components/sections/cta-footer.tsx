@@ -52,7 +52,7 @@ export function CtaFooter() {
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Let&apos;s make something meaningful.
           </h2>
-          <p className="mt-3 text-white/60">Research, technology, and ideas — brought together.</p>
+          <p className="mt-3 text-white/60">Research, technology, and ideas brought together.</p>
           <Link
             href="/contact"
             className="mt-6 inline-flex items-center rounded-md border border-white/25 px-5 py-2.5 text-sm font-medium transition-colors hover:border-white/50"

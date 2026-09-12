@@ -81,22 +81,8 @@ function setupParallax(root: HTMLElement) {
 function startIdleLoops(): gsap.core.Animation[] {
   const loops: gsap.core.Animation[] = [];
 
-  // Toggle chip — track desaturates to grey and the ring slides back off, forever.
-  loops.push(
-    gsap
-      .timeline({ repeat: -1, repeatDelay: 1.5, delay: 0.7, yoyo: true })
-      .to(".toggle-switch [data-part='knob']", {
-        attr: { cx: 175 },
-        duration: 0.55,
-        ease: "power2.inOut",
-      })
-      .to(
-        ".toggle-switch [data-part='track']",
-        { attr: { fill: "#f94141" }, duration: 0.5, ease: "power2.inOut" },
-        "<",
-      ),
-  );
-
+  // A small number of clear, long-running motions preserves the hero's
+  // energy without continuously repainting every decorative element.
   loops.push(
     gsap.to(".shape-circle-yellow", {
       y: -6,
@@ -105,42 +91,9 @@ function startIdleLoops(): gsap.core.Animation[] {
       yoyo: true,
       repeat: -1,
     }),
-    gsap.to(".shape-circle-red", {
-      y: -6,
-      duration: 1.9,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
-      delay: 0.3,
-    }),
     gsap.to(".shape-square", {
       rotate: 6,
       duration: 2.2,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
-    }),
-    gsap.to(".shape-triangle", { y: -5, duration: 2, ease: "sine.inOut", yoyo: true, repeat: -1 }),
-    gsap.to(".shape-x", { rotate: 8, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: -1 }),
-    gsap.to(".leaves-motif-wrap", {
-      y: -5,
-      duration: 1.8,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
-    }),
-    gsap.to(".fans-motif-wrap", {
-      rotate: 18,
-      duration: 1.5,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
-      delay: 0.2,
-    }),
-    gsap.to(".domes-motif-wrap", {
-      scale: 1.08,
-      transformOrigin: "50% 50%",
-      duration: 1.7,
       ease: "sine.inOut",
       yoyo: true,
       repeat: -1,
@@ -159,70 +112,6 @@ function startIdleLoops(): gsap.core.Animation[] {
       ease: "none",
       repeat: -1,
       transformOrigin: "50% 50%",
-    }),
-  );
-
-  // Arrow — a spark keeps traveling the path, tracing it over and over,
-  // staying fully visible until 75% of the way along and then fading out
-  // gradually over the last stretch so it never just "pops" away.
-  const sparkTravelDuration = 2;
-  const sparkTl = gsap.timeline({ repeat: -1, repeatDelay: 1 });
-  sparkTl
-    .set(".arrow-connector [data-part='arrow-spark']", { opacity: 1 })
-    .fromTo(
-      ".arrow-connector [data-part='arrow-spark']",
-      {
-        motionPath: {
-          path: ".arrow-connector [data-part='arrow-path']",
-          align: ".arrow-connector [data-part='arrow-path']",
-          alignOrigin: [0.5, 0.5],
-          start: 0,
-          end: 0,
-        },
-      },
-      {
-        motionPath: {
-          path: ".arrow-connector [data-part='arrow-path']",
-          align: ".arrow-connector [data-part='arrow-path']",
-          alignOrigin: [0.5, 0.5],
-          start: 0,
-          end: 1,
-        },
-        duration: sparkTravelDuration,
-        ease: "power1.inOut",
-      },
-      0,
-    )
-    .to(
-      ".arrow-connector [data-part='arrow-spark']",
-      { opacity: 0, ease: "power1.in", duration: sparkTravelDuration * 0.25 },
-      sparkTravelDuration * 0.75,
-    );
-  loops.push(sparkTl);
-
-  gsap.utils.toArray<HTMLElement>(".bg-motif").forEach((el, i) => {
-    loops.push(
-      gsap.to(el, {
-        y: gsap.utils.random(-16, -9),
-        x: gsap.utils.random(-9, 9),
-        rotate: gsap.utils.random(-14, 14),
-        duration: gsap.utils.random(3, 5),
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-        delay: i * 0.2,
-      }),
-    );
-  });
-
-  // Scroll indicator — idle bounce once the page has unlocked and it's visible.
-  loops.push(
-    gsap.to(".scroll-indicator [data-part='content']", {
-      y: 6,
-      duration: 1,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
     }),
   );
 

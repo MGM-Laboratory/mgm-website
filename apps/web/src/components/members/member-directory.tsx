@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Search, SlidersHorizontal, X } from "lucide-react";
-import gsap from "gsap";
 import { useDeferredValue, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { MEMBERS, type Member, type MemberDivision } from "@/data/members";
@@ -64,7 +63,6 @@ const FILTER_GROUPS: ReadonlyArray<{
   },
 ];
 
-const CARD_SIZES = ["lg:mt-0", "lg:mt-14", "lg:mt-7", "lg:mt-5", "lg:mt-16"];
 const CARD_SURFACES = [
   "bg-brand-blue-50 dark:bg-[#1b2944]",
   "bg-brand-yellow-50 dark:bg-[#342d19]",
@@ -184,49 +182,31 @@ function Portrait({ member, index }: { member: Member; index: number }) {
 
   return (
     <div
-      className={`relative aspect-[4/4.75] overflow-hidden ${CARD_SURFACES[index % CARD_SURFACES.length]}`}
+      className={`relative size-12 shrink-0 overflow-hidden rounded-xl border border-white/55 ${CARD_SURFACES[index % CARD_SURFACES.length]}`}
     >
       <div
         aria-hidden="true"
-        className={`absolute rounded-full ${ACCENT_COLORS[member.accent]} opacity-95 ${
-          index % 3 === 0
-            ? "-top-[18%] -right-[18%] size-[72%]"
-            : index % 3 === 1
-              ? "-bottom-[18%] -left-[14%] size-[74%]"
-              : "top-[14%] -right-[24%] size-[64%]"
-        }`}
-      />
-      <div
-        aria-hidden="true"
-        className={`absolute border-[18px] border-white/60 dark:border-white/10 ${
-          index % 2 === 0
-            ? "bottom-0 left-0 size-[35%] border-r-0 border-b-0"
-            : "top-0 right-0 size-[38%] border-t-0 border-l-0"
-        }`}
+        className={`absolute -right-3 -bottom-3 size-8 rounded-full ${ACCENT_COLORS[member.accent]} opacity-90`}
       />
       {member.hasPortrait ? (
         <Image
           src={`/members/${member.slug}.webp`}
           alt=""
           fill
-          sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
-          className="object-contain object-bottom transition-transform duration-700 ease-out group-hover/member:scale-[1.045]"
+          sizes="48px"
+          className="object-contain object-bottom transition-transform duration-500 ease-out group-hover/member:scale-105"
         />
       ) : (
-        <span className="absolute inset-x-0 bottom-7 text-center font-display text-7xl font-semibold tracking-tighter text-[var(--ink)]/80 dark:text-white/80">
+        <span className="absolute inset-0 grid place-items-center font-display text-sm font-semibold tracking-tight text-[var(--ink)]/80 dark:text-white/80">
           {initials}
         </span>
       )}
-      <span className="absolute bottom-5 left-5 font-mono text-[11px] tracking-[0.16em] text-[var(--ink)]/55 uppercase dark:text-white/50">
-        MGM / {member.division}
-      </span>
     </div>
   );
 }
 
 export function MemberDirectory() {
   const root = useRef<HTMLDivElement>(null);
-  const grid = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<Filter>("All");
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -248,26 +228,6 @@ export function MemberDirectory() {
       reveal?.kill();
     };
   }, []);
-
-  useLayoutEffect(() => {
-    const element = grid.current;
-    if (!element) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const cards = element.querySelectorAll<HTMLElement>(".member-card");
-    if (reducedMotion) {
-      gsap.set(cards, { opacity: 1, y: 0 });
-      return;
-    }
-
-    const context = gsap.context(() => {
-      gsap.fromTo(
-        cards,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.035, overwrite: "auto" },
-      );
-    }, element);
-    return () => context.revert();
-  }, [filteredMembers]);
 
   const countFor = (candidate: Filter) =>
     MEMBERS.filter((member) => matchesFilter(member, candidate)).length;
@@ -392,42 +352,48 @@ export function MemberDirectory() {
             </div>
 
             {filteredMembers.length ? (
-              <div
-                ref={grid}
-                className="grid grid-cols-1 gap-x-6 gap-y-9 md:grid-cols-2 xl:grid-cols-3"
-              >
+              <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                 {filteredMembers.map(({ member }, index) => (
                   <article
                     key={member.slug}
-                    className={`member-card min-w-0 [content-visibility:auto] ${CARD_SIZES[index % CARD_SIZES.length]}`}
+                    className="member-card min-w-0 [content-visibility:auto]"
                   >
                     <Link
                       href={`/member/${member.slug}`}
                       className="group/member block focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-4 focus-visible:outline-none dark:focus-visible:ring-offset-[#15181e]"
                     >
-                      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-background shadow-[var(--shadow-1)] transition-[border-color,box-shadow] duration-500 group-hover/member:border-brand-blue/45 group-hover/member:shadow-[0_24px_50px_-33px_rgba(14,17,22,0.45)] dark:bg-[#171c24]">
-                        <Portrait member={member} index={index} />
-                        <div className="relative px-5 pb-5 pt-4">
-                          <ArrowUpRight
-                            aria-hidden="true"
-                            size={18}
-                            strokeWidth={2.25}
-                            className="absolute right-5 top-5 text-brand-blue transition-transform duration-300 group-hover/member:-translate-y-1 group-hover/member:translate-x-1"
-                          />
-                          <p className="pr-8 text-xs font-medium text-brand-blue">
-                            {member.division}
-                          </p>
-                          <h3 className="mt-1 font-display text-xl font-semibold tracking-tight text-[var(--ink)] dark:text-white">
-                            {member.name}
-                          </h3>
-                          <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--ink-2)] dark:text-white/65">
-                            {member.bio}
-                          </p>
-                          <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-[var(--ink-3)] dark:text-white/45">
-                            {member.labFocus.slice(0, 2).map((focus) => (
-                              <span key={focus}>{focus}</span>
-                            ))}
+                      <div className="rounded-2xl border border-[var(--line)] bg-background p-5 shadow-[var(--shadow-1)] transition-[transform,border-color,box-shadow] duration-300 group-hover/member:-translate-y-0.5 group-hover/member:border-brand-blue/45 group-hover/member:shadow-[0_20px_40px_-30px_rgba(14,17,22,0.5)] dark:bg-[#171c24]">
+                        <div className="flex gap-4">
+                          <Portrait member={member} index={index} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-xs font-medium text-brand-blue">
+                                {member.division}
+                              </p>
+                              <ArrowUpRight
+                                aria-hidden="true"
+                                size={18}
+                                strokeWidth={2.25}
+                                className="mt-0.5 shrink-0 text-brand-blue transition-transform duration-300 group-hover/member:-translate-y-1 group-hover/member:translate-x-1"
+                              />
+                            </div>
+                            <h3 className="mt-1 font-display text-xl font-semibold tracking-tight text-[var(--ink)] dark:text-white">
+                              {member.name}
+                            </h3>
+                            <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--ink-2)] dark:text-white/65">
+                              {member.bio}
+                            </p>
                           </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-1.5 border-t border-[var(--line)] pt-3">
+                          {member.labFocus.slice(0, 3).map((focus) => (
+                            <span
+                              key={focus}
+                              className="rounded-full bg-black/[0.045] px-2.5 py-1 text-[11px] font-medium text-[var(--ink-2)] dark:bg-white/[0.07] dark:text-white/65"
+                            >
+                              {focus}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     </Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
@@ -13,11 +14,14 @@ if (typeof window !== "undefined") {
 
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const pendingKillRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pathname = usePathname();
+  const shouldSmooth = pathname === "/";
 
   useLayoutEffect(() => {
     // Smoothing itself is a motion effect — reduced-motion visitors keep
     // native, unsmoothed scrolling instead.
-    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+    if (!shouldSmooth || !window.matchMedia("(prefers-reduced-motion: no-preference)").matches)
+      return;
 
     // React's Strict Mode (dev only) mounts, cleans up, and remounts this
     // effect synchronously on first render. Actually killing and
@@ -32,7 +36,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       pendingKillRef.current = null;
     }
     const smoother =
-      ScrollSmoother.get() ?? ScrollSmoother.create({ smooth: 1.1, smoothTouch: 0.1 });
+      ScrollSmoother.get() ?? ScrollSmoother.create({ smooth: 0.75, smoothTouch: 0 });
 
     if (process.env.NODE_ENV !== "production") {
       Object.assign(window, { __smoother: smoother });
@@ -48,7 +52,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
         pendingKillRef.current = null;
       }, 0);
     };
-  }, []);
+  }, [shouldSmooth]);
 
   return (
     <div id="smooth-wrapper">
