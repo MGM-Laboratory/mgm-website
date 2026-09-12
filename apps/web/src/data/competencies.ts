@@ -42,13 +42,12 @@ export const COMPETENCIES: Competency[] = [
       "Every interface we ship is grounded in research — usability studies, interviews, and iteration — so design decisions come from how people actually use a product, not assumptions about them.",
   },
   {
-    title: "Game & XR",
+    title: "Game & New Media",
     href: "/game",
     color: "green",
     motif: "chevron",
-    description:
-      "Games and interactive experiences built for research, play, and everything between.",
+    description: "Game, VR, XR, and MR development for research, play, and new-media experiences.",
     longDescription:
-      "We build games and interactive experiences that double as research tools — installations, prototypes, and playable studies built for both play and publication.",
+      "We build games and new-media experiences across VR, XR, and MR — from installations and prototypes to playable research tools, built for both play and publication.",
   },
 ];

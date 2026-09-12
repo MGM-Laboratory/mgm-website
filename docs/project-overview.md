@@ -22,7 +22,7 @@ All routes live in `apps/web/src/app/` (one folder per route, App Router).
 | `/articles`          | Articles                                                                                                                                                                                      | `PageBand` stub                                             |
 | `/events`            | Events                                                                                                                                                                                        | `PageBand` stub — **not in the nav menu**                   |
 | `/media`             | Media                                                                                                                                                                                         | `PageBand` stub — **not in the nav menu**                   |
-| `/game`              | Focus: Game & XR                                                                                                                                                                              | `PageBand` stub                                             |
+| `/game`              | Focus: Game & New Media                                                                                                                                                                       | Competency page                                             |
 | `/website`           | Focus: Website                                                                                                                                                                                | `PageBand` stub                                             |
 | `/mobile`            | Focus: Mobile                                                                                                                                                                                 | `PageBand` stub                                             |
 | `/ux`                | Focus: HCI/UX                                                                                                                                                                                 | `PageBand` stub                                             |
@@ -38,7 +38,7 @@ All routes live in `apps/web/src/app/` (one folder per route, App Router).
 
 - **Home** → `/`
 - **About Us** → `/about`
-- **Focus** (dropdown, 2×2 bento flip cards) → Game & XR `/game`, Website `/website`, Mobile `/mobile`, HCI/UX `/ux`
+- **Focus** (dropdown, 2×2 bento cards) → Game & New Media `/game`, Website `/website`, Mobile `/mobile`, HCI/UX `/ux`
 - **Our Work** (dropdown, bento: Projects 2×1 + Publications/Research 1×1) → Projects `/projects`, Publications `/publications`, Research `/research`
 - **Member** → `/member` · **Articles** → `/articles` · **Careers** → `/careers` · **Contact** → `/contact`
 - Bottom block: email widget (`hi@labmgm.org`, copy / open mail client) + Malang (ID) WIB clock · icon-only socials · Privacy Policy / Terms of Service links

@@ -60,7 +60,7 @@ Geist Sans / Geist Mono / Hanken Grotesk via `next/font` in `layout.tsx` (variab
 - `CompetencyCardShape` — full-card background motif on competency card fronts (clipped by the card's rounded edge; it is **scale-animated only, never rotated**, because its cut corners/ring gap would swing to broken-looking positions).
 - `CompetencyMotifShape` — small watermark motifs, `stroke` prop for translucent white (`rgba(255,255,255,0.32)` / `0.16`) on colored fills.
 
-Nav bento tiles pair each item with a `motif` (`ring | bracket | cross | chevron`) and/or a `pattern` tile (`PatternKind`) plus a `tone` (`PatternTone` = one of the 4 brand colors). The Focus dropdown's four tiles mirror the homepage competency cards' motifs and colors (Game & XR = chevron/green, Website = ring/blue, Mobile = bracket/red, HCI/UX = cross/yellow) for continuity.
+Nav bento tiles pair each item with a `motif` (`ring | bracket | cross | chevron`) and/or a `pattern` tile (`PatternKind`) plus a `tone` (`PatternTone` = one of the 4 brand colors). The Focus dropdown's four tiles mirror the homepage competency cards' motifs and colors (Game & New Media = chevron/green, Website = ring/blue, Mobile = bracket/red, HCI/UX = cross/yellow) for continuity.
 
 ## Theme awareness rules
 

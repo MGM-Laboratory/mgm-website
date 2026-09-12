@@ -29,7 +29,7 @@ export const NAV_ITEMS: (NavItem & { accent: PatternTone })[] = [
     // Colors/motifs match the homepage's Core Competencies cards exactly —
     // Focus names the same four areas.
     items: [
-      { label: "Game & XR", href: "/game", color: "green", motif: "chevron" },
+      { label: "Game & New Media", href: "/game", color: "green", motif: "chevron" },
       { label: "Website", href: "/website", color: "blue", motif: "ring" },
       { label: "Mobile", href: "/mobile", color: "red", motif: "bracket" },
       { label: "HCI/UX", href: "/ux", color: "yellow", motif: "cross" },
