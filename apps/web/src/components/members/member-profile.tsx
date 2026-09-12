@@ -28,8 +28,8 @@ import {
   useState,
 } from "react";
 
-import type { Member } from "@/data/members";
 import { GithubGlyph, LinkedinGlyph } from "@/components/social-icons";
+import type { Member } from "@/data/members";
 
 type PublicProfile = {
   contacts: {
@@ -44,98 +44,283 @@ type PublicProfile = {
   identifiers: { nim?: string };
   raw: string;
 };
+type DatePart = { month: number; year: number };
+type Experience = {
+  company: string;
+  end?: DatePart;
+  isCurrent: boolean;
+  location?: string;
+  start?: DatePart;
+  title: string;
+};
+type Education = { detail?: string; institution: string };
+type ProfileData = {
+  achievements: string[];
+  bio: string;
+  certifications: string[];
+  education: Education[];
+  experience: Experience[];
+  languages: string[];
+  projects: string[];
+  skills: string[];
+};
+type SectionKey =
+  | "achievements"
+  | "certifications"
+  | "education"
+  | "experience"
+  | "languages"
+  | "projects"
+  | "summary"
+  | "topSkills";
 
-type ProfileSectionData = { content: string; icon: LucideIcon; title: string };
-
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+const MONTH_LOOKUP = new Map(MONTHS.map((month, index) => [month.toLowerCase(), index]));
+const MONTH_PATTERN = MONTHS.join("|");
+const PERIOD = new RegExp(
+  `(${MONTH_PATTERN})\\s+(\\d{4})\\s*-\\s*(Present|(?:${MONTH_PATTERN})\\s+\\d{4})(?:\\s*\\([^)]*\\))?`,
+  "i",
+);
+const SECTIONS: readonly [RegExp, SectionKey][] = [
+  [/^(?:summary|ringkasan)\b/i, "summary"],
+  [/^(?:top skills|keahlian teratas)\b/i, "topSkills"],
+  [/^(?:experience|pengalaman)\b/i, "experience"],
+  [/^(?:education|pendidikan)\b/i, "education"],
+  [/^(?:languages|bahasa)\b/i, "languages"],
+  [/^(?:honors?-?awards?|penghargaan)\b/i, "achievements"],
+  [/^(?:certifications?|sertifikasi)\b/i, "certifications"],
+  [/^(?:projects?|proyek)\b/i, "projects"],
+];
+const COMPANY =
+  /\b(?:agency|arunika|bem|biznet|community|company|faculty|filkom|foundation|gdsc|himpunan|inc\.?|kaia|kaizin|laboratory|laboratorium|ltd\.?|mgm|organizer|pt\.?|school|sekawan|suitmedia|tedx|university|universitas|upwork|yorusa)\b/i;
+const LOCATION =
+  /\b(?:indonesia|jakarta|malang|surabaya|yogyakarta|bandung|bali|batang|pekalongan|czechia|prague|makassar|sidoarjo|greater)\b/i;
+const LANGUAGE =
+  /\((?:native|limited|elementary|professional|full professional|working|bilingual|intermediate)/i;
+const ACHIEVEMENT =
+  /\b(?:\d+(?:st|nd|rd|th)\s+(?:place|honorable)|first\s+place|second\s+place|third\s+place|finalist|winner|award|medal|champion|recognition|top\s+\d+)\b/i;
 const ACCENT_COLORS = {
   blue: "bg-brand-blue",
-  yellow: "bg-brand-yellow",
-  red: "bg-brand-red",
   green: "bg-brand-green",
+  red: "bg-brand-red",
+  yellow: "bg-brand-yellow",
 } as const;
 
-const SECTION_CONFIG: Record<string, Pick<ProfileSectionData, "icon" | "title">> = {
-  achievements: { icon: BadgeCheck, title: "Achievements" },
-  certifications: { icon: BadgeCheck, title: "Certifications" },
-  education: { icon: GraduationCap, title: "Education" },
-  experience: { icon: BriefcaseBusiness, title: "Experience" },
-  languages: { icon: Languages, title: "Languages" },
-  projects: { icon: FolderKanban, title: "Projects" },
-  summary: { icon: FileText, title: "About" },
-  topSkills: { icon: Sparkles, title: "Top skills" },
-};
-
-function normalise(value: string) {
+function clean(value: string) {
   return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\s+/g, " ")
     .trim();
 }
-
-function sectionKey(line: string) {
-  const value = normalise(line);
-  if (["summary", "ringkasan"].includes(value)) return "summary";
-  if (["top skills", "keahlian teratas"].includes(value)) return "topSkills";
-  if (["experience", "pengalaman"].includes(value)) return "experience";
-  if (["education", "pendidikan"].includes(value)) return "education";
-  if (["languages", "bahasa"].includes(value)) return "languages";
-  if (["honors awards", "penghargaan"].includes(value)) return "achievements";
-  if (["certifications", "certification", "sertifikasi"].includes(value)) return "certifications";
-  if (["projects", "proyek"].includes(value)) return "projects";
+function unique(values: readonly string[]) {
+  return Array.from(
+    new Map(
+      values
+        .map(clean)
+        .filter(Boolean)
+        .map((value) => [value.toLocaleLowerCase(), value]),
+    ).values(),
+  );
+}
+function lines(raw: string) {
+  return raw.split("\n").map(clean);
+}
+function section(line: string): { content: string; key: SectionKey } | undefined {
+  for (const [pattern, key] of SECTIONS) {
+    const match = line.match(pattern);
+    if (match) return { content: clean(line.slice(match[0].length)), key };
+  }
   return undefined;
 }
-
-function parseProfile(member: Member, raw: string) {
-  const lines = raw
-    .split("\n")
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
-  const sections = new Map<string, string[]>();
-  let activeSection: string | undefined;
-  const memberWords = normalise(member.name)
+function sectionLines(member: Member, raw: string, target: SectionKey) {
+  const memberWords = member.name
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
     .split(" ")
     .filter((word) => word.length > 2);
-  const resemblesMemberName = (value: string) =>
-    memberWords.filter((word) => normalise(value).includes(word)).length / memberWords.length >=
-    0.6;
-
-  for (const line of lines) {
-    const nextSection = sectionKey(line);
-    if (nextSection) {
-      activeSection = nextSection;
-      if (!sections.has(nextSection)) sections.set(nextSection, []);
+  const resemblesMember = (value: string) =>
+    memberWords.length > 0 &&
+    memberWords.filter((word) => value.toLocaleLowerCase().includes(word)).length /
+      memberWords.length >=
+      0.6;
+  const output: string[] = [];
+  let capturing = false;
+  for (const line of lines(raw)) {
+    const heading = section(line);
+    if (heading) {
+      capturing = heading.key === target;
+      if (capturing && heading.content) output.push(heading.content);
       continue;
     }
-    const isProfileHeading = memberWords.length > 1 && resemblesMemberName(line);
-    if (activeSection === "topSkills" && isProfileHeading) {
-      activeSection = undefined;
-      continue;
-    }
-    if (activeSection) sections.get(activeSection)?.push(line);
+    if (capturing && resemblesMember(line)) break;
+    if (capturing && line) output.push(line);
   }
-
-  const nameIndex = lines.findIndex((line) => {
-    return memberWords.length > 1 && resemblesMemberName(line);
+  return output;
+}
+function parseDate(value: string): DatePart | undefined {
+  const match = value.match(new RegExp(`^(${MONTH_PATTERN})\\s+(\\d{4})$`, "i"));
+  const month = match ? MONTH_LOOKUP.get(match[1].toLocaleLowerCase()) : undefined;
+  return month === undefined || !match ? undefined : { month, year: Number(match[2]) };
+}
+function locationFrom(value: string) {
+  if (!LOCATION.test(value)) return undefined;
+  const match = clean(value).match(
+    /^(.*?(?:Indonesia|Czechia|Jakarta|Malang|Surabaya|Yogyakarta|Bandung|Bali|Batang|Pekalongan|Makassar|Sidoarjo))(?:\s|$)/i,
+  );
+  const result = clean(match?.[1] ?? value);
+  return result.length <= 90 ? result : undefined;
+}
+function isNoise(value: string) {
+  const wordCount = value.split(" ").filter(Boolean).length;
+  return (
+    !value ||
+    Boolean(section(value)) ||
+    LANGUAGE.test(value) ||
+    ACHIEVEMENT.test(value) ||
+    /^\d+\s+(?:years?|months?)(?:\s+\d+\s+months?)?$/i.test(value) ||
+    /^(?:https?:\/\/|www\.|contact$)/i.test(value) ||
+    value.length > 180 ||
+    wordCount > 14 ||
+    (wordCount > 8 && /[,.]/.test(value) && !/^PT\./i.test(value)) ||
+    (wordCount > 1 && /\.$/.test(value) && !/^PT\./i.test(value)) ||
+    (/^[a-z]/.test(value) && !COMPANY.test(value))
+  );
+}
+function parseExperience(raw: string) {
+  const all = lines(raw);
+  const start = all.findIndex((line) => section(line)?.key === "experience");
+  if (start < 0) return [];
+  const end = all.findIndex((line, index) => index > start && section(line)?.key === "education");
+  const scope = all.slice(start + 1, end < 0 ? undefined : end);
+  const dates = scope
+    .map((line, index) => ({ index, match: line.match(PERIOD) }))
+    .filter((value): value is { index: number; match: RegExpMatchArray } => Boolean(value.match));
+  let currentCompany: string | undefined;
+  return dates.flatMap((date, index): Experience[] => {
+    const previous = dates[index - 1]?.index ?? -1;
+    const next = dates[index + 1]?.index ?? scope.length;
+    const beforeSource = scope.slice(previous + 1, date.index);
+    const before = beforeSource.filter(
+      (line, lineIndex) =>
+        !isNoise(line) &&
+        !(lineIndex > 0 && isNoise(beforeSource[lineIndex - 1]) && /^\(/.test(line)),
+    );
+    const title = before.at(-1);
+    if (!title) return [];
+    const directCompany = before.at(-2);
+    const directCompanyIsPlausible =
+      directCompany &&
+      !locationFrom(directCompany) &&
+      !/[,.]/.test(directCompany.replace(/^PT\./i, "")) &&
+      (COMPANY.test(directCompany) || directCompany.split(" ").length <= 6);
+    const previousCompanyLine = before.at(-3);
+    const company =
+      !currentCompany || directCompanyIsPlausible
+        ? clean(
+            previousCompanyLine &&
+              COMPANY.test(previousCompanyLine) &&
+              COMPANY.test(directCompany ?? "")
+              ? `${previousCompanyLine} ${directCompany}`
+              : (directCompany ?? currentCompany ?? ""),
+          )
+        : currentCompany;
+    if (!company) return [];
+    currentCompany = clean(company);
+    const [full, startMonth, startYear, endValue] = date.match;
+    const inline = clean(scope[date.index].slice(scope[date.index].indexOf(full) + full.length));
+    const laterLocation = scope
+      .slice(date.index + 1, next)
+      .map(locationFrom)
+      .find(Boolean);
+    const endDate = endValue.toLocaleLowerCase() === "present" ? undefined : parseDate(endValue);
+    return [
+      {
+        company: currentCompany,
+        end: endDate,
+        isCurrent: !endDate,
+        location: locationFrom(inline) ?? laterLocation,
+        start: parseDate(`${startMonth} ${startYear}`),
+        title: clean(title),
+      },
+    ];
   });
-  const headline =
-    nameIndex >= 0
-      ? lines.slice(nameIndex + 1, nameIndex + 5).find((line) => {
-          const lineWords = normalise(line).split(" ");
-          return (
-            !sectionKey(line) &&
-            !/Indonesia|University|Universitas/i.test(line) &&
-            !resemblesMemberName(line) &&
-            !lineWords.some((word) => memberWords.includes(word))
-          );
-        })
-      : undefined;
-  const content = Object.entries(SECTION_CONFIG).flatMap(([key, config]) => {
-    const value = sections.get(key)?.join("\n").trim();
-    return value ? [{ ...config, content: value }] : [];
-  });
-  return { headline, sections: content, skills: (sections.get("topSkills") ?? []).slice(0, 8) };
+}
+function parseEducation(member: Member, raw: string) {
+  const institution = /\b(?:universit(?:as|y)|school|sma|smk|college|academy|institut(?:e|ut))\b/i;
+  const output: Education[] = [];
+  let current: Education | undefined;
+  for (const line of sectionLines(member, raw, "education")) {
+    if (institution.test(line) || !current) {
+      if (current) output.push(current);
+      current = { institution: line };
+    } else {
+      current.detail = clean(`${current.detail ?? ""} ${line}`);
+    }
+  }
+  if (current) output.push(current);
+  return output;
+}
+function parseProfile(member: Member, raw: string): ProfileData {
+  const summary = sectionLines(member, raw, "summary");
+  const skills = unique(sectionLines(member, raw, "topSkills")).slice(0, 12);
+  const languages = unique([
+    ...sectionLines(member, raw, "languages"),
+    ...lines(raw).filter((line) => LANGUAGE.test(line)),
+  ]).slice(0, 8);
+  const achievements = unique([
+    ...sectionLines(member, raw, "achievements"),
+    ...lines(raw).filter((line) => ACHIEVEMENT.test(line)),
+  ]).slice(0, 12);
+  const list = (key: "certifications" | "projects") =>
+    unique(sectionLines(member, raw, key))
+      .filter((item) => item.length < 180)
+      .slice(0, 12);
+  return {
+    achievements,
+    bio: clean(summary.join(" ")) || member.bio,
+    certifications: list("certifications"),
+    education: parseEducation(member, raw),
+    experience: parseExperience(raw),
+    languages,
+    projects: list("projects"),
+    skills: skills.length ? skills : [...member.labFocus],
+  };
+}
+function formatPeriod(item: Experience, now: Date) {
+  if (!item.start) return item.isCurrent ? "Present" : "Timeline unavailable";
+  const end = item.end ?? { month: now.getMonth(), year: now.getFullYear() };
+  const count = Math.max(1, (end.year - item.start.year) * 12 + end.month - item.start.month + 1);
+  const years = Math.floor(count / 12);
+  const months = count % 12;
+  const duration = years
+    ? `${years} year${years === 1 ? "" : "s"}${months ? ` ${months} month${months === 1 ? "" : "s"}` : ""}`
+    : `${months} month${months === 1 ? "" : "s"}`;
+  return `${MONTHS[item.start.month]} ${item.start.year} - ${item.isCurrent ? "Present" : `${MONTHS[end.month]} ${end.year}`} (${duration})`;
+}
+function useCurrentMonth() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 1);
+    const timer = window.setTimeout(
+      () => setNow(new Date()),
+      Math.max(1_000, next.getTime() - Date.now()),
+    );
+    return () => window.clearTimeout(timer);
+  }, [now]);
+  return now;
 }
 
 function ProfilePortrait({ member }: { member: Member }) {
@@ -164,7 +349,7 @@ function ProfilePortrait({ member }: { member: Member }) {
           src={`/members/${member.slug}.png`}
           alt={`Portrait of ${member.name}`}
           fill
-          sizes="(max-width: 1023px) 100vw, 42vw"
+          sizes="(max-width: 1023px) 100vw, 30vw"
           className="object-contain object-bottom"
         />
       ) : (
@@ -178,11 +363,10 @@ function ProfilePortrait({ member }: { member: Member }) {
     </div>
   );
 }
-
 function ProfileSection({
+  children,
   icon: Icon,
   title,
-  children,
 }: {
   children: ReactNode;
   icon: LucideIcon;
@@ -200,7 +384,6 @@ function ProfileSection({
     </section>
   );
 }
-
 function ExternalLink({
   href,
   icon: Icon,
@@ -210,24 +393,150 @@ function ExternalLink({
   icon: ComponentType<{ className?: string }>;
   label: string;
 }) {
+  const external = /^https?:\/\//i.test(href);
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-2 rounded-full border border-[var(--line-strong)] px-3 py-2 text-sm font-medium text-[var(--ink-2)] transition-colors hover:border-brand-blue hover:text-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:border-white/15 dark:text-white/70 dark:hover:text-white"
+      {...(external ? { rel: "noreferrer", target: "_blank" } : {})}
+      className="inline-flex items-center gap-2 rounded-full border border-[var(--line-strong)] px-3 py-2 text-sm font-medium text-[var(--ink-2)] transition-[border-color,color,transform] duration-200 hover:-translate-y-0.5 hover:border-brand-blue hover:text-brand-blue active:translate-y-0 focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:border-white/15 dark:text-white/70 dark:hover:text-white"
     >
       <Icon className="size-4" />
       {label}
-      <ArrowUpRight size={14} strokeWidth={2.25} />
+      {external ? <ArrowUpRight size={14} strokeWidth={2.25} /> : null}
     </a>
+  );
+}
+function ContactLinks({ profile }: { profile: PublicProfile }) {
+  const { contacts, identifiers } = profile;
+  return (
+    <div className="mt-5">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-brand-blue uppercase">Connect</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {contacts.personalWebsite ? (
+          <ExternalLink href={contacts.personalWebsite} icon={Globe2} label="Website" />
+        ) : null}
+        {contacts.portfolio ? (
+          <ExternalLink href={contacts.portfolio} icon={FolderKanban} label="Portfolio" />
+        ) : null}
+        {contacts.github ? (
+          <ExternalLink href={contacts.github} icon={GithubGlyph} label="GitHub" />
+        ) : null}
+        {contacts.linkedin ? (
+          <ExternalLink href={contacts.linkedin} icon={LinkedinGlyph} label="LinkedIn" />
+        ) : null}
+        {contacts.primaryEmail ? (
+          <ExternalLink href={`mailto:${contacts.primaryEmail}`} icon={Mail} label="Email" />
+        ) : null}
+        {contacts.labEmail && contacts.labEmail !== contacts.primaryEmail ? (
+          <ExternalLink href={`mailto:${contacts.labEmail}`} icon={Mail} label="Lab email" />
+        ) : null}
+        {contacts.phone ? (
+          <ExternalLink href={`tel:+${contacts.phone}`} icon={Phone} label="Phone" />
+        ) : null}
+      </div>
+      {identifiers.nim ? (
+        <p className="mt-5 font-mono text-xs text-[var(--ink-3)] dark:text-white/45">
+          NIM {identifiers.nim}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+function Bio({ value }: { value: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = value.length > 300;
+  return (
+    <div className="mt-6 max-w-3xl">
+      <p
+        className={`text-lg leading-8 text-[var(--ink-2)] dark:text-white/70 ${long && !expanded ? "line-clamp-4" : ""}`}
+      >
+        {value}
+      </p>
+      {long ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="mt-3 text-sm font-semibold text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
+        >
+          {expanded ? "Show less" : "See more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+function ExperienceList({ items, now }: { items: readonly Experience[]; now: Date }) {
+  if (!items.length)
+    return (
+      <p className="text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
+        No public experience has been listed yet.
+      </p>
+    );
+  return (
+    <ol className="grid gap-4">
+      {items.map((item, index) => (
+        <li
+          key={`${item.company}-${item.title}-${index}`}
+          className="grid gap-3 rounded-2xl border border-[var(--line)] bg-white/35 p-5 transition-colors hover:border-brand-blue/50 dark:border-white/10 dark:bg-white/[0.025]"
+        >
+          <div>
+            <h3 className="font-display text-xl font-semibold tracking-tight text-[var(--ink)] dark:text-white">
+              {item.title}
+            </h3>
+            <p className="mt-1 text-sm font-medium text-brand-blue">{item.company}</p>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--ink-2)] dark:text-white/65">
+            <span>{formatPeriod(item, now)}</span>
+            {item.location ? <span>{item.location}</span> : null}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+function EducationList({ items }: { items: readonly Education[] }) {
+  if (!items.length)
+    return (
+      <p className="text-sm text-[var(--ink-2)] dark:text-white/65">
+        No public education history has been listed yet.
+      </p>
+    );
+  return (
+    <div className="grid gap-3">
+      {items.map((item, index) => (
+        <article
+          key={`${item.institution}-${index}`}
+          className="rounded-2xl border border-[var(--line)] p-4 dark:border-white/10"
+        >
+          <h3 className="font-medium text-[var(--ink)] dark:text-white">{item.institution}</h3>
+          {item.detail ? (
+            <p className="mt-1 text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
+              {item.detail}
+            </p>
+          ) : null}
+        </article>
+      ))}
+    </div>
+  );
+}
+function DetailList({ items }: { items: readonly string[] }) {
+  return (
+    <ul className="grid gap-3">
+      {items.map((item) => (
+        <li
+          key={item}
+          className="rounded-2xl border border-[var(--line)] px-4 py-3 text-sm leading-6 text-[var(--ink-2)] dark:border-white/10 dark:text-white/65"
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
   );
 }
 
 export function MemberProfile({ member }: { member: Member }) {
   const root = useRef<HTMLElement>(null);
   const [profile, setProfile] = useState<PublicProfile>();
-
+  const now = useCurrentMonth();
   useEffect(() => {
     const controller = new AbortController();
     fetch(`/member-profiles/${member.slug}.json`, { signal: controller.signal })
@@ -238,7 +547,6 @@ export function MemberProfile({ member }: { member: Member }) {
       });
     return () => controller.abort();
   }, [member.slug]);
-
   useLayoutEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -256,20 +564,10 @@ export function MemberProfile({ member }: { member: Member }) {
     }, element);
     return () => context.revert();
   }, []);
-
   const parsed = useMemo(
     () => (profile ? parseProfile(member, profile.raw) : undefined),
     [member, profile],
   );
-  const links = profile?.contacts;
-  const visibleSkills = parsed?.skills.length ? parsed.skills : member.labFocus;
-  const supportingSections = (parsed?.sections ?? []).filter((section) =>
-    ["Top skills", "Languages", "Certifications", "Projects"].includes(section.title),
-  );
-  const careerSections = (parsed?.sections ?? []).filter((section) =>
-    ["Experience", "Education", "Achievements"].includes(section.title),
-  );
-
   return (
     <main ref={root} className="px-5 pb-20 pt-28 sm:px-8 sm:pt-32 lg:px-12 lg:pb-28">
       <div className="mx-auto max-w-[1280px]">
@@ -280,98 +578,80 @@ export function MemberProfile({ member }: { member: Member }) {
           <ArrowLeft size={18} strokeWidth={2.25} />
           All members
         </Link>
-        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(20rem,0.82fr)_minmax(0,1.18fr)] lg:gap-20">
-          <div className="profile-reveal self-start lg:sticky lg:top-24">
+        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(19rem,0.75fr)_minmax(0,1.25fr)] lg:gap-20">
+          <aside className="profile-reveal self-start lg:sticky lg:top-24">
             <ProfilePortrait member={member} />
-          </div>
-          <div className="min-w-0 pt-1">
-            <p className="profile-reveal font-mono text-xs tracking-[0.16em] text-brand-blue uppercase">
-              {member.division}
-            </p>
-            <h1 className="profile-reveal mt-3 font-display text-[clamp(2.75rem,6vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-[var(--ink)] dark:text-white">
+            {profile ? (
+              <ContactLinks profile={profile} />
+            ) : (
+              <div className="mt-5 h-20 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />
+            )}
+          </aside>
+          <header className="min-w-0 self-center">
+            <h1 className="profile-reveal font-display text-[clamp(2.75rem,6vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-[var(--ink)] dark:text-white">
               {member.name}
             </h1>
-            <p className="profile-reveal mt-4 text-lg font-medium text-brand-blue">
-              {parsed?.headline ?? member.role}
-            </p>
-            <p className="profile-reveal mt-7 max-w-2xl text-lg leading-8 text-[var(--ink-2)] dark:text-white/70">
-              {parsed?.sections.find((section) => section.title === "About")?.content ?? member.bio}
-            </p>
-            <div className="profile-reveal mt-10 flex flex-wrap gap-2">
-              {visibleSkills.slice(0, 8).map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded-full border border-[var(--line-strong)] px-3 py-1.5 text-sm text-[var(--ink-2)] dark:border-white/15 dark:text-white/70"
-                >
-                  {skill}
-                </span>
-              ))}
+            <div className="profile-reveal">
+              {parsed ? (
+                <Bio value={parsed.bio} />
+              ) : (
+                <div className="mt-7 h-24 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />
+              )}
             </div>
-            {links ? (
-              <div className="profile-reveal mt-8 flex flex-wrap gap-2">
-                {links.personalWebsite ? (
-                  <ExternalLink href={links.personalWebsite} icon={Globe2} label="Website" />
-                ) : null}
-                {links.portfolio ? (
-                  <ExternalLink href={links.portfolio} icon={FolderKanban} label="Portfolio" />
-                ) : null}
-                {links.github ? (
-                  <ExternalLink href={links.github} icon={GithubGlyph} label="GitHub" />
-                ) : null}
-                {links.linkedin ? (
-                  <ExternalLink href={links.linkedin} icon={LinkedinGlyph} label="LinkedIn" />
-                ) : null}
-                {links.primaryEmail ? (
-                  <ExternalLink href={`mailto:${links.primaryEmail}`} icon={Mail} label="Email" />
-                ) : null}
-                {links.labEmail && links.labEmail !== links.primaryEmail ? (
-                  <ExternalLink href={`mailto:${links.labEmail}`} icon={Mail} label="Lab email" />
-                ) : null}
-                {links.phone ? (
-                  <ExternalLink href={`tel:+${links.phone}`} icon={Phone} label="Phone" />
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+          </header>
         </div>
-        <div className="profile-reveal mt-20 grid gap-x-14 lg:grid-cols-[0.8fr_1.2fr] lg:gap-y-0">
+        <div className="profile-reveal mt-20">
+          <ProfileSection icon={BriefcaseBusiness} title="Experience">
+            <ExperienceList items={parsed?.experience ?? []} now={now} />
+          </ProfileSection>
+        </div>
+        <div className="profile-reveal grid gap-x-14 lg:grid-cols-2 lg:gap-y-0">
           <div className="lg:border-r lg:border-[var(--line)] lg:pr-14 dark:border-white/10">
-            <ProfileSection icon={Sparkles} title="Professional profile">
-              <p className="max-w-md text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
-                {profile
-                  ? "Published from this member’s submitted LinkedIn profile export and roster links."
-                  : "Loading this member’s published professional profile."}
-              </p>
-              {profile?.identifiers.nim ? (
-                <p className="mt-3 font-mono text-xs text-brand-blue">
-                  NIM · {profile.identifiers.nim}
-                </p>
-              ) : null}
+            <ProfileSection icon={GraduationCap} title="Education">
+              <EducationList items={parsed?.education ?? []} />
             </ProfileSection>
-            {supportingSections.map((section) => (
-              <ProfileSection key={section.title} icon={section.icon} title={section.title}>
-                <p className="whitespace-pre-line text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
-                  {section.content}
-                </p>
+            <ProfileSection icon={Sparkles} title="Skills">
+              <div className="flex flex-wrap gap-2">
+                {(parsed?.skills ?? member.labFocus).map((skill) => (
+                  <span
+                    key={skill}
+                    className="rounded-full border border-[var(--line-strong)] px-3 py-1.5 text-sm text-[var(--ink-2)] dark:border-white/15 dark:text-white/70"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </ProfileSection>
+            {parsed?.languages.length ? (
+              <ProfileSection icon={Languages} title="Languages">
+                <DetailList items={parsed.languages} />
               </ProfileSection>
-            ))}
+            ) : null}
           </div>
           <div className="lg:pl-14">
-            {careerSections.map((section) => (
-              <ProfileSection key={section.title} icon={section.icon} title={section.title}>
-                <p className="whitespace-pre-line text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
-                  {section.content}
-                </p>
-              </ProfileSection>
-            ))}
-            {!profile ? (
-              <ProfileSection icon={BriefcaseBusiness} title="Experience">
-                <div className="h-16 animate-pulse rounded-xl bg-black/[0.045] dark:bg-white/[0.06]" />
+            {parsed?.achievements.length ? (
+              <ProfileSection icon={BadgeCheck} title="Achievements">
+                <DetailList items={parsed.achievements} />
               </ProfileSection>
             ) : null}
+            {parsed?.certifications.length ? (
+              <ProfileSection icon={BadgeCheck} title="Certifications">
+                <DetailList items={parsed.certifications} />
+              </ProfileSection>
+            ) : null}
+            {parsed?.projects.length ? (
+              <ProfileSection icon={FolderKanban} title="Projects">
+                <DetailList items={parsed.projects} />
+              </ProfileSection>
+            ) : null}
+            <ProfileSection icon={FileText} title="Laboratory">
+              <p className="text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
+                {member.division} division, MGM Laboratory.
+              </p>
+            </ProfileSection>
             <Link
               href="/contact"
-              className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
+              className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
             >
               Contact MGM Laboratory
               <ArrowUpRight size={17} strokeWidth={2.25} />
