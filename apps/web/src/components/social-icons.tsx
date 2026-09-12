@@ -1,11 +1,18 @@
+import type { Ref } from "react";
+
 // lucide-react in this repo ships no brand/logo icons (Instagram, LinkedIn,
 // etc. were dropped upstream) — drawn inline instead. All `currentColor`,
 // so they track whatever text color the caller sets (and so flip with
-// light/dark mode for free, same as any other icon in the app).
+// light/dark mode for free, same as any other icon in the app). Each also
+// takes a `ref` (React 19 supports this directly on function components,
+// no forwardRef needed) so a caller can GSAP-animate the actual svg node —
+// used for the nav panel's per-icon hover wiggle.
 
-export function InstagramGlyph({ className }: { className?: string }) {
+export type GlyphProps = { className?: string; ref?: Ref<SVGSVGElement> };
+
+export function InstagramGlyph({ className, ref }: GlyphProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <svg ref={ref} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="2" />
       <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="2" />
       <circle cx="17.25" cy="6.75" r="1.1" fill="currentColor" />
@@ -13,9 +20,9 @@ export function InstagramGlyph({ className }: { className?: string }) {
   );
 }
 
-export function LinkedinGlyph({ className }: { className?: string }) {
+export function LinkedinGlyph({ className, ref }: GlyphProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <svg ref={ref} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <rect x="3" y="9" width="4" height="12" fill="currentColor" />
       <circle cx="5" cy="4.5" r="2.25" fill="currentColor" />
       <path
@@ -26,9 +33,9 @@ export function LinkedinGlyph({ className }: { className?: string }) {
   );
 }
 
-export function XGlyph({ className }: { className?: string }) {
+export function XGlyph({ className, ref }: GlyphProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <svg ref={ref} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path
         d="M5 4L19 20M19 4L5 20"
         stroke="currentColor"
@@ -39,18 +46,18 @@ export function XGlyph({ className }: { className?: string }) {
   );
 }
 
-export function YoutubeGlyph({ className }: { className?: string }) {
+export function YoutubeGlyph({ className, ref }: GlyphProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <svg ref={ref} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" strokeWidth="2" />
       <path d="M10 9L15.5 12L10 15V9Z" fill="currentColor" />
     </svg>
   );
 }
 
-export function DiscordGlyph({ className }: { className?: string }) {
+export function DiscordGlyph({ className, ref }: GlyphProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <svg ref={ref} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path
         d="M8 6C5 6 3.5 8.5 3.5 12.5C3.5 16 5 18 8 18.5L8.8 17C6.9 16.5 6 15.5 6 15.5C6.3 15.7 6.8 16 7.5 16.2C9 16.7 10.6 16.9 12 16.9C13.4 16.9 15 16.7 16.5 16.2C17.2 16 17.7 15.7 18 15.5C18 15.5 17.1 16.5 15.2 17L16 18.5C19 18 20.5 16 20.5 12.5C20.5 8.5 19 6 16 6C16 6 15.4 6.7 15 7.3C13.7 7 10.3 7 9 7.3C8.6 6.7 8 6 8 6Z"
         stroke="currentColor"

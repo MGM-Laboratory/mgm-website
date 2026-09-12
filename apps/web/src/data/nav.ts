@@ -62,3 +62,8 @@ export const NAV_SOCIALS: NavLink[] = [
   { label: "LinkedIn", href: "https://linkedin.com" },
   { label: "Discord", href: "https://discord.com" },
 ];
+
+export const LEGAL_LINKS: NavLink[] = [
+  { label: "Privacy Policy", href: "/privacy-policy" },
+  { label: "Terms of Service", href: "/terms-of-services" },
+];

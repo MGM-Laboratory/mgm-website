@@ -14,7 +14,7 @@ import gsap from "gsap";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 
-import { CONTACT_EMAIL, NAV_ITEMS, NAV_SOCIALS } from "@/data/nav";
+import { CONTACT_EMAIL, LEGAL_LINKS, NAV_ITEMS, NAV_SOCIALS } from "@/data/nav";
 import { toneColor } from "@/components/process/pattern-tile";
 import {
   DiscordGlyph,
@@ -22,12 +22,13 @@ import {
   LinkedinGlyph,
   XGlyph,
   YoutubeGlyph,
+  type GlyphProps,
 } from "@/components/social-icons";
 import { EmailReveal } from "./email-reveal";
 import { FocusBento } from "./focus-bento";
 import { WorkBento } from "./work-bento";
 
-const SOCIAL_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+const SOCIAL_ICONS: Record<string, ComponentType<GlyphProps>> = {
   Instagram: InstagramGlyph,
   "X (Formerly Twitter)": XGlyph,
   YouTube: YoutubeGlyph,
@@ -75,6 +76,16 @@ const LAYER_COLORS = [
   "var(--brand-green)",
 ];
 
+// Cycled across the social icons on hover, same brand palette as the rest
+// of the panel's accents.
+const SOCIAL_ACCENTS = [
+  toneColor("blue"),
+  toneColor("red"),
+  toneColor("yellow"),
+  toneColor("green"),
+  toneColor("blue"),
+];
+
 function measureHeight(el: HTMLElement) {
   const prevHeight = el.style.height;
   const prevVisibility = el.style.visibility;
@@ -114,6 +125,8 @@ export function NavMenu() {
   const firstLinkRef = useRef<HTMLAnchorElement | HTMLButtonElement | null>(null);
 
   const hoverTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
+  const socialRefs = useRef<(SVGSVGElement | null)[]>([]);
+  const socialTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
   const openTlRef = useRef<gsap.core.Timeline | null>(null);
   const closeTlRef = useRef<gsap.core.Timeline | null>(null);
   const busyRef = useRef(false);
@@ -172,6 +185,39 @@ export function NavMenu() {
       hoverTimelines.current = [];
     };
   }, []);
+
+  // A little wiggle-and-pop per social icon on hover/focus — purely
+  // decorative (the link itself is already fully reachable without it), so
+  // playback is skipped outright under reduced motion (see socialHoverIn)
+  // rather than collapsed to zero duration.
+  useLayoutEffect(() => {
+    NAV_SOCIALS.forEach((_, i) => {
+      const icon = socialRefs.current[i];
+      if (!icon) return;
+      const accent = SOCIAL_ACCENTS[i % SOCIAL_ACCENTS.length];
+      const tl = gsap.timeline({ paused: true, defaults: { overwrite: "auto" } });
+      tl.to(icon, { rotate: -14, duration: 0.1, ease: "power1.out" })
+        .to(
+          icon,
+          { rotate: 14, scale: 1.25, color: accent, duration: 0.18, ease: "power1.inOut" },
+          ">",
+        )
+        .to(icon, { rotate: 0, duration: 0.22, ease: "back.out(3)" }, ">");
+      socialTimelines.current[i] = tl;
+    });
+    return () => {
+      socialTimelines.current.forEach((tl) => tl?.kill());
+      socialTimelines.current = [];
+    };
+  }, []);
+
+  function socialHoverIn(i: number) {
+    if (reducedMotion()) return;
+    socialTimelines.current[i]?.play();
+  }
+  function socialHoverOut(i: number) {
+    socialTimelines.current[i]?.reverse();
+  }
 
   const lockScroll = useCallback((locked: boolean) => {
     ScrollSmoother.get()?.paused(locked);
@@ -622,7 +668,7 @@ export function NavMenu() {
                 Socials
               </p>
               <div className="flex flex-wrap items-center gap-[clamp(0.6rem,1.6dvh,1.1rem)]">
-                {NAV_SOCIALS.map((s) => {
+                {NAV_SOCIALS.map((s, i) => {
                   const Icon = SOCIAL_ICONS[s.label];
                   return (
                     <a
@@ -631,20 +677,37 @@ export function NavMenu() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={s.label}
-                      className="text-foreground/60 transition-colors hover:text-foreground"
+                      onMouseEnter={() => socialHoverIn(i)}
+                      onMouseLeave={() => socialHoverOut(i)}
+                      onFocus={() => socialHoverIn(i)}
+                      onBlur={() => socialHoverOut(i)}
+                      className="text-foreground/60"
                     >
-                      {Icon && <Icon className="size-[clamp(0.9rem,2.2dvh,1.375rem)]" />}
+                      {Icon && (
+                        <Icon
+                          ref={(el) => {
+                            socialRefs.current[i] = el;
+                          }}
+                          className="size-[clamp(0.9rem,2.2dvh,1.375rem)]"
+                        />
+                      )}
                     </a>
                   );
                 })}
               </div>
             </div>
 
-            {/* No destination yet — plain, non-interactive text rather than
-                a link that would 404. */}
             <div className="flex items-center gap-[clamp(0.75rem,2dvh,1.25rem)] border-t border-[var(--line)] pt-[clamp(0.35rem,1dvh,0.75rem)] text-[clamp(0.6rem,1.5dvh,0.75rem)] text-foreground/40">
-              <span>Privacy Policy</span>
-              <span>Terms of Service</span>
+              {LEGAL_LINKS.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={closeMenu}
+                  className="transition-colors hover:text-foreground"
+                >
+                  {l.label}
+                </Link>
+              ))}
             </div>
           </div>
         </aside>
