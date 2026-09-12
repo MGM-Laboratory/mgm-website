@@ -3,7 +3,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
+  /* Match the calm hero canvas across every page surface. */
+  --background: #f7f7f5;
   --foreground: #0e1116;
   --ink: #0e1116;
 
@@ -31,7 +32,7 @@
 }
 
 .dark {
-  --background: #0e1116;
+  --background: #15181e;
   --foreground: #ededed;
   --line: #262a33;
   --surface-muted: #15181e;

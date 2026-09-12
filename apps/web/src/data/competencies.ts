@@ -42,8 +42,8 @@ export const COMPETENCIES: Competency[] = [
       "Every interface we ship is grounded in research — usability studies, interviews, and iteration — so design decisions come from how people actually use a product, not assumptions about them.",
   },
   {
-    title: "Interactive Media",
-    href: "/media",
+    title: "Game & XR",
+    href: "/game",
     color: "green",
     motif: "chevron",
     description:
