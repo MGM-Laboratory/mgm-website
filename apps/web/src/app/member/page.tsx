@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 
-import { PageBand } from "@/components/sections/page-band";
+import { MemberDirectory } from "@/components/members/member-directory";
+import { MemberHero } from "@/components/members/member-hero";
+import { CtaFooter } from "@/components/sections/cta-footer";
 
 export const metadata: Metadata = {
-  title: "Member — MGM Laboratory",
+  title: "Member | MGM Laboratory",
   description: "The researchers, engineers, and designers behind MGM Laboratory.",
 };
 
 export default function MemberPage() {
   return (
-    <PageBand
-      eyebrow="Member"
-      title="Our Members"
-      description="A mix of researchers, engineers, and designers working across websites, mobile apps, UX research, and interactive media."
-      tone="green"
-      motif="clover"
-    />
+    <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col">
+      <MemberHero />
+      <MemberDirectory />
+      <CtaFooter />
+    </div>
   );
 }

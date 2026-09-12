@@ -120,8 +120,23 @@ body {
   }
 }
 
+@keyframes member-search-pulse {
+  50% {
+    opacity: 0.42;
+    transform: translateY(-1px);
+  }
+}
+
+.member-search-pulse {
+  animation: member-search-pulse 0.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cta-ring-spin {
+    animation: none;
+  }
+
+  .member-search-pulse {
     animation: none;
   }
 }
