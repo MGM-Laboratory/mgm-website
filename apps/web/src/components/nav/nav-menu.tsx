@@ -24,6 +24,7 @@ import {
   YoutubeGlyph,
   type GlyphProps,
 } from "@/components/social-icons";
+import { LogoMark as ShardLogo } from "@/components/hero/shapes";
 import { EmailReveal } from "./email-reveal";
 import { FocusBento } from "./focus-bento";
 import { WorkBento } from "./work-bento";
@@ -129,6 +130,7 @@ export function NavMenu() {
   const socialTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
   const openTlRef = useRef<gsap.core.Timeline | null>(null);
   const closeTlRef = useRef<gsap.core.Timeline | null>(null);
+  const logoTlRef = useRef<gsap.core.Timeline | null>(null);
   const busyRef = useRef(false);
   const expandedRef = useRef<number | null>(null);
 
@@ -320,6 +322,44 @@ export function NavMenu() {
     closeTlRef.current = tl;
   }, [resetAccordions]);
 
+  // The empty left side (over the blurred/dimmed backdrop) gets the same
+  // brand-mark assembly the hero plays after "& Mobile Laboratory" — three
+  // shards flying in from different directions and popping into place —
+  // reusing that exact component and choreography for continuity. Closing
+  // is deliberately simpler, just a fade, rather than reversing the
+  // assembly.
+  const playLogoIn = useCallback(() => {
+    logoTlRef.current?.kill();
+    const d = reducedMotion() ? 0 : 1;
+    const tl = gsap.timeline({ delay: 0.3 * d });
+    tl.set(".nav-logo", { opacity: 1 })
+      .fromTo(
+        ".nav-logo [data-part='shard-1']",
+        { opacity: 0, scale: 0.3, x: -40, y: -55, rotate: -140 },
+        { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0, duration: 0.55 * d, ease: "back.out(1.9)" },
+      )
+      .fromTo(
+        ".nav-logo [data-part='shard-2']",
+        { opacity: 0, scale: 0.3, x: -55, y: 45, rotate: 120 },
+        { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0, duration: 0.55 * d, ease: "back.out(1.9)" },
+        "-=0.4",
+      )
+      .fromTo(
+        ".nav-logo [data-part='shard-3']",
+        { opacity: 0, scale: 0.3, x: 55, y: 45, rotate: -120 },
+        { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0, duration: 0.55 * d, ease: "back.out(1.9)" },
+        "-=0.4",
+      )
+      .to(".nav-logo", { scale: 1.12, duration: 0.14 * d, ease: "power1.out" }, "+=0.02")
+      .to(".nav-logo", { scale: 1, duration: 0.25 * d, ease: "back.out(3)" });
+    logoTlRef.current = tl;
+  }, []);
+
+  const playLogoOut = useCallback(() => {
+    logoTlRef.current?.kill();
+    gsap.to(".nav-logo", { opacity: 0, duration: 0.3, ease: "power2.in" });
+  }, []);
+
   const animateIcon = useCallback((opening: boolean) => {
     const top = iconTopRef.current;
     const bottom = iconBottomRef.current;
@@ -349,9 +389,10 @@ export function NavMenu() {
     setOpen(true);
     lockScroll(true);
     playOpen();
+    playLogoIn();
     animateIcon(true);
     animateText(true);
-  }, [animateIcon, animateText, lockScroll, playOpen]);
+  }, [animateIcon, animateText, lockScroll, playLogoIn, playOpen]);
 
   const closeMenu = useCallback(() => {
     if (!openRef.current) return;
@@ -359,10 +400,11 @@ export function NavMenu() {
     setOpen(false);
     lockScroll(false);
     playClose();
+    playLogoOut();
     animateIcon(false);
     animateText(false);
     toggleRef.current?.focus();
-  }, [animateIcon, animateText, lockScroll, playClose]);
+  }, [animateIcon, animateText, lockScroll, playClose, playLogoOut]);
 
   function toggleMenu() {
     if (openRef.current) closeMenu();
@@ -503,6 +545,18 @@ export function NavMenu() {
         aria-hidden
         className="invisible fixed inset-x-0 top-16 bottom-0 z-40 bg-black/55 opacity-0 backdrop-blur-md"
       />
+
+      {/* The blurred backdrop's own left side is otherwise empty — each
+          shard already defaults to its own inline opacity:0 (see
+          hero/shapes.tsx), so there's nothing to see here until playLogoIn
+          runs; no separate SSR-safe default needed for the container. Only
+          shown once there's actually room beside the panel for it. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed top-16 bottom-0 left-0 z-40 hidden items-center justify-center lg:right-[460px] lg:flex"
+      >
+        <ShardLogo className="nav-logo size-56" />
+      </div>
 
       <div className="pointer-events-none fixed top-16 right-0 bottom-0 z-40 w-full sm:w-[420px] lg:w-[460px]">
         <div className="absolute inset-0 flex">

@@ -51,7 +51,7 @@ export const NAV_ITEMS: (NavItem & { accent: PatternTone })[] = [
   { kind: "link", label: "Contact", href: "/contact", accent: "green" },
 ];
 
-export const CONTACT_EMAIL = "hello@mgmlaboratory.id";
+export const CONTACT_EMAIL = "hi@labmgm.org";
 
 // Icon-only in the panel — matched to a glyph in nav-menu.tsx by label.
 // Placeholder hrefs until real accounts exist.
