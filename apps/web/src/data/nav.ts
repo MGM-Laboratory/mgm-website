@@ -1,10 +1,17 @@
-import type { PatternTone } from "@/components/process/pattern-tile";
+import type { PatternKind, PatternTone } from "@/components/process/pattern-tile";
 
 export type NavLink = { label: string; href: string };
 
-// Dropdown sub-items render as bento cards (see nav-bento.tsx), so they
-// carry a short description for the card's hover-revealed back/overlay.
-export type NavBentoLink = NavLink & { description: string };
+// Dropdown sub-items render as bento cards (see focus-bento.tsx /
+// work-bento.tsx). `motif` (Focus) reuses the four Core Competency icon
+// shapes — Focus is that same set of four areas — while `pattern` (Our
+// Work) picks from the general pattern-tile shape set instead, since
+// there's no competency-style motif to match there.
+export type NavBentoLink = NavLink & {
+  color: PatternTone;
+  motif?: "ring" | "bracket" | "cross" | "chevron";
+  pattern?: PatternKind;
+};
 
 export type NavItem =
   | { kind: "link"; label: string; href: string }
@@ -19,19 +26,13 @@ export const NAV_ITEMS: (NavItem & { accent: PatternTone })[] = [
     kind: "dropdown",
     label: "Focus",
     accent: "yellow",
+    // Colors/motifs match the homepage's Core Competencies cards exactly —
+    // Focus names the same four areas.
     items: [
-      {
-        label: "Game & XR",
-        href: "/game",
-        description: "Games and immersive experiences for research and play.",
-      },
-      {
-        label: "Website",
-        href: "/website",
-        description: "Fast, accessible web products built end to end.",
-      },
-      { label: "Mobile", href: "/mobile", description: "Native-feel iOS and Android apps." },
-      { label: "HCI/UX", href: "/ux", description: "Research-grounded interface design." },
+      { label: "Game & XR", href: "/game", color: "green", motif: "chevron" },
+      { label: "Website", href: "/website", color: "blue", motif: "ring" },
+      { label: "Mobile", href: "/mobile", color: "red", motif: "bracket" },
+      { label: "HCI/UX", href: "/ux", color: "yellow", motif: "cross" },
     ],
   },
   {
@@ -39,21 +40,9 @@ export const NAV_ITEMS: (NavItem & { accent: PatternTone })[] = [
     label: "Our Work",
     accent: "green",
     items: [
-      {
-        label: "Projects",
-        href: "/projects",
-        description: "Research-driven products the lab has built end to end.",
-      },
-      {
-        label: "Publications",
-        href: "/publications",
-        description: "Papers and write-ups from the lab.",
-      },
-      {
-        label: "Research",
-        href: "/research",
-        description: "Ongoing studies shaping what we build.",
-      },
+      { label: "Projects", href: "/projects", color: "blue", pattern: "fans" },
+      { label: "Publications", href: "/publications", color: "green", pattern: "leaves" },
+      { label: "Research", href: "/research", color: "red", pattern: "circle" },
     ],
   },
   { kind: "link", label: "Member", href: "/member", accent: "blue" },
