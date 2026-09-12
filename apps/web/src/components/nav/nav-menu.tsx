@@ -130,6 +130,7 @@ export function NavMenu() {
   const hoverTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
   const socialRefs = useRef<(SVGSVGElement | null)[]>([]);
   const socialTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
+  const accordionTlRef = useRef<gsap.core.Timeline | null>(null);
   const openTlRef = useRef<gsap.core.Timeline | null>(null);
   const closeTlRef = useRef<gsap.core.Timeline | null>(null);
   const logoTlRef = useRef<gsap.core.Timeline | null>(null);
@@ -229,6 +230,8 @@ export function NavMenu() {
   }, []);
 
   const resetAccordions = useCallback(() => {
+    accordionTlRef.current?.kill();
+    accordionTlRef.current = null;
     NAV_ITEMS.forEach((item, i) => {
       if (item.kind !== "dropdown") return;
       const clip = clipRefs.current[i];
@@ -410,45 +413,15 @@ export function NavMenu() {
   function toggleAccordion(i: number) {
     const reduced = reducedMotion();
     const d = reduced ? 0 : 1;
-    const clip = clipRefs.current[i];
-    const chevron = chevronRefs.current[i];
-    const children = subRefs.current[i]?.filter((el): el is HTMLAnchorElement => !!el) ?? [];
-    if (!clip) return;
+    const activeIndex = expandedRef.current;
+    accordionTlRef.current?.kill();
 
-    const currentlyOpen = expandedRef.current === i;
-
-    if (expandedRef.current !== null && expandedRef.current !== i) {
-      collapse(expandedRef.current);
-    }
-
-    if (currentlyOpen) {
-      collapse(i);
-      expandedRef.current = null;
-      setExpandedIndex(null);
-      return;
-    }
-
-    expandedRef.current = i;
-    setExpandedIndex(i);
-    const targetHeight = measureHeight(clip);
-    gsap.set(children, { opacity: 0, y: -8 });
-    const tl = gsap.timeline();
-    tl.to(clip, { height: targetHeight, duration: 0.4 * d, ease: "power3.out" }, 0);
-    if (children.length) {
-      tl.to(
-        children,
-        { opacity: 1, y: 0, duration: 0.35 * d, stagger: 0.05 * d, ease: "power2.out" },
-        0.08 * d,
-      );
-    }
-    if (chevron) tl.to(chevron, { rotate: 180, duration: 0.35 * d, ease: "power2.out" }, 0);
-
-    function collapse(idx: number) {
+    function collapse(idx: number, onComplete?: () => void) {
       const c = clipRefs.current[idx];
       const chev = chevronRefs.current[idx];
       const kids = subRefs.current[idx]?.filter((el): el is HTMLAnchorElement => !!el) ?? [];
-      if (!c) return;
-      const closeTl = gsap.timeline();
+      if (!c) return null;
+      const closeTl = gsap.timeline({ paused: true, onComplete });
       if (kids.length)
         closeTl.to(
           kids,
@@ -457,7 +430,56 @@ export function NavMenu() {
         );
       closeTl.to(c, { height: 0, duration: 0.3 * d, ease: "power2.inOut" }, 0.05 * d);
       if (chev) closeTl.to(chev, { rotate: 0, duration: 0.3 * d, ease: "power2.out" }, 0);
+      return closeTl;
     }
+
+    function open() {
+      const clip = clipRefs.current[i];
+      const chevron = chevronRefs.current[i];
+      const children = subRefs.current[i]?.filter((el): el is HTMLAnchorElement => !!el) ?? [];
+      if (!clip) return;
+
+      const targetHeight = measureHeight(clip);
+      gsap.set(children, { opacity: 0, y: -8 });
+      const openTl = gsap.timeline();
+      openTl.to(clip, { height: targetHeight, duration: 0.4 * d, ease: "power3.out" }, 0);
+      if (children.length) {
+        openTl.to(
+          children,
+          { opacity: 1, y: 0, duration: 0.35 * d, stagger: 0.05 * d, ease: "power2.out" },
+          0.08 * d,
+        );
+      }
+      if (chevron) openTl.to(chevron, { rotate: 180, duration: 0.35 * d, ease: "power2.out" }, 0);
+      accordionTlRef.current = openTl;
+    }
+
+    if (activeIndex === i) {
+      setExpandedIndex(null);
+      const closeTl = collapse(i, () => {
+        expandedRef.current = null;
+        accordionTlRef.current = null;
+      });
+      accordionTlRef.current = closeTl;
+      closeTl?.play(0);
+      return;
+    }
+
+    const openNext = () => {
+      expandedRef.current = i;
+      setExpandedIndex(i);
+      open();
+    };
+
+    if (activeIndex !== null) {
+      setExpandedIndex(null);
+      const closeTl = collapse(activeIndex, openNext);
+      accordionTlRef.current = closeTl;
+      closeTl?.play(0);
+      return;
+    }
+
+    openNext();
   }
 
   function handleToggleHoverIn() {
