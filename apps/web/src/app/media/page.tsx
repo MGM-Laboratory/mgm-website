@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
 
-import { CompetencyPageContent } from "@/components/sections/competency-page";
-import { COMPETENCIES } from "@/data/competencies";
-
-const competency = COMPETENCIES.find((c) => c.href === "/media")!;
+import { PageBand } from "@/components/sections/page-band";
 
 export const metadata: Metadata = {
-  title: `${competency.title} — MGM Laboratory`,
-  description: competency.description,
+  title: "Media — MGM Laboratory",
+  description: "News, stories, and updates from MGM Laboratory.",
 };
 
 export default function MediaPage() {
-  return <CompetencyPageContent competency={competency} />;
+  return (
+    <PageBand
+      eyebrow="Media"
+      title="Media"
+      description="News, stories, and updates from MGM Laboratory."
+      tone="blue"
+      motif="fans"
+    />
+  );
 }

@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
 
-import { PageBand } from "@/components/sections/page-band";
+import { CompetencyPageContent } from "@/components/sections/competency-page";
+import { COMPETENCIES } from "@/data/competencies";
+
+const competency = COMPETENCIES.find((c) => c.href === "/game")!;
 
 export const metadata: Metadata = {
-  title: "Game & XR — MGM Laboratory",
-  description: "Games, XR, and interactive experiences from MGM Laboratory.",
+  title: `${competency.title} — MGM Laboratory`,
+  description: competency.description,
 };
 
 export default function GamePage() {
-  return (
-    <PageBand
-      eyebrow="Focus — Game & XR"
-      title="Game & XR"
-      description="Games, XR, and interactive experiences built for research, play, and everything in between — from early prototypes to installations."
-      tone="green"
-      motif="domes"
-    />
-  );
+  return <CompetencyPageContent competency={competency} />;
 }
