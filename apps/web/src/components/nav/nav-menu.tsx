@@ -493,7 +493,7 @@ export function NavMenu() {
                       onFocus={() => hoverIn(i)}
                       onBlur={() => hoverOut(i)}
                       onClick={closeMenu}
-                      className="group relative flex items-baseline gap-[1em] py-[0.1em]"
+                      className="group relative flex items-baseline gap-[0.7em] py-[0.1em]"
                     >
                       <ItemFill
                         setRef={(el) => {
@@ -537,7 +537,7 @@ export function NavMenu() {
                       onBlur={() => hoverOut(i)}
                       aria-expanded={expandedIndex === i}
                       aria-controls={`nav-dropdown-${i}`}
-                      className="group relative flex w-full items-baseline gap-[1em] py-[0.1em] text-left"
+                      className="group relative flex w-full items-baseline gap-[0.7em] py-[0.1em] text-left"
                     >
                       <ItemFill
                         setRef={(el) => {
