@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ComponentType,
 } from "react";
 import Link from "next/link";
@@ -151,9 +152,10 @@ export function NavMenu() {
     if (iconBottomRef.current) gsap.set(iconBottomRef.current, { y: 3, rotate: 0, width: 10 });
   }, []);
 
-  // One paused hover timeline per top-level item — lift the fill, push the
-  // label into its own accent color, pop the number, slide the arrow in.
-  // Built once against the refs, played/reversed on pointer or focus.
+  // One paused hover timeline per top-level item — lift the fill, move the
+  // label, pop the number, slide the arrow in. Color belongs to CSS below,
+  // rather than GSAP: GSAP's inline color values can outlive a theme switch
+  // and override the current --foreground token.
   useLayoutEffect(() => {
     const reduced = reducedMotion();
     NAV_ITEMS.forEach((item, i) => {
@@ -161,16 +163,15 @@ export function NavMenu() {
       const label = labelRefs.current[i];
       const number = numberRefs.current[i];
       if (!fill || !label) return;
-      const accent = toneColor(item.accent);
       const d = reduced ? 0 : 1;
       const tl = gsap.timeline({ paused: true, defaults: { overwrite: "auto" } });
       tl.to(fill, { scaleX: 1, duration: 0.4 * d, ease: "power3.out" }, 0).to(
         label,
-        { x: 14, color: accent, duration: 0.3 * d, ease: "power2.out" },
+        { x: 14, duration: 0.3 * d, ease: "power2.out" },
         0,
       );
       if (number) {
-        tl.to(number, { color: accent, scale: 1.15, duration: 0.3 * d, ease: "back.out(2)" }, 0);
+        tl.to(number, { scale: 1.15, duration: 0.3 * d, ease: "back.out(2)" }, 0);
       }
       const arrow = arrowRefs.current[i];
       if (arrow) {
@@ -542,7 +543,7 @@ export function NavMenu() {
         ref={overlayRef}
         onClick={closeMenu}
         aria-hidden
-        className="invisible fixed inset-x-0 top-16 bottom-0 z-40 bg-black/55 opacity-0 backdrop-blur-md"
+        className="invisible fixed inset-x-0 top-16 bottom-0 z-40 bg-white/70 opacity-0 backdrop-blur-md dark:bg-black/55"
       />
 
       {/* The blurred backdrop's own left side is otherwise empty — each
@@ -590,6 +591,7 @@ export function NavMenu() {
           <nav className="mt-[2dvh] flex flex-col text-[clamp(1rem,2.7dvh,1.75rem)]">
             {NAV_ITEMS.map((item, i) => {
               const accentVar = toneColor(item.accent);
+              const accentStyle = { "--nav-item-accent": accentVar } as CSSProperties;
               return (
                 <div
                   key={item.label}
@@ -609,6 +611,7 @@ export function NavMenu() {
                       onFocus={() => hoverIn(i)}
                       onBlur={() => hoverOut(i)}
                       onClick={closeMenu}
+                      style={accentStyle}
                       className="group relative flex items-baseline gap-[0.7em] py-[0.1em]"
                     >
                       <ItemFill
@@ -621,7 +624,7 @@ export function NavMenu() {
                         ref={(el) => {
                           numberRefs.current[i] = el;
                         }}
-                        className="font-mono text-[0.45em] text-foreground/30 tabular-nums"
+                        className="font-mono text-[0.45em] text-foreground/30 tabular-nums transition-colors group-hover:text-[var(--nav-item-accent)] group-focus:text-[var(--nav-item-accent)]"
                       >
                         {pad(i + 1)}
                       </span>
@@ -629,7 +632,7 @@ export function NavMenu() {
                         ref={(el) => {
                           labelRefs.current[i] = el;
                         }}
-                        className="font-display text-[1em] font-semibold tracking-tight text-foreground"
+                        className="font-display text-[1em] font-semibold tracking-tight text-foreground transition-colors group-hover:text-[var(--nav-item-accent)] group-focus:text-[var(--nav-item-accent)]"
                       >
                         {item.label}
                       </span>
@@ -653,6 +656,7 @@ export function NavMenu() {
                       onBlur={() => hoverOut(i)}
                       aria-expanded={expandedIndex === i}
                       aria-controls={`nav-dropdown-${i}`}
+                      style={accentStyle}
                       className="group relative flex w-full items-baseline gap-[0.7em] py-[0.1em] text-left"
                     >
                       <ItemFill
@@ -665,7 +669,7 @@ export function NavMenu() {
                         ref={(el) => {
                           numberRefs.current[i] = el;
                         }}
-                        className="font-mono text-[0.45em] text-foreground/30 tabular-nums"
+                        className="font-mono text-[0.45em] text-foreground/30 tabular-nums transition-colors group-hover:text-[var(--nav-item-accent)] group-focus:text-[var(--nav-item-accent)]"
                       >
                         {pad(i + 1)}
                       </span>
@@ -673,7 +677,7 @@ export function NavMenu() {
                         ref={(el) => {
                           labelRefs.current[i] = el;
                         }}
-                        className="font-display text-[1em] font-semibold tracking-tight text-foreground"
+                        className="font-display text-[1em] font-semibold tracking-tight text-foreground transition-colors group-hover:text-[var(--nav-item-accent)] group-focus:text-[var(--nav-item-accent)]"
                       >
                         {item.label}
                       </span>

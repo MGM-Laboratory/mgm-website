@@ -12,8 +12,15 @@ import { FlairShape } from "@/components/process/pattern-tile";
 const CARD_BG: Record<string, string> = {
   blue: "bg-brand-blue",
   red: "bg-brand-red",
-  yellow: "bg-[#FFBC00]",
+  yellow: "bg-brand-yellow",
   green: "bg-brand-green",
+};
+
+const CARD_TEXT: Record<string, string> = {
+  blue: "text-white",
+  red: "text-white",
+  green: "text-white",
+  yellow: "text-[var(--ink)]",
 };
 
 function reducedMotion() {
@@ -122,8 +129,9 @@ export function WorkBento({
               panelRefs.current[i] = el;
             }}
             className={cn(
-              "absolute inset-0 flex flex-col items-start justify-center gap-[0.35em] overflow-hidden px-[0.4em] text-white",
+              "absolute inset-0 flex flex-col items-start justify-center gap-[0.35em] overflow-hidden px-[0.4em]",
               CARD_BG[item.color] ?? "bg-brand-blue",
+              CARD_TEXT[item.color] ?? "text-white",
             )}
           >
             {item.pattern && (

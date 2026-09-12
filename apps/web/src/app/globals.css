@@ -5,6 +5,7 @@
 :root {
   --background: #ffffff;
   --foreground: #0e1116;
+  --ink: #0e1116;
 
   /* MGM Laboratory brand tokens — see /DESIGN_SYSTEM.md */
   --brand-blue: #3a6dc5;

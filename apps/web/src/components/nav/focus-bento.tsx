@@ -12,8 +12,15 @@ import { CompetencyMotifShape } from "@/components/sections/competency-motif";
 const CARD_BG: Record<string, string> = {
   blue: "bg-brand-blue",
   red: "bg-brand-red",
-  yellow: "bg-[#FFBC00]",
+  yellow: "bg-brand-yellow",
   green: "bg-brand-green",
+};
+
+const CARD_TEXT: Record<string, string> = {
+  blue: "text-white",
+  red: "text-white",
+  green: "text-white",
+  yellow: "text-[var(--ink)]",
 };
 
 function reducedMotion() {
@@ -95,14 +102,20 @@ export function FocusBento({
                   className="-right-3 -bottom-3 size-[2.6em]"
                 />
               )}
-              <span className="relative z-10 text-[1em] leading-tight font-semibold text-white">
+              <span
+                className={cn(
+                  "relative z-10 text-[1em] leading-tight font-semibold",
+                  CARD_TEXT[item.color] ?? "text-white",
+                )}
+              >
                 {item.label}
               </span>
             </div>
             <div
               className={cn(
-                "absolute inset-0 flex flex-col items-center justify-center gap-[0.35em] overflow-hidden rounded-xl p-[0.3em] text-center text-white [backface-visibility:hidden] [transform:rotateY(180deg)]",
+                "absolute inset-0 flex flex-col items-center justify-center gap-[0.35em] overflow-hidden rounded-xl p-[0.3em] text-center [backface-visibility:hidden] [transform:rotateY(180deg)]",
                 CARD_BG[item.color] ?? "bg-brand-blue",
+                CARD_TEXT[item.color] ?? "text-white",
               )}
             >
               {item.motif && (
