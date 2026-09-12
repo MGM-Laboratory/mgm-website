@@ -78,8 +78,9 @@ const LAYER_COLORS = [
   "var(--brand-green)",
 ];
 
-// Cycled across the social icons on hover, same brand palette as the rest
-// of the panel's accents.
+// Cycled across the social icons' CSS hover/focus states, matching the
+// panel's brand palette without letting an inline animation color outlive a
+// theme change.
 const SOCIAL_ACCENTS = [
   toneColor("blue"),
   toneColor("red"),
@@ -202,14 +203,9 @@ export function NavMenu() {
     NAV_SOCIALS.forEach((_, i) => {
       const icon = socialRefs.current[i];
       if (!icon) return;
-      const accent = SOCIAL_ACCENTS[i % SOCIAL_ACCENTS.length];
       const tl = gsap.timeline({ paused: true, defaults: { overwrite: "auto" } });
       tl.to(icon, { rotate: -14, duration: 0.1, ease: "power1.out" })
-        .to(
-          icon,
-          { rotate: 14, scale: 1.25, color: accent, duration: 0.18, ease: "power1.inOut" },
-          ">",
-        )
+        .to(icon, { rotate: 14, scale: 1.25, duration: 0.18, ease: "power1.inOut" }, ">")
         .to(icon, { rotate: 0, duration: 0.22, ease: "back.out(3)" }, ">");
       socialTimelines.current[i] = tl;
     });
@@ -731,10 +727,6 @@ export function NavMenu() {
                 Let&apos;s Talk
               </p>
               <EmailReveal email={CONTACT_EMAIL} />
-              <div className="flex items-center gap-2 border-t border-[var(--line)] pt-[clamp(0.35rem,1dvh,0.6rem)] text-[0.85em] font-semibold text-foreground/70">
-                <span>Malang (ID)</span>
-                <span className="text-foreground/40">{wibTime ?? "--:--"}</span>
-              </div>
             </div>
 
             <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)] border-t border-[var(--line)] pt-[clamp(0.5rem,1.5dvh,1.25rem)]">
@@ -744,6 +736,9 @@ export function NavMenu() {
               <div className="flex flex-wrap items-center gap-[clamp(0.6rem,1.6dvh,1.1rem)]">
                 {NAV_SOCIALS.map((s, i) => {
                   const Icon = SOCIAL_ICONS[s.label];
+                  const accentStyle = {
+                    "--social-accent": SOCIAL_ACCENTS[i % SOCIAL_ACCENTS.length],
+                  } as CSSProperties;
                   return (
                     <a
                       key={s.label}
@@ -755,7 +750,8 @@ export function NavMenu() {
                       onMouseLeave={() => socialHoverOut(i)}
                       onFocus={() => socialHoverIn(i)}
                       onBlur={() => socialHoverOut(i)}
-                      className="text-foreground/60"
+                      style={accentStyle}
+                      className="text-foreground/60 transition-colors hover:text-[var(--social-accent)] focus:text-[var(--social-accent)]"
                     >
                       {Icon && (
                         <Icon
@@ -772,6 +768,9 @@ export function NavMenu() {
             </div>
 
             <div className="flex items-center gap-[clamp(0.75rem,2dvh,1.25rem)] border-t border-[var(--line)] pt-[clamp(0.35rem,1dvh,0.75rem)] text-[clamp(0.6rem,1.5dvh,0.75rem)] text-foreground/40">
+              <span className="whitespace-nowrap">
+                <span className="text-foreground/60">Malang (ID)</span> {wibTime ?? "--:--"}
+              </span>
               {LEGAL_LINKS.map((l) => (
                 <Link
                   key={l.href}

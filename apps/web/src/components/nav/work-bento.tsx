@@ -7,7 +7,8 @@ import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { NavBentoLink } from "@/data/nav";
-import { FlairShape } from "@/components/process/pattern-tile";
+import { FlairShape, toneColor } from "@/components/process/pattern-tile";
+import { CompetencyMotifShape } from "@/components/sections/competency-motif";
 
 const CARD_BG: Record<string, string> = {
   blue: "bg-brand-blue",
@@ -27,19 +28,21 @@ function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
 }
 
-// Deliberately a different mechanic than Focus's 3D flip: an accent panel
-// slides up from the bottom to cover the card while it lifts on its own
-// shadow, instead of rotating — same "reveal more" idea, a different axis
-// of motion so the two dropdowns don't feel identical.
-// items[0] (Projects) spans both columns; the other two sit side by side.
+// Shared card mechanic for both menu accordions: an accent panel slides up
+// from the bottom while the card lifts. Our Work gives its first item a
+// featured span; Focus keeps its four cards in an even 2×2 grid.
 export function WorkBento({
   items,
   registerRef,
   onNavigate,
+  featuredFirst = true,
+  actionLabel = "View",
 }: {
   items: NavBentoLink[];
   registerRef: (index: number, el: HTMLAnchorElement | null) => void;
   onNavigate: () => void;
+  featuredFirst?: boolean;
+  actionLabel?: string;
 }) {
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const panelRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -94,7 +97,7 @@ export function WorkBento({
   }
 
   return (
-    <div className="grid grid-cols-2 auto-rows-[clamp(2.4rem,7dvh,4.2rem)] gap-[0.4em] pt-[0.15em] pb-[0.3em] text-[clamp(0.65rem,1.7dvh,0.95rem)]">
+    <div className="grid grid-cols-2 auto-rows-[clamp(2.4rem,7dvh,4.2rem)] gap-[0.4em] pt-[0.35em] pb-[0.3em] text-[clamp(0.65rem,1.7dvh,0.95rem)]">
       {items.map((item, i) => (
         <Link
           key={item.href}
@@ -111,7 +114,7 @@ export function WorkBento({
           style={{ boxShadow: "0 0 0 0 rgba(0,0,0,0)" }}
           className={cn(
             "group relative block overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground",
-            i === 0 && "col-span-2",
+            featuredFirst && i === 0 && "col-span-2",
           )}
         >
           <div className="absolute inset-0 flex items-center px-[0.4em]">
@@ -120,6 +123,13 @@ export function WorkBento({
                 kind={item.pattern}
                 tone={item.color}
                 className="pointer-events-none absolute -top-2 -right-2 size-[2.2em] opacity-20"
+              />
+            )}
+            {item.motif && (
+              <CompetencyMotifShape
+                motif={item.motif}
+                stroke={toneColor(item.color)}
+                className="pointer-events-none absolute -top-2 -right-2 size-[2.2em] opacity-30"
               />
             )}
             <span className="text-[1em] font-semibold text-foreground">{item.label}</span>
@@ -144,9 +154,16 @@ export function WorkBento({
                 <FlairShape kind={item.pattern} tone="white" className="h-full w-full" />
               </div>
             )}
+            {item.motif && (
+              <CompetencyMotifShape
+                motif={item.motif}
+                stroke="rgba(255,255,255,0.35)"
+                className="pointer-events-none absolute -top-3 -right-3 size-[2.8em] opacity-25"
+              />
+            )}
             <span className="relative z-10 text-[0.95em] font-semibold">{item.label}</span>
             <span className="relative z-10 inline-flex items-center gap-1 rounded-full bg-white/20 px-[0.6em] py-[0.15em] text-[0.55em] font-medium">
-              View
+              {actionLabel}
               <ArrowRight className="size-[0.8em]" />
             </span>
           </div>
