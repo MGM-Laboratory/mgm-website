@@ -5,32 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { PatternTile, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
-
-// lucide-react in this repo ships no brand/logo icons (Instagram,
-// Linkedin, etc. were dropped upstream) — drawn inline instead, matching
-// the design system's stroke-only iconography rules.
-function LinkedinGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3" y="9" width="4" height="12" fill="currentColor" />
-      <circle cx="5" cy="4.5" r="2.25" fill="currentColor" />
-      <path
-        d="M11 21V9h4v1.8c.9-1.3 2.3-2 4-2 3 0 5 2 5 5.5V21h-4v-6c0-1.5-.8-2.5-2.2-2.5S15 13.5 15 15v6z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function InstagramGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="2" />
-      <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="2" />
-      <circle cx="17.25" cy="6.75" r="1.1" fill="currentColor" />
-    </svg>
-  );
-}
+import { InstagramGlyph, LinkedinGlyph } from "@/components/social-icons";
 
 const FOOTER_MOSAIC: { kind: PatternKind; bg: PatternTone; fg: PatternTone }[] = [
   { kind: "arcs", bg: "white", fg: "yellow" },
