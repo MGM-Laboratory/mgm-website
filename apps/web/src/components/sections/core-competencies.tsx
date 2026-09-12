@@ -61,17 +61,62 @@ export function CoreCompetenciesSection() {
 
       const d = reduced ? 0 : 1;
       const tl = gsap.timeline({ paused: true, defaults: { overwrite: "auto" } });
-      tl.to(link, { y: -10, boxShadow: "0 24px 48px -20px rgba(0,0,0,0.35)", duration: 0.4 * d }, 0)
+      // `link`'s y/opacity and `frontMotif`'s scale are also driven by
+      // animations outside this timeline (the section's scroll-triggered
+      // entrance on `link`, the idle loop on `frontMotif`) — a plain
+      // `.to()` takes "current value" as its implicit start, and if hover
+      // fires while one of those is still mid-flight, `overwrite: "auto"`
+      // cuts it off right there, so reversing on mouseleave returned to
+      // that half-finished value forever instead of the card's true rest
+      // state (seen as a card stuck lower than the others, sometimes
+      // invisible if caught early enough that opacity hadn't animated up
+      // yet). `.fromTo()` forces the real baseline every time this plays,
+      // fixing that — but it renders its "from" the instant the tween is
+      // *created* by default (`immediateRender: true`), regardless of this
+      // timeline's own `paused: true`. Under reduced motion every duration
+      // here collapses to 0, so that eager render (a real, if brief, "from"
+      // state under normal motion) and the tween's "complete" state become
+      // the same instant — every card snapped straight to its hovered
+      // position on mount, before any hover. There's no race to protect
+      // against under reduced motion in the first place, though (the
+      // entrance is a synchronous `gsap.set()` there, not an animation —
+      // see fadeUpOnScroll — so it's always already resolved before any
+      // hover could occur), so it's safe to turn `immediateRender` off
+      // specifically for that case rather than needing the `.fromTo()`
+      // protection at all.
+      tl.fromTo(
+        link,
+        { y: 0, opacity: 1 },
+        {
+          y: -10,
+          opacity: 1,
+          boxShadow: "0 24px 48px -20px rgba(0,0,0,0.35)",
+          duration: 0.4 * d,
+          immediateRender: !reduced,
+        },
+        0,
+      )
         .to(inner, { rotationY: 180, duration: 0.7 * d, ease: "back.out(1.5)" }, 0)
         // Scale only, no rotate — this shape is clipped by the card's own
         // edge on purpose (its ring's gap, the X's cut corners), so
         // rotating it would swing that cut to an arbitrary, broken-looking
         // spot mid-hover instead of staying anchored to the card.
-        .to(frontMotif, { scale: 1.06, duration: 0.7 * d, ease: "power2.out" }, 0)
+        .fromTo(
+          frontMotif,
+          { scale: 1 },
+          { scale: 1.06, duration: 0.7 * d, ease: "power2.out", immediateRender: !reduced },
+          0,
+        )
         .fromTo(
           back,
           { opacity: 0, y: 14 },
-          { opacity: 1, y: 0, duration: 0.4 * d, ease: "back.out(2)" },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.4 * d,
+            ease: "back.out(2)",
+            immediateRender: !reduced,
+          },
           reduced ? 0 : 0.32,
         );
       hoverTimelines.current[i] = tl;
