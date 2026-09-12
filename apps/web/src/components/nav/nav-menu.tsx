@@ -325,9 +325,10 @@ export function NavMenu() {
   // The empty left side (over the blurred/dimmed backdrop) gets the same
   // brand-mark assembly the hero plays after "& Mobile Laboratory" — three
   // shards flying in from different directions and popping into place —
-  // reusing that exact component and choreography for continuity. Closing
-  // is deliberately simpler, just a fade, rather than reversing the
-  // assembly.
+  // reusing that exact component and choreography for continuity. Unlike
+  // the hero, there's no settle bump after the shards land (just the
+  // assembly, nothing extra once it's together) and closing is simpler
+  // still, just a fade rather than reversing the assembly.
   const playLogoIn = useCallback(() => {
     logoTlRef.current?.kill();
     const d = reducedMotion() ? 0 : 1;
@@ -349,9 +350,7 @@ export function NavMenu() {
         { opacity: 0, scale: 0.3, x: 55, y: 45, rotate: -120 },
         { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0, duration: 0.55 * d, ease: "back.out(1.9)" },
         "-=0.4",
-      )
-      .to(".nav-logo", { scale: 1.12, duration: 0.14 * d, ease: "power1.out" }, "+=0.02")
-      .to(".nav-logo", { scale: 1, duration: 0.25 * d, ease: "back.out(3)" });
+      );
     logoTlRef.current = tl;
   }, []);
 
