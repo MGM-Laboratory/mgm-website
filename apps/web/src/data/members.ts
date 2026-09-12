@@ -58,19 +58,7 @@ const FOCUS_BY_DIVISION: Record<MemberDivision, readonly string[]> = {
   Secretariat: ["Operations", "Administration", "Coordination"],
 };
 
-const MISSING_PORTRAITS = new Set([
-  "tobias-andra-valentino",
-  "sandhika-rizqi-ramadhan",
-  "devanida-ratna-adiningrum",
-  "a-agung-ngurah-bayu-widia-putra",
-  "azmi-al-ghifari-rahman",
-  "risqi-achmad-fahreal",
-  "nada-musyaffa-bilhaqi",
-  "raynanta-aulia-nanda",
-  "githapati-prabuja-kemala-detha",
-  "edgar-jason-husin",
-  "rananda-ardiawan",
-]);
+const MISSING_PORTRAITS = new Set(["a-agung-ngurah-bayu-widia-putra"]);
 
 const MEMBER_SEEDS: readonly (readonly [string, string, string?])[] = [
   ["CURRICULUM", "Ihtishamul Hasan", "Samhasan"],

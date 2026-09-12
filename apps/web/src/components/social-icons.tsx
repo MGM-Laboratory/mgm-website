@@ -33,6 +33,21 @@ export function LinkedinGlyph({ className, ref }: GlyphProps) {
   );
 }
 
+export function GithubGlyph({ className, ref }: GlyphProps) {
+  return (
+    <svg ref={ref} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M9 19.4C5.5 20.5 5.5 17.5 4.1 17M13.9 21V18.2C13.9 17.4 14.2 16.7 14.7 16.2C11 15.8 7.1 14.4 7.1 8.1C7.1 6.5 7.7 5.1 8.6 4C8.3 3.2 8.2 2 8.7 1C8.7 1 10.1 0.6 13 2.5C15.5 1.8 18.2 1.8 20.7 2.5C23.6 0.6 25 1 25 1C25.5 2 25.4 3.2 25.1 4C26 5.1 26.6 6.5 26.6 8.1C26.6 14.4 22.7 15.8 19 16.2C19.5 16.7 19.8 17.5 19.8 18.5V21"
+        transform="translate(-3.4 1) scale(.83)"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function XGlyph({ className, ref }: GlyphProps) {
   return (
     <svg ref={ref} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

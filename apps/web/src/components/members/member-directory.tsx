@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Search, SlidersHorizontal, X } from "lucide-react";
-import { useDeferredValue, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { MEMBERS, type Member, type MemberDivision } from "@/data/members";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
@@ -103,15 +103,24 @@ function fuzzyScore(value: string, query: string) {
   return score;
 }
 
-function scoreMember(member: Member, query: string) {
+function scoreMember(member: Member, query: string, profileText = "") {
   const normalizedQuery = normalize(query);
   const requiredYears = normalizedQuery.match(/\b(\d+)\s*(?:years?|yrs?)\b/)?.[1];
+  const normalizedProfileText = normalize(profileText);
 
-  if (requiredYears) {
-    return -1;
-  }
+  if (requiredYears && !normalizedProfileText.includes(`${requiredYears} years`)) return -1000;
 
-  const terms = normalizedQuery.split(" ").filter((term) => term && !STOP_WORDS.has(term));
+  const terms = normalizedQuery
+    .split(" ")
+    .filter(
+      (term) =>
+        term &&
+        !STOP_WORDS.has(term) &&
+        term !== requiredYears &&
+        term !== "year" &&
+        term !== "years" &&
+        term !== "yrs",
+    );
   if (!terms.length) return 1;
 
   const fields = [
@@ -125,9 +134,15 @@ function scoreMember(member: Member, query: string) {
 
   return terms.reduce((total, term) => {
     const candidates = SEARCH_ALIASES[term] ?? [term];
-    const best = Math.max(
+    const fuzzyMatch = Math.max(
       ...candidates.flatMap((candidate) => fields.map((field) => fuzzyScore(field, candidate))),
     );
+    const profileMatch = Math.max(
+      ...candidates.map((candidate) =>
+        normalizedProfileText.includes(candidate) ? candidate.length * 4 : 0,
+      ),
+    );
+    const best = Math.max(fuzzyMatch, profileMatch);
     return best ? total + best : -1000;
   }, 0);
 }
@@ -136,6 +151,11 @@ function matchesFilter(member: Member, filter: Filter) {
   if (filter === "All") return true;
   if (filter === "Research and Development") return member.group === filter;
   return member.division === filter;
+}
+
+function matchesRequestedExperience(profileText: string | undefined, query: string) {
+  const years = normalize(query).match(/\b(\d+)\s*(?:years?|yrs?)\b/)?.[1];
+  return !years || normalize(profileText ?? "").includes(`${years} years`);
 }
 
 function FilterButton({
@@ -190,7 +210,7 @@ function Portrait({ member, index }: { member: Member; index: number }) {
       />
       {member.hasPortrait ? (
         <Image
-          src={`/members/${member.slug}.webp`}
+          src={`/members/${member.slug}.png`}
           alt=""
           fill
           sizes="48px"
@@ -209,15 +229,40 @@ export function MemberDirectory() {
   const root = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<Filter>("All");
   const [query, setQuery] = useState("");
+  const [profileSearchIndex, setProfileSearchIndex] = useState<Record<string, string>>({});
   const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadIndex = () =>
+      fetch("/member-profiles/index.json", { signal: controller.signal })
+        .then((response) => (response.ok ? response.json() : {}))
+        .then((index: Record<string, string>) => {
+          setProfileSearchIndex(index);
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+        });
+
+    const idleCallback = window.requestIdleCallback?.(loadIndex);
+    if (idleCallback === undefined) {
+      void loadIndex();
+    }
+
+    return () => {
+      controller.abort();
+      if (idleCallback !== undefined) window.cancelIdleCallback?.(idleCallback);
+    };
+  }, []);
 
   const filteredMembers = useMemo(() => {
     return MEMBERS.flatMap((member) => {
       if (!matchesFilter(member, filter)) return [];
-      const score = scoreMember(member, deferredQuery);
+      if (!matchesRequestedExperience(profileSearchIndex[member.slug], deferredQuery)) return [];
+      const score = scoreMember(member, deferredQuery, profileSearchIndex[member.slug]);
       return score < 0 ? [] : [{ member, score }];
     }).toSorted((a, b) => b.score - a.score || a.member.name.localeCompare(b.member.name));
-  }, [deferredQuery, filter]);
+  }, [deferredQuery, filter, profileSearchIndex]);
 
   useLayoutEffect(() => {
     const element = root.current;
