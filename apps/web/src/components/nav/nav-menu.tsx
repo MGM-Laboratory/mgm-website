@@ -132,14 +132,19 @@ export function NavMenu() {
   const busyRef = useRef(false);
   const expandedRef = useRef<number | null>(null);
 
-  // Initial offscreen/hidden state — set once, imperatively, instead of
-  // relying on a first-render CSS class, so it's the same code path the
-  // close animation lands back on.
+  // The panel/layers render `invisible` by default (see the comment above
+  // the overlay) so there's nothing to see before this runs. From here,
+  // GSAP owns their position and visibility exclusively: the panel and
+  // layers become visible (autoAlpha: 1) but pushed off-screen (xPercent),
+  // instead of visible-and-off-screen coming from a CSS transform class —
+  // GSAP appears to preserve and stack onto whatever transform a class
+  // already put on an element rather than replacing it, which previously
+  // left the panel translated twice as far as intended the moment this ran.
   useLayoutEffect(() => {
     const layers = layerRefs.current.filter((el): el is HTMLDivElement => !!el);
     if (overlayRef.current) gsap.set(overlayRef.current, { autoAlpha: 0 });
-    if (panelRef.current) gsap.set(panelRef.current, { xPercent: 100 });
-    if (layers.length) gsap.set(layers, { xPercent: 100 });
+    if (panelRef.current) gsap.set(panelRef.current, { autoAlpha: 1, xPercent: 100 });
+    if (layers.length) gsap.set(layers, { autoAlpha: 1, xPercent: 100 });
     if (iconTopRef.current) gsap.set(iconTopRef.current, { y: -3, rotate: 0, width: 16 });
     if (iconBottomRef.current) gsap.set(iconBottomRef.current, { y: 3, rotate: 0, width: 10 });
   }, []);
@@ -475,16 +480,28 @@ export function NavMenu() {
           </span>
         </span>
         <span className="relative flex size-8 items-center justify-center">
-          <span ref={iconTopRef} className="absolute h-[2px] rounded-full bg-current" />
-          <span ref={iconBottomRef} className="absolute h-[2px] rounded-full bg-current" />
+          <span ref={iconTopRef} className="absolute h-[2px] w-4 rounded-full bg-current" />
+          <span ref={iconBottomRef} className="absolute h-[2px] w-2.5 rounded-full bg-current" />
         </span>
       </button>
 
+      {/* `invisible opacity-0` below is the closed state's CSS baseline, not
+          just an animation starting point — the server-rendered HTML (and
+          the gap before hydration) has no JS at all, so without a CSS
+          default these would render at their natural, fully visible
+          position for that first paint: a flash of the open menu that then
+          animates away. The mount effect re-asserts the same result via
+          GSAP's `autoAlpha` once JS runs (simple opacity/visibility, so it
+          cleanly overrides the classes — unlike `transform`, GSAP appears
+          to preserve and stack onto whatever transform a CSS class already
+          put on the element rather than replacing it, which is why the
+          off-screen position below comes from GSAP alone (xPercent), never
+          from a CSS transform class). */}
       <div
         ref={overlayRef}
         onClick={closeMenu}
         aria-hidden
-        className="fixed inset-x-0 top-16 bottom-0 z-40 bg-black/55 backdrop-blur-md"
+        className="invisible fixed inset-x-0 top-16 bottom-0 z-40 bg-black/55 opacity-0 backdrop-blur-md"
       />
 
       <div className="pointer-events-none fixed top-16 right-0 bottom-0 z-40 w-full sm:w-[420px] lg:w-[460px]">
@@ -495,7 +512,7 @@ export function NavMenu() {
               ref={(el) => {
                 layerRefs.current[i] = el;
               }}
-              className="absolute inset-0"
+              className="invisible absolute inset-0"
               style={{ background: c }}
             />
           ))}
@@ -506,7 +523,7 @@ export function NavMenu() {
           ref={panelRef}
           aria-hidden={!open}
           inert={!open ? true : undefined}
-          className="pointer-events-auto absolute inset-0 flex flex-col overflow-y-auto border-l border-[var(--line)] bg-[var(--surface-muted)] px-6 pt-[clamp(1rem,4dvh,2rem)] pb-[clamp(0.75rem,3dvh,1.5rem)] text-foreground sm:px-10"
+          className="invisible pointer-events-auto absolute inset-0 flex flex-col overflow-y-auto border-l border-[var(--line)] bg-[var(--surface-muted)] px-6 pt-[clamp(1rem,4dvh,2rem)] pb-[clamp(0.75rem,3dvh,1.5rem)] text-foreground opacity-0 sm:px-10"
         >
           <p className="text-[11px] font-semibold tracking-[0.2em] text-foreground/40 uppercase">
             Menu
