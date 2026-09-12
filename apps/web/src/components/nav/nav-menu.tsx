@@ -1,13 +1,20 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState, type ComponentType } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import gsap from "gsap";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 
-import { NAV_ITEMS, NAV_SOCIALS } from "@/data/nav";
+import { CONTACT_EMAIL, NAV_ITEMS, NAV_SOCIALS } from "@/data/nav";
 import { toneColor } from "@/components/process/pattern-tile";
 import {
   DiscordGlyph,
@@ -16,6 +23,9 @@ import {
   XGlyph,
   YoutubeGlyph,
 } from "@/components/social-icons";
+import { EmailReveal } from "./email-reveal";
+import { FocusBento } from "./focus-bento";
+import { WorkBento } from "./work-bento";
 
 const SOCIAL_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   Instagram: InstagramGlyph,
@@ -31,6 +41,28 @@ function reducedMotion() {
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
+}
+
+const wibTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: "Asia/Jakarta",
+});
+
+// Always Malang/WIB time regardless of the visitor's own timezone — the
+// server has no notion of "now" for a client clock, so this renders a
+// placeholder until the effect below fires on mount (avoids a hydration
+// mismatch), same pattern as ThemeToggle's `useMounted`.
+function useWIBClock() {
+  const [time, setTime] = useState<string | null>(null);
+  useEffect(() => {
+    const tick = () => setTime(wibTimeFormatter.format(new Date()));
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
 }
 
 // Slides in staggered behind the panel itself — brand colors flashing past
@@ -60,6 +92,7 @@ export function NavMenu() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const pathname = usePathname();
   const isFirstRender = useRef(true);
+  const wibTime = useWIBClock();
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -124,9 +157,13 @@ export function NavMenu() {
         tl.fromTo(
           arrow,
           { opacity: 0, x: -8 },
-          { opacity: 1, x: 0, duration: 0.3 * d, ease: "power2.out" },
+          { opacity: 1, x: 14, duration: 0.3 * d, ease: "power2.out" },
           0.05,
         );
+      }
+      const chevron = chevronRefs.current[i];
+      if (chevron) {
+        tl.to(chevron, { x: 14, duration: 0.3 * d, ease: "power2.out" }, 0);
       }
       hoverTimelines.current[i] = tl;
     });
@@ -434,7 +471,7 @@ export function NavMenu() {
               as one unit — on a short viewport it shrinks enough that all
               eight items plus socials and the legal row fit with no scroll,
               instead of overflowing at a fixed size. */}
-          <nav className="mt-[2dvh] flex flex-col text-[clamp(0.8rem,2.3dvh,1.45rem)]">
+          <nav className="mt-[2dvh] flex flex-col text-[clamp(1rem,2.7dvh,1.75rem)]">
             {NAV_ITEMS.map((item, i) => {
               const accentVar = toneColor(item.accent);
               return (
@@ -456,7 +493,7 @@ export function NavMenu() {
                       onFocus={() => hoverIn(i)}
                       onBlur={() => hoverOut(i)}
                       onClick={closeMenu}
-                      className="group relative flex items-baseline gap-[0.6em] py-[0.2em]"
+                      className="group relative flex items-baseline gap-[1em] py-[0.1em]"
                     >
                       <ItemFill
                         setRef={(el) => {
@@ -500,7 +537,7 @@ export function NavMenu() {
                       onBlur={() => hoverOut(i)}
                       aria-expanded={expandedIndex === i}
                       aria-controls={`nav-dropdown-${i}`}
-                      className="group relative flex w-full items-baseline gap-[0.6em] py-[0.2em] text-left"
+                      className="group relative flex w-full items-baseline gap-[1em] py-[0.1em] text-left"
                     >
                       <ItemFill
                         setRef={(el) => {
@@ -539,25 +576,28 @@ export function NavMenu() {
                       ref={(el) => {
                         clipRefs.current[i] = el;
                       }}
-                      className="overflow-hidden pl-[2.6em]"
+                      className="overflow-hidden"
                       style={{ height: 0 }}
                     >
-                      <div className="flex flex-col gap-[0.1em] pt-[0.1em] pb-[0.6em]">
-                        {item.items.map((sub, si) => (
-                          <Link
-                            key={sub.href}
-                            ref={(el) => {
-                              if (!subRefs.current[i]) subRefs.current[i] = [];
-                              subRefs.current[i][si] = el;
-                            }}
-                            href={sub.href}
-                            onClick={closeMenu}
-                            className="w-fit py-[0.15em] text-[0.65em] font-medium text-foreground/60 transition-colors hover:text-foreground"
-                          >
-                            {sub.label}
-                          </Link>
-                        ))}
-                      </div>
+                      {item.label === "Focus" ? (
+                        <FocusBento
+                          items={item.items}
+                          onNavigate={closeMenu}
+                          registerRef={(si, el) => {
+                            if (!subRefs.current[i]) subRefs.current[i] = [];
+                            subRefs.current[i][si] = el;
+                          }}
+                        />
+                      ) : (
+                        <WorkBento
+                          items={item.items}
+                          onNavigate={closeMenu}
+                          registerRef={(si, el) => {
+                            if (!subRefs.current[i]) subRefs.current[i] = [];
+                            subRefs.current[i][si] = el;
+                          }}
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -565,7 +605,18 @@ export function NavMenu() {
             })}
           </nav>
 
-          <div className="mt-auto flex flex-col gap-[clamp(0.4rem,1.2dvh,1rem)] pt-[clamp(0.5rem,1.5dvh,1.5rem)]">
+          <div className="mt-auto flex flex-col gap-[clamp(0.3rem,1dvh,0.85rem)] pt-[clamp(0.4rem,1.2dvh,1.25rem)] text-[clamp(0.7rem,1.7dvh,0.95rem)]">
+            <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)]">
+              <p className="text-[11px] font-semibold tracking-wide text-foreground/40 uppercase">
+                Let&apos;s Talk
+              </p>
+              <EmailReveal email={CONTACT_EMAIL} />
+              <div className="flex items-center gap-2 border-t border-[var(--line)] pt-[clamp(0.35rem,1dvh,0.6rem)] text-[0.85em] font-semibold text-foreground/70">
+                <span>Malang (ID)</span>
+                <span className="text-foreground/40">{wibTime ?? "--:--"}</span>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)] border-t border-[var(--line)] pt-[clamp(0.5rem,1.5dvh,1.25rem)]">
               <p className="text-[11px] font-semibold tracking-wide text-foreground/40 uppercase">
                 Socials
