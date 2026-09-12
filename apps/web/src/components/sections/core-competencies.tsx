@@ -8,12 +8,17 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { COMPETENCIES, type CompetencyColor } from "@/data/competencies";
-import { CompetencyMotifShape } from "./competency-motif";
+import { CompetencyCardShape, CompetencyMotifShape } from "./competency-motif";
 
+// Blue, red, and green match the shared brand tokens exactly, but this
+// card's yellow is a one-off, more saturated shade the reference design
+// uses only here — not the site-wide --brand-yellow used everywhere else
+// (mosaic tiles, hero shapes, the CTA ring), so it's kept local to this
+// card instead of overwriting that shared value.
 const CARD_BG: Record<CompetencyColor, string> = {
   blue: "bg-brand-blue",
   red: "bg-brand-red",
-  yellow: "bg-brand-yellow",
+  yellow: "bg-[#FFBC00]",
   green: "bg-brand-green",
 };
 
@@ -58,7 +63,11 @@ export function CoreCompetenciesSection() {
       const tl = gsap.timeline({ paused: true, defaults: { overwrite: "auto" } });
       tl.to(link, { y: -10, boxShadow: "0 24px 48px -20px rgba(0,0,0,0.35)", duration: 0.4 * d }, 0)
         .to(inner, { rotationY: 180, duration: 0.7 * d, ease: "back.out(1.5)" }, 0)
-        .to(frontMotif, { rotate: 35, scale: 1.2, duration: 0.7 * d, ease: "power2.out" }, 0)
+        // Scale only, no rotate — this shape is clipped by the card's own
+        // edge on purpose (its ring's gap, the X's cut corners), so
+        // rotating it would swing that cut to an arbitrary, broken-looking
+        // spot mid-hover instead of staying anchored to the card.
+        .to(frontMotif, { scale: 1.06, duration: 0.7 * d, ease: "power2.out" }, 0)
         .fromTo(
           back,
           { opacity: 0, y: 14 },
@@ -70,8 +79,7 @@ export function CoreCompetenciesSection() {
       if (!reduced) {
         idleLoops.push(
           gsap.to(frontMotif, {
-            rotate: 6,
-            scale: 1.04,
+            scale: 1.02,
             duration: 2.6,
             ease: "sine.inOut",
             yoyo: true,
@@ -112,7 +120,7 @@ export function CoreCompetenciesSection() {
           roof.
         </p>
 
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-7 sm:grid-cols-4">
           {COMPETENCIES.map((c, i) => (
             <Link
               key={c.title}
@@ -124,19 +132,19 @@ export function CoreCompetenciesSection() {
               onMouseLeave={() => reverse(i)}
               onFocus={() => play(i)}
               onBlur={() => reverse(i)}
-              className="reveal-card group relative block aspect-[3/4] rounded-2xl opacity-0 [perspective:1400px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
+              className="reveal-card group relative block aspect-[279/472] rounded-3xl opacity-0 [perspective:1400px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
               style={{ boxShadow: "0 0 0 0 rgba(0,0,0,0)" }}
             >
               <div
                 ref={(el) => {
                   innerRefs.current[i] = el;
                 }}
-                className="relative h-full w-full rounded-2xl [transform-style:preserve-3d]"
+                className="relative h-full w-full rounded-3xl [transform-style:preserve-3d]"
               >
                 {/* Front */}
                 <div
                   className={cn(
-                    "absolute inset-0 flex flex-col justify-between overflow-hidden rounded-2xl p-6 [backface-visibility:hidden]",
+                    "absolute inset-0 flex flex-col justify-between overflow-hidden rounded-3xl p-6 [backface-visibility:hidden]",
                     CARD_BG[c.color],
                   )}
                 >
@@ -145,16 +153,16 @@ export function CoreCompetenciesSection() {
                     ref={(el) => {
                       frontMotifRefs.current[i] = el;
                     }}
-                    className="absolute -right-4 -bottom-4 size-32"
+                    className="pointer-events-none absolute inset-0"
                   >
-                    <CompetencyMotifShape motif={c.motif} className="inset-0 size-full" />
+                    <CompetencyCardShape motif={c.motif} className="h-full w-full" />
                   </div>
                 </div>
 
                 {/* Back */}
                 <div
                   className={cn(
-                    "absolute inset-0 flex flex-col justify-between overflow-hidden rounded-2xl p-6 [backface-visibility:hidden] [transform:rotateY(180deg)]",
+                    "absolute inset-0 flex flex-col justify-between overflow-hidden rounded-3xl p-6 [backface-visibility:hidden] [transform:rotateY(180deg)]",
                     CARD_BG[c.color],
                   )}
                 >
