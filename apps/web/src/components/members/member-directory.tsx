@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpRight, Search, X } from "lucide-react";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { MEMBERS, type Member, type MemberDivision } from "@/data/members";
@@ -386,11 +386,7 @@ export function MemberDirectory() {
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
           <aside className="member-directory-reveal lg:sticky lg:top-[11.5rem]">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)] dark:text-white">
-              <SlidersHorizontal size={18} strokeWidth={2.25} className="text-brand-blue" />
-              Filter by division
-            </div>
-            <div className="mt-4 rounded-2xl border border-[var(--line)] bg-black/[0.015] p-2 dark:bg-white/[0.025]">
+            <div className="rounded-2xl border border-[var(--line)] bg-black/[0.015] p-2 dark:bg-white/[0.025]">
               <FilterButton
                 active={filter === "All"}
                 count={MEMBERS.length}
