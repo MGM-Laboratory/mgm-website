@@ -16,6 +16,10 @@ type PublicPublicationRecord = Record<string, unknown> & { slug: string; updated
 const PAPER_KEY_PATTERN =
   /^paper-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/;
 
+// Non-residence author portraits are minted by the photo upload endpoint.
+const AUTHOR_PHOTO_KEY_PATTERN =
+  /^author-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|webp)$/;
+
 function isDraft(record: Record<string, unknown>) {
   const publication = record.publication as { draft?: unknown } | undefined;
   return publication?.draft === true;
@@ -24,6 +28,15 @@ function isDraft(record: Record<string, unknown>) {
 function paperKeyOf(record: Record<string, unknown>) {
   const publication = record.publication as { paperKey?: unknown } | undefined;
   return typeof publication?.paperKey === "string" ? publication.paperKey : undefined;
+}
+
+function authorPhotoKeysOf(record: Record<string, unknown>) {
+  const publication = record.publication as { authors?: unknown } | undefined;
+  if (!Array.isArray(publication?.authors)) return [];
+  return publication.authors.flatMap((author) => {
+    const photoKey = (author as { photoKey?: unknown } | undefined)?.photoKey;
+    return typeof photoKey === "string" ? [photoKey] : [];
+  });
 }
 
 @Injectable()
@@ -106,6 +119,7 @@ export class CmsPublicationsService {
 
   async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
     let previousPaperKey: string | undefined;
+    let previousPhotoKeys: string[] = [];
     const record = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.cmsPublication.findUnique({ where: { slug: currentSlug } });
 
@@ -122,6 +136,7 @@ export class CmsPublicationsService {
       }
 
       previousPaperKey = paperKeyOf(current.data as Record<string, unknown>);
+      previousPhotoKeys = authorPhotoKeysOf(current.data as Record<string, unknown>);
       return transaction.cmsPublication.update({
         where: { slug: currentSlug },
         data: { data, slug: nextSlug },
@@ -137,6 +152,13 @@ export class CmsPublicationsService {
       PAPER_KEY_PATTERN.test(previousPaperKey)
     ) {
       await this.storage.deleteFile(previousPaperKey).catch(() => undefined);
+    }
+    // Same for replaced or removed author portraits.
+    const nextPhotoKeys = authorPhotoKeysOf(data as Record<string, unknown>);
+    for (const photoKey of previousPhotoKeys) {
+      if (!nextPhotoKeys.includes(photoKey) && AUTHOR_PHOTO_KEY_PATTERN.test(photoKey)) {
+        await this.storage.deleteFile(photoKey).catch(() => undefined);
+      }
     }
 
     await Promise.all([
@@ -178,6 +200,11 @@ export class CmsPublicationsService {
     const key = paperKeyOf(record.data as Record<string, unknown>);
     if (key && PAPER_KEY_PATTERN.test(key)) {
       await this.storage.deleteFile(key).catch(() => undefined);
+    }
+    for (const photoKey of authorPhotoKeysOf(record.data as Record<string, unknown>)) {
+      if (AUTHOR_PHOTO_KEY_PATTERN.test(photoKey)) {
+        await this.storage.deleteFile(photoKey).catch(() => undefined);
+      }
     }
     await Promise.all([this.invalidateRecords(), this.invalidatePaperAllowed(key)]);
   }
