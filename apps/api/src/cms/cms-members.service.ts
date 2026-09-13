@@ -15,11 +15,26 @@ export class CmsMembersService {
     }));
   }
 
-  async save(slug: string, data: Prisma.InputJsonValue) {
-    const record = await this.prisma.cmsMember.upsert({
-      where: { slug },
-      create: { slug, data },
-      update: { data },
+  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+    const record = await this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.cmsMember.findUnique({ where: { slug: currentSlug } });
+
+      // A new member starts with its first chosen slug. A renamed member must
+      // already exist under the URL that was opened in the editor.
+      if (!current) {
+        if (currentSlug !== nextSlug) throw new NotFoundException("Member record not found");
+        return transaction.cmsMember.create({ data: { slug: nextSlug, data } });
+      }
+
+      if (currentSlug !== nextSlug) {
+        const destination = await transaction.cmsMember.findUnique({ where: { slug: nextSlug } });
+        if (destination) throw new Error("CMS_MEMBER_SLUG_CONFLICT");
+      }
+
+      return transaction.cmsMember.update({
+        where: { slug: currentSlug },
+        data: { data, slug: nextSlug },
+      });
     });
     return {
       ...(record.data as Record<string, unknown>),

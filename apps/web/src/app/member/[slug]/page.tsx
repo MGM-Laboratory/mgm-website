@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { MemberProfile, MemberProfileBySlug } from "@/components/members/member-profile";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { MEMBERS, getMemberBySlug } from "@/data/members";
+import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 
 type MemberDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -10,6 +12,10 @@ type MemberDetailPageProps = {
 export function generateStaticParams() {
   return MEMBERS.map((member) => ({ slug: member.slug }));
 }
+
+// A renamed profile needs to resolve at request time so its previous URL can
+// immediately redirect instead of serving an obsolete statically generated page.
+export const revalidate = 0;
 
 export async function generateMetadata({ params }: MemberDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -27,6 +33,16 @@ export async function generateMetadata({ params }: MemberDetailPageProps): Promi
 
 export default async function MemberDetailPage({ params }: MemberDetailPageProps) {
   const { slug } = await params;
+  let renamedSlug: string | undefined;
+  try {
+    const records = await ensureMemberCmsSeeded();
+    renamedSlug = records.find(
+      (record) => record.sourceSlug === slug && record.slug !== slug,
+    )?.slug;
+  } catch {
+    // The client-side member data hook retains the public profile fallback if the CMS is unavailable.
+  }
+  if (renamedSlug) redirect(`/member/${renamedSlug}`);
   const member = getMemberBySlug(slug);
 
   return (

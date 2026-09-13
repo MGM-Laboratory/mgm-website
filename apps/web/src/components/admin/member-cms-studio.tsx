@@ -489,6 +489,12 @@ export function MemberCmsStudio() {
                   activeTab={activeTab}
                   initialMember={showNew ? undefined : currentMember}
                   initialProfile={showNew ? undefined : selectedRecord?.profile}
+                  sourceMemberSlug={
+                    showNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
+                  }
+                  sourceRecordSlug={
+                    showNew ? undefined : (selectedRecord?.slug ?? currentMember.slug)
+                  }
                   onSaved={(record) => {
                     setRecords((current) => [
                       ...current.filter((item) => item.slug !== record.slug),
@@ -590,11 +596,15 @@ function MemberEditor({
   initialMember,
   initialProfile,
   onSaved,
+  sourceMemberSlug,
+  sourceRecordSlug,
 }: {
   activeTab: EditorTab;
   initialMember?: Member;
   initialProfile?: CmsMemberProfile;
   onSaved: (record: CmsMemberRecord) => void;
+  sourceMemberSlug?: string;
+  sourceRecordSlug?: string;
 }) {
   const [draft, setDraft] = useState<MemberDraft>(() =>
     initialMember
@@ -625,6 +635,7 @@ function MemberEditor({
   const [photoToEdit, setPhotoToEdit] = useState<string>();
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
+  const [originalRecordSlug] = useState(sourceRecordSlug);
   const fileInput = useRef<HTMLInputElement>(null);
   const mutateProfile = (update: (current: CmsMemberProfile) => CmsMemberProfile) =>
     setProfile((current) => update(copyProfile(current)));
@@ -669,11 +680,14 @@ function MemberEditor({
         nextProfile = { ...nextProfile, photoKey: photo.key };
       }
       const member = draftToMember(draft);
-      const response = await fetch(`/api/admin/members/${encodeURIComponent(member.slug)}`, {
-        body: JSON.stringify({ member, profile: nextProfile }),
-        headers: { "content-type": "application/json" },
-        method: "PUT",
-      });
+      const response = await fetch(
+        `/api/admin/members/${encodeURIComponent(originalRecordSlug ?? member.slug)}`,
+        {
+          body: JSON.stringify({ member, profile: nextProfile, sourceSlug: sourceMemberSlug }),
+          headers: { "content-type": "application/json" },
+          method: "PUT",
+        },
+      );
       if (!response.ok) throw new Error(await responseError(response, "Profile save failed."));
       const savedRecord = (await response.json()) as CmsMemberRecord;
       onSaved(savedRecord);

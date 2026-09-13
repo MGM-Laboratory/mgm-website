@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -38,6 +39,7 @@ const memberSchema = z.object({
   profile: z.record(z.string(), z.unknown()),
 });
 const bootstrapSchema = z.object({ records: z.array(memberSchema).min(1).max(200) });
+const saveMemberSchema = memberSchema.extend({ sourceSlug: z.string().min(1).optional() });
 
 const imageSchema = z.object({ image: z.string().startsWith("data:image/") });
 
@@ -88,9 +90,19 @@ export class CmsMembersController {
     @Headers("x-cms-passphrase") passphrase = "",
   ) {
     this.assertAdmin(passphrase);
-    const document = memberSchema.parse(body);
-    if (document.member.slug !== slug) throw new UnauthorizedException("Slug mismatch");
-    return this.members.save(slug, document as unknown as Prisma.InputJsonValue);
+    const document = saveMemberSchema.parse(body);
+    try {
+      return await this.members.save(
+        slug,
+        document.member.slug,
+        document as unknown as Prisma.InputJsonValue,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message === "CMS_MEMBER_SLUG_CONFLICT") {
+        throw new ConflictException("That profile URL is already in use.");
+      }
+      throw error;
+    }
   }
 
   @Delete(":slug")

@@ -56,6 +56,8 @@ export type CmsMemberRecord = {
   member: Member;
   profile: CmsMemberProfile;
   slug: string;
+  /** The original static-directory slug when a member profile has been renamed. */
+  sourceSlug?: string;
   updatedAt?: string;
 };
 
@@ -100,7 +102,14 @@ export function draftToMember(draft: MemberDraft): Member {
 
 export function mergeMemberRecords(base: readonly Member[], records: readonly CmsMemberRecord[]) {
   const overrides = new Map(records.map((record) => [record.slug, record.member]));
-  const merged = base.map((member) => overrides.get(member.slug) ?? member);
+  const renamedBaseSlugs = new Set(
+    records.flatMap((record) =>
+      record.sourceSlug && record.sourceSlug !== record.slug ? [record.sourceSlug] : [],
+    ),
+  );
+  const merged = base
+    .filter((member) => !renamedBaseSlugs.has(member.slug))
+    .map((member) => overrides.get(member.slug) ?? member);
   const additions = records
     .filter((record) => !base.some((member) => member.slug === record.slug))
     .map((record) => record.member);
