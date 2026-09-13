@@ -13,18 +13,29 @@ function replaceRecord(records: readonly CmsArticleRecord[], next: CmsArticleRec
  * Starts from the server-rendered CMS snapshot, then revalidates in the
  * browser. A request made before an admin publish can never overwrite the
  * newer broadcast record when it eventually completes.
+ *
+ * The admin workspace points at its own authenticated feed so unpublished
+ * drafts appear in the sidebar; every public surface uses the default
+ * published-only feed.
  */
-export function useArticleRecords(initialRecords: readonly CmsArticleRecord[] = []) {
+export function useArticleRecords(
+  initialRecords: readonly CmsArticleRecord[] = [],
+  endpoint = "/api/articles-cms",
+) {
   const [records, setRecords] = useState<CmsArticleRecord[]>(() => [...initialRecords]);
   const [ready, setReady] = useState(initialRecords.length > 0);
   const requestVersion = useRef(0);
+  const endpointRef = useRef(endpoint);
+  useEffect(() => {
+    endpointRef.current = endpoint;
+  }, [endpoint]);
 
   const loadRecords = useCallback(async (signal?: AbortSignal) => {
     const version = ++requestVersion.current;
     try {
       // The route revalidates its ETag on revisit, preserving immediate edits
       // without downloading and parsing an unchanged feed again.
-      const response = await fetch("/api/articles-cms", { cache: "default", signal });
+      const response = await fetch(endpointRef.current, { cache: "default", signal });
       const data = (response.ok ? await response.json() : { records: [] }) as {
         records?: CmsArticleRecord[];
       };

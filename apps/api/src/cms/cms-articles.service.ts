@@ -4,8 +4,14 @@ import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 
 const ARTICLE_RECORDS_CACHE_KEY = "cms:articles:v1";
+const ARTICLE_DRAFTS_CACHE_KEY = "cms:articles:drafts:v1";
 const ARTICLE_RECORDS_CACHE_TTL_SECONDS = 60 * 10;
 type PublicArticleRecord = Record<string, unknown> & { slug: string; updatedAt: string };
+
+function isDraft(record: Record<string, unknown>) {
+  const article = record.article as { draft?: unknown } | undefined;
+  return article?.draft === true;
+}
 
 @Injectable()
 export class CmsArticlesService {
@@ -14,22 +20,33 @@ export class CmsArticlesService {
     private readonly cache: CacheService,
   ) {}
 
+  /** The public feed: published articles only. Drafts never leave this service. */
   async all() {
     const cached = await this.cache.getJson<PublicArticleRecord[]>(ARTICLE_RECORDS_CACHE_KEY);
     if (cached) return cached;
 
+    const records = (await this.readAll()).filter((record) => !isDraft(record));
+    await this.cache.setJson(ARTICLE_RECORDS_CACHE_KEY, records, ARTICLE_RECORDS_CACHE_TTL_SECONDS);
+    return records;
+  }
+
+  /** The admin workspace: every article, including unpublished drafts. */
+  async allIncludingDrafts() {
+    const cached = await this.cache.getJson<PublicArticleRecord[]>(ARTICLE_DRAFTS_CACHE_KEY);
+    if (cached) return cached;
+
+    const records = await this.readAll();
+    await this.cache.setJson(ARTICLE_DRAFTS_CACHE_KEY, records, ARTICLE_RECORDS_CACHE_TTL_SECONDS);
+    return records;
+  }
+
+  private async readAll() {
     const records = await this.prisma.cmsArticle.findMany({ orderBy: { updatedAt: "desc" } });
-    const publicRecords = records.map((record) => ({
+    return records.map((record) => ({
       ...(record.data as Record<string, unknown>),
       slug: record.slug,
       updatedAt: record.updatedAt.toISOString(),
     }));
-    await this.cache.setJson(
-      ARTICLE_RECORDS_CACHE_KEY,
-      publicRecords,
-      ARTICLE_RECORDS_CACHE_TTL_SECONDS,
-    );
-    return publicRecords;
   }
 
   async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
@@ -86,6 +103,9 @@ export class CmsArticlesService {
   }
 
   private async invalidateRecords() {
-    await this.cache.remove(ARTICLE_RECORDS_CACHE_KEY);
+    await Promise.all([
+      this.cache.remove(ARTICLE_RECORDS_CACHE_KEY),
+      this.cache.remove(ARTICLE_DRAFTS_CACHE_KEY),
+    ]);
   }
 }

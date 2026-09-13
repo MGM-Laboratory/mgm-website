@@ -53,6 +53,12 @@ const saveArticleSchema = articleSchema.extend({ sourceSlug: z.string().min(1).o
 
 const imageSchema = z.object({ image: z.string().startsWith("data:image/") });
 
+// Every article media key is minted by the cover upload endpoint with an
+// `article-<slug>-<uuid>.<ext>` shape. Anything else belongs to another
+// namespace (member portraits, arbitrary bucket objects) and is refused.
+const MEDIA_KEY_PATTERN =
+  /^article-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp)$/;
+
 function safeEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
@@ -70,7 +76,14 @@ export class CmsArticlesController {
 
   @Get()
   async all() {
+    // Drafts are filtered server-side; this route feeds the public site.
     return { records: await this.articles.all() };
+  }
+
+  @Get("admin")
+  async allIncludingDrafts(@Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    return { records: await this.articles.allIncludingDrafts() };
   }
 
   @Post("bootstrap")
@@ -89,7 +102,15 @@ export class CmsArticlesController {
 
   @Get("media/:key")
   async media(@Param("key") key: string, @Res() response: Response) {
-    const url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
+    if (!MEDIA_KEY_PATTERN.test(key)) {
+      throw new BadRequestException("Unknown media key");
+    }
+    let url: string;
+    try {
+      url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
+    } catch {
+      throw new BadRequestException("Media storage is not configured in this environment.");
+    }
     return response.redirect(url);
   }
 

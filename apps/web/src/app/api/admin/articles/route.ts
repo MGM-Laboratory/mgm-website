@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 export async function GET() {
   if (!(await hasAdminSession()))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const response = await cmsApi("/cms/articles");
+  // The admin list endpoint includes unpublished drafts.
+  const response = await cmsApi("/cms/articles/admin");
   return NextResponse.json(await response.json(), { status: response.status });
 }

@@ -373,7 +373,7 @@ export function MemberCmsStudio({
     ready: articlesReady,
     records: articleRecords,
     setRecords: setArticleRecords,
-  } = useArticleRecords(initialArticles);
+  } = useArticleRecords(initialArticles, "/api/admin/articles");
   const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");

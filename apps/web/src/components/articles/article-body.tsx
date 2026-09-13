@@ -9,19 +9,34 @@ type InlineContent = InlineNode[] | string | undefined;
 
 const BODY_TEXT = "text-[1.1875rem] leading-[23px] text-[#3f3f3f] dark:text-[#d6d6d1]";
 
+// CMS-authored URLs are trusted but rendered publicly, so non-web schemes
+// are refused outright — React's own javascript: blocking stays the last line
+// of defense rather than the only one.
+function safeHref(value: string) {
+  if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
+  if (/^[/#?]/.test(value)) return value;
+  return undefined;
+}
+
+function safeImageSrc(value: string) {
+  if (/^https?:\/\//i.test(value) || value.startsWith("/")) return value;
+  return undefined;
+}
+
 function renderInline(nodes: InlineContent, keyPrefix: string): React.ReactNode {
   if (typeof nodes === "string") return nodes;
   if (!nodes?.length) return null;
   return nodes.map((node, index) => {
     const key = `${keyPrefix}-${index}`;
     if (node.type === "link") {
+      const href = node.href ? safeHref(node.href) : undefined;
       return (
         <a
           className="text-brand-blue underline decoration-brand-blue/40 underline-offset-2 transition hover:decoration-brand-blue"
-          href={node.href ?? "#"}
+          href={href}
           key={key}
           rel="noopener noreferrer"
-          target={node.href?.startsWith("http") ? "_blank" : undefined}
+          target={href?.startsWith("http") ? "_blank" : undefined}
         >
           {renderInline(node.content, key)}
         </a>
@@ -51,7 +66,8 @@ function renderInline(nodes: InlineContent, keyPrefix: string): React.ReactNode 
 }
 
 function ImageBlock({ block }: { block: ArticleBlock }) {
-  const url = typeof block.props?.url === "string" ? block.props.url : undefined;
+  const rawUrl = typeof block.props?.url === "string" ? block.props.url : undefined;
+  const url = rawUrl ? safeImageSrc(rawUrl) : undefined;
   if (!url) return null;
   return (
     <figure className="mb-[23px]">
