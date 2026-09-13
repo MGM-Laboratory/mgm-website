@@ -16,6 +16,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { MEMBER_DIVISIONS, MEMBERS, type Member } from "@/data/members";
 import {
@@ -486,7 +487,10 @@ function MemberEditor({
     reader.readAsDataURL(file);
   };
   const save = async () => {
-    if (!draft.name.trim() || !draft.slug.trim()) return;
+    if (!draft.name.trim() || !draft.slug.trim()) {
+      toast.error("Name and profile URL are required.");
+      return;
+    }
     setStatus("saving");
     setError(undefined);
     try {
@@ -512,12 +516,23 @@ function MemberEditor({
         method: "PUT",
       });
       if (!response.ok) throw new Error(await responseError(response, "Profile save failed."));
-      onSaved((await response.json()) as CmsMemberRecord);
+      const savedRecord = (await response.json()) as CmsMemberRecord;
+      onSaved(savedRecord);
+      window.dispatchEvent(new CustomEvent("mgm:member-updated"));
+      const channel = new BroadcastChannel("mgm-member-cms");
+      channel.postMessage({ type: "member-updated" });
+      channel.close();
       setPhotoUpload(undefined);
       setStatus("saved");
+      toast.success("Changes published", {
+        description: `${member.name} is updated on the public member profile.`,
+      });
     } catch (saveError) {
       setStatus("error");
-      setError(saveError instanceof Error ? saveError.message : "The changes could not be saved.");
+      const message =
+        saveError instanceof Error ? saveError.message : "The changes could not be saved.";
+      setError(message);
+      toast.error("Changes were not saved", { description: message });
     }
   };
   return (
