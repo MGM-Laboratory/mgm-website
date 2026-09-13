@@ -9,5 +9,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ key
   });
   const location = response.headers.get("location");
   if (!location) return new NextResponse(null, { status: response.status });
-  return NextResponse.redirect(location);
+  return NextResponse.redirect(location, {
+    headers: { "cache-control": "private, no-store" },
+  });
 }

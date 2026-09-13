@@ -353,11 +353,14 @@ function ProfilePortrait({
         className="absolute right-0 top-0 h-[58%] w-[22%] bg-[var(--ink)]/90 dark:bg-white/15"
       />
       {member.hasPortrait || photoKey ? (
+        // Uploaded portraits resolve through a short-lived signed storage URL.
+        // The browser can follow it directly; the Next image optimizer rejects it.
         <Image
           src={photoKey ? `/api/member-cms/media/${photoKey}` : `/members/${member.slug}.png`}
           alt={`Portrait of ${member.name}`}
           fill
           sizes="(max-width: 1023px) 100vw, 30vw"
+          unoptimized={Boolean(photoKey)}
           className={photoKey ? "object-cover" : "object-contain object-bottom"}
           style={
             photoKey && photoPosition

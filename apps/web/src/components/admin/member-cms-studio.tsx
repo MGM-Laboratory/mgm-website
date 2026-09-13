@@ -15,7 +15,8 @@ import {
 } from "@phosphor-icons/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import Cropper, { type Area } from "react-easy-crop";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { MEMBER_DIVISIONS, MEMBERS, type Member } from "@/data/members";
@@ -102,6 +103,162 @@ function CropPreview({ source, profile }: { profile: CmsMemberProfile; source?: 
         </div>
       )}
       <div className="pointer-events-none absolute inset-3 rounded-xl border border-white/75 shadow-[inset_0_0_0_1px_rgba(10,20,38,0.12)]" />
+    </div>
+  );
+}
+
+async function cropPortrait(source: string, crop: Area) {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new window.Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("This image could not be prepared."));
+    element.src = source;
+  });
+  // Preserve detail on high-density screens without allowing an oversized base64 request.
+  const scale = Math.min(1, 1600 / Math.max(crop.width, crop.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(crop.width * scale));
+  canvas.height = Math.max(1, Math.round(crop.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Your browser could not prepare this image.");
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(
+    image,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+  return canvas.toDataURL("image/jpeg", 0.9);
+}
+
+function PhotoEditorDialog({
+  image,
+  onClose,
+  onConfirm,
+}: {
+  image: string;
+  onClose: () => void;
+  onConfirm: (portrait: string) => void;
+}) {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area>();
+  const [isApplying, setIsApplying] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isApplying) onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isApplying, onClose]);
+
+  const onCropComplete = useCallback((_area: Area, pixels: Area) => {
+    setCroppedAreaPixels(pixels);
+  }, []);
+
+  const apply = async () => {
+    if (!croppedAreaPixels) return;
+    setIsApplying(true);
+    try {
+      onConfirm(await cropPortrait(image, croppedAreaPixels));
+    } catch (error) {
+      toast.error("Photo could not be prepared", {
+        description: error instanceof Error ? error.message : "Please try another image.",
+      });
+      setIsApplying(false);
+    }
+  };
+
+  return (
+    <div
+      aria-modal="true"
+      aria-labelledby="portrait-editor-title"
+      className="fixed inset-0 z-[100] grid place-items-center bg-[#10131b]/70 p-4 backdrop-blur-sm"
+      onMouseDown={() => !isApplying && onClose()}
+      role="dialog"
+    >
+      <section
+        className="w-full max-w-3xl overflow-hidden rounded-3xl border border-white/15 bg-[#f8f9fc] text-[#171b25] shadow-[0_28px_90px_-30px_rgba(0,0,0,0.7)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-5 border-b border-[#dfe4ee] px-5 py-4 sm:px-7">
+          <div>
+            <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-blue uppercase">
+              Portrait editor
+            </p>
+            <h2
+              id="portrait-editor-title"
+              className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em]"
+            >
+              Frame the member photo
+            </h2>
+            <p className="mt-1 text-sm text-[#687187]">
+              Drag to reposition, then use zoom for the final crop.
+            </p>
+          </div>
+          <button
+            aria-label="Close photo editor"
+            className="rounded-xl p-2 text-[#687187] transition hover:bg-[#e9edf5] hover:text-[#171b25]"
+            disabled={isApplying}
+            onClick={onClose}
+            type="button"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="grid gap-6 p-5 sm:grid-cols-[minmax(0,1fr)_12rem] sm:p-7">
+          <div className="relative aspect-[4/5] min-h-[22rem] overflow-hidden rounded-2xl bg-[#151b27] shadow-inner">
+            <Cropper
+              aspect={4 / 5}
+              crop={crop}
+              cropShape="rect"
+              image={image}
+              maxZoom={3}
+              minZoom={1}
+              onCropChange={setCrop}
+              onCropComplete={onCropComplete}
+              onZoomChange={setZoom}
+              restrictPosition
+              showGrid={false}
+              zoom={zoom}
+            />
+          </div>
+          <div className="flex flex-col justify-between gap-5">
+            <Field label="Zoom">
+              <input
+                aria-label="Photo zoom"
+                className="h-10 w-full accent-brand-blue"
+                max="3"
+                min="1"
+                onChange={(event) => setZoom(Number(event.target.value))}
+                step="0.01"
+                type="range"
+                value={zoom}
+              />
+            </Field>
+            <p className="rounded-2xl bg-brand-blue/[0.07] p-4 text-sm leading-6 text-[#55627a]">
+              The public portrait uses a 4:5 frame. Your crop is compressed for quick loading before
+              it is uploaded.
+            </p>
+            <button
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#171b25] px-4 text-sm font-semibold text-white transition hover:bg-brand-blue active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+              disabled={!croppedAreaPixels || isApplying}
+              onClick={() => void apply()}
+              type="button"
+            >
+              {isApplying ? "Preparing…" : "Use this photo"}
+              <Check size={17} weight="bold" />
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -465,6 +622,7 @@ function MemberEditor({
         : undefined,
   );
   const [photoUpload, setPhotoUpload] = useState<string>();
+  const [photoToEdit, setPhotoToEdit] = useState<string>();
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -472,19 +630,20 @@ function MemberEditor({
     setProfile((current) => update(copyProfile(current)));
   const updateDraft = <K extends keyof MemberDraft>(key: K, value: MemberDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
-  const readPhoto = (file?: File) => {
+  const openPhotoEditor = (file?: File) => {
     if (!file || !file.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const result = String(reader.result);
-      setPhotoSource(result);
-      setPhotoUpload(result);
-      mutateProfile((current) => ({
-        ...current,
-        photoPosition: current.photoPosition ?? { x: 50, y: 50, zoom: 1 },
-      }));
+      setPhotoToEdit(String(reader.result));
     };
     reader.readAsDataURL(file);
+  };
+  const useEditedPhoto = (portrait: string) => {
+    setPhotoSource(portrait);
+    setPhotoUpload(portrait);
+    setPhotoToEdit(undefined);
+    setDraft((current) => ({ ...current, hasPortrait: true }));
+    mutateProfile((current) => ({ ...current, photoPosition: { x: 50, y: 50, zoom: 1 } }));
   };
   const save = async () => {
     if (!draft.name.trim() || !draft.slug.trim()) {
@@ -572,7 +731,7 @@ function MemberEditor({
         <ProfileTab
           draft={draft}
           fileInput={fileInput}
-          onPhoto={readPhoto}
+          onPhoto={openPhotoEditor}
           onProfile={mutateProfile}
           photoSource={photoSource}
           profile={profile}
@@ -587,6 +746,13 @@ function MemberEditor({
       ) : null}
       {activeTab === "credentials" ? (
         <CredentialsTab onProfile={mutateProfile} profile={profile} />
+      ) : null}
+      {photoToEdit ? (
+        <PhotoEditorDialog
+          image={photoToEdit}
+          onClose={() => setPhotoToEdit(undefined)}
+          onConfirm={useEditedPhoto}
+        />
       ) : null}
     </>
   );
@@ -619,7 +785,6 @@ function ProfileTab({
   profile: CmsMemberProfile;
   updateDraft: <K extends keyof MemberDraft>(key: K, value: MemberDraft[K]) => void;
 }) {
-  const position = profile.photoPosition ?? { x: 50, y: 50, zoom: 1 };
   return (
     <div className="mt-7 space-y-10">
       <div className="grid gap-7 lg:grid-cols-[12rem_minmax(0,1fr)]">
@@ -628,7 +793,10 @@ function ProfileTab({
           <input
             accept="image/png,image/jpeg,image/webp"
             className="sr-only"
-            onChange={(event) => onPhoto(event.target.files?.[0])}
+            onChange={(event) => {
+              onPhoto(event.target.files?.[0]);
+              event.target.value = "";
+            }}
             ref={fileInput}
             type="file"
           />
@@ -699,54 +867,6 @@ function ProfileTab({
             </select>
           </Field>
         </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Photo zoom">
-          <input
-            className="h-10 w-full accent-brand-blue"
-            max="2.5"
-            min="1"
-            onChange={(e) =>
-              onProfile((current) => ({
-                ...current,
-                photoPosition: { ...position, zoom: Number(e.target.value) },
-              }))
-            }
-            step="0.05"
-            type="range"
-            value={position.zoom}
-          />
-        </Field>
-        <Field label="Horizontal crop">
-          <input
-            className="h-10 w-full accent-brand-blue"
-            max="100"
-            min="0"
-            onChange={(e) =>
-              onProfile((current) => ({
-                ...current,
-                photoPosition: { ...position, x: Number(e.target.value) },
-              }))
-            }
-            type="range"
-            value={position.x}
-          />
-        </Field>
-        <Field label="Vertical crop">
-          <input
-            className="h-10 w-full accent-brand-blue"
-            max="100"
-            min="0"
-            onChange={(e) =>
-              onProfile((current) => ({
-                ...current,
-                photoPosition: { ...position, y: Number(e.target.value) },
-              }))
-            }
-            type="range"
-            value={position.y}
-          />
-        </Field>
       </div>
       <div>
         <Field label="Bio">
