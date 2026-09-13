@@ -9,7 +9,7 @@ import {
   publishedArticles,
   type CmsArticleRecord,
 } from "@/lib/article-cms";
-import { ensureArticleCmsSeeded } from "@/lib/article-cms-seed";
+import { ensureArticleFeed } from "@/lib/article-cms-seed";
 import { MEMBERS } from "@/data/members";
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ export const revalidate = 0;
 
 async function readRecords() {
   try {
-    return publishedArticles(await ensureArticleCmsSeeded());
+    return publishedArticles(await ensureArticleFeed());
   } catch {
     return [] as CmsArticleRecord[];
   }

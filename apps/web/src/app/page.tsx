@@ -6,7 +6,7 @@ import { ArticlesSection } from "@/components/sections/articles-section";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { PROJECTS } from "@/data/projects";
 import { publishedArticles } from "@/lib/article-cms";
-import { ensureArticleCmsSeeded } from "@/lib/article-cms-seed";
+import { ensureArticleFeed } from "@/lib/article-cms-seed";
 
 const ACHIEVEMENTS = [
   {
@@ -24,8 +24,10 @@ const ACHIEVEMENTS = [
 ];
 
 export default async function Home() {
-  const initialArticles = await ensureArticleCmsSeeded()
-    .then(publishedArticles)
+  // Only the newest six articles render on the homepage, so the server
+  // fetches the light feed and trims it before it reaches the client.
+  const initialArticles = await ensureArticleFeed()
+    .then((records) => publishedArticles(records).slice(0, 6))
     .catch(() => []);
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">

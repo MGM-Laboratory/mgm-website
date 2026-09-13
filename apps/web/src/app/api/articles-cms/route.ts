@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
-import { ensureArticleCmsSeeded } from "@/lib/article-cms-seed";
+import { ensureArticleFeed } from "@/lib/article-cms-seed";
 import { publishedArticles } from "@/lib/article-cms";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +13,9 @@ const RECORDS_CACHE_CONTROL = "private, no-cache, max-age=0, must-revalidate";
 export async function GET(request: Request) {
   try {
     // Drafts stay out of the public feed entirely; the admin workspace reads
-    // them through its own authenticated proxy.
-    const records = publishedArticles(await ensureArticleCmsSeeded());
+    // them through its own authenticated proxy. The feed carries no BlockNote
+    // documents, so this payload stays light even with hundreds of articles.
+    const records = publishedArticles(await ensureArticleFeed());
     const payload = JSON.stringify({ records });
     const etag = `W/\"${createHash("sha256").update(payload).digest("base64url")}\"`;
     const headers = { "cache-control": RECORDS_CACHE_CONTROL, etag, vary: "Accept-Encoding" };

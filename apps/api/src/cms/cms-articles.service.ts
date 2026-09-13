@@ -5,8 +5,14 @@ import { PrismaService } from "../prisma/prisma.service.js";
 
 const ARTICLE_RECORDS_CACHE_KEY = "cms:articles:v1";
 const ARTICLE_DRAFTS_CACHE_KEY = "cms:articles:drafts:v1";
+const ARTICLE_FEED_CACHE_KEY = "cms:articles:feed:v1";
 const ARTICLE_RECORDS_CACHE_TTL_SECONDS = 60 * 10;
 type PublicArticleRecord = Record<string, unknown> & { slug: string; updatedAt: string };
+
+/** Feed entries carry everything except the BlockNote document. */
+function toFeedEntry(record: PublicArticleRecord) {
+  return { ...record, content: [] };
+}
 
 function isDraft(record: Record<string, unknown>) {
   const article = record.article as { draft?: unknown } | undefined;
@@ -28,6 +34,29 @@ export class CmsArticlesService {
     const records = (await this.readAll()).filter((record) => !isDraft(record));
     await this.cache.setJson(ARTICLE_RECORDS_CACHE_KEY, records, ARTICLE_RECORDS_CACHE_TTL_SECONDS);
     return records;
+  }
+
+  /** The public list without BlockNote documents, for feed-sized payloads. */
+  async feed() {
+    const cached = await this.cache.getJson<PublicArticleRecord[]>(ARTICLE_FEED_CACHE_KEY);
+    if (cached) return cached;
+
+    const records = (await this.readAll()).filter((record) => !isDraft(record)).map(toFeedEntry);
+    await this.cache.setJson(ARTICLE_FEED_CACHE_KEY, records, ARTICLE_RECORDS_CACHE_TTL_SECONDS);
+    return records;
+  }
+
+  /** One published article with its document, or nothing. */
+  async bySlug(slug: string) {
+    const record = await this.prisma.cmsArticle.findUnique({ where: { slug } });
+    if (!record) throw new NotFoundException("Article record not found");
+    const publicRecord = {
+      ...(record.data as Record<string, unknown>),
+      slug: record.slug,
+      updatedAt: record.updatedAt.toISOString(),
+    };
+    if (isDraft(publicRecord)) throw new NotFoundException("Article record not found");
+    return publicRecord;
   }
 
   /** The admin workspace: every article, including unpublished drafts. */
@@ -106,6 +135,7 @@ export class CmsArticlesService {
     await Promise.all([
       this.cache.remove(ARTICLE_RECORDS_CACHE_KEY),
       this.cache.remove(ARTICLE_DRAFTS_CACHE_KEY),
+      this.cache.remove(ARTICLE_FEED_CACHE_KEY),
     ]);
   }
 }

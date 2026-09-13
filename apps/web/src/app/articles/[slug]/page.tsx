@@ -11,7 +11,7 @@ import {
   publishedArticles,
   type CmsArticleRecord,
 } from "@/lib/article-cms";
-import { ensureArticleCmsSeeded } from "@/lib/article-cms-seed";
+import { ensureArticleFeed, fetchArticleRecord } from "@/lib/article-cms-seed";
 import { MEMBERS } from "@/data/members";
 
 type ArticlePageProps = { params: Promise<{ slug: string }> };
@@ -20,9 +20,17 @@ type ArticlePageProps = { params: Promise<{ slug: string }> };
 // and admin publishes must reach the public page immediately.
 export const revalidate = 0;
 
-async function readRecords() {
+async function readRecord(slug: string) {
   try {
-    return await ensureArticleCmsSeeded();
+    return await fetchArticleRecord(slug);
+  } catch {
+    return undefined;
+  }
+}
+
+async function readFeed() {
+  try {
+    return publishedArticles(await ensureArticleFeed());
   } catch {
     return [] as CmsArticleRecord[];
   }
@@ -30,8 +38,7 @@ async function readRecords() {
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const records = publishedArticles(await readRecords());
-  const record = records.find((item) => item.slug === slug);
+  const record = await readRecord(slug);
   if (!record) return { title: "Article not found | MGM Laboratory" };
   return {
     title: `${record.article.title} | MGM Laboratory`,
@@ -41,14 +48,15 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
-  const records = publishedArticles(await readRecords());
-  const record = records.find((item) => item.slug === slug);
+  // The document itself comes from the single-record endpoint while the
+  // related-articles strip below reuses the light feed.
+  const [record, feed] = await Promise.all([readRecord(slug), readFeed()]);
   if (!record) notFound();
 
   const { article } = record;
   const authors = articleAuthors(record, MEMBERS);
   const coverUrl = articleCoverUrl(article.coverKey);
-  const others = records.filter((item) => item.slug !== slug).slice(0, 3);
+  const others = feed.filter((item) => item.slug !== slug).slice(0, 3);
 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">

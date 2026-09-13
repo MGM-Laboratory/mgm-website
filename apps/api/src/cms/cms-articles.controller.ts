@@ -86,6 +86,18 @@ export class CmsArticlesController {
     return { records: await this.articles.allIncludingDrafts() };
   }
 
+  // The light feed and the single-record routes sit above ":slug" so the
+  // reserved paths admin / feed / media can never be shadowed by a slug.
+  @Get("feed")
+  async feed() {
+    return { records: await this.articles.feed() };
+  }
+
+  @Get(":slug")
+  async one(@Param("slug") slug: string) {
+    return { record: await this.articles.bySlug(slug) };
+  }
+
   @Post("bootstrap")
   async bootstrap(@Body() body: unknown, @Headers("x-cms-passphrase") passphrase = "") {
     this.assertAdmin(passphrase);
