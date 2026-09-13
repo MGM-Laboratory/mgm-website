@@ -524,7 +524,7 @@ export function ArticleEditor({
         </div>
       </div>
 
-      <div className="sticky top-[4.75rem] z-30 mt-5 flex justify-end pointer-events-none">
+      <div className="sticky top-[7.5rem] z-30 mt-5 flex justify-end pointer-events-none">
         <div className="flex flex-col items-end gap-2 pointer-events-auto">
           {isDirty ? (
             <span className="rounded-full bg-[#171b25]/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">

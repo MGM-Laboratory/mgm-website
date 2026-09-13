@@ -8,12 +8,12 @@ import {
   Check,
   FilePdf,
   FloppyDisk,
+  ImageSquare,
   LinkSimple,
   Plus,
   Tag,
   Trash,
   User,
-  UsersThree,
   X,
 } from "@phosphor-icons/react";
 import Link from "next/link";
@@ -22,6 +22,7 @@ import { toast } from "sonner";
 
 import type { Member } from "@/data/members";
 import {
+  authorPhotoUrl,
   draftToPublication,
   emptyPublicationDraft,
   formatPaperSize,
@@ -34,13 +35,17 @@ import {
   slugify,
   type CmsPublicationRecord,
   type PublicationAuthor,
+  type PublicationAuthorKind,
   type PublicationDraft,
 } from "@/lib/publication-cms";
+import { PhotoCropDialog, type PhotoCropPosition } from "@/components/admin/photo-crop-dialog";
 
 const inputClass =
   "h-10 w-full rounded-xl border border-[#d9dfeb] bg-white px-3 text-sm text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
 const textareaClass =
   "w-full rounded-xl border border-[#d9dfeb] bg-white px-3 py-2.5 text-sm leading-6 text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
+
+const RESIDENCE_AFFILIATION = "MGM Laboratory, University of Brawijaya";
 
 function Field({ children, label }: { children: React.ReactNode; label: string }) {
   return (
@@ -120,30 +125,78 @@ function KeywordEditor({
   );
 }
 
+type AuthorPhotoUpload = { dataUrl: string; position: PhotoCropPosition };
+
 function AuthorRow({
   author,
   index,
   members,
-  onMove,
+  onChoosePhoto,
   onChange,
+  onClearPhoto,
+  onMove,
   onRemove,
+  photoRemoved,
+  photoUpload,
   total,
 }: {
   author: PublicationAuthor;
   index: number;
   members: readonly Member[];
-  onMove: (direction: -1 | 1) => void;
+  onChoosePhoto: (file?: File) => void;
   onChange: (author: PublicationAuthor) => void;
+  onClearPhoto: () => void;
+  onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
+  photoRemoved: boolean;
+  photoUpload?: AuthorPhotoUpload;
   total: number;
 }) {
+  const kind = author.kind ?? "non-residence";
+  const setKind = (next: PublicationAuthorKind) => onChange({ ...author, kind: next });
+
+  // Choosing a lab member pulls their name in; the affiliation defaults to
+  // the laboratory and stays fully editable.
+  const chooseMember = (memberSlug: string) => {
+    const member = members.find((entry) => entry.slug === memberSlug);
+    onChange({
+      ...author,
+      memberSlug: memberSlug || undefined,
+      name: member?.name ?? author.name,
+      affiliation: author.affiliation || RESIDENCE_AFFILIATION,
+    });
+  };
+
+  const photoSource = photoUpload ? photoUpload.dataUrl : authorPhotoUrl(author.photoKey);
+  const shownPhotoSource = photoRemoved ? undefined : photoSource;
+  const position = photoUpload?.position ?? author.photoPosition;
+
+  const kindButton = (value: PublicationAuthorKind, label: string) => (
+    <button
+      aria-pressed={kind === value}
+      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+        kind === value
+          ? "bg-brand-blue text-white"
+          : "bg-[#f1f4fa] text-[#5d687d] hover:bg-[#e8edf6] dark:bg-white/[0.06] dark:text-white/60 dark:hover:bg-white/10"
+      }`}
+      onClick={() => setKind(value)}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <div className="rounded-2xl border border-[#dfe4ee] bg-white p-3.5 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
-      <div className="flex items-center justify-between gap-2">
+    <div className="rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
           Author {index + 1}
         </span>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-xl bg-[#f1f4fa] p-1 dark:bg-white/[0.06]">
+            {kindButton("residence", "Residence")}
+            {kindButton("non-residence", "Non-Residence")}
+          </div>
           <button
             aria-label="Move author up"
             className="rounded-lg p-1.5 text-[#7e899e] transition hover:bg-[#f5f7fb] hover:text-brand-blue disabled:opacity-30 dark:text-white/40 dark:hover:bg-white/[0.06]"
@@ -172,55 +225,124 @@ function AuthorRow({
           </button>
         </div>
       </div>
-      <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-        <Field label="Full name">
-          <input
-            className={inputClass}
-            onChange={(event) => onChange({ ...author, name: event.target.value })}
-            placeholder="Ayu Paramitha"
-            value={author.name}
-          />
-        </Field>
-        <Field label="Lab member (optional)">
-          <div className="relative">
-            <User
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-              size={16}
+
+      {kind === "residence" ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Field label="Lab member">
+            <div className="relative">
+              <User
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                size={16}
+              />
+              <select
+                className={`${inputClass} appearance-none pl-9 pr-8`}
+                onChange={(event) => chooseMember(event.target.value)}
+                value={author.memberSlug ?? ""}
+              >
+                <option value="">Choose a member</option>
+                {members.map((member) => (
+                  <option key={member.slug} value={member.slug}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </Field>
+          <Field label="Affiliation / organization">
+            <input
+              className={inputClass}
+              onChange={(event) => onChange({ ...author, affiliation: event.target.value })}
+              placeholder={RESIDENCE_AFFILIATION}
+              value={author.affiliation ?? ""}
             />
-            <select
-              className={`${inputClass} appearance-none pl-9 pr-8`}
-              onChange={(event) =>
-                onChange({
-                  ...author,
-                  memberSlug: event.target.value || undefined,
-                  name: event.target.value
-                    ? (members.find((member) => member.slug === event.target.value)?.name ??
-                      author.name)
-                    : author.name,
-                })
-              }
-              value={author.memberSlug ?? ""}
-            >
-              <option value="">No profile link</option>
-              {members.map((member) => (
-                <option key={member.slug} value={member.slug}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
+          </Field>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Author name (full name)">
+              <input
+                className={inputClass}
+                onChange={(event) => onChange({ ...author, name: event.target.value })}
+                placeholder="Ayu Paramitha"
+                value={author.name}
+              />
+            </Field>
+            <Field label="Affiliation / organization">
+              <input
+                className={inputClass}
+                onChange={(event) => onChange({ ...author, affiliation: event.target.value })}
+                placeholder="Faculty of Computer Science, University of Brawijaya"
+                value={author.affiliation ?? ""}
+              />
+            </Field>
           </div>
-        </Field>
-      </div>
-      <div className="mt-2.5">
-        <Field label="Affiliation / organization">
-          <input
-            className={inputClass}
-            onChange={(event) => onChange({ ...author, affiliation: event.target.value })}
-            placeholder="MGM Laboratory, University of Brawijaya"
-            value={author.affiliation ?? ""}
-          />
-        </Field>
-      </div>
+          <div className="grid items-start gap-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
+            <Field label="Public profile link">
+              <div className="flex items-center gap-1.5">
+                <LinkSimple className="shrink-0 text-[#8490a5]" size={16} />
+                <input
+                  className={`${inputClass} font-mono text-xs`}
+                  onChange={(event) => onChange({ ...author, url: event.target.value })}
+                  placeholder="https://example.com/author"
+                  value={author.url ?? ""}
+                />
+              </div>
+              <p className="mt-1.5 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">
+                Clicking the author&apos;s portrait or name on the public page opens this link.
+              </p>
+            </Field>
+            <Field label="Portrait">
+              <div className="flex items-center gap-2">
+                <button
+                  aria-label="Choose portrait"
+                  className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full border border-dashed border-[#c6cedd] bg-[#f8fafd] text-[#8490a5] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/15 dark:bg-white/[0.03] dark:text-white/40"
+                  onClick={() => onChoosePhoto()}
+                  type="button"
+                >
+                  {shownPhotoSource ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt=""
+                      className="size-full object-cover"
+                      src={shownPhotoSource}
+                      style={
+                        position
+                          ? {
+                              objectPosition: `${position.x}% ${position.y}%`,
+                              transform: `scale(${position.zoom})`,
+                            }
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <ImageSquare size={17} />
+                  )}
+                </button>
+                <button
+                  className="text-xs font-semibold text-[#5d687d] transition hover:text-brand-blue dark:text-white/60"
+                  onClick={() => onChoosePhoto()}
+                  type="button"
+                >
+                  {shownPhotoSource ? "Change" : "Upload"}
+                </button>
+                {shownPhotoSource ? (
+                  <button
+                    className="text-xs font-semibold text-[#5d687d] transition hover:text-brand-red dark:text-white/60"
+                    onClick={onClearPhoto}
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+              <p className="mt-1.5 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">
+                Square crop; transparent backgrounds are kept.
+              </p>
+            </Field>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -247,14 +369,25 @@ export function PublicationEditor({
   const [slugTouched, setSlugTouched] = useState(Boolean(initialRecord));
   const [paperFile, setPaperFile] = useState<File>();
   const [paperRemoved, setPaperRemoved] = useState(false);
+  const [authorPhotos, setAuthorPhotos] = useState<Record<string, AuthorPhotoUpload>>({});
+  const [removedAuthorPhotos, setRemovedAuthorPhotos] = useState<Record<string, boolean>>({});
+  const [photoToEdit, setPhotoToEdit] = useState<{ authorId: string; image: string }>();
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const [originalRecordSlug] = useState(initialRecord?.slug);
   const fileInput = useRef<HTMLInputElement>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const photoTarget = useRef<string | undefined>(undefined);
   const [baseline, setBaseline] = useState(() =>
     JSON.stringify({ draft: initial, paperFile: undefined, paperRemoved: false }),
   );
-  const signature = JSON.stringify({ draft, paperFile: paperFile?.name, paperRemoved });
+  const signature = JSON.stringify({
+    draft,
+    paperFile: paperFile?.name,
+    paperRemoved,
+    authorPhotos: Object.keys(authorPhotos).sort(),
+    removedAuthorPhotos: Object.keys(removedAuthorPhotos).sort(),
+  });
   const isDirty = baseline !== signature;
   useEffect(() => {
     onDirtyChange(isDirty);
@@ -298,7 +431,7 @@ export function PublicationEditor({
   const addAuthor = () => {
     updateDraft("authors", [
       ...draft.authors,
-      { id: crypto.randomUUID(), name: "", affiliation: "" },
+      { id: crypto.randomUUID(), kind: "non-residence", name: "", affiliation: "" },
     ]);
   };
 
@@ -316,11 +449,35 @@ export function PublicationEditor({
     }
     setPaperFile(file);
     setPaperRemoved(false);
+    // Keep a name the admin already typed; otherwise default to the file's.
+    if (!draft.paperName) updateDraft("paperName", file.name);
+    if (status === "saved") setStatus("idle");
+  };
+
+  const openPhotoPicker = (authorId: string, file?: File) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhotoToEdit({ authorId, image: String(reader.result) });
+    reader.readAsDataURL(file);
+  };
+  const applyEditedPhoto = (authorId: string, dataUrl: string, position: PhotoCropPosition) => {
+    setAuthorPhotos((current) => ({ ...current, [authorId]: { dataUrl, position } }));
+    setRemovedAuthorPhotos((current) => ({ ...current, [authorId]: false }));
+    setPhotoToEdit(undefined);
+    if (status === "saved") setStatus("idle");
+  };
+  const clearAuthorPhoto = (authorId: string) => {
+    setAuthorPhotos((current) => {
+      const next = { ...current };
+      delete next[authorId];
+      return next;
+    });
+    setRemovedAuthorPhotos((current) => ({ ...current, [authorId]: true }));
     if (status === "saved") setStatus("idle");
   };
 
   const save = async () => {
-    const publication = draftToPublication(draft);
+    let publication = draftToPublication(draft);
     if (!publication.title || !publication.slug) {
       toast.error("Title and publication URL are required.");
       return;
@@ -338,7 +495,29 @@ export function PublicationEditor({
     setStatus("saving");
     setError(undefined);
     try {
-      let nextPublication = publication;
+      // New or replaced portraits upload first, then the record references
+      // their keys.
+      const authors = publication.authors.map((author) => ({ ...author }));
+      for (const author of authors) {
+        const upload = authorPhotos[author.id];
+        if (upload) {
+          const photoResponse = await fetch("/api/admin/publications/author-photo", {
+            body: JSON.stringify({ image: upload.dataUrl }),
+            headers: { "content-type": "application/json" },
+            method: "POST",
+          });
+          if (!photoResponse.ok)
+            throw new Error(await responseError(photoResponse, "Portrait upload failed."));
+          const uploaded = (await photoResponse.json()) as { key: string };
+          author.photoKey = uploaded.key;
+          author.photoPosition = upload.position;
+        } else if (removedAuthorPhotos[author.id]) {
+          delete author.photoKey;
+          delete author.photoPosition;
+        }
+      }
+      publication = { ...publication, authors };
+
       if (paperFile) {
         const paperResponse = await fetch(
           `/api/admin/publications/${encodeURIComponent(publication.slug)}/paper`,
@@ -351,24 +530,27 @@ export function PublicationEditor({
         if (!paperResponse.ok)
           throw new Error(await responseError(paperResponse, "Paper upload failed."));
         const uploaded = (await paperResponse.json()) as { key: string; size: number };
-        nextPublication = {
+        publication = {
           ...publication,
           paperKey: uploaded.key,
-          paperName: paperFile.name,
+          paperName: publication.paperName?.trim() || paperFile.name,
           paperSize: uploaded.size,
         };
       } else if (paperRemoved) {
-        nextPublication = {
+        publication = {
           ...publication,
           paperKey: undefined,
           paperName: undefined,
           paperSize: undefined,
         };
+      } else if (publication.paperName) {
+        publication = { ...publication, paperName: publication.paperName.trim() };
       }
+
       const response = await fetch(
         `/api/admin/publications/${encodeURIComponent(originalRecordSlug ?? publication.slug)}`,
         {
-          body: JSON.stringify({ publication: nextPublication }),
+          body: JSON.stringify({ publication }),
           headers: { "content-type": "application/json" },
           method: "PUT",
         },
@@ -380,7 +562,17 @@ export function PublicationEditor({
       setSlugTouched(true);
       setPaperFile(undefined);
       setPaperRemoved(false);
-      setBaseline(JSON.stringify({ draft: savedDraft, paperFile: undefined, paperRemoved: false }));
+      setAuthorPhotos({});
+      setRemovedAuthorPhotos({});
+      setBaseline(
+        JSON.stringify({
+          draft: savedDraft,
+          paperFile: undefined,
+          paperRemoved: false,
+          authorPhotos: [],
+          removedAuthorPhotos: [],
+        }),
+      );
       onSaved(savedRecord);
       window.dispatchEvent(new CustomEvent("mgm:publication-updated", { detail: savedRecord }));
       const channel = new BroadcastChannel("mgm-publication-cms");
@@ -434,7 +626,7 @@ export function PublicationEditor({
         </div>
       </div>
 
-      <div className="sticky top-[4.75rem] z-30 mt-5 flex justify-end pointer-events-none">
+      <div className="sticky top-[7.5rem] z-30 mt-5 flex justify-end pointer-events-none">
         <div className="flex flex-col items-end gap-2 pointer-events-auto">
           {isDirty ? (
             <span className="rounded-full bg-[#171b25]/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
@@ -500,44 +692,59 @@ export function PublicationEditor({
               Paper (PDF)
             </p>
             {paperUrl && !paperRemoved ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#dfe4ee] bg-[#f8fafd] p-3.5 dark:border-white/10 dark:bg-white/[0.03]">
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-red-50 text-brand-red dark:bg-brand-red/15">
-                  <FilePdf size={20} weight="duotone" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">
-                    {paperFile?.name ?? draft.paperName ?? "paper.pdf"}
+              <div className="mt-3 rounded-xl border border-[#dfe4ee] bg-[#f8fafd] p-3.5 dark:border-white/10 dark:bg-white/[0.03]">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-red-50 text-brand-red dark:bg-brand-red/15">
+                    <FilePdf size={20} weight="duotone" />
                   </span>
-                  <span className="mt-0.5 block font-mono text-[11px] text-[#8490a5]">
-                    {paperFile
-                      ? `${formatPaperSize(paperFile.size)} · not uploaded yet`
-                      : (formatPaperSize(draft.paperSize) ?? "uploaded")}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      {paperFile?.name ?? draft.paperName ?? "paper.pdf"}
+                    </span>
+                    <span className="mt-0.5 block font-mono text-[11px] text-[#8490a5]">
+                      {paperFile
+                        ? `${formatPaperSize(paperFile.size)} · not uploaded yet`
+                        : (formatPaperSize(draft.paperSize) ?? "uploaded")}
+                    </span>
                   </span>
-                </span>
-                <Link
-                  className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-blue transition hover:bg-brand-blue-50"
-                  href={paperUrl}
-                  target="_blank"
-                >
-                  View
-                </Link>
-                <button
-                  className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-white hover:text-brand-blue dark:text-white/60 dark:hover:bg-white/10"
-                  onClick={() => fileInput.current?.click()}
-                  type="button"
-                >
-                  Replace
-                </button>
-                <button
-                  className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-brand-red-50 hover:text-brand-red dark:text-white/60 dark:hover:bg-brand-red/15"
-                  onClick={() => {
-                    setPaperFile(undefined);
-                    setPaperRemoved(true);
-                  }}
-                  type="button"
-                >
-                  Remove
-                </button>
+                  <Link
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-blue transition hover:bg-brand-blue-50"
+                    href={paperUrl}
+                    target="_blank"
+                  >
+                    View
+                  </Link>
+                  <button
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-white hover:text-brand-blue dark:text-white/60 dark:hover:bg-white/10"
+                    onClick={() => fileInput.current?.click()}
+                    type="button"
+                  >
+                    Replace
+                  </button>
+                  <button
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-brand-red-50 hover:text-brand-red dark:text-white/60 dark:hover:bg-brand-red/15"
+                    onClick={() => {
+                      setPaperFile(undefined);
+                      setPaperRemoved(true);
+                    }}
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="mt-3 border-t border-[#dfe4ee] pt-3 dark:border-white/10">
+                  <Field label="Manuscript name">
+                    <input
+                      className={inputClass}
+                      onChange={(event) => updateDraft("paperName", event.target.value)}
+                      placeholder="touch-first-field-work.pdf"
+                      value={draft.paperName ?? ""}
+                    />
+                  </Field>
+                  <p className="mt-1.5 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">
+                    Shown under the preview and used as the download filename.
+                  </p>
+                </div>
               </div>
             ) : (
               <button
@@ -566,6 +773,60 @@ export function PublicationEditor({
               The first page becomes the public preview; readers open the full PDF viewer for the
               whole paper.
             </p>
+          </div>
+
+          {/* Authors get the full column width: names and affiliations are long. */}
+          <div className="mt-5 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
+                Authors
+              </p>
+              <button
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-brand-blue transition hover:bg-brand-blue-50"
+                onClick={addAuthor}
+                type="button"
+              >
+                <Plus size={13} weight="bold" />
+                Add author
+              </button>
+            </div>
+            <div className="mt-3 space-y-3">
+              {draft.authors.map((author, index) => (
+                <AuthorRow
+                  author={author}
+                  index={index}
+                  key={author.id}
+                  members={members}
+                  onChange={(next) =>
+                    updateDraft(
+                      "authors",
+                      draft.authors.map((item) => (item.id === author.id ? next : item)),
+                    )
+                  }
+                  onChoosePhoto={(file) => {
+                    photoTarget.current = author.id;
+                    if (file) openPhotoPicker(author.id, file);
+                    else photoInput.current?.click();
+                  }}
+                  onClearPhoto={() => clearAuthorPhoto(author.id)}
+                  onMove={(direction) => moveAuthor(index, direction)}
+                  onRemove={() =>
+                    updateDraft(
+                      "authors",
+                      draft.authors.filter((item) => item.id !== author.id),
+                    )
+                  }
+                  photoRemoved={Boolean(removedAuthorPhotos[author.id])}
+                  photoUpload={authorPhotos[author.id]}
+                  total={draft.authors.length}
+                />
+              ))}
+              {!draft.authors.length ? (
+                <p className="rounded-xl border border-dashed border-[#d9dfeb] px-3 py-5 text-center text-xs leading-5 text-[#9ba4b5] dark:border-white/10 dark:text-white/35">
+                  No authors yet. The first author becomes the citation&apos;s lead.
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -729,55 +990,6 @@ export function PublicationEditor({
             </Field>
           </div>
 
-          <div className="rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
-            <div className="flex items-center justify-between">
-              <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
-                Authors
-              </p>
-              <button
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-brand-blue transition hover:bg-brand-blue-50"
-                onClick={addAuthor}
-                type="button"
-              >
-                <Plus size={13} weight="bold" />
-                Add
-              </button>
-            </div>
-            <div className="mt-3 space-y-3">
-              {draft.authors.map((author, index) => (
-                <AuthorRow
-                  author={author}
-                  index={index}
-                  key={author.id}
-                  members={members}
-                  onChange={(next) =>
-                    updateDraft(
-                      "authors",
-                      draft.authors.map((item) => (item.id === author.id ? next : item)),
-                    )
-                  }
-                  onMove={(direction) => moveAuthor(index, direction)}
-                  onRemove={() =>
-                    updateDraft(
-                      "authors",
-                      draft.authors.filter((item) => item.id !== author.id),
-                    )
-                  }
-                  total={draft.authors.length}
-                />
-              ))}
-              {!draft.authors.length ? (
-                <p className="rounded-xl border border-dashed border-[#d9dfeb] px-3 py-5 text-center text-xs leading-5 text-[#9ba4b5] dark:border-white/10 dark:text-white/35">
-                  No authors yet. The first author becomes the citation&apos;s lead.
-                </p>
-              ) : null}
-            </div>
-            <p className="mt-3 flex items-center gap-1.5 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">
-              <UsersThree size={13} />
-              Lab members link to their profiles and show their portraits on the public page.
-            </p>
-          </div>
-
           <div className="flex items-center justify-between gap-3">
             {initialRecord ? (
               <Link
@@ -806,6 +1018,27 @@ export function PublicationEditor({
           </div>
         </aside>
       </div>
+
+      {/* The hidden input feeds the author-row portrait pickers. */}
+      <input
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const authorId = photoTarget.current;
+          openPhotoPicker(authorId ?? "", event.target.files?.[0]);
+          event.currentTarget.value = "";
+        }}
+        ref={photoInput}
+        type="file"
+      />
+
+      {photoToEdit ? (
+        <PhotoCropDialog
+          image={photoToEdit.image}
+          onClose={() => setPhotoToEdit(undefined)}
+          onConfirm={(photo, position) => applyEditedPhoto(photoToEdit.authorId, photo, position)}
+        />
+      ) : null}
     </div>
   );
 }
