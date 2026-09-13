@@ -19,7 +19,7 @@ type LegacyContacts = {
 
 type LegacyProfile = { contacts?: LegacyContacts; raw?: string };
 
-let bootstrapPromise: Promise<CmsMemberRecord[]> | undefined;
+let bootstrapPromise: Promise<void> | undefined;
 
 function publicProfileDirectories() {
   return [
@@ -81,23 +81,23 @@ async function requestRecords() {
 }
 
 export async function ensureMemberCmsSeeded() {
+  const existing = await requestRecords();
+  if (existing.length) return existing;
+
   if (!bootstrapPromise) {
     bootstrapPromise = (async () => {
-      const existing = await requestRecords();
-      if (existing.length) return existing;
-
       const records = await Promise.all(MEMBERS.map(sourceRecord));
       const response = await cmsApi("/cms/members/bootstrap", {
         body: JSON.stringify({ records }),
         method: "POST",
       });
       if (!response.ok) throw new Error("CMS member records could not be imported");
-      const data = (await response.json()) as { records?: CmsMemberRecord[] };
-      return data.records ?? records;
     })().catch((error) => {
       bootstrapPromise = undefined;
       throw error;
     });
   }
-  return bootstrapPromise;
+
+  await bootstrapPromise;
+  return requestRecords();
 }
