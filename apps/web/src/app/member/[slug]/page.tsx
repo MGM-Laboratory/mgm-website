@@ -19,7 +19,16 @@ export const revalidate = 0;
 
 export async function generateMetadata({ params }: MemberDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const member = getMemberBySlug(slug);
+  let member = getMemberBySlug(slug);
+  try {
+    const records = await ensureMemberCmsSeeded();
+    const record = records.find(
+      (item) => item.slug === slug || (item.sourceSlug === slug && item.slug !== slug),
+    );
+    member = record?.member ?? member;
+  } catch {
+    // Preserve the static member metadata when the CMS cannot be reached.
+  }
 
   if (!member) {
     return { title: "Member not found | MGM Laboratory" };
