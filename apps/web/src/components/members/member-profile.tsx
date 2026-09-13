@@ -29,7 +29,7 @@ import {
 import { GithubGlyph, LinkedinGlyph, WhatsappGlyph } from "@/components/social-icons";
 import type { Member } from "@/data/members";
 import { useMemberRecords } from "@/hooks/use-member-records";
-import type { CmsMemberProfile } from "@/lib/member-cms";
+import type { CmsMemberProfile, CmsMemberRecord } from "@/lib/member-cms";
 
 type PublicProfile = {
   contacts: {
@@ -327,13 +327,11 @@ function ProfilePortrait({
   member,
   photoKey,
   photoPosition,
-  recordsReady,
   sourceSlug,
 }: {
   member: Member;
   photoKey?: string;
   photoPosition?: CmsMemberProfile["photoPosition"];
-  recordsReady: boolean;
   sourceSlug?: string;
 }) {
   const initials = member.name
@@ -356,7 +354,7 @@ function ProfilePortrait({
         aria-hidden="true"
         className="absolute right-0 top-0 h-[58%] w-[22%] bg-[var(--ink)]/90 dark:bg-white/15"
       />
-      {photoKey || (recordsReady && member.hasPortrait) ? (
+      {photoKey || member.hasPortrait ? (
         // Uploaded portraits resolve through a short-lived signed storage URL.
         // The browser can follow it directly; the Next image optimizer rejects it.
         <Image
@@ -589,9 +587,15 @@ function DetailList({ items }: { items: readonly string[] }) {
   );
 }
 
-export function MemberProfile({ member }: { member: Member }) {
+export function MemberProfile({
+  initialRecords = [],
+  member,
+}: {
+  initialRecords?: readonly CmsMemberRecord[];
+  member: Member;
+}) {
   const root = useRef<HTMLElement>(null);
-  const { ready: recordsReady, records } = useMemberRecords();
+  const { records } = useMemberRecords(initialRecords);
   const override = records.find((record) => record.slug === member.slug);
   const effectiveMember = override?.member ?? member;
   const cmsProfile = override?.profile;
@@ -617,24 +621,24 @@ export function MemberProfile({ member }: { member: Member }) {
   const displayed = useMemo(
     () => ({
       ...parsed,
-      achievements: cmsProfile?.achievements?.length
+      achievements: cmsProfile?.achievements
         ? cmsProfile.achievements.map((item) =>
             [item.title, item.issuer, item.description].filter(Boolean).join(" · "),
           )
         : (parsed?.achievements ?? []),
-      bio: cmsProfile?.bio?.trim() || parsed?.bio || effectiveMember.bio,
-      certifications: cmsProfile?.certificates?.length
+      bio: cmsProfile?.bio?.trim() ?? parsed?.bio ?? effectiveMember.bio,
+      certifications: cmsProfile?.certificates
         ? cmsProfile.certificates.map((item) =>
             [item.title, item.issuer].filter(Boolean).join(" · "),
           )
         : (parsed?.certifications ?? []),
-      education: cmsProfile?.education?.length
+      education: cmsProfile?.education
         ? cmsProfile.education.map((item) => ({
             detail: [item.degree, item.detail].filter(Boolean).join(" · "),
             institution: item.institution,
           }))
         : (parsed?.education ?? []),
-      experience: cmsProfile?.experience?.length
+      experience: cmsProfile?.experience
         ? cmsProfile.experience.map((item) => ({
             company: item.company,
             description: item.description,
@@ -645,15 +649,13 @@ export function MemberProfile({ member }: { member: Member }) {
             title: item.title,
           }))
         : (parsed?.experience ?? []),
-      languages: cmsProfile?.languages?.length
+      languages: cmsProfile?.languages
         ? cmsProfile.languages.map((item) =>
             [item.name, item.proficiency].filter(Boolean).join(" · "),
           )
         : (parsed?.languages ?? []),
-      projects: cmsProfile?.projects?.length ? cmsProfile.projects : (parsed?.projects ?? []),
-      skills: cmsProfile?.skills?.length
-        ? cmsProfile.skills
-        : (parsed?.skills ?? [...effectiveMember.labFocus]),
+      projects: cmsProfile?.projects ?? parsed?.projects ?? [],
+      skills: cmsProfile?.skills ?? parsed?.skills ?? [...effectiveMember.labFocus],
     }),
     [cmsProfile, effectiveMember.bio, effectiveMember.labFocus, parsed],
   );
@@ -673,7 +675,6 @@ export function MemberProfile({ member }: { member: Member }) {
               member={effectiveMember}
               photoKey={cmsProfile?.photoKey}
               photoPosition={cmsProfile?.photoPosition}
-              recordsReady={recordsReady}
               sourceSlug={override?.sourceSlug}
             />
             <ContactLinks links={cmsProfile?.links} profile={{ contacts: {}, raw: "" }} />
@@ -738,8 +739,14 @@ export function MemberProfile({ member }: { member: Member }) {
   );
 }
 
-export function MemberProfileBySlug({ slug }: { slug: string }) {
-  const { members, ready } = useMemberRecords();
+export function MemberProfileBySlug({
+  initialRecords = [],
+  slug,
+}: {
+  initialRecords?: readonly CmsMemberRecord[];
+  slug: string;
+}) {
+  const { members, ready, records } = useMemberRecords(initialRecords);
   const member = members.find((candidate) => candidate.slug === slug);
   if (!member) {
     return (
@@ -748,5 +755,5 @@ export function MemberProfileBySlug({ slug }: { slug: string }) {
       </main>
     );
   }
-  return <MemberProfile member={member} />;
+  return <MemberProfile initialRecords={records} member={member} />;
 }

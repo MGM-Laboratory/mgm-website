@@ -1,15 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MEMBERS, type Member } from "@/data/members";
 import { mergeMemberRecords, type CmsMemberRecord } from "@/lib/member-cms";
 
-export function useMemberRecords() {
-  const [records, setRecords] = useState<CmsMemberRecord[]>([]);
-  const [ready, setReady] = useState(false);
+function replaceRecord(records: readonly CmsMemberRecord[], next: CmsMemberRecord) {
+  return [
+    ...records.filter(
+      (record) =>
+        record.slug !== next.slug &&
+        record.slug !== next.sourceSlug &&
+        record.sourceSlug !== next.slug &&
+        record.sourceSlug !== next.sourceSlug,
+    ),
+    next,
+  ];
+}
+
+/**
+ * Starts from the server-rendered CMS snapshot, then revalidates in the
+ * browser. A request made before an admin publish can never overwrite the
+ * newer broadcast record when it eventually completes.
+ */
+export function useMemberRecords(initialRecords: readonly CmsMemberRecord[] = []) {
+  const [records, setRecords] = useState<CmsMemberRecord[]>(() => [...initialRecords]);
+  const [ready, setReady] = useState(initialRecords.length > 0);
+  const requestVersion = useRef(0);
 
   const loadRecords = useCallback(async (signal?: AbortSignal) => {
+    const version = ++requestVersion.current;
     try {
       // The route revalidates its ETag on revisit, preserving immediate edits
       // without downloading and parsing an unchanged directory again.
@@ -17,9 +37,12 @@ export function useMemberRecords() {
       const data = (response.ok ? await response.json() : { records: [] }) as {
         records?: CmsMemberRecord[];
       };
-      setRecords(data.records ?? []);
+      if (!signal?.aborted && version === requestVersion.current) {
+        setRecords(data.records ?? []);
+      }
     } catch {
-      if (!signal?.aborted) setRecords([]);
+      // Retain the server snapshot (or a just-published record) on transient
+      // failures instead of falling back to an older static profile.
     } finally {
       if (!signal?.aborted) setReady(true);
     }
@@ -28,7 +51,8 @@ export function useMemberRecords() {
   useEffect(() => {
     const controller = new AbortController();
     const applyRecord = (record: CmsMemberRecord) => {
-      setRecords((current) => [...current.filter((item) => item.slug !== record.slug), record]);
+      requestVersion.current += 1;
+      setRecords((current) => replaceRecord(current, record));
     };
     const refresh = (event?: Event | MessageEvent<{ record?: CmsMemberRecord }>) => {
       const record =

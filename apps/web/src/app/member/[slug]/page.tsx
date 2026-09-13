@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { MemberProfile, MemberProfileBySlug } from "@/components/members/member-profile";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { MEMBERS, getMemberBySlug } from "@/data/members";
+import type { CmsMemberRecord } from "@/lib/member-cms";
 import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 
 type MemberDetailPageProps = {
@@ -42,10 +43,11 @@ export async function generateMetadata({ params }: MemberDetailPageProps): Promi
 
 export default async function MemberDetailPage({ params }: MemberDetailPageProps) {
   const { slug } = await params;
+  let initialRecords: CmsMemberRecord[] = [];
   let renamedSlug: string | undefined;
   try {
-    const records = await ensureMemberCmsSeeded();
-    renamedSlug = records.find(
+    initialRecords = await ensureMemberCmsSeeded();
+    renamedSlug = initialRecords.find(
       (record) => record.sourceSlug === slug && record.slug !== slug,
     )?.slug;
   } catch {
@@ -56,7 +58,11 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
 
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col">
-      {member ? <MemberProfile member={member} /> : <MemberProfileBySlug slug={slug} />}
+      {member ? (
+        <MemberProfile initialRecords={initialRecords} member={member} />
+      ) : (
+        <MemberProfileBySlug initialRecords={initialRecords} slug={slug} />
+      )}
       <CtaFooter />
     </div>
   );

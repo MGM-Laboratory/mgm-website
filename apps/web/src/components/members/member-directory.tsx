@@ -7,6 +7,7 @@ import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState
 
 import { type Member, type MemberDivision } from "@/data/members";
 import { useMemberRecords } from "@/hooks/use-member-records";
+import type { CmsMemberRecord } from "@/lib/member-cms";
 
 type Filter = "All" | MemberDivision;
 
@@ -211,13 +212,11 @@ function Portrait({
   member,
   index,
   photoKey,
-  recordsReady,
   sourceSlug,
 }: {
   member: Member;
   index: number;
   photoKey?: string;
-  recordsReady: boolean;
   sourceSlug?: string;
 }) {
   const initials = member.name
@@ -235,7 +234,7 @@ function Portrait({
         aria-hidden="true"
         className={`absolute -right-3 -bottom-3 size-8 rounded-full ${ACCENT_COLORS[member.accent]} opacity-90`}
       />
-      {photoKey || (recordsReady && member.hasPortrait) ? (
+      {photoKey || member.hasPortrait ? (
         <Image
           src={
             photoKey
@@ -258,8 +257,12 @@ function Portrait({
   );
 }
 
-export function MemberDirectory() {
-  const { members, ready: recordsReady, records } = useMemberRecords();
+export function MemberDirectory({
+  initialRecords = [],
+}: {
+  initialRecords?: readonly CmsMemberRecord[];
+}) {
+  const { members, records } = useMemberRecords(initialRecords);
   const root = useRef<HTMLDivElement>(null);
   const searchAnchor = useRef<HTMLDivElement>(null);
   const searchSurface = useRef<HTMLDivElement>(null);
@@ -300,10 +303,18 @@ export function MemberDirectory() {
   const filteredMembers = useMemo(() => {
     return members
       .flatMap((member) => {
+        const record = recordsBySlug.get(member.slug);
+        const profileText = [
+          profileSearchIndex[member.slug],
+          record?.profile.bio,
+          ...(record?.profile.skills ?? []),
+        ]
+          .filter(Boolean)
+          .join(" ");
         if (!matchesFilter(member, filter)) return [];
-        if (!matchesRequestedExperience(profileSearchIndex[member.slug], deferredQuery)) return [];
-        const score = scoreMember(member, deferredQuery, profileSearchIndex[member.slug]);
-        return score < 0 ? [] : [{ member, record: recordsBySlug.get(member.slug), score }];
+        if (!matchesRequestedExperience(profileText, deferredQuery)) return [];
+        const score = scoreMember(member, deferredQuery, profileText);
+        return score < 0 ? [] : [{ member, record, score }];
       })
       .toSorted((a, b) => b.score - a.score || a.member.name.localeCompare(b.member.name));
   }, [deferredQuery, filter, members, profileSearchIndex, recordsBySlug]);
@@ -460,7 +471,6 @@ export function MemberDirectory() {
                             member={member}
                             index={index}
                             photoKey={record?.profile.photoKey}
-                            recordsReady={recordsReady}
                             sourceSlug={record?.sourceSlug}
                           />
                           <div className="min-w-0 flex-1">
@@ -486,12 +496,12 @@ export function MemberDirectory() {
                               {member.name}
                             </h3>
                             <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--ink-2)] dark:text-white/65">
-                              {member.bio}
+                              {record?.profile.bio?.trim() ?? member.bio}
                             </p>
                           </div>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-1.5 border-t border-[var(--line)] pt-3">
-                          {member.labFocus.slice(0, 3).map((focus) => (
+                          {(record?.profile.skills ?? member.labFocus).slice(0, 3).map((focus) => (
                             <span
                               key={focus}
                               className="rounded-full bg-black/[0.045] px-2.5 py-1 text-[11px] font-medium text-[var(--ink-2)] dark:bg-white/[0.07] dark:text-white/65"

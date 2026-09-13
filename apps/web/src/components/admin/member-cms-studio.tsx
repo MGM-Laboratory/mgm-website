@@ -306,6 +306,7 @@ export function MemberCmsStudio() {
   const [selectedSlug, setSelectedSlug] = useState<string>();
   const [showNew, setShowNew] = useState(false);
   const [newKey, setNewKey] = useState(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const selected = useMemo(
     () => members.find((member) => member.slug === selectedSlug),
@@ -326,16 +327,28 @@ export function MemberCmsStudio() {
     );
   }, [members, query]);
 
+  const confirmDiscard = () =>
+    !hasUnsavedChanges ||
+    window.confirm("You have unsaved member changes. Discard them and continue?");
   const selectMember = (member: Member) => {
+    if ((showNew || member.slug !== selectedSlug) && !confirmDiscard()) return;
+    setHasUnsavedChanges(false);
     setShowNew(false);
     setSelectedSlug(member.slug);
   };
 
   const startNew = () => {
+    if (!confirmDiscard()) return;
+    setHasUnsavedChanges(false);
     setSelectedSlug(undefined);
     setShowNew(true);
     setNewKey((current) => current + 1);
     setActiveTab("profile");
+  };
+  const changeSection = (nextSection: EditorialSection) => {
+    if (nextSection !== section && !confirmDiscard()) return;
+    if (nextSection !== section) setHasUnsavedChanges(false);
+    setSection(nextSection);
   };
   const currentMember = selected ?? members[0] ?? MEMBERS[0];
 
@@ -365,7 +378,13 @@ export function MemberCmsStudio() {
               <ArrowSquareOut className="mr-1.5" size={16} />
               View profile
             </Link>
-            <form action="/api/admin/logout" method="post">
+            <form
+              action="/api/admin/logout"
+              method="post"
+              onSubmit={(event) => {
+                if (!confirmDiscard()) event.preventDefault();
+              }}
+            >
               <button
                 className="inline-flex rounded-lg p-2 text-[#667187] transition hover:bg-white hover:text-brand-red dark:text-white/55 dark:hover:bg-white/10"
                 title="Sign out"
@@ -387,7 +406,7 @@ export function MemberCmsStudio() {
             <SidebarItem
               active={section === "overview"}
               label="Overview"
-              onClick={() => setSection("overview")}
+              onClick={() => changeSection("overview")}
             />
             {EDITORIAL_SECTIONS.map((item) => (
               <SidebarItem
@@ -395,7 +414,7 @@ export function MemberCmsStudio() {
                 key={item.id}
                 label={item.label}
                 live={item.id === "members"}
-                onClick={() => setSection(item.id)}
+                onClick={() => changeSection(item.id)}
               />
             ))}
           </nav>
@@ -499,6 +518,7 @@ export function MemberCmsStudio() {
                   activeTab={activeTab}
                   initialMember={showNew ? undefined : currentMember}
                   initialProfile={showNew ? undefined : selectedRecord?.profile}
+                  onDirtyChange={setHasUnsavedChanges}
                   sourceMemberSlug={
                     showNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
                   }
@@ -514,11 +534,15 @@ export function MemberCmsStudio() {
                     ]);
                     setSelectedSlug(record.slug);
                     setShowNew(false);
+                    setHasUnsavedChanges(false);
                   }}
                 />
               </>
             ) : (
-              <EditorialOverview section={section} onChooseMembers={() => setSection("members")} />
+              <EditorialOverview
+                section={section}
+                onChooseMembers={() => changeSection("members")}
+              />
             )}
           </div>
         </section>
@@ -607,6 +631,7 @@ function MemberEditor({
   activeTab,
   initialMember,
   initialProfile,
+  onDirtyChange,
   onSaved,
   sourceMemberSlug,
   sourceRecordSlug,
@@ -614,6 +639,7 @@ function MemberEditor({
   activeTab: EditorTab;
   initialMember?: Member;
   initialProfile?: CmsMemberProfile;
+  onDirtyChange: (isDirty: boolean) => void;
   onSaved: (record: CmsMemberRecord) => void;
   sourceMemberSlug?: string;
   sourceRecordSlug?: string;
@@ -640,7 +666,7 @@ function MemberEditor({
     initialProfile?.photoKey
       ? `/api/member-cms/media/${initialProfile.photoKey}`
       : initialMember
-        ? `/members/${initialMember.slug}.png`
+        ? `/members/${sourceMemberSlug ?? initialMember.slug}.png`
         : undefined,
   );
   const [photoUpload, setPhotoUpload] = useState<string>();
@@ -649,10 +675,29 @@ function MemberEditor({
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const [originalRecordSlug] = useState(sourceRecordSlug);
   const fileInput = useRef<HTMLInputElement>(null);
-  const mutateProfile = (update: (current: CmsMemberProfile) => CmsMemberProfile) =>
+  const [baseline, setBaseline] = useState(() => JSON.stringify({ draft, profile }));
+  const signature = JSON.stringify({ draft, profile });
+  const isDirty = Boolean(photoUpload) || baseline !== signature;
+  useEffect(() => {
+    onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
+  useEffect(() => {
+    if (!isDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [isDirty]);
+  const mutateProfile = (update: (current: CmsMemberProfile) => CmsMemberProfile) => {
+    if (status === "saved") setStatus("idle");
     setProfile((current) => update(copyProfile(current)));
-  const updateDraft = <K extends keyof MemberDraft>(key: K, value: MemberDraft[K]) =>
+  };
+  const updateDraft = <K extends keyof MemberDraft>(key: K, value: MemberDraft[K]) => {
+    if (status === "saved") setStatus("idle");
     setDraft((current) => ({ ...current, [key]: value }));
+  };
   const openPhotoEditor = (file?: File) => {
     if (!file || !file.type.startsWith("image/")) return;
     const reader = new FileReader();
@@ -702,12 +747,23 @@ function MemberEditor({
       );
       if (!response.ok) throw new Error(await responseError(response, "Profile save failed."));
       const savedRecord = (await response.json()) as CmsMemberRecord;
+      const savedDraft = memberToDraft(savedRecord.member);
+      const savedProfile = copyProfile(savedRecord.profile);
+      setDraft(savedDraft);
+      setProfile(savedProfile);
+      setPhotoSource(
+        savedProfile.photoKey
+          ? `/api/member-cms/media/${savedProfile.photoKey}`
+          : `/members/${savedRecord.sourceSlug ?? savedRecord.slug}.png`,
+      );
+      setBaseline(JSON.stringify({ draft: savedDraft, profile: savedProfile }));
       onSaved(savedRecord);
       window.dispatchEvent(new CustomEvent("mgm:member-updated", { detail: savedRecord }));
       const channel = new BroadcastChannel("mgm-member-cms");
       channel.postMessage({ record: savedRecord, type: "member-updated" });
       channel.close();
       setPhotoUpload(undefined);
+      onDirtyChange(false);
       setStatus("saved");
       toast.success("Changes published", {
         description: `${member.name} is updated on the public member profile.`,
@@ -734,19 +790,6 @@ function MemberEditor({
             Structured fields publish directly to the member profile.
           </p>
         </div>
-        <button
-          className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#171b25] px-4 text-sm font-semibold text-white transition hover:bg-brand-blue active:scale-[0.98] dark:bg-white dark:text-[#151820]"
-          disabled={status === "saving"}
-          onClick={save}
-          type="button"
-        >
-          {status === "saved" ? (
-            <Check size={18} weight="bold" />
-          ) : (
-            <FloppyDisk size={18} weight="bold" />
-          )}
-          {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : "Save changes"}
-        </button>
       </div>
       {status === "error" ? (
         <p className="mt-4 rounded-xl bg-brand-red-50 px-4 py-3 text-sm text-brand-red dark:bg-brand-red/15 dark:text-brand-red-100">
@@ -780,6 +823,31 @@ function MemberEditor({
           onConfirm={useEditedPhoto}
         />
       ) : null}
+      <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2 sm:bottom-7 sm:right-7">
+        {isDirty ? (
+          <span className="rounded-full bg-[#171b25]/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+            Unsaved changes
+          </span>
+        ) : null}
+        <button
+          aria-label="Save member changes"
+          className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white shadow-[0_18px_35px_-16px_rgba(20,32,58,0.55)] transition hover:bg-brand-blue active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+          disabled={status === "saving"}
+          onClick={save}
+          type="button"
+        >
+          {status === "saved" ? (
+            <Check size={18} weight="bold" />
+          ) : (
+            <FloppyDisk size={18} weight="bold" />
+          )}
+          {status === "saving"
+            ? "Saving…"
+            : status === "saved" && !isDirty
+              ? "Saved"
+              : "Save changes"}
+        </button>
+      </div>
     </>
   );
 }
