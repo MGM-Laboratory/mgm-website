@@ -27,6 +27,7 @@ import { toast } from "sonner";
 
 import { MEMBER_DIVISIONS, MEMBERS, type Member } from "@/data/members";
 import { ArticleEditor } from "@/components/admin/article-cms-editor";
+import { PublicationEditor } from "@/components/admin/publication-cms-editor";
 import {
   draftToMember,
   memberToDraft,
@@ -42,7 +43,9 @@ import {
 } from "@/lib/member-cms";
 import { useMemberRecords } from "@/hooks/use-member-records";
 import { useArticleRecords } from "@/hooks/use-article-records";
+import { usePublicationRecords } from "@/hooks/use-publication-records";
 import type { CmsArticleRecord } from "@/lib/article-cms";
+import type { CmsPublicationRecord } from "@/lib/publication-cms";
 
 type EditorTab = "profile" | "experience" | "education" | "credentials";
 type EditorialSection =
@@ -365,8 +368,12 @@ function EditRow({ children, onRemove }: { children: React.ReactNode; onRemove: 
 
 export function MemberCmsStudio({
   initialArticles = [],
+  initialPublications = [],
+  paperLimitBytes = 209_715_200,
 }: {
   initialArticles?: CmsArticleRecord[];
+  initialPublications?: CmsPublicationRecord[];
+  paperLimitBytes?: number;
 }) {
   const { members, ready, records, setRecords } = useMemberRecords();
   const {
@@ -374,6 +381,11 @@ export function MemberCmsStudio({
     records: articleRecords,
     setRecords: setArticleRecords,
   } = useArticleRecords(initialArticles, "/api/admin/articles");
+  const {
+    ready: publicationsReady,
+    records: publicationRecords,
+    setRecords: setPublicationRecords,
+  } = usePublicationRecords(initialPublications);
   const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");
@@ -384,6 +396,10 @@ export function MemberCmsStudio({
   const [selectedArticleSlug, setSelectedArticleSlug] = useState<string>();
   const [showNewArticle, setShowNewArticle] = useState(false);
   const [articleNewKey, setArticleNewKey] = useState(0);
+  const [publicationQuery, setPublicationQuery] = useState("");
+  const [selectedPublicationSlug, setSelectedPublicationSlug] = useState<string>();
+  const [showNewPublication, setShowNewPublication] = useState(false);
+  const [publicationNewKey, setPublicationNewKey] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const workspacePickerRef = useRef<HTMLDivElement>(null);
@@ -425,6 +441,29 @@ export function MemberCmsStudio({
     );
   }, [articleQuery, sortedArticleRecords]);
 
+  const sortedPublicationRecords = useMemo(
+    () =>
+      [...publicationRecords].sort((left, right) =>
+        right.publication.date.localeCompare(left.publication.date),
+      ),
+    [publicationRecords],
+  );
+  const visiblePublicationRecords = useMemo(() => {
+    const needle = publicationQuery.trim().toLocaleLowerCase();
+    if (!needle) return sortedPublicationRecords;
+    return sortedPublicationRecords.filter((record) =>
+      [
+        record.publication.title,
+        record.publication.slug,
+        record.publication.journal,
+        ...record.publication.authors.map((author) => author.name),
+      ]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(needle),
+    );
+  }, [publicationQuery, sortedPublicationRecords]);
+
   const confirmDiscard = () =>
     !hasUnsavedChanges || window.confirm("You have unsaved changes. Discard them and continue?");
   const selectMember = (member: Member) => {
@@ -455,6 +494,19 @@ export function MemberCmsStudio({
     setShowNewArticle(true);
     setArticleNewKey((current) => current + 1);
   };
+  const selectPublication = (slug: string) => {
+    if ((showNewPublication || slug !== selectedPublicationSlug) && !confirmDiscard()) return;
+    setHasUnsavedChanges(false);
+    setShowNewPublication(false);
+    setSelectedPublicationSlug(slug);
+  };
+  const startNewPublication = () => {
+    if (!confirmDiscard()) return;
+    setHasUnsavedChanges(false);
+    setSelectedPublicationSlug(undefined);
+    setShowNewPublication(true);
+    setPublicationNewKey((current) => current + 1);
+  };
   const changeSection = (nextSection: EditorialSection) => {
     if (nextSection !== section && !confirmDiscard()) return;
     if (nextSection !== section) setHasUnsavedChanges(false);
@@ -466,6 +518,9 @@ export function MemberCmsStudio({
   const isEditingMember = section === "members" && !showNew;
   const selectedArticle = sortedArticleRecords.find(
     (record) => record.slug === selectedArticleSlug,
+  );
+  const selectedPublication = sortedPublicationRecords.find(
+    (record) => record.slug === selectedPublicationSlug,
   );
 
   useEffect(() => {
@@ -530,7 +585,8 @@ export function MemberCmsStudio({
                     const available =
                       workspace.id === "overview" ||
                       workspace.id === "members" ||
-                      workspace.id === "articles";
+                      workspace.id === "articles" ||
+                      workspace.id === "publications";
                     return (
                       <button
                         aria-current={workspace.id === section ? "page" : undefined}
@@ -645,6 +701,63 @@ export function MemberCmsStudio({
                 ) : null}
               </nav>
             </div>
+          ) : section === "publications" ? (
+            <div className="flex min-h-0 flex-col lg:h-full">
+              <div className="shrink-0">
+                <div className="relative">
+                  <MagnifyingGlass
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                    size={17}
+                  />
+                  <input
+                    className={`${inputClass} pl-9`}
+                    onChange={(event) => setPublicationQuery(event.target.value)}
+                    placeholder="Find a publication"
+                    value={publicationQuery}
+                  />
+                </div>
+                <button
+                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-green/45 bg-brand-green/[0.04] text-sm font-semibold text-brand-green transition hover:bg-brand-green hover:text-white active:scale-[0.98]"
+                  onClick={startNewPublication}
+                  type="button"
+                >
+                  <Plus size={17} weight="bold" />
+                  New publication
+                </button>
+                <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                  Editorial · {publicationsReady ? publicationRecords.length : "…"}
+                </p>
+              </div>
+              <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                {visiblePublicationRecords.map((record) => (
+                  <button
+                    className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${record.slug === selectedPublicationSlug && !showNewPublication ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                    key={record.slug}
+                    onClick={() => selectPublication(record.slug)}
+                    type="button"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">
+                        {record.publication.title || "Untitled publication"}
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-2 text-xs text-[#778299] dark:text-white/45">
+                        <span>{record.publication.date}</span>
+                        {record.publication.draft ? (
+                          <span className="rounded-full bg-brand-yellow-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#a97b1c] uppercase">
+                            Draft
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+                {!visiblePublicationRecords.length ? (
+                  <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
+                    No publications yet. Start one with “New publication”.
+                  </p>
+                ) : null}
+              </nav>
+            </div>
           ) : section === "members" ? (
             <div className="flex min-h-0 flex-col lg:h-full">
               <div className="shrink-0">
@@ -675,9 +788,7 @@ export function MemberCmsStudio({
               <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                 {visibleMembers.map((member) => {
                   const record = records.find((item) => item.slug === member.slug);
-                  const portrait = record?.profile.photoKey
-                    ? `/api/member-cms/media/${record.profile.photoKey}`
-                    : `/members/${record?.sourceSlug ?? member.slug}.png`;
+                  const photoKey = record?.profile.photoKey;
                   return (
                     <button
                       className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${member.slug === selectedSlug && !showNew ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
@@ -686,15 +797,15 @@ export function MemberCmsStudio({
                       type="button"
                     >
                       <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
-                        {member.hasPortrait || record?.profile.photoKey ? (
+                        {photoKey ? (
                           // Native media avoids an image-component rehydration
                           // race for freshly uploaded, private CMS assets.
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             alt=""
                             className="size-full object-contain object-bottom"
-                            key={record?.profile.photoKey ?? portrait}
-                            src={portrait}
+                            key={photoKey}
+                            src={`/api/member-cms/media/${photoKey}`}
                           />
                         ) : (
                           <span className="pb-2 text-xs font-semibold text-[#778299]">
@@ -782,6 +893,34 @@ export function MemberCmsStudio({
                   }}
                 />
               </>
+            ) : section === "publications" ? (
+              <PublicationEditor
+                key={
+                  showNewPublication
+                    ? `new-${publicationNewKey}`
+                    : `${selectedPublication?.slug ?? "none"}-${selectedPublication?.updatedAt ?? "base"}`
+                }
+                initialRecord={showNewPublication ? undefined : selectedPublication}
+                members={members}
+                paperLimitBytes={paperLimitBytes}
+                onDeleted={(slug) => {
+                  setPublicationRecords((current) =>
+                    current.filter((record) => record.slug !== slug),
+                  );
+                  setSelectedPublicationSlug(undefined);
+                  setHasUnsavedChanges(false);
+                }}
+                onDirtyChange={setHasUnsavedChanges}
+                onSaved={(record) => {
+                  setPublicationRecords((current) => [
+                    ...current.filter((item) => item.slug !== record.slug),
+                    record,
+                  ]);
+                  setSelectedPublicationSlug(record.slug);
+                  setShowNewPublication(false);
+                  setHasUnsavedChanges(false);
+                }}
+              />
             ) : section === "articles" ? (
               <ArticleEditor
                 key={
@@ -842,13 +981,14 @@ function EditorialOverview({
       {section === "members" ? null : (
         <p className="mt-5 max-w-xl text-base leading-7 text-[#6b768b] dark:text-white/55">
           {section === "overview"
-            ? "Choose a collection with the workspace switcher above. Member profiles and Articles are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
-            : `${label} is reserved for its own editorial workflow. It will be added here without changing the member or article workspaces.`}
+            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, and Publications are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
+            : `${label} is reserved for its own editorial workflow. It will be added here without changing the member, article, or publication workspaces.`}
         </p>
       )}
       <div className="mt-10 grid gap-3 sm:grid-cols-2">
         {EDITORIAL_SECTIONS.map((item) => {
-          const available = item.id === "members" || item.id === "articles";
+          const available =
+            item.id === "members" || item.id === "articles" || item.id === "publications";
           return (
             <button
               className={`rounded-2xl border p-5 text-left transition ${available ? "border-brand-blue/30 bg-brand-blue/[0.04] hover:border-brand-blue hover:bg-brand-blue/[0.08]" : "border-[#dfe4ee] bg-white/55 opacity-60 dark:border-white/10 dark:bg-white/[0.025]"}`}
@@ -907,11 +1047,7 @@ function MemberEditor({
   );
   const [profile, setProfile] = useState<CmsMemberProfile>(() => copyProfile(initialProfile));
   const [photoSource, setPhotoSource] = useState<string | undefined>(() =>
-    initialProfile?.photoKey
-      ? `/api/member-cms/media/${initialProfile.photoKey}`
-      : initialMember
-        ? `/members/${sourceMemberSlug ?? initialMember.slug}.png`
-        : undefined,
+    initialProfile?.photoKey ? `/api/member-cms/media/${initialProfile.photoKey}` : undefined,
   );
   const [photoUpload, setPhotoUpload] = useState<string>();
   const [photoToEdit, setPhotoToEdit] = useState<string>();
@@ -996,9 +1132,7 @@ function MemberEditor({
       setDraft(savedDraft);
       setProfile(savedProfile);
       setPhotoSource(
-        savedProfile.photoKey
-          ? `/api/member-cms/media/${savedProfile.photoKey}`
-          : `/members/${savedRecord.sourceSlug ?? savedRecord.slug}.png`,
+        savedProfile.photoKey ? `/api/member-cms/media/${savedProfile.photoKey}` : undefined,
       );
       setBaseline(JSON.stringify({ draft: savedDraft, profile: savedProfile }));
       onSaved(savedRecord);
