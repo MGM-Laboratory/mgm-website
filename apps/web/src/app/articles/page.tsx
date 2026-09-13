@@ -10,6 +10,8 @@ import {
   type CmsArticleRecord,
 } from "@/lib/article-cms";
 import { ensureArticleFeed } from "@/lib/article-cms-seed";
+import { mergeMemberRecords } from "@/lib/member-cms";
+import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 import { MEMBERS } from "@/data/members";
 
 export const metadata: Metadata = {
@@ -28,7 +30,12 @@ async function readRecords() {
 }
 
 export default async function ArticlesPage() {
-  const articles = await readRecords();
+  const [articles, members] = await Promise.all([
+    readRecords(),
+    ensureMemberCmsSeeded()
+      .then((records) => mergeMemberRecords(MEMBERS, records))
+      .catch(() => [...MEMBERS]),
+  ]);
 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
@@ -51,7 +58,7 @@ export default async function ArticlesPage() {
             <div className="grid grid-cols-1 gap-x-[25px] gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
               {articles.map((record) => {
                 const coverUrl = articleCoverUrl(record.article.coverKey);
-                const authors = articleAuthors(record, MEMBERS);
+                const authors = articleAuthors(record, members);
                 return (
                   <Link
                     className="group block min-w-0"

@@ -12,6 +12,8 @@ import {
   type CmsArticleRecord,
 } from "@/lib/article-cms";
 import { ensureArticleFeed, fetchArticleRecord } from "@/lib/article-cms-seed";
+import { mergeMemberRecords } from "@/lib/member-cms";
+import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 import { MEMBERS } from "@/data/members";
 
 type ArticlePageProps = { params: Promise<{ slug: string }> };
@@ -36,6 +38,14 @@ async function readFeed() {
   }
 }
 
+async function readMembers() {
+  try {
+    return mergeMemberRecords(MEMBERS, await ensureMemberCmsSeeded());
+  } catch {
+    return [...MEMBERS];
+  }
+}
+
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
   const record = await readRecord(slug);
@@ -49,12 +59,14 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
   // The document itself comes from the single-record endpoint while the
-  // related-articles strip below reuses the light feed.
-  const [record, feed] = await Promise.all([readRecord(slug), readFeed()]);
+  // related-articles strip below reuses the light feed. Authors resolve
+  // against the merged member directory, so members added through the CMS
+  // (like new bylines) light up without redeploys.
+  const [record, feed, members] = await Promise.all([readRecord(slug), readFeed(), readMembers()]);
   if (!record) notFound();
 
   const { article } = record;
-  const authors = articleAuthors(record, MEMBERS);
+  const authors = articleAuthors(record, members);
   const coverUrl = articleCoverUrl(article.coverKey);
   const others = feed.filter((item) => item.slug !== slug).slice(0, 3);
 
