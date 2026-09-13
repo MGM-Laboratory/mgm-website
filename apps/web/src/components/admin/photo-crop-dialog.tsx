@@ -8,9 +8,9 @@ import { toast } from "sonner";
 export type PhotoCropPosition = { x: number; y: number; zoom: number };
 
 /**
- * Crops a square portrait frame out of any image. When the source has an
- * alpha channel the result is encoded as WebP so transparent backgrounds
- * survive; opaque images compress as JPEG.
+ * Crops a square portrait frame out of any image. The crop stays PNG so
+ * transparency always survives the trip to the server; compression, resizing
+ * and format conversion (WebP) all happen server-side after upload.
  */
 export async function cropSquarePortrait(source: string, crop: Area): Promise<string> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -19,54 +19,35 @@ export async function cropSquarePortrait(source: string, crop: Area): Promise<st
     element.onerror = () => reject(new Error("This image could not be prepared."));
     element.src = source;
   });
-  const workingScale = Math.min(1, 1440 / Math.max(crop.width, crop.height));
-  const workingCanvas = document.createElement("canvas");
-  workingCanvas.width = Math.max(1, Math.round(crop.width * workingScale));
-  workingCanvas.height = Math.max(1, Math.round(crop.height * workingScale));
-  const workingContext = workingCanvas.getContext("2d");
-  if (!workingContext) throw new Error("Your browser could not prepare this image.");
-  workingContext.imageSmoothingEnabled = true;
-  workingContext.imageSmoothingQuality = "high";
-  workingContext.drawImage(
-    image,
-    crop.x,
-    crop.y,
-    crop.width,
-    crop.height,
-    0,
-    0,
-    workingCanvas.width,
-    workingCanvas.height,
-  );
-  const pixels = workingContext.getImageData(0, 0, workingCanvas.width, workingCanvas.height).data;
-  const hasTransparency = pixels.some((_, index) => index % 4 === 3 && pixels[index] < 255);
-  const contentType = hasTransparency ? "image/webp" : "image/jpeg";
-  const maxBytes = 4 * 1024 * 1024;
-  let smallest = "";
 
-  for (const scale of [1, 0.84, 0.7]) {
+  // Photographs at 1024px stay comfortably under the upload limit; if an
+  // unusually noisy image still encodes too large, one smaller pass is tried
+  // before giving up with a friendly error.
+  for (const maxDimension of [1024, 800]) {
+    const workingScale = Math.min(1, maxDimension / Math.max(crop.width, crop.height));
     const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(workingCanvas.width * scale));
-    canvas.height = Math.max(1, Math.round(workingCanvas.height * scale));
+    canvas.width = Math.max(1, Math.round(crop.width * workingScale));
+    canvas.height = Math.max(1, Math.round(crop.height * workingScale));
     const context = canvas.getContext("2d");
-    if (!context) continue;
+    if (!context) throw new Error("Your browser could not prepare this image.");
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = "high";
-    context.drawImage(workingCanvas, 0, 0, canvas.width, canvas.height);
-
-    for (const quality of [0.9, 0.82, 0.74]) {
-      const encoded = canvas.toDataURL(contentType, quality);
-      if (!smallest || encoded.length < smallest.length) smallest = encoded;
-      // A base64 data URL adds roughly one third overhead; 4 MiB decoded is
-      // safely under the 6 MiB API limit and avoids request-size failures.
-      if (Math.ceil((encoded.length - encoded.indexOf(",") - 1) * 0.75) <= maxBytes) {
-        return encoded;
-      }
-    }
+    context.drawImage(
+      image,
+      crop.x,
+      crop.y,
+      crop.width,
+      crop.height,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+    const encoded = canvas.toDataURL("image/png");
+    if (encoded.length <= 7_500_000) return encoded;
   }
 
-  if (smallest) return smallest;
-  throw new Error("This image could not be compressed. Please choose another image.");
+  throw new Error("This image is too large to prepare. Please choose a smaller one.");
 }
 
 /**
@@ -194,8 +175,8 @@ export function PhotoCropDialog({
               />
             </div>
             <p className="rounded-2xl bg-brand-blue/[0.07] p-4 text-sm leading-6 text-[#55627a]">
-              The public portrait uses a square frame. Transparent PNGs stay transparent — the crop
-              is encoded as WebP when alpha is present.
+              The public portrait uses a square frame. Any image works — JPEG, PNG, WebP, GIF — and
+              the server compresses it to a crisp WebP that keeps transparency.
             </p>
             <button
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#171b25] px-4 text-sm font-semibold text-white transition hover:bg-brand-blue active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
