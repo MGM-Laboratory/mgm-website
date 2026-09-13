@@ -37,9 +37,22 @@ export const PUBLICATION_TYPES = [
 
 const authorSchema = z.object({
   id: z.string().trim().min(1).max(64),
+  // Residence authors resolve through the member CMS; non-residence authors
+  // carry their own name, link, and portrait. Omitted on older records, where
+  // the presence of memberSlug decides.
+  kind: z.enum(["residence", "non-residence"]).optional(),
   name: z.string().trim().min(1).max(200),
   affiliation: z.string().trim().max(300).optional(),
   memberSlug: z.string().trim().min(1).max(120).optional(),
+  url: z.string().trim().max(500).optional(),
+  photoKey: z.string().min(1).max(500).optional(),
+  photoPosition: z
+    .object({
+      x: z.number().min(0).max(100),
+      y: z.number().min(0).max(100),
+      zoom: z.number().positive().max(10),
+    })
+    .optional(),
 });
 
 const publicationSchema = z.object({
@@ -77,11 +90,18 @@ const savePublicationSchema = publicationSchema.extend({
   sourceSlug: z.string().min(1).optional(),
 });
 
+const authorPhotoSchema = z.object({ image: z.string().startsWith("data:image/") });
+
 // Every uploaded paper key is minted by the upload endpoint with a
 // `paper-<slug>-<uuid>.pdf` shape. Anything else belongs to another namespace
 // (covers, portraits, arbitrary bucket objects) and is refused.
 const PAPER_KEY_PATTERN =
   /^paper-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/;
+
+// Non-residence author portraits are minted by the photo upload endpoint.
+// PNG and WebP keep alpha channels, so cut-out portraits survive the crop.
+const AUTHOR_PHOTO_KEY_PATTERN =
+  /^author-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|webp)$/;
 
 function safeEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left);
@@ -140,6 +160,20 @@ export class CmsPublicationsController {
     return response.redirect(url);
   }
 
+  @Get("media/:key")
+  async media(@Param("key") key: string, @Res() response: Response) {
+    if (!AUTHOR_PHOTO_KEY_PATTERN.test(key)) {
+      throw new BadRequestException("Unknown media key");
+    }
+    let url: string;
+    try {
+      url = await this.storage.getSignedDownloadUrl(key, 60 * 60);
+    } catch {
+      throw new BadRequestException("Media storage is not configured in this environment.");
+    }
+    return response.redirect(url);
+  }
+
   @Get(":slug")
   async one(@Param("slug") slug: string) {
     return { record: await this.publications.bySlug(slug) };
@@ -157,6 +191,33 @@ export class CmsPublicationsController {
         })),
       ),
     };
+  }
+
+  // Non-residence author portraits arrive as base64 PNG/WebP data URLs (the
+  // same flow as article covers). WebP keeps transparency when the crop has
+  // alpha; JPEG compresses opaque portraits smaller.
+  @Post("author-photo")
+  async uploadAuthorPhoto(@Req() request: Request, @Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    const { image } = authorPhotoSchema.parse(request.body);
+    const [meta, payload] = image.split(",", 2);
+    const contentType = meta.match(/^data:(image\/(?:png|webp));base64$/)?.[1];
+    const buffer = Buffer.from(payload ?? "", "base64");
+    if (!contentType || !buffer.length || buffer.length > 6 * 1024 * 1024) {
+      throw new BadRequestException(
+        "The portrait must be a PNG or WebP image under 6 MB after cropping.",
+      );
+    }
+    const extension = contentType === "image/webp" ? "webp" : "png";
+    const key = `author-${randomUUID()}.${extension}`;
+    try {
+      await this.storage.uploadFile({ body: buffer, contentType, key });
+    } catch {
+      throw new BadRequestException(
+        "Media storage is not configured in this environment, so portraits cannot be uploaded.",
+      );
+    }
+    return { key };
   }
 
   @Put(":slug")
