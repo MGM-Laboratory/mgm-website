@@ -192,7 +192,7 @@ export function PdfViewerDialog({
       },
       { root, rootMargin: "800px 0px" },
     );
-    for (const [pageNumber, element] of pageRefs.current) {
+    for (const element of pageRefs.current.values()) {
       observer.observe(element);
     }
     return () => observer.disconnect();
