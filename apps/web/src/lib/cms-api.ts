@@ -1,6 +1,6 @@
 import "server-only";
 
-const apiBaseUrl = () =>
+export const apiBaseUrl = () =>
   (
     process.env.CMS_API_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
