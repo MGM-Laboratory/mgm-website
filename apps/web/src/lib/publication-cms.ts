@@ -3,14 +3,32 @@
 export type PublicationType =
   "journal-article" | "conference-paper" | "preprint" | "book-chapter" | "thesis";
 
+export type PublicationAuthorKind = "residence" | "non-residence";
+
 export type PublicationAuthor = {
   id: string;
+  /** Residence authors resolve through the member CMS; non-residence
+   *  authors carry their own portrait and public link. Omitted on older
+   *  records, where the presence of memberSlug decides. */
+  kind?: PublicationAuthorKind;
   name: string;
   /** Organization the author is affiliated with, shown as a footnote. */
   affiliation?: string;
-  /** Optional link to a lab member profile. */
+  /** Lab member link (residence authors). */
   memberSlug?: string;
+  /** Public click target for the author's name and portrait (non-residence). */
+  url?: string;
+  /** Uploaded portrait storage key (non-residence). */
+  photoKey?: string;
+  /** Crop framing for the uploaded portrait. */
+  photoPosition?: { x: number; y: number; zoom: number };
 };
+
+/** Legacy records decide residence by the presence of a member link. */
+export function authorKind(author: PublicationAuthor): PublicationAuthorKind {
+  if (author.kind) return author.kind;
+  return author.memberSlug ? "residence" : "non-residence";
+}
 
 export type PublicationDraft = {
   slug: string;
@@ -114,7 +132,12 @@ export function draftToPublication(draft: PublicationDraft): PublicationDraft {
     keywords: [...new Set(draft.keywords.map((keyword) => keyword.trim()).filter(Boolean))],
     abstract: draft.abstract.trim(),
     authors: draft.authors
-      .map((author) => ({ ...author, name: author.name.trim() }))
+      .map((author) => ({
+        ...author,
+        name: author.name.trim(),
+        affiliation: author.affiliation?.trim() || undefined,
+        url: author.url?.trim() || undefined,
+      }))
       .filter((author) => Boolean(author.name)),
   };
 }
@@ -131,7 +154,12 @@ export function publicationToDraft(publication: PublicationDraft): PublicationDr
     license: publication.license ?? "",
     keywords: [...publication.keywords],
     abstract: publication.abstract ?? "",
-    authors: publication.authors.map((author) => ({ ...author })),
+    authors: publication.authors.map((author) => ({
+      ...author,
+      kind: authorKind(author),
+      affiliation: author.affiliation ?? "",
+      url: author.url ?? "",
+    })),
   };
 }
 
@@ -146,6 +174,12 @@ export function publicationPaperUrl(paperKey?: string) {
   if (!paperKey) return undefined;
   if (paperKey.startsWith("static/")) return `/${paperKey.slice("static/".length)}`;
   return `/api/publications-cms/paper/${encodeURIComponent(paperKey)}`;
+}
+
+/** Resolves an author portrait key to a loadable URL. */
+export function authorPhotoUrl(photoKey?: string) {
+  if (!photoKey) return undefined;
+  return `/api/publications-cms/media/${encodeURIComponent(photoKey)}`;
 }
 
 export function doiUrl(doi?: string) {
