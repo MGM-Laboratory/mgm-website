@@ -10,14 +10,20 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+import { CacheService } from "../cache/cache.service.js";
 import type { Env } from "../config/env.validation.js";
+
+const IMMUTABLE_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 @Injectable()
 export class StorageService {
   private readonly client: S3Client;
   private readonly bucket?: string;
 
-  constructor(configService: ConfigService<Env, true>) {
+  constructor(
+    configService: ConfigService<Env, true>,
+    private readonly cache: CacheService,
+  ) {
     const accessKeyId = configService.get<string | undefined>("AWS_ACCESS_KEY_ID");
     const secretAccessKey = configService.get<string | undefined>("AWS_SECRET_ACCESS_KEY");
 
@@ -51,6 +57,7 @@ export class StorageService {
         Bucket: this.requireBucket(),
         Key: key,
         Body: params.body,
+        CacheControl: IMMUTABLE_MEDIA_CACHE_CONTROL,
         ContentType: params.contentType,
       }),
     );
@@ -59,11 +66,17 @@ export class StorageService {
   }
 
   async getSignedDownloadUrl(key: string, expiresInSeconds = 3600): Promise<string> {
-    return getSignedUrl(
+    const cacheKey = `cms:media-url:${key}`;
+    const cached = await this.cache.getJson<string>(cacheKey);
+    if (cached) return cached;
+
+    const signedUrl = await getSignedUrl(
       this.client,
       new GetObjectCommand({ Bucket: this.requireBucket(), Key: key }),
       { expiresIn: expiresInSeconds },
     );
+    await this.cache.setJson(cacheKey, signedUrl, Math.max(1, expiresInSeconds - 60));
+    return signedUrl;
   }
 
   async deleteFile(key: string): Promise<void> {

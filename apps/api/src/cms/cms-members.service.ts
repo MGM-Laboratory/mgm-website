@@ -1,8 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "../generated/prisma/client.js";
+import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 
 type MemberDocument = { member?: { name?: unknown }; sourceSlug?: unknown };
+
+const MEMBER_RECORDS_CACHE_KEY = "cms:members:v1";
+const MEMBER_RECORDS_CACHE_TTL_SECONDS = 60 * 10;
+type PublicMemberRecord = Record<string, unknown> & { slug: string; updatedAt: string };
 
 function memberName(data: Prisma.JsonValue) {
   const name = (data as MemberDocument).member?.name;
@@ -19,15 +24,27 @@ function renameDocument(data: Prisma.InputJsonValue, sourceSlug: string) {
 
 @Injectable()
 export class CmsMembersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async all() {
+    const cached = await this.cache.getJson<PublicMemberRecord[]>(MEMBER_RECORDS_CACHE_KEY);
+    if (cached) return cached;
+
     const records = await this.prisma.cmsMember.findMany({ orderBy: { updatedAt: "desc" } });
-    return records.map((record) => ({
+    const publicRecords = records.map((record) => ({
       ...(record.data as Record<string, unknown>),
       slug: record.slug,
       updatedAt: record.updatedAt.toISOString(),
     }));
+    await this.cache.setJson(
+      MEMBER_RECORDS_CACHE_KEY,
+      publicRecords,
+      MEMBER_RECORDS_CACHE_TTL_SECONDS,
+    );
+    return publicRecords;
   }
 
   async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
@@ -80,6 +97,7 @@ export class CmsMembersService {
         data: { data, slug: nextSlug },
       });
     });
+    await this.invalidateRecords();
     return {
       ...(record.data as Record<string, unknown>),
       slug: record.slug,
@@ -100,6 +118,7 @@ export class CmsMembersService {
         }),
       ),
     );
+    await this.invalidateRecords();
     return this.all();
   }
 
@@ -109,5 +128,10 @@ export class CmsMembersService {
     } catch {
       throw new NotFoundException("Member override not found");
     }
+    await this.invalidateRecords();
+  }
+
+  private async invalidateRecords() {
+    await this.cache.remove(MEMBER_RECORDS_CACHE_KEY);
   }
 }

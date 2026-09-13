@@ -11,7 +11,9 @@ export function useMemberRecords() {
 
   const loadRecords = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch("/api/member-cms", { cache: "no-store", signal });
+      // The route revalidates its ETag on revisit, preserving immediate edits
+      // without downloading and parsing an unchanged directory again.
+      const response = await fetch("/api/member-cms", { cache: "default", signal });
       const data = (response.ok ? await response.json() : { records: [] }) as {
         records?: CmsMemberRecord[];
       };

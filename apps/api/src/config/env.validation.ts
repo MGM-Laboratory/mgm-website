@@ -12,6 +12,7 @@ const envSchema = z.object({
   THROTTLE_TTL: z.coerce.number().int().positive().default(60000),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
   ADMIN_PASSPHRASE: z.string().min(1, "ADMIN_PASSPHRASE is required"),
+  REDIS_URL: optionalString(z.url()),
   AWS_REGION: z.string().default("us-east-1"),
   AWS_S3_BUCKET: optionalString(),
   AWS_ACCESS_KEY_ID: optionalString(),

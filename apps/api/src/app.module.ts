@@ -6,6 +6,7 @@ import { LoggerModule } from "nestjs-pino";
 
 import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";
+import { CacheModule } from "./cache/cache.module.js";
 import { CmsMembersModule } from "./cms/cms-members.module.js";
 import { validateEnv } from "./config/env.validation.js";
 import { HealthModule } from "./health/health.module.js";
@@ -34,6 +35,7 @@ import { StorageModule } from "./storage/storage.module.js";
         limit: Number(process.env.THROTTLE_LIMIT ?? 100),
       },
     ]),
+    CacheModule,
     PrismaModule,
     CmsMembersModule,
     HealthModule,
