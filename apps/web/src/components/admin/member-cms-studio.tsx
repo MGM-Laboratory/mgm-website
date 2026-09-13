@@ -34,6 +34,8 @@ import {
 import { useMemberRecords } from "@/hooks/use-member-records";
 
 type EditorTab = "profile" | "experience" | "education" | "credentials";
+type EditorialSection =
+  "overview" | "articles" | "projects" | "publications" | "research" | "members" | "careers";
 type DateValue = { month: number; year: number };
 
 const TABS: { id: EditorTab; label: string }[] = [
@@ -41,6 +43,15 @@ const TABS: { id: EditorTab; label: string }[] = [
   { id: "experience", label: "Experience" },
   { id: "education", label: "Education" },
   { id: "credentials", label: "Credentials" },
+];
+
+const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: string }[] = [
+  { id: "articles", label: "Articles" },
+  { id: "projects", label: "Projects" },
+  { id: "publications", label: "Publications" },
+  { id: "research", label: "Research" },
+  { id: "members", label: "Member" },
+  { id: "careers", label: "Careers" },
 ];
 
 const emptyProfile = (): CmsMemberProfile => ({
@@ -127,6 +138,7 @@ function EditRow({ children, onRemove }: { children: React.ReactNode; onRemove: 
 
 export function MemberCmsStudio() {
   const { members, ready, records, setRecords } = useMemberRecords();
+  const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState<string>();
@@ -174,7 +186,9 @@ export function MemberCmsStudio() {
               <UsersThree size={21} weight="duotone" />
             </span>
             <div>
-              <p className="font-display text-lg font-semibold tracking-[-0.04em]">Member editor</p>
+              <p className="font-display text-lg font-semibold tracking-[-0.04em]">
+                Editorial workspace
+              </p>
               <p className="font-mono text-[10px] tracking-[0.13em] text-[#768096] uppercase dark:text-white/40">
                 MGM Laboratory CMS
               </p>
@@ -204,106 +218,211 @@ export function MemberCmsStudio() {
 
       <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
         <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
-          <div className="relative">
-            <MagnifyingGlass
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-              size={17}
-            />
-            <input
-              className={`${inputClass} pl-9`}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Find a member"
-              value={query}
-            />
-          </div>
-          <button
-            className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
-            onClick={startNew}
-            type="button"
-          >
-            <Plus size={17} weight="bold" />
-            New member
-          </button>
-          <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
-            Directory · {ready ? members.length : "…"}
+          <p className="px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+            Editorial
           </p>
           <nav className="mt-2 space-y-1">
-            {visibleMembers.map((member) => (
-              <button
-                className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${member.slug === selectedSlug && !showNew ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
-                key={member.slug}
-                onClick={() => selectMember(member)}
-                type="button"
-              >
-                <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
-                  {member.hasPortrait ? (
-                    <Image
-                      alt=""
-                      className="object-contain object-bottom"
-                      fill
-                      sizes="36px"
-                      src={`/members/${member.slug}.png`}
-                    />
-                  ) : (
-                    <span className="pb-2 text-xs font-semibold text-[#778299]">
-                      {member.name
-                        .split(" ")
-                        .map((part) => part[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </span>
-                  )}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold">{member.name}</span>
-                  <span className="mt-0.5 block truncate text-xs text-[#778299] dark:text-white/45">
-                    {member.division}
-                  </span>
-                </span>
-              </button>
+            <SidebarItem
+              active={section === "overview"}
+              label="Overview"
+              onClick={() => setSection("overview")}
+            />
+            {EDITORIAL_SECTIONS.map((item) => (
+              <SidebarItem
+                active={section === item.id}
+                key={item.id}
+                label={item.label}
+                live={item.id === "members"}
+                onClick={() => setSection(item.id)}
+              />
             ))}
           </nav>
+          {section === "members" ? (
+            <div className="mt-7 border-t border-[#dee4ef] pt-5 dark:border-white/10">
+              <div className="relative">
+                <MagnifyingGlass
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                  size={17}
+                />
+                <input
+                  className={`${inputClass} pl-9`}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Find a member"
+                  value={query}
+                />
+              </div>
+              <button
+                className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
+                onClick={startNew}
+                type="button"
+              >
+                <Plus size={17} weight="bold" />
+                New member
+              </button>
+              <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                Directory · {ready ? members.length : "…"}
+              </p>
+              <nav className="mt-2 space-y-1">
+                {visibleMembers.map((member) => (
+                  <button
+                    className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${member.slug === selectedSlug && !showNew ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                    key={member.slug}
+                    onClick={() => selectMember(member)}
+                    type="button"
+                  >
+                    <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
+                      {member.hasPortrait ? (
+                        <Image
+                          alt=""
+                          className="object-contain object-bottom"
+                          fill
+                          sizes="36px"
+                          src={`/members/${member.slug}.png`}
+                        />
+                      ) : (
+                        <span className="pb-2 text-xs font-semibold text-[#778299]">
+                          {member.name
+                            .split(" ")
+                            .map((part) => part[0])
+                            .slice(0, 2)
+                            .join("")}
+                        </span>
+                      )}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">{member.name}</span>
+                      <span className="mt-0.5 block truncate text-xs text-[#778299] dark:text-white/45">
+                        {member.division}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          ) : null}
         </aside>
 
         <section className="admin-editor-enter min-w-0 p-5 sm:p-8 lg:p-10">
           <div className="mx-auto max-w-5xl">
-            <div className="mt-6 flex gap-1 overflow-x-auto border-b border-[#dee4ef] dark:border-white/10">
-              {TABS.map((tab) => (
-                <button
-                  className={`relative whitespace-nowrap px-4 py-3 text-sm font-semibold transition ${activeTab === tab.id ? "text-brand-blue" : "text-[#758097] hover:text-[#202532] dark:text-white/45 dark:hover:text-white"}`}
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  type="button"
-                >
-                  {tab.label}
-                  {activeTab === tab.id ? (
-                    <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-blue" />
-                  ) : null}
-                </button>
-              ))}
-            </div>
-            <MemberEditor
-              key={
-                showNew
-                  ? `new-${newKey}`
-                  : `${currentMember.slug}-${selectedRecord?.updatedAt ?? "base"}`
-              }
-              activeTab={activeTab}
-              initialMember={showNew ? undefined : currentMember}
-              initialProfile={showNew ? undefined : selectedRecord?.profile}
-              onSaved={(record) => {
-                setRecords((current) => [
-                  ...current.filter((item) => item.slug !== record.slug),
-                  record,
-                ]);
-                setSelectedSlug(record.slug);
-                setShowNew(false);
-              }}
-            />
+            {section === "members" ? (
+              <>
+                <div className="mt-6 flex gap-1 overflow-x-auto border-b border-[#dee4ef] dark:border-white/10">
+                  {TABS.map((tab) => (
+                    <button
+                      className={`relative whitespace-nowrap px-4 py-3 text-sm font-semibold transition ${activeTab === tab.id ? "text-brand-blue" : "text-[#758097] hover:text-[#202532] dark:text-white/45 dark:hover:text-white"}`}
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      type="button"
+                    >
+                      {tab.label}
+                      {activeTab === tab.id ? (
+                        <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-blue" />
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+                <MemberEditor
+                  key={
+                    showNew
+                      ? `new-${newKey}`
+                      : `${currentMember.slug}-${selectedRecord?.updatedAt ?? "base"}`
+                  }
+                  activeTab={activeTab}
+                  initialMember={showNew ? undefined : currentMember}
+                  initialProfile={showNew ? undefined : selectedRecord?.profile}
+                  onSaved={(record) => {
+                    setRecords((current) => [
+                      ...current.filter((item) => item.slug !== record.slug),
+                      record,
+                    ]);
+                    setSelectedSlug(record.slug);
+                    setShowNew(false);
+                  }}
+                />
+              </>
+            ) : (
+              <EditorialOverview section={section} onChooseMembers={() => setSection("members")} />
+            )}
           </div>
         </section>
       </div>
     </main>
+  );
+}
+
+function SidebarItem({
+  active,
+  label,
+  live = false,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  live?: boolean;
+  onClick: () => void;
+}) {
+  const status = live ? "LIVE" : label === "Overview" ? "HOME" : "SOON";
+  return (
+    <button
+      className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${active ? "bg-white text-brand-blue shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "text-[#566177] hover:bg-white/70 dark:text-white/55 dark:hover:bg-white/[0.05]"}`}
+      onClick={onClick}
+      type="button"
+    >
+      <span>{label}</span>
+      <span
+        className={`font-mono text-[10px] font-normal ${live ? "text-brand-blue" : "text-[#8993a7] dark:text-white/30"}`}
+      >
+        {status}
+      </span>
+    </button>
+  );
+}
+
+function EditorialOverview({
+  onChooseMembers,
+  section,
+}: {
+  onChooseMembers: () => void;
+  section: EditorialSection;
+}) {
+  const label =
+    section === "overview"
+      ? "Editorial CMS"
+      : EDITORIAL_SECTIONS.find((item) => item.id === section)?.label;
+  return (
+    <div className="pt-14">
+      <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-blue uppercase">
+        {section === "overview" ? "MGM Laboratory" : "Collection"}
+      </p>
+      <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
+        {label}
+      </h1>
+      {section === "members" ? null : (
+        <p className="mt-5 max-w-xl text-base leading-7 text-[#6b768b] dark:text-white/55">
+          {section === "overview"
+            ? "Choose a collection from the sidebar. Member profiles are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
+            : `${label} is reserved for its own editorial workflow. It will be added here without changing the member workspace.`}
+        </p>
+      )}
+      <div className="mt-10 grid gap-3 sm:grid-cols-2">
+        {EDITORIAL_SECTIONS.map((item) => (
+          <button
+            className={`rounded-2xl border p-5 text-left transition ${item.id === "members" ? "border-brand-blue/30 bg-brand-blue/[0.04] hover:border-brand-blue hover:bg-brand-blue/[0.08]" : "border-[#dfe4ee] bg-white/55 opacity-60 dark:border-white/10 dark:bg-white/[0.025]"}`}
+            disabled={item.id !== "members"}
+            key={item.id}
+            onClick={onChooseMembers}
+            type="button"
+          >
+            <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-brand-blue uppercase">
+              {item.id === "members" ? "Available" : "Reserved"}
+            </span>
+            <span className="mt-2 block font-display text-xl font-semibold tracking-[-0.03em]">
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
