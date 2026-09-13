@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { MEMBER_DIVISIONS, MEMBERS, type Member } from "@/data/members";
+import { ArticleEditor } from "@/components/admin/article-cms-editor";
 import {
   draftToMember,
   memberToDraft,
@@ -40,6 +41,8 @@ import {
   type MemberDraft,
 } from "@/lib/member-cms";
 import { useMemberRecords } from "@/hooks/use-member-records";
+import { useArticleRecords } from "@/hooks/use-article-records";
+import type { CmsArticleRecord } from "@/lib/article-cms";
 
 type EditorTab = "profile" | "experience" | "education" | "credentials";
 type EditorialSection =
@@ -360,14 +363,27 @@ function EditRow({ children, onRemove }: { children: React.ReactNode; onRemove: 
   );
 }
 
-export function MemberCmsStudio() {
+export function MemberCmsStudio({
+  initialArticles = [],
+}: {
+  initialArticles?: CmsArticleRecord[];
+}) {
   const { members, ready, records, setRecords } = useMemberRecords();
+  const {
+    ready: articlesReady,
+    records: articleRecords,
+    setRecords: setArticleRecords,
+  } = useArticleRecords(initialArticles);
   const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState<string>();
   const [showNew, setShowNew] = useState(false);
   const [newKey, setNewKey] = useState(0);
+  const [articleQuery, setArticleQuery] = useState("");
+  const [selectedArticleSlug, setSelectedArticleSlug] = useState<string>();
+  const [showNewArticle, setShowNewArticle] = useState(false);
+  const [articleNewKey, setArticleNewKey] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const workspacePickerRef = useRef<HTMLDivElement>(null);
@@ -391,9 +407,26 @@ export function MemberCmsStudio() {
     );
   }, [members, query]);
 
+  const sortedArticleRecords = useMemo(
+    () =>
+      [...articleRecords].sort((left, right) =>
+        right.article.date.localeCompare(left.article.date),
+      ),
+    [articleRecords],
+  );
+  const visibleArticleRecords = useMemo(() => {
+    const needle = articleQuery.trim().toLocaleLowerCase();
+    if (!needle) return sortedArticleRecords;
+    return sortedArticleRecords.filter((record) =>
+      [record.article.title, record.article.slug, ...record.article.categories]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(needle),
+    );
+  }, [articleQuery, sortedArticleRecords]);
+
   const confirmDiscard = () =>
-    !hasUnsavedChanges ||
-    window.confirm("You have unsaved member changes. Discard them and continue?");
+    !hasUnsavedChanges || window.confirm("You have unsaved changes. Discard them and continue?");
   const selectMember = (member: Member) => {
     if ((showNew || member.slug !== selectedSlug) && !confirmDiscard()) return;
     setHasUnsavedChanges(false);
@@ -409,6 +442,19 @@ export function MemberCmsStudio() {
     setNewKey((current) => current + 1);
     setActiveTab("profile");
   };
+  const selectArticle = (slug: string) => {
+    if ((showNewArticle || slug !== selectedArticleSlug) && !confirmDiscard()) return;
+    setHasUnsavedChanges(false);
+    setShowNewArticle(false);
+    setSelectedArticleSlug(slug);
+  };
+  const startNewArticle = () => {
+    if (!confirmDiscard()) return;
+    setHasUnsavedChanges(false);
+    setSelectedArticleSlug(undefined);
+    setShowNewArticle(true);
+    setArticleNewKey((current) => current + 1);
+  };
   const changeSection = (nextSection: EditorialSection) => {
     if (nextSection !== section && !confirmDiscard()) return;
     if (nextSection !== section) setHasUnsavedChanges(false);
@@ -418,6 +464,9 @@ export function MemberCmsStudio() {
   const currentMember = selected ?? members[0] ?? MEMBERS[0];
   const activeWorkspace = WORKSPACES.find((workspace) => workspace.id === section) ?? WORKSPACES[0];
   const isEditingMember = section === "members" && !showNew;
+  const selectedArticle = sortedArticleRecords.find(
+    (record) => record.slug === selectedArticleSlug,
+  );
 
   useEffect(() => {
     const closePicker = (event: MouseEvent) => {
@@ -478,7 +527,10 @@ export function MemberCmsStudio() {
                 </p>
                 <div className="space-y-1">
                   {WORKSPACES.map((workspace) => {
-                    const available = workspace.id === "overview" || workspace.id === "members";
+                    const available =
+                      workspace.id === "overview" ||
+                      workspace.id === "members" ||
+                      workspace.id === "articles";
                     return (
                       <button
                         aria-current={workspace.id === section ? "page" : undefined}
@@ -536,7 +588,64 @@ export function MemberCmsStudio() {
 
       <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
         <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
-          {section === "members" ? (
+          {section === "articles" ? (
+            <div className="flex min-h-0 flex-col lg:h-full">
+              <div className="shrink-0">
+                <div className="relative">
+                  <MagnifyingGlass
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                    size={17}
+                  />
+                  <input
+                    className={`${inputClass} pl-9`}
+                    onChange={(event) => setArticleQuery(event.target.value)}
+                    placeholder="Find an article"
+                    value={articleQuery}
+                  />
+                </div>
+                <button
+                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
+                  onClick={startNewArticle}
+                  type="button"
+                >
+                  <Plus size={17} weight="bold" />
+                  New article
+                </button>
+                <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                  Editorial · {articlesReady ? articleRecords.length : "…"}
+                </p>
+              </div>
+              <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                {visibleArticleRecords.map((record) => (
+                  <button
+                    className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${record.slug === selectedArticleSlug && !showNewArticle ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                    key={record.slug}
+                    onClick={() => selectArticle(record.slug)}
+                    type="button"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">
+                        {record.article.title || "Untitled article"}
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-2 text-xs text-[#778299] dark:text-white/45">
+                        <span>{record.article.date}</span>
+                        {record.article.draft ? (
+                          <span className="rounded-full bg-brand-yellow-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#a97b1c] uppercase">
+                            Draft
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+                {!visibleArticleRecords.length ? (
+                  <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
+                    No articles yet. Start one with “New article”.
+                  </p>
+                ) : null}
+              </nav>
+            </div>
+          ) : section === "members" ? (
             <div className="flex min-h-0 flex-col lg:h-full">
               <div className="shrink-0">
                 <div className="relative">
@@ -673,10 +782,35 @@ export function MemberCmsStudio() {
                   }}
                 />
               </>
+            ) : section === "articles" ? (
+              <ArticleEditor
+                key={
+                  showNewArticle
+                    ? `new-${articleNewKey}`
+                    : `${selectedArticle?.slug ?? "none"}-${selectedArticle?.updatedAt ?? "base"}`
+                }
+                initialRecord={showNewArticle ? undefined : selectedArticle}
+                members={members}
+                onDeleted={(slug) => {
+                  setArticleRecords((current) => current.filter((record) => record.slug !== slug));
+                  setSelectedArticleSlug(undefined);
+                  setHasUnsavedChanges(false);
+                }}
+                onDirtyChange={setHasUnsavedChanges}
+                onSaved={(record) => {
+                  setArticleRecords((current) => [
+                    ...current.filter((item) => item.slug !== record.slug),
+                    record,
+                  ]);
+                  setSelectedArticleSlug(record.slug);
+                  setShowNewArticle(false);
+                  setHasUnsavedChanges(false);
+                }}
+              />
             ) : (
               <EditorialOverview
                 section={section}
-                onChooseMembers={() => changeSection("members")}
+                onChoose={(nextSection) => changeSection(nextSection)}
               />
             )}
           </div>
@@ -687,10 +821,10 @@ export function MemberCmsStudio() {
 }
 
 function EditorialOverview({
-  onChooseMembers,
+  onChoose,
   section,
 }: {
-  onChooseMembers: () => void;
+  onChoose: (section: EditorialSection) => void;
   section: EditorialSection;
 }) {
   const label =
@@ -708,27 +842,30 @@ function EditorialOverview({
       {section === "members" ? null : (
         <p className="mt-5 max-w-xl text-base leading-7 text-[#6b768b] dark:text-white/55">
           {section === "overview"
-            ? "Choose a collection with the workspace switcher above. Member profiles are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
-            : `${label} is reserved for its own editorial workflow. It will be added here without changing the member workspace.`}
+            ? "Choose a collection with the workspace switcher above. Member profiles and Articles are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
+            : `${label} is reserved for its own editorial workflow. It will be added here without changing the member or article workspaces.`}
         </p>
       )}
       <div className="mt-10 grid gap-3 sm:grid-cols-2">
-        {EDITORIAL_SECTIONS.map((item) => (
-          <button
-            className={`rounded-2xl border p-5 text-left transition ${item.id === "members" ? "border-brand-blue/30 bg-brand-blue/[0.04] hover:border-brand-blue hover:bg-brand-blue/[0.08]" : "border-[#dfe4ee] bg-white/55 opacity-60 dark:border-white/10 dark:bg-white/[0.025]"}`}
-            disabled={item.id !== "members"}
-            key={item.id}
-            onClick={onChooseMembers}
-            type="button"
-          >
-            <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-brand-blue uppercase">
-              {item.id === "members" ? "Available" : "Reserved"}
-            </span>
-            <span className="mt-2 block font-display text-xl font-semibold tracking-[-0.03em]">
-              {item.label}
-            </span>
-          </button>
-        ))}
+        {EDITORIAL_SECTIONS.map((item) => {
+          const available = item.id === "members" || item.id === "articles";
+          return (
+            <button
+              className={`rounded-2xl border p-5 text-left transition ${available ? "border-brand-blue/30 bg-brand-blue/[0.04] hover:border-brand-blue hover:bg-brand-blue/[0.08]" : "border-[#dfe4ee] bg-white/55 opacity-60 dark:border-white/10 dark:bg-white/[0.025]"}`}
+              disabled={!available}
+              key={item.id}
+              onClick={() => onChoose(item.id)}
+              type="button"
+            >
+              <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-brand-blue uppercase">
+                {available ? "Available" : "Reserved"}
+              </span>
+              <span className="mt-2 block font-display text-xl font-semibold tracking-[-0.03em]">
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
