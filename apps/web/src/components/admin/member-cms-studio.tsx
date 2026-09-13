@@ -464,6 +464,7 @@ function MemberEditor({
         : undefined,
   );
   const [photoUpload, setPhotoUpload] = useState<string>();
+  const [error, setError] = useState<string>();
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const fileInput = useRef<HTMLInputElement>(null);
   const mutateProfile = (update: (current: CmsMemberProfile) => CmsMemberProfile) =>
@@ -487,6 +488,7 @@ function MemberEditor({
   const save = async () => {
     if (!draft.name.trim() || !draft.slug.trim()) return;
     setStatus("saving");
+    setError(undefined);
     try {
       let nextProfile = copyProfile(profile);
       if (photoUpload) {
@@ -498,7 +500,8 @@ function MemberEditor({
             method: "POST",
           },
         );
-        if (!photoResponse.ok) throw new Error("portrait upload failed");
+        if (!photoResponse.ok)
+          throw new Error(await responseError(photoResponse, "Portrait upload failed."));
         const photo = (await photoResponse.json()) as { key: string };
         nextProfile = { ...nextProfile, photoKey: photo.key };
       }
@@ -508,12 +511,13 @@ function MemberEditor({
         headers: { "content-type": "application/json" },
         method: "PUT",
       });
-      if (!response.ok) throw new Error("profile save failed");
+      if (!response.ok) throw new Error(await responseError(response, "Profile save failed."));
       onSaved((await response.json()) as CmsMemberRecord);
       setPhotoUpload(undefined);
       setStatus("saved");
-    } catch {
+    } catch (saveError) {
       setStatus("error");
+      setError(saveError instanceof Error ? saveError.message : "The changes could not be saved.");
     }
   };
   return (
@@ -546,7 +550,7 @@ function MemberEditor({
       </div>
       {status === "error" ? (
         <p className="mt-4 rounded-xl bg-brand-red-50 px-4 py-3 text-sm text-brand-red dark:bg-brand-red/15 dark:text-brand-red-100">
-          The changes could not be saved. Check that the CMS API and storage are configured.
+          {error ?? "The changes could not be saved."}
         </p>
       ) : null}
       {activeTab === "profile" ? (
@@ -571,6 +575,16 @@ function MemberEditor({
       ) : null}
     </>
   );
+}
+
+async function responseError(response: Response, fallback: string) {
+  try {
+    const body = (await response.json()) as { error?: string; message?: string | string[] };
+    const message = Array.isArray(body.message) ? body.message.join(" ") : body.message;
+    return message || body.error || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function ProfileTab({
