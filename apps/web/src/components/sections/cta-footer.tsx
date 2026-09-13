@@ -1,9 +1,7 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { PatternTile, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 import { InstagramGlyph, LinkedinGlyph } from "@/components/social-icons";
 
@@ -32,23 +30,10 @@ const EXPLORE_LINKS = [
 ];
 
 export function CtaFooter() {
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const tween = fadeUpOnScroll(root, ".reveal-card", { stagger: 0.1 });
-    return () => tween?.scrollTrigger?.kill();
-  }, []);
-
   return (
-    <footer ref={rootRef} className="bg-[var(--surface-inverse)] text-white">
-      <noscript>
-        <style>{".reveal-card{opacity:1 !important}"}</style>
-      </noscript>
-
+    <footer className="bg-[var(--surface-inverse)] text-white">
       <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-20 sm:px-10 sm:py-28 lg:flex-row lg:items-center lg:justify-between lg:px-16">
-        <div className="reveal-card max-w-md opacity-0">
+        <div className="max-w-md">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Let&apos;s make something meaningful.
           </h2>
@@ -61,7 +46,7 @@ export function CtaFooter() {
           </Link>
         </div>
 
-        <div className="reveal-card grid grid-cols-4 gap-1 opacity-0 sm:grid-cols-4">
+        <div className="grid grid-cols-4 gap-1 sm:grid-cols-4">
           {FOOTER_MOSAIC.map((tile, i) => (
             <PatternTile key={i} {...tile} className="size-14 sm:size-16" />
           ))}
@@ -69,7 +54,7 @@ export function CtaFooter() {
       </div>
 
       <div className="mx-auto flex max-w-5xl flex-col gap-10 border-t border-white/10 px-6 py-14 sm:px-10 lg:flex-row lg:justify-between lg:px-16">
-        <div className="reveal-card max-w-sm opacity-0">
+        <div className="max-w-sm">
           <div className="flex items-center gap-2.5">
             <Image src="/logo.svg" alt="MGM Laboratory" width={32} height={32} />
           </div>
@@ -82,7 +67,7 @@ export function CtaFooter() {
           </p>
         </div>
 
-        <div className="reveal-card grid grid-cols-2 gap-8 opacity-0 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
           <div>
             <p className="text-xs font-semibold tracking-wide text-white/40 uppercase">Explore</p>
             <ul className="mt-3 flex flex-col gap-2 text-sm text-white/70">
