@@ -8,7 +8,7 @@ export function AdminLightMode({ children }: { children: React.ReactNode }) {
     const wasDark = root.classList.contains("dark");
     const previousColorScheme = root.style.colorScheme;
     const enforceLight = () => {
-      root.classList.remove("dark");
+      if (root.classList.contains("dark")) root.classList.remove("dark");
       root.style.colorScheme = "light";
     };
 

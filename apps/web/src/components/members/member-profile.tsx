@@ -662,22 +662,14 @@ export function MemberProfile({ member }: { member: Member }) {
               photoKey={cmsProfile?.photoKey}
               photoPosition={cmsProfile?.photoPosition}
             />
-            {cmsProfile ? (
-              <ContactLinks links={cmsProfile?.links} profile={{ contacts: {}, raw: "" }} />
-            ) : (
-              <div className="mt-5 h-20 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />
-            )}
+            <ContactLinks links={cmsProfile?.links} profile={{ contacts: {}, raw: "" }} />
           </aside>
           <header className="min-w-0 self-start">
             <h1 className="profile-reveal font-display text-[clamp(2.75rem,6vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-[var(--ink)] dark:text-white">
               {effectiveMember.name}
             </h1>
             <div className="profile-reveal">
-              {cmsProfile ? (
-                <Bio value={displayed.bio} />
-              ) : (
-                <div className="mt-7 h-24 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />
-              )}
+              <Bio value={displayed.bio} />
             </div>
           </header>
         </div>
