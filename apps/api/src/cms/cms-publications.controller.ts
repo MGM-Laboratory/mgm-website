@@ -17,6 +17,7 @@ import { ConfigService } from "@nestjs/config";
 import { ApiTags } from "@nestjs/swagger";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
+import sharp from "sharp";
 import { z } from "zod";
 
 import type { Prisma } from "../generated/prisma/client.js";
@@ -99,7 +100,8 @@ const PAPER_KEY_PATTERN =
   /^paper-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/;
 
 // Non-residence author portraits are minted by the photo upload endpoint.
-// PNG and WebP keep alpha channels, so cut-out portraits survive the crop.
+// Everything is re-encoded server-side as WebP (which keeps alpha), so the
+// stored keys are .webp; .png stays accepted for keys minted before.
 const AUTHOR_PHOTO_KEY_PATTERN =
   /^author-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|webp)$/;
 
@@ -193,25 +195,37 @@ export class CmsPublicationsController {
     };
   }
 
-  // Non-residence author portraits arrive as base64 PNG/WebP data URLs (the
-  // same flow as article covers). WebP keeps transparency when the crop has
-  // alpha; JPEG compresses opaque portraits smaller.
+  // Non-residence author portraits arrive as base64 data URLs in whatever
+  // format the editor's browser produced (JPEG, PNG, WebP, GIF). The server
+  // re-encodes everything: EXIF rotation applied, resized to at most 1024px,
+  // and compressed to WebP — which also preserves transparency.
   @Post("author-photo")
   async uploadAuthorPhoto(@Req() request: Request, @Headers("x-cms-passphrase") passphrase = "") {
     this.assertAdmin(passphrase);
     const { image } = authorPhotoSchema.parse(request.body);
     const [meta, payload] = image.split(",", 2);
-    const contentType = meta.match(/^data:(image\/(?:png|webp));base64$/)?.[1];
+    const sourceType = meta.match(/^data:(image\/(?:png|jpeg|webp|gif));base64$/)?.[1];
     const buffer = Buffer.from(payload ?? "", "base64");
-    if (!contentType || !buffer.length || buffer.length > 6 * 1024 * 1024) {
+    if (!sourceType || !buffer.length || buffer.length > 6 * 1024 * 1024) {
       throw new BadRequestException(
-        "The portrait must be a PNG or WebP image under 6 MB after cropping.",
+        "The portrait must be a PNG, JPEG, WebP, or GIF image under 6 MB after cropping.",
       );
     }
-    const extension = contentType === "image/webp" ? "webp" : "png";
-    const key = `author-${randomUUID()}.${extension}`;
+
+    let webp: Buffer;
     try {
-      await this.storage.uploadFile({ body: buffer, contentType, key });
+      webp = await sharp(buffer, { limitInputPixels: 40_000_000 })
+        .rotate()
+        .resize({ width: 1024, height: 1024, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toBuffer();
+    } catch {
+      throw new BadRequestException("That file is not a valid image.");
+    }
+
+    const key = `author-${randomUUID()}.webp`;
+    try {
+      await this.storage.uploadFile({ body: webp, contentType: "image/webp", key });
     } catch {
       throw new BadRequestException(
         "Media storage is not configured in this environment, so portraits cannot be uploaded.",
