@@ -5,6 +5,8 @@ import { ShowcaseSection } from "@/components/sections/showcase-section";
 import { ArticlesSection } from "@/components/sections/articles-section";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { PROJECTS } from "@/data/projects";
+import { publishedArticles } from "@/lib/article-cms";
+import { ensureArticleCmsSeeded } from "@/lib/article-cms-seed";
 
 const ACHIEVEMENTS = [
   {
@@ -21,7 +23,10 @@ const ACHIEVEMENTS = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const initialArticles = await ensureArticleCmsSeeded()
+    .then(publishedArticles)
+    .catch(() => []);
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">
       <main className="flex flex-1 flex-col">
@@ -40,7 +45,7 @@ export default function Home() {
           intro="Milestones the lab has reached along the way."
           items={ACHIEVEMENTS}
         />
-        <ArticlesSection />
+        <ArticlesSection initialRecords={initialArticles} />
       </main>
       <CtaFooter />
     </div>
