@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Headers,
+  NotFoundException,
   Param,
   Post,
   Put,
@@ -125,6 +126,11 @@ export class CmsPublicationsController {
     if (!PAPER_KEY_PATTERN.test(key)) {
       throw new BadRequestException("Unknown paper key");
     }
+    // Draft papers stay unservable even when their storage key leaks; the
+    // ownership check mirrors the single-record read path.
+    if (!(await this.publications.paperIsPublished(key))) {
+      throw new NotFoundException("Publication record not found");
+    }
     let url: string;
     try {
       url = await this.storage.getSignedDownloadUrl(key, 60 * 60);
@@ -192,6 +198,11 @@ export class CmsPublicationsController {
     @Headers("x-cms-passphrase") passphrase = "",
   ) {
     this.assertAdmin(passphrase);
+    // The slug becomes part of the storage key, so it is held to the same
+    // shape as everywhere else rather than trusted from the route.
+    if (!SLUG_PATTERN.test(slug)) {
+      throw new BadRequestException("Invalid publication slug");
+    }
     const contentType = String(request.headers["content-type"] ?? "")
       .split(";")[0]
       .trim()

@@ -8,6 +8,7 @@ const RECORDS_CACHE_KEY = "cms:publications:v1";
 const DRAFTS_CACHE_KEY = "cms:publications:drafts:v1";
 const FEED_CACHE_KEY = "cms:publications:feed:v1";
 const RECORDS_CACHE_TTL_SECONDS = 60 * 10;
+const PAPER_ALLOWED_TTL_SECONDS = 60 * 10;
 type PublicPublicationRecord = Record<string, unknown> & { slug: string; updatedAt: string };
 
 // Only keys minted by the paper upload endpoint may be cleaned up here; seed
@@ -55,6 +56,20 @@ export class CmsPublicationsService {
     const records = (await this.readAll()).filter((record) => !isDraft(record));
     await this.cache.setJson(FEED_CACHE_KEY, records, RECORDS_CACHE_TTL_SECONDS);
     return records;
+  }
+
+  /** Whether a paper key belongs to a published (non-draft) publication. */
+  async paperIsPublished(key: string) {
+    const cacheKey = `cms:publications:paper-allowed:${key}`;
+    const cached = await this.cache.getJson<boolean>(cacheKey);
+    if (cached !== undefined) return cached;
+
+    const records = await this.prisma.cmsPublication.findMany({
+      where: { data: { path: ["publication", "paperKey"], equals: key } },
+    });
+    const allowed = records.some((record) => !isDraft(record.data as Record<string, unknown>));
+    await this.cache.setJson(cacheKey, allowed, PAPER_ALLOWED_TTL_SECONDS);
+    return allowed;
   }
 
   /** One published publication, or nothing. */
@@ -124,7 +139,11 @@ export class CmsPublicationsService {
       await this.storage.deleteFile(previousPaperKey).catch(() => undefined);
     }
 
-    await this.invalidateRecords();
+    await Promise.all([
+      this.invalidateRecords(),
+      this.invalidatePaperAllowed(previousPaperKey),
+      this.invalidatePaperAllowed(nextPaperKey),
+    ]);
     return {
       ...(record.data as Record<string, unknown>),
       slug: record.slug,
@@ -160,7 +179,7 @@ export class CmsPublicationsService {
     if (key && PAPER_KEY_PATTERN.test(key)) {
       await this.storage.deleteFile(key).catch(() => undefined);
     }
-    await this.invalidateRecords();
+    await Promise.all([this.invalidateRecords(), this.invalidatePaperAllowed(key)]);
   }
 
   private async invalidateRecords() {
@@ -169,5 +188,10 @@ export class CmsPublicationsService {
       this.cache.remove(DRAFTS_CACHE_KEY),
       this.cache.remove(FEED_CACHE_KEY),
     ]);
+  }
+
+  private async invalidatePaperAllowed(key?: string) {
+    if (!key) return;
+    await this.cache.remove(`cms:publications:paper-allowed:${key}`);
   }
 }
