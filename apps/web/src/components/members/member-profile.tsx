@@ -7,13 +7,11 @@ import {
   ArrowUpRight,
   BadgeCheck,
   BriefcaseBusiness,
-  FileText,
   FolderKanban,
   Globe2,
   GraduationCap,
   Languages,
   Mail,
-  Phone,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -28,7 +26,7 @@ import {
   useState,
 } from "react";
 
-import { GithubGlyph, LinkedinGlyph } from "@/components/social-icons";
+import { GithubGlyph, LinkedinGlyph, WhatsappGlyph } from "@/components/social-icons";
 import type { Member } from "@/data/members";
 
 type PublicProfile = {
@@ -41,7 +39,6 @@ type PublicProfile = {
     portfolio?: string;
     primaryEmail?: string;
   };
-  identifiers: { nim?: string };
   raw: string;
 };
 type DatePart = { month: number; year: number };
@@ -183,6 +180,11 @@ function locationFrom(value: string) {
   const result = clean(match?.[1] ?? value);
   return result.length <= 90 ? result : undefined;
 }
+function isLocationOnly(value: string) {
+  return /^(?:(?:greater )?(?:jakarta|malang|surabaya|yogyakarta|bandung|bali|batang|pekalongan|makassar|sidoarjo|prague)(?:,? (?:east|west|central) java)?(?:,? indonesia)?|czechia|indonesia)$/i.test(
+    clean(value),
+  );
+}
 function isNoise(value: string) {
   const wordCount = value.split(" ").filter(Boolean).length;
   return (
@@ -223,19 +225,12 @@ function parseExperience(raw: string) {
     const directCompany = before.at(-2);
     const directCompanyIsPlausible =
       directCompany &&
-      !locationFrom(directCompany) &&
       !/[,.]/.test(directCompany.replace(/^PT\./i, "")) &&
-      (COMPANY.test(directCompany) || directCompany.split(" ").length <= 6);
-    const previousCompanyLine = before.at(-3);
+      (COMPANY.test(directCompany) ||
+        (!isLocationOnly(directCompany) && directCompany.split(" ").length <= 6));
     const company =
       !currentCompany || directCompanyIsPlausible
-        ? clean(
-            previousCompanyLine &&
-              COMPANY.test(previousCompanyLine) &&
-              COMPANY.test(directCompany ?? "")
-              ? `${previousCompanyLine} ${directCompany}`
-              : (directCompany ?? currentCompany ?? ""),
-          )
+        ? clean(directCompany ?? currentCompany ?? "")
         : currentCompany;
     if (!company) return [];
     currentCompany = clean(company);
@@ -407,7 +402,15 @@ function ExternalLink({
   );
 }
 function ContactLinks({ profile }: { profile: PublicProfile }) {
-  const { contacts, identifiers } = profile;
+  const { contacts } = profile;
+  const whatsappNumber = contacts.phone?.replace(/\D/g, "");
+  const whatsappHref = whatsappNumber
+    ? `https://api.whatsapp.com/send/?phone=${whatsappNumber.startsWith("0") ? `62${whatsappNumber.slice(1)}` : whatsappNumber}`
+    : undefined;
+  const primaryEmail =
+    contacts.primaryEmail && !contacts.primaryEmail.toLocaleLowerCase().endsWith("@labmgm.org")
+      ? contacts.primaryEmail
+      : undefined;
   return (
     <div className="mt-5">
       <p className="font-mono text-[11px] tracking-[0.14em] text-brand-blue uppercase">Connect</p>
@@ -424,43 +427,20 @@ function ContactLinks({ profile }: { profile: PublicProfile }) {
         {contacts.linkedin ? (
           <ExternalLink href={contacts.linkedin} icon={LinkedinGlyph} label="LinkedIn" />
         ) : null}
-        {contacts.primaryEmail ? (
-          <ExternalLink href={`mailto:${contacts.primaryEmail}`} icon={Mail} label="Email" />
+        {primaryEmail ? (
+          <ExternalLink href={`mailto:${primaryEmail}`} icon={Mail} label="Email" />
         ) : null}
-        {contacts.labEmail && contacts.labEmail !== contacts.primaryEmail ? (
-          <ExternalLink href={`mailto:${contacts.labEmail}`} icon={Mail} label="Lab email" />
-        ) : null}
-        {contacts.phone ? (
-          <ExternalLink href={`tel:+${contacts.phone}`} icon={Phone} label="Phone" />
+        {whatsappHref ? (
+          <ExternalLink href={whatsappHref} icon={WhatsappGlyph} label="WhatsApp" />
         ) : null}
       </div>
-      {identifiers.nim ? (
-        <p className="mt-5 font-mono text-xs text-[var(--ink-3)] dark:text-white/45">
-          NIM {identifiers.nim}
-        </p>
-      ) : null}
     </div>
   );
 }
 function Bio({ value }: { value: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const long = value.length > 300;
   return (
     <div className="mt-6 max-w-3xl">
-      <p
-        className={`text-lg leading-8 text-[var(--ink-2)] dark:text-white/70 ${long && !expanded ? "line-clamp-4" : ""}`}
-      >
-        {value}
-      </p>
-      {long ? (
-        <button
-          type="button"
-          onClick={() => setExpanded((current) => !current)}
-          className="mt-3 text-sm font-semibold text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
-        >
-          {expanded ? "Show less" : "See more"}
-        </button>
-      ) : null}
+      <p className="text-lg leading-8 text-[var(--ink-2)] dark:text-white/70">{value}</p>
     </div>
   );
 }
@@ -471,23 +451,37 @@ function ExperienceList({ items, now }: { items: readonly Experience[]; now: Dat
         No public experience has been listed yet.
       </p>
     );
+  const groups = items.reduce<Experience[][]>((all, item) => {
+    const existing = all.find(
+      (group) => group[0]?.company.toLocaleLowerCase() === item.company.toLocaleLowerCase(),
+    );
+    if (existing) existing.push(item);
+    else all.push([item]);
+    return all;
+  }, []);
   return (
-    <ol className="grid gap-4">
-      {items.map((item, index) => (
+    <ol className="grid gap-6">
+      {groups.map((group, groupIndex) => (
         <li
-          key={`${item.company}-${item.title}-${index}`}
-          className="grid gap-3 rounded-2xl border border-[var(--line)] bg-white/35 p-5 transition-colors hover:border-brand-blue/50 dark:border-white/10 dark:bg-white/[0.025]"
+          key={`${group[0]?.company}-${groupIndex}`}
+          className="rounded-2xl border border-[var(--line)] bg-white/35 p-5 transition-colors hover:border-brand-blue/50 dark:border-white/10 dark:bg-white/[0.025]"
         >
-          <div>
-            <h3 className="font-display text-xl font-semibold tracking-tight text-[var(--ink)] dark:text-white">
-              {item.title}
-            </h3>
-            <p className="mt-1 text-sm font-medium text-brand-blue">{item.company}</p>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--ink-2)] dark:text-white/65">
-            <span>{formatPeriod(item, now)}</span>
-            {item.location ? <span>{item.location}</span> : null}
-          </div>
+          <h3 className="font-display text-2xl font-semibold tracking-tight text-[var(--ink)] dark:text-white">
+            {group[0]?.company}
+          </h3>
+          <ol className="mt-5 grid gap-5 border-l-2 border-brand-blue/70 pl-5 dark:border-brand-blue-50">
+            {group.map((item, index) => (
+              <li key={`${item.title}-${index}`} className="grid gap-2">
+                <h4 className="font-display text-xl font-semibold tracking-tight text-[var(--ink)] dark:text-white">
+                  {item.title}
+                </h4>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--ink-2)] dark:text-white/70">
+                  <span>{formatPeriod(item, now)}</span>
+                  {item.location ? <span>{item.location}</span> : null}
+                </div>
+              </li>
+            ))}
+          </ol>
         </li>
       ))}
     </ol>
@@ -587,7 +581,7 @@ export function MemberProfile({ member }: { member: Member }) {
               <div className="mt-5 h-20 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />
             )}
           </aside>
-          <header className="min-w-0 self-center">
+          <header className="min-w-0 self-start">
             <h1 className="profile-reveal font-display text-[clamp(2.75rem,6vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-[var(--ink)] dark:text-white">
               {member.name}
             </h1>
@@ -644,18 +638,6 @@ export function MemberProfile({ member }: { member: Member }) {
                 <DetailList items={parsed.projects} />
               </ProfileSection>
             ) : null}
-            <ProfileSection icon={FileText} title="Laboratory">
-              <p className="text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
-                {member.division} division, MGM Laboratory.
-              </p>
-            </ProfileSection>
-            <Link
-              href="/contact"
-              className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
-            >
-              Contact MGM Laboratory
-              <ArrowUpRight size={17} strokeWidth={2.25} />
-            </Link>
           </div>
         </div>
       </div>
