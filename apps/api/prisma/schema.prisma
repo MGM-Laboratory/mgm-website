@@ -13,3 +13,10 @@ model CmsMember {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model CmsArticle {
+  slug      String   @id
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

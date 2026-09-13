@@ -7,6 +7,7 @@ import { LoggerModule } from "nestjs-pino";
 import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";
 import { CacheModule } from "./cache/cache.module.js";
+import { CmsArticlesModule } from "./cms/cms-articles.module.js";
 import { CmsMembersModule } from "./cms/cms-members.module.js";
 import { validateEnv } from "./config/env.validation.js";
 import { HealthModule } from "./health/health.module.js";
@@ -38,6 +39,7 @@ import { StorageModule } from "./storage/storage.module.js";
     CacheModule,
     PrismaModule,
     CmsMembersModule,
+    CmsArticlesModule,
     HealthModule,
     StorageModule,
     MailModule,
