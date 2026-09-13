@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 
-import { cmsApi } from "@/lib/cms-api";
+import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 
 export async function GET() {
   try {
-    const response = await cmsApi("/cms/members");
-    return NextResponse.json(await response.json(), {
-      headers: { "cache-control": "no-store" },
-      status: response.status,
-    });
+    const records = await ensureMemberCmsSeeded();
+    return NextResponse.json(
+      { records },
+      {
+        headers: { "cache-control": "no-store" },
+      },
+    );
   } catch {
     return NextResponse.json({ records: [] });
   }

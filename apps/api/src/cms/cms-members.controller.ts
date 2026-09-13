@@ -37,6 +37,7 @@ const memberSchema = z.object({
   }),
   profile: z.record(z.string(), z.unknown()),
 });
+const bootstrapSchema = z.object({ records: z.array(memberSchema).min(1).max(200) });
 
 const imageSchema = z.object({ image: z.string().startsWith("data:image/") });
 
@@ -58,6 +59,20 @@ export class CmsMembersController {
   @Get()
   async all() {
     return { records: await this.members.all() };
+  }
+
+  @Post("bootstrap")
+  async bootstrap(@Body() body: unknown, @Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    const { records } = bootstrapSchema.parse(body);
+    return {
+      records: await this.members.bootstrap(
+        records.map((record) => ({
+          data: record as unknown as Prisma.InputJsonValue,
+          slug: record.member.slug,
+        })),
+      ),
+    };
   }
 
   @Get("media/:key")

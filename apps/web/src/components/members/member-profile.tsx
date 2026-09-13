@@ -271,6 +271,8 @@ function parseEducation(member: Member, raw: string) {
   if (current) output.push(current);
   return output;
 }
+// The importer owns persistence now; this remains as a legacy fallback parser for archived records.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function parseProfile(member: Member, raw: string): ProfileData {
   const summary = sectionLines(member, raw, "summary");
   const skills = unique(sectionLines(member, raw, "topSkills")).slice(0, 12);
@@ -436,6 +438,14 @@ function ContactLinks({
     contacts.primaryEmail && !contacts.primaryEmail.toLocaleLowerCase().endsWith("@labmgm.org")
       ? contacts.primaryEmail
       : undefined;
+  const iconForLink = (label: string, href: string): ComponentType<{ className?: string }> => {
+    const identity = `${label} ${href}`.toLocaleLowerCase();
+    if (identity.includes("github")) return GithubGlyph;
+    if (identity.includes("linkedin")) return LinkedinGlyph;
+    if (identity.includes("whatsapp") || identity.includes("wa.me")) return WhatsappGlyph;
+    if (identity.includes("mailto:")) return Mail;
+    return Globe2;
+  };
   return (
     <div className="mt-5">
       <p className="font-mono text-[11px] tracking-[0.14em] text-brand-blue uppercase">Connect</p>
@@ -463,7 +473,7 @@ function ContactLinks({
           .map((link) => (
             <ExternalLink
               href={link.url}
-              icon={Globe2}
+              icon={iconForLink(link.label, link.url)}
               key={`${link.label}-${link.url}`}
               label={link.label}
             />
@@ -569,22 +579,11 @@ function DetailList({ items }: { items: readonly string[] }) {
 
 export function MemberProfile({ member }: { member: Member }) {
   const root = useRef<HTMLElement>(null);
-  const [profile, setProfile] = useState<PublicProfile>();
   const { records } = useMemberRecords();
   const override = records.find((record) => record.slug === member.slug);
   const effectiveMember = override?.member ?? member;
   const cmsProfile = override?.profile;
   const now = useCurrentMonth();
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch(`/member-profiles/${effectiveMember.slug}.json`, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : undefined))
-      .then((data: PublicProfile | undefined) => setProfile(data))
-      .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setProfile(undefined);
-      });
-    return () => controller.abort();
-  }, [effectiveMember.slug]);
   useLayoutEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -602,10 +601,7 @@ export function MemberProfile({ member }: { member: Member }) {
     }, element);
     return () => context.revert();
   }, []);
-  const parsed = useMemo(
-    () => (profile ? parseProfile(effectiveMember, profile.raw) : undefined),
-    [effectiveMember, profile],
-  );
+  const parsed = useMemo<ProfileData | undefined>(() => undefined, []);
   const displayed = useMemo(
     () => ({
       ...parsed,
@@ -642,7 +638,7 @@ export function MemberProfile({ member }: { member: Member }) {
             [item.name, item.proficiency].filter(Boolean).join(" · "),
           )
         : (parsed?.languages ?? []),
-      projects: parsed?.projects ?? [],
+      projects: cmsProfile?.projects?.length ? cmsProfile.projects : (parsed?.projects ?? []),
       skills: cmsProfile?.skills?.length
         ? cmsProfile.skills
         : (parsed?.skills ?? [...effectiveMember.labFocus]),
@@ -666,11 +662,8 @@ export function MemberProfile({ member }: { member: Member }) {
               photoKey={cmsProfile?.photoKey}
               photoPosition={cmsProfile?.photoPosition}
             />
-            {profile || cmsProfile ? (
-              <ContactLinks
-                links={cmsProfile?.links}
-                profile={profile ?? { contacts: {}, raw: "" }}
-              />
+            {cmsProfile ? (
+              <ContactLinks links={cmsProfile?.links} profile={{ contacts: {}, raw: "" }} />
             ) : (
               <div className="mt-5 h-20 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />
             )}
@@ -680,7 +673,7 @@ export function MemberProfile({ member }: { member: Member }) {
               {effectiveMember.name}
             </h1>
             <div className="profile-reveal">
-              {profile || cmsProfile ? (
+              {cmsProfile ? (
                 <Bio value={displayed.bio} />
               ) : (
                 <div className="mt-7 h-24 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />

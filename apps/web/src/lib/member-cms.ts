@@ -48,6 +48,7 @@ export type CmsMemberProfile = {
   links?: CmsLink[];
   photoKey?: string;
   photoPosition?: { x: number; y: number; zoom: number };
+  projects?: string[];
   skills?: string[];
 };
 

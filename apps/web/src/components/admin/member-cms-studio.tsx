@@ -61,6 +61,7 @@ const emptyProfile = (): CmsMemberProfile => ({
   experience: [],
   languages: [],
   links: [],
+  projects: [],
   skills: [],
 });
 
@@ -733,6 +734,12 @@ function ProfileTab({
         onChange={(skills) => onProfile((current) => ({ ...current, skills }))}
         placeholder="Add a technology, for example: TypeScript"
         values={profile.skills ?? draft.labFocus}
+      />
+      <TagEditor
+        label="Projects"
+        onChange={(projects) => onProfile((current) => ({ ...current, projects }))}
+        placeholder="Add a notable project"
+        values={profile.projects ?? []}
       />
       <LinkEditor
         onChange={(links) => onProfile((current) => ({ ...current, links }))}
