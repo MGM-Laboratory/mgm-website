@@ -3,6 +3,11 @@ import Link from "next/link";
 
 import { CtaFooter } from "@/components/sections/cta-footer";
 import {
+  ARTICLE_PAGE_SIZES,
+  ArticlePagination,
+  DEFAULT_ARTICLE_PAGE_SIZE,
+} from "@/components/articles/article-pagination";
+import {
   articleAuthors,
   articleCoverUrl,
   formatArticleDate,
@@ -29,13 +34,48 @@ async function readRecords() {
   }
 }
 
-export default async function ArticlesPage() {
-  const [articles, members] = await Promise.all([
+type ArticlesSearchParams = Promise<{
+  page?: string | string[];
+  per?: string | string[];
+}>;
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** Keeps `?per=` on the published options and `?page=` inside the real range. */
+function readWindow(
+  total: number,
+  searchParams: { page?: string | string[]; per?: string | string[] },
+) {
+  const requestedPer = Number(firstValue(searchParams.per));
+  const perPage = (ARTICLE_PAGE_SIZES as readonly number[]).includes(requestedPer)
+    ? requestedPer
+    : DEFAULT_ARTICLE_PAGE_SIZE;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const requestedPage = Number(firstValue(searchParams.page));
+  const page = Number.isInteger(requestedPage)
+    ? Math.min(Math.max(requestedPage, 1), totalPages)
+    : 1;
+
+  return { page, perPage, totalPages };
+}
+
+export default async function ArticlesPage({
+  searchParams,
+}: {
+  searchParams: ArticlesSearchParams;
+}) {
+  const [articles, members, resolvedParams] = await Promise.all([
     readRecords(),
     ensureMemberCmsSeeded()
       .then((records) => mergeMemberRecords(MEMBERS, records))
       .catch(() => [...MEMBERS]),
+    searchParams,
   ]);
+
+  const { page, perPage } = readWindow(articles.length, resolvedParams);
+  const visibleArticles = articles.slice((page - 1) * perPage, page * perPage);
 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
@@ -53,10 +93,13 @@ export default async function ArticlesPage() {
           </p>
         </section>
 
-        <section className="mx-auto w-full max-w-[1200px] px-[55px] pb-40">
+        <section
+          className="mx-auto w-full max-w-[1200px] scroll-mt-24 px-[55px] pb-40"
+          id="articles"
+        >
           {articles.length ? (
             <div className="grid grid-cols-1 gap-x-[25px] gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-              {articles.map((record) => {
+              {visibleArticles.map((record) => {
                 const coverUrl = articleCoverUrl(record.article.coverKey);
                 const authors = articleAuthors(record, members);
                 return (
@@ -113,6 +156,10 @@ export default async function ArticlesPage() {
               </p>
             </div>
           )}
+
+          {articles.length ? (
+            <ArticlePagination page={page} perPage={perPage} total={articles.length} />
+          ) : null}
         </section>
       </main>
       <CtaFooter />
