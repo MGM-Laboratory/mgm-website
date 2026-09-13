@@ -26,6 +26,10 @@ export function isValidPassphrase(value: string) {
 }
 
 export async function hasAdminSession() {
+  // Fail closed: without a configured passphrase the HMAC key would be empty
+  // and any visitor could forge a valid-looking session cookie.
+  if (!process.env.ADMIN_PASSPHRASE) return false;
+
   const value = (await cookies()).get(COOKIE_NAME)?.value;
   if (!value) return false;
 

@@ -11,16 +11,18 @@ export const runtime = "nodejs";
 // responses streamed back, so a 200 MB paper only ever moves the pages the
 // reader actually opens.
 const PAPER_KEY_PATTERN =
-  /^(static\/publications\/[\w./-]+\.pdf|paper-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf)$/;
+  /^(static\/publications\/(?:[\w-]+\/)*[\w-]+\.pdf|paper-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf)$/;
 
 export async function GET(request: Request, { params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
   if (!PAPER_KEY_PATTERN.test(key)) return new NextResponse(null, { status: 404 });
 
   // Seed publications ship with bundled papers under `static/<public-path>`.
-  const staticPath = key.match(/^static\/([\w./-]+\.pdf)$/)?.[1];
+  // Segments may only be plain word characters, so no dot segments or other
+  // path tricks can survive, and the Location header stays root-relative.
+  const staticPath = key.match(/^static\/((?:[\w-]+\/)*[\w-]+\.pdf)$/)?.[1];
   if (staticPath) {
-    return NextResponse.redirect(new URL(`/${staticPath}`, request.url));
+    return new NextResponse(null, { headers: { location: `/${staticPath}` }, status: 307 });
   }
 
   const response = await cmsApi(`/cms/publications/paper/${encodeURIComponent(key)}`, {
