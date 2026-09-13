@@ -230,8 +230,22 @@ export function PdfViewerDialog({
         // and external URLs open in a new tab.
         const linkService = {
           addLinkAttributes(link: HTMLAnchorElement, linkUrl: string, newWindow: boolean) {
-            link.href = linkUrl;
-            if (newWindow || /^https?:\/\//i.test(linkUrl)) {
+            // Link annotations come from the document, so only known-safe
+            // schemes may reach the href; anything else stays inert.
+            let parsed: URL | undefined;
+            try {
+              parsed = new URL(linkUrl, window.location.href);
+            } catch {
+              parsed = undefined;
+            }
+            if (!parsed || !["http:", "https:", "mailto:"].includes(parsed.protocol)) {
+              link.removeAttribute("href");
+              link.setAttribute("aria-disabled", "true");
+              link.setAttribute("role", "link");
+              return;
+            }
+            link.href = parsed.href;
+            if (newWindow || parsed.protocol === "http:" || parsed.protocol === "https:") {
               link.target = "_blank";
               link.rel = "noreferrer noopener";
             }
