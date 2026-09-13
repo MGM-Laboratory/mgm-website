@@ -10,7 +10,13 @@ import {
   MagnifyingGlassPlus,
   X,
 } from "@phosphor-icons/react";
-import { getDocument, type PDFDocumentProxy, type RenderTask } from "pdfjs-dist";
+import {
+  AnnotationLayer,
+  getDocument,
+  TextLayer,
+  type PDFDocumentProxy,
+  type RenderTask,
+} from "pdfjs-dist";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ensurePdfJsWorker } from "@/lib/pdfjs-client";
@@ -22,6 +28,14 @@ const PAGE_GUTTER = 24;
 
 type PageBox = { width: number; height: number };
 
+/** Everything layered over one page's canvas, rebuilt on each render pass. */
+type PageLayers = {
+  textLayer: TextLayer;
+  textDiv: HTMLDivElement;
+  annotationLayer: AnnotationLayer;
+  annotationDiv: HTMLDivElement;
+};
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -31,6 +45,11 @@ function clamp(value: number, min: number, max: number) {
  * page navigation and download — the standard set of PDF viewer tools, drawn
  * on demand page by page so even a very large paper only ever renders what is
  * on screen.
+ *
+ * Every page carries a canvas plus a transparent text layer and an annotation
+ * layer, so the text is selectable and copyable, and links — including the
+ * hyperref/TOC links in LaTeX-generated PDFs — are clickable. Internal links
+ * jump within the reader; external links open in a new tab.
  */
 export function PdfViewerDialog({
   fileName,
@@ -47,7 +66,12 @@ export function PdfViewerDialog({
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef(new Map<number, HTMLDivElement>());
   const canvasRefs = useRef(new Map<number, HTMLCanvasElement>());
+  const layersRef = useRef(new Map<number, PageLayers>());
   const tasks = useRef(new Map<number, RenderTask>());
+  // Monotonic pass counter per page: the observer and the scale-change effect
+  // can both schedule a render for the same page, and only the newest pass
+  // may touch the DOM — stale passes bail out after every await.
+  const renderPass = useRef(new Map<number, number>());
   const [attempt, setAttempt] = useState(0);
   const [doc, setDoc] = useState<PDFDocumentProxy>();
   const [boxes, setBoxes] = useState<PageBox[]>([]);
@@ -125,18 +149,63 @@ export function PdfViewerDialog({
     return clamp(containerWidth / pageBox.width, MIN_SCALE, MAX_SCALE);
   }, [boxes, containerWidth, currentPage, fitWidth, zoom]);
 
+  const jumpTo = useCallback(
+    (page: number) => {
+      if (!numPages) return;
+      const target = clamp(page, 1, numPages);
+      const element = pageRefs.current.get(target);
+      const root = scrollRef.current;
+      if (element && root) root.scrollTo({ top: Math.max(0, element.offsetTop - PAGE_GUTTER) });
+      setCurrentPage(target);
+    },
+    [numPages],
+  );
+
+  const clearPage = useCallback((pageNumber: number) => {
+    renderPass.current.set(pageNumber, (renderPass.current.get(pageNumber) ?? 0) + 1);
+    const task = tasks.current.get(pageNumber);
+    if (task) {
+      task.cancel();
+      tasks.current.delete(pageNumber);
+    }
+    const layers = layersRef.current.get(pageNumber);
+    if (layers) {
+      layers.textLayer.cancel();
+      layers.annotationLayer.destroy();
+      layersRef.current.delete(pageNumber);
+    }
+    // A stale pass may have appended layer divs and bailed before registering
+    // them here; sweeping the wrapper removes those orphans too.
+    const wrapper = pageRefs.current.get(pageNumber);
+    wrapper
+      ?.querySelectorAll(".textLayer, .annotationLayer")
+      .forEach((element) => element.remove());
+    const canvas = canvasRefs.current.get(pageNumber);
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+      canvas.style.width = "";
+      canvas.style.height = "";
+    }
+  }, []);
+
   const renderPage = useCallback(
     async (pageNumber: number) => {
       if (!doc) return;
       const canvas = canvasRefs.current.get(pageNumber);
-      if (!canvas) return;
-      const previous = tasks.current.get(pageNumber);
-      if (previous) {
-        previous.cancel();
-        tasks.current.delete(pageNumber);
-      }
+      const wrapper = pageRefs.current.get(pageNumber);
+      if (!canvas || !wrapper) return;
+
+      // A previous pass's layers (older scale) are torn down before the new
+      // ones mount, so zooming can never stack duplicate text layers.
+      clearPage(pageNumber);
+      const pass = (renderPass.current.get(pageNumber) ?? 0) + 1;
+      renderPass.current.set(pageNumber, pass);
+      const stale = () => renderPass.current.get(pageNumber) !== pass;
+
       try {
         const page = await doc.getPage(pageNumber);
+        if (stale()) return;
         const viewport = page.getViewport({ scale });
         const dpr = window.devicePixelRatio || 1;
         canvas.width = Math.max(1, Math.floor(viewport.width * dpr));
@@ -154,27 +223,111 @@ export function PdfViewerDialog({
         tasks.current.set(pageNumber, task);
         await task.promise;
         tasks.current.delete(pageNumber);
+        if (stale()) return;
+
+        // Links resolve destinations and named actions through this reader,
+        // so internal jumps (LaTeX hyperref/TOC links) navigate the viewer
+        // and external URLs open in a new tab.
+        const linkService = {
+          addLinkAttributes(link: HTMLAnchorElement, linkUrl: string, newWindow: boolean) {
+            link.href = linkUrl;
+            if (newWindow || /^https?:\/\//i.test(linkUrl)) {
+              link.target = "_blank";
+              link.rel = "noreferrer noopener";
+            }
+          },
+          getDestinationHash() {
+            return "#";
+          },
+          getAnchorUrl() {
+            return "#";
+          },
+          goToDestination: async (destination: unknown) => {
+            try {
+              // The worker accepts both named destinations and explicit
+              // destination arrays; the published type only names strings.
+              const explicit = await doc.getDestination(destination as string);
+              if (!explicit || !Array.isArray(explicit)) return;
+              const pageIndex = await doc.getPageIndex(explicit[0]);
+              const targetPage = pageIndex + 1;
+              const element = pageRefs.current.get(targetPage);
+              const root = scrollRef.current;
+              if (!element || !root) return;
+              // LaTeX TOC links use /XYZ destinations; land on the exact
+              // vertical position instead of just the top of the page.
+              let offset = Math.max(0, element.offsetTop - PAGE_GUTTER);
+              const box = boxes[pageIndex];
+              if (explicit[1] === "XYZ" && typeof explicit[3] === "number" && box) {
+                offset += explicit[3] * box.height * scale;
+              }
+              root.scrollTo({ top: offset });
+              setCurrentPage(targetPage);
+            } catch {
+              // Unresolvable destination; the link does nothing.
+            }
+          },
+          executeNamedAction: (action: string) => {
+            const page = currentPage;
+            if (action === "NextPage") jumpTo(page + 1);
+            else if (action === "PrevPage") jumpTo(page - 1);
+            else if (action === "FirstPage") jumpTo(1);
+            else if (action === "LastPage") jumpTo(numPages);
+          },
+        };
+
+        // Selectable, copyable text — glyphs stay transparent because the
+        // canvas underneath is the visual source of truth.
+        const textDiv = document.createElement("div");
+        textDiv.className = "textLayer";
+        wrapper.append(textDiv);
+        const textContent = await page.getTextContent();
+        if (stale()) return;
+        const textLayer = new TextLayer({
+          textContentSource: textContent,
+          container: textDiv,
+          viewport,
+        });
+        await textLayer.render();
+        if (stale()) return;
+
+        // Clickable link annotations over the text layer.
+        const annotationDiv = document.createElement("div");
+        annotationDiv.className = "annotationLayer";
+        wrapper.append(annotationDiv);
+        const annotationLayer = new AnnotationLayer({
+          div: annotationDiv,
+          linkService,
+          page,
+          viewport,
+        } as ConstructorParameters<typeof AnnotationLayer>[0]);
+        // The shipped build reads annotations from the render params and the
+        // rest from the constructor; the superset keeps both the current
+        // runtime and the published type shape satisfied.
+        const annotations = await page.getAnnotations();
+        if (stale()) return;
+        await annotationLayer.render({
+          annotations,
+          div: annotationDiv,
+          enableScripting: false,
+          linkService,
+          page,
+          renderForms: false,
+          viewport,
+        } as unknown as Parameters<AnnotationLayer["render"]>[0]);
+        if (stale()) return;
+
+        layersRef.current.set(pageNumber, {
+          annotationDiv,
+          annotationLayer,
+          textDiv,
+          textLayer,
+        });
       } catch {
         // Cancelled mid-render; a newer scale pass takes over.
       }
     },
-    [doc, scale],
+    [boxes, clearPage, currentPage, doc, jumpTo, numPages, scale],
   );
-
-  const clearPage = useCallback((pageNumber: number) => {
-    const task = tasks.current.get(pageNumber);
-    if (task) {
-      task.cancel();
-      tasks.current.delete(pageNumber);
-    }
-    const canvas = canvasRefs.current.get(pageNumber);
-    if (canvas) {
-      canvas.width = 0;
-      canvas.height = 0;
-      canvas.style.width = "";
-      canvas.style.height = "";
-    }
-  }, []);
 
   // Render pages as they approach the viewport and release them when they
   // leave it, so memory tracks what is actually being read.
@@ -240,18 +393,6 @@ export function PdfViewerDialog({
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, [doc, boxes]);
-
-  const jumpTo = useCallback(
-    (page: number) => {
-      if (!numPages) return;
-      const target = clamp(page, 1, numPages);
-      const element = pageRefs.current.get(target);
-      const root = scrollRef.current;
-      if (element && root) root.scrollTo({ top: Math.max(0, element.offsetTop - PAGE_GUTTER) });
-      setCurrentPage(target);
-    },
-    [numPages],
-  );
 
   // Zoom steps start from the scale actually on screen, so stepping out of
   // fit-to-width continues from the fitted size instead of jumping.
@@ -421,7 +562,16 @@ export function PdfViewerDialog({
                     if (element) pageRefs.current.set(pageNumber, element);
                     else pageRefs.current.delete(pageNumber);
                   }}
-                  style={{ width: box.width * scale, height: box.height * scale }}
+                  style={
+                    {
+                      width: box.width * scale,
+                      height: box.height * scale,
+                      // pdf.js layers size themselves against these variables.
+                      "--total-scale-factor": scale,
+                      "--scale-round-x": "1px",
+                      "--scale-round-y": "1px",
+                    } as React.CSSProperties
+                  }
                 >
                   <canvas
                     className="absolute left-0 top-0"
@@ -430,7 +580,7 @@ export function PdfViewerDialog({
                       else canvasRefs.current.delete(pageNumber);
                     }}
                   />
-                  <span className="absolute bottom-2 right-3 font-mono text-[10px] text-[#8a8a8a] select-none">
+                  <span className="absolute right-3 bottom-2 z-[2] font-mono text-[10px] text-[#8a8a8a] select-none">
                     {pageNumber}
                   </span>
                 </div>
