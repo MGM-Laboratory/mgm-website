@@ -38,7 +38,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         {children}
-        <Toaster richColors position="top-right" />
+        <Toaster
+          closeButton
+          duration={4500}
+          expand
+          gap={12}
+          position="bottom-right"
+          richColors
+          theme={pathname.startsWith("/admin") ? "light" : "system"}
+        />
         {ReactQueryDevtools ? <ReactQueryDevtools initialIsOpen={false} /> : null}
       </QueryClientProvider>
     </ThemeProvider>

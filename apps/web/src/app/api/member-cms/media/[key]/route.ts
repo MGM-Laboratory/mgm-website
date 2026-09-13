@@ -13,8 +13,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ key
     redirect: "manual",
   });
   const location = response.headers.get("location");
-  if (!location) return new NextResponse(null, { status: response.status });
-  const source = await fetch(location, { cache: "no-store" });
+  const source = location ? await fetch(location, { cache: "no-store" }) : response;
   if (!source.ok || !source.body) return new NextResponse(null, { status: source.status });
 
   const headers = new Headers({

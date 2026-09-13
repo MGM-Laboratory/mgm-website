@@ -21,6 +21,7 @@ const envSchema = z.object({
   AWS_S3_FORCE_PATH_STYLE: z
     .preprocess((value: unknown) => value === "true", z.boolean())
     .default(false),
+  CMS_LOCAL_MEDIA_DIR: optionalString(),
   SES_FROM_EMAIL: optionalString(z.email()),
 });
 

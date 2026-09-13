@@ -42,3 +42,4 @@ yarn-error.log*
 .env*.local
 apps/api/src/generated/
 apps/api/uploads/
+uploads/

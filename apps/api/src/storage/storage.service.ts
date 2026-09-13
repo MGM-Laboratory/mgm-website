@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
 
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -19,6 +21,7 @@ const IMMUTABLE_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable";
 export class StorageService {
   private readonly client: S3Client;
   private readonly bucket?: string;
+  private readonly localMediaDirectory?: string;
 
   constructor(
     configService: ConfigService<Env, true>,
@@ -36,6 +39,12 @@ export class StorageService {
       credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
     });
     this.bucket = configService.get<string | undefined>("AWS_S3_BUCKET");
+    // Local development should remain fully usable without cloud credentials.
+    // Production always has a bucket, while this ignored directory gives the
+    // CMS a durable target between local API restarts.
+    this.localMediaDirectory = this.bucket
+      ? undefined
+      : resolve(configService.get<string | undefined>("CMS_LOCAL_MEDIA_DIR") ?? "uploads");
   }
 
   private requireBucket(): string {
@@ -45,12 +54,31 @@ export class StorageService {
     return this.bucket;
   }
 
+  private localPath(key: string) {
+    if (!this.localMediaDirectory || basename(key) !== key) {
+      throw new Error("Invalid local media key");
+    }
+    return join(this.localMediaDirectory, key);
+  }
+
+  private contentTypeFor(key: string) {
+    if (key.endsWith(".png")) return "image/png";
+    if (key.endsWith(".webp")) return "image/webp";
+    return "image/jpeg";
+  }
+
   async uploadFile(params: {
     body: Buffer | Uint8Array;
     contentType: string;
     key?: string;
   }): Promise<{ key: string }> {
     const key = params.key ?? randomUUID();
+
+    if (!this.bucket) {
+      await mkdir(this.localMediaDirectory!, { recursive: true });
+      await writeFile(this.localPath(key), params.body);
+      return { key };
+    }
 
     await this.client.send(
       new PutObjectCommand({
@@ -79,7 +107,28 @@ export class StorageService {
     return signedUrl;
   }
 
+  async getLocalFile(key: string): Promise<{ body: Buffer; contentType: string } | undefined> {
+    if (this.bucket) return undefined;
+    try {
+      return { body: await readFile(this.localPath(key)), contentType: this.contentTypeFor(key) };
+    } catch {
+      return undefined;
+    }
+  }
+
+  usesLocalMedia() {
+    return !this.bucket;
+  }
+
   async deleteFile(key: string): Promise<void> {
+    if (!this.bucket) {
+      try {
+        await unlink(this.localPath(key));
+      } catch {
+        // A missing local file is already deleted from the CMS's perspective.
+      }
+      return;
+    }
     await this.client.send(new DeleteObjectCommand({ Bucket: this.requireBucket(), Key: key }));
   }
 }

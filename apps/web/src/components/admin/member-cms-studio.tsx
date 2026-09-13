@@ -20,7 +20,6 @@ import {
   UsersThree,
   X,
 } from "@phosphor-icons/react";
-import Image from "next/image";
 import Link from "next/link";
 import Cropper, { type Area } from "react-easy-crop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -150,16 +149,18 @@ async function cropPortrait(source: string, crop: Area) {
     element.onerror = () => reject(new Error("This image could not be prepared."));
     element.src = source;
   });
-  // Preserve detail on high-density screens without allowing an oversized base64 request.
-  const scale = Math.min(1, 1600 / Math.max(crop.width, crop.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(crop.width * scale));
-  canvas.height = Math.max(1, Math.round(crop.height * scale));
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Your browser could not prepare this image.");
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = "high";
-  context.drawImage(
+  // First create a high-quality working frame. The result below is then
+  // compressed adaptively, leaving generous space beneath the API's upload
+  // limit even for detailed photographs and transparent cut-outs.
+  const workingScale = Math.min(1, 1440 / Math.max(crop.width, crop.height));
+  const workingCanvas = document.createElement("canvas");
+  workingCanvas.width = Math.max(1, Math.round(crop.width * workingScale));
+  workingCanvas.height = Math.max(1, Math.round(crop.height * workingScale));
+  const workingContext = workingCanvas.getContext("2d");
+  if (!workingContext) throw new Error("Your browser could not prepare this image.");
+  workingContext.imageSmoothingEnabled = true;
+  workingContext.imageSmoothingQuality = "high";
+  workingContext.drawImage(
     image,
     crop.x,
     crop.y,
@@ -167,13 +168,38 @@ async function cropPortrait(source: string, crop: Area) {
     crop.height,
     0,
     0,
-    canvas.width,
-    canvas.height,
+    workingCanvas.width,
+    workingCanvas.height,
   );
-  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const pixels = workingContext.getImageData(0, 0, workingCanvas.width, workingCanvas.height).data;
   const hasTransparency = pixels.some((_, index) => index % 4 === 3 && pixels[index] < 255);
-  // WebP retains alpha for transparent cut-outs; JPEG stays smaller for opaque portraits.
-  return canvas.toDataURL(hasTransparency ? "image/webp" : "image/jpeg", 0.9);
+  const contentType = hasTransparency ? "image/webp" : "image/jpeg";
+  const maxBytes = 4 * 1024 * 1024;
+  let smallest = "";
+
+  for (const scale of [1, 0.84, 0.7]) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(workingCanvas.width * scale));
+    canvas.height = Math.max(1, Math.round(workingCanvas.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) continue;
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(workingCanvas, 0, 0, canvas.width, canvas.height);
+
+    for (const quality of [0.88, 0.8, 0.72]) {
+      const encoded = canvas.toDataURL(contentType, quality);
+      if (!smallest || encoded.length < smallest.length) smallest = encoded;
+      // A base64 data URL adds roughly one third overhead; 4 MiB decoded is
+      // safely under the 6 MiB API limit and avoids request-size failures.
+      if (Math.ceil((encoded.length - encoded.indexOf(",") - 1) * 0.75) <= maxBytes) {
+        return encoded;
+      }
+    }
+  }
+
+  if (smallest) return smallest;
+  throw new Error("This image could not be compressed. Please choose another image.");
 }
 
 function PhotoEditorDialog({
@@ -509,33 +535,35 @@ export function MemberCmsStudio() {
       </header>
 
       <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
-        <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
+        <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
           {section === "members" ? (
-            <div>
-              <div className="relative">
-                <MagnifyingGlass
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-                  size={17}
-                />
-                <input
-                  className={`${inputClass} pl-9`}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Find a member"
-                  value={query}
-                />
+            <div className="flex min-h-0 flex-col lg:h-full">
+              <div className="shrink-0">
+                <div className="relative">
+                  <MagnifyingGlass
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                    size={17}
+                  />
+                  <input
+                    className={`${inputClass} pl-9`}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Find a member"
+                    value={query}
+                  />
+                </div>
+                <button
+                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
+                  onClick={startNew}
+                  type="button"
+                >
+                  <Plus size={17} weight="bold" />
+                  New member
+                </button>
+                <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                  Directory · {ready ? members.length : "…"}
+                </p>
               </div>
-              <button
-                className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
-                onClick={startNew}
-                type="button"
-              >
-                <Plus size={17} weight="bold" />
-                New member
-              </button>
-              <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
-                Directory · {ready ? members.length : "…"}
-              </p>
-              <nav className="mt-2 space-y-1">
+              <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                 {visibleMembers.map((member) => {
                   const record = records.find((item) => item.slug === member.slug);
                   const portrait = record?.profile.photoKey
@@ -550,13 +578,14 @@ export function MemberCmsStudio() {
                     >
                       <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
                         {member.hasPortrait || record?.profile.photoKey ? (
-                          <Image
+                          // Native media avoids an image-component rehydration
+                          // race for freshly uploaded, private CMS assets.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
                             alt=""
-                            className="object-contain object-bottom"
-                            fill
-                            sizes="36px"
+                            className="size-full object-contain object-bottom"
+                            key={record?.profile.photoKey ?? portrait}
                             src={portrait}
-                            unoptimized={Boolean(record?.profile.photoKey)}
                           />
                         ) : (
                           <span className="pb-2 text-xs font-semibold text-[#778299]">
@@ -855,8 +884,8 @@ function MemberEditor({
     }
   };
   return (
-    <>
-      <div className="flex flex-wrap items-start justify-between gap-5 border-b border-[#dee4ef] pb-7 dark:border-white/10">
+    <div>
+      <div className="mt-10 flex flex-wrap items-start justify-between gap-5 border-b border-[#dee4ef] pb-7 dark:border-white/10">
         <div>
           <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-blue uppercase">
             {initialMember ? "Member record" : "New record"}
@@ -867,6 +896,33 @@ function MemberEditor({
           <p className="mt-2 text-sm text-[#69748a] dark:text-white/50">
             Structured fields publish directly to the member profile.
           </p>
+        </div>
+      </div>
+      <div className="sticky top-[4.75rem] z-30 mt-5 flex justify-end pointer-events-none">
+        <div className="flex flex-col items-end gap-2 pointer-events-auto">
+          {isDirty ? (
+            <span className="rounded-full bg-[#171b25]/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+              Unsaved changes
+            </span>
+          ) : null}
+          <button
+            aria-label="Save member changes"
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white shadow-[0_18px_35px_-16px_rgba(20,32,58,0.55)] transition hover:bg-brand-blue active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+            disabled={status === "saving"}
+            onClick={save}
+            type="button"
+          >
+            {status === "saved" ? (
+              <Check size={18} weight="bold" />
+            ) : (
+              <FloppyDisk size={18} weight="bold" />
+            )}
+            {status === "saving"
+              ? "Saving…"
+              : status === "saved" && !isDirty
+                ? "Saved"
+                : "Save changes"}
+          </button>
         </div>
       </div>
       {status === "error" ? (
@@ -901,32 +957,7 @@ function MemberEditor({
           onConfirm={useEditedPhoto}
         />
       ) : null}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2 sm:bottom-7 sm:right-7">
-        {isDirty ? (
-          <span className="rounded-full bg-[#171b25]/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
-            Unsaved changes
-          </span>
-        ) : null}
-        <button
-          aria-label="Save member changes"
-          className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white shadow-[0_18px_35px_-16px_rgba(20,32,58,0.55)] transition hover:bg-brand-blue active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
-          disabled={status === "saving"}
-          onClick={save}
-          type="button"
-        >
-          {status === "saved" ? (
-            <Check size={18} weight="bold" />
-          ) : (
-            <FloppyDisk size={18} weight="bold" />
-          )}
-          {status === "saving"
-            ? "Saving…"
-            : status === "saved" && !isDirty
-              ? "Saved"
-              : "Save changes"}
-        </button>
-      </div>
-    </>
+    </div>
   );
 }
 
