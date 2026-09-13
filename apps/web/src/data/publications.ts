@@ -46,7 +46,7 @@ export const SEED_PUBLICATIONS: CmsPublicationRecord[] = [
       draft: false,
       paperKey: "static/publications/touch-first-field-work.pdf",
       paperName: "touch-first-field-work.pdf",
-      paperSize: 18089,
+      paperSize: 20313,
     },
   },
   {
