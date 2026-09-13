@@ -422,40 +422,47 @@ export function MemberCmsStudio() {
                 Directory · {ready ? members.length : "…"}
               </p>
               <nav className="mt-2 space-y-1">
-                {visibleMembers.map((member) => (
-                  <button
-                    className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${member.slug === selectedSlug && !showNew ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
-                    key={member.slug}
-                    onClick={() => selectMember(member)}
-                    type="button"
-                  >
-                    <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
-                      {member.hasPortrait ? (
-                        <Image
-                          alt=""
-                          className="object-contain object-bottom"
-                          fill
-                          sizes="36px"
-                          src={`/members/${member.slug}.png`}
-                        />
-                      ) : (
-                        <span className="pb-2 text-xs font-semibold text-[#778299]">
-                          {member.name
-                            .split(" ")
-                            .map((part) => part[0])
-                            .slice(0, 2)
-                            .join("")}
-                        </span>
-                      )}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">{member.name}</span>
-                      <span className="mt-0.5 block truncate text-xs text-[#778299] dark:text-white/45">
-                        {member.division}
+                {visibleMembers.map((member) => {
+                  const record = records.find((item) => item.slug === member.slug);
+                  const portrait = record?.profile.photoKey
+                    ? `/api/member-cms/media/${record.profile.photoKey}`
+                    : `/members/${record?.sourceSlug ?? member.slug}.png`;
+                  return (
+                    <button
+                      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${member.slug === selectedSlug && !showNew ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                      key={member.slug}
+                      onClick={() => selectMember(member)}
+                      type="button"
+                    >
+                      <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
+                        {member.hasPortrait ? (
+                          <Image
+                            alt=""
+                            className="object-contain object-bottom"
+                            fill
+                            sizes="36px"
+                            src={portrait}
+                            unoptimized={Boolean(record?.profile.photoKey)}
+                          />
+                        ) : (
+                          <span className="pb-2 text-xs font-semibold text-[#778299]">
+                            {member.name
+                              .split(" ")
+                              .map((part) => part[0])
+                              .slice(0, 2)
+                              .join("")}
+                          </span>
+                        )}
                       </span>
-                    </span>
-                  </button>
-                ))}
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold">{member.name}</span>
+                        <span className="mt-0.5 block truncate text-xs text-[#778299] dark:text-white/45">
+                          {member.division}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
               </nav>
             </div>
           ) : null}

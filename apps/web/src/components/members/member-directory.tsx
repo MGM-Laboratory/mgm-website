@@ -208,7 +208,17 @@ function FilterButton({
   );
 }
 
-function Portrait({ member, index }: { member: Member; index: number }) {
+function Portrait({
+  member,
+  index,
+  photoKey,
+  sourceSlug,
+}: {
+  member: Member;
+  index: number;
+  photoKey?: string;
+  sourceSlug?: string;
+}) {
   const initials = member.name
     .split(" ")
     .filter(Boolean)
@@ -226,11 +236,16 @@ function Portrait({ member, index }: { member: Member; index: number }) {
       />
       {member.hasPortrait ? (
         <Image
-          src={`/members/${member.slug}.png`}
+          src={
+            photoKey
+              ? `/api/member-cms/media/${photoKey}`
+              : `/members/${sourceSlug ?? member.slug}.png`
+          }
           alt=""
           fill
           sizes="48px"
-          className="object-contain object-bottom transition-transform duration-500 ease-out group-hover/member:scale-105"
+          unoptimized={Boolean(photoKey)}
+          className={`${photoKey ? "object-cover" : "object-contain object-bottom"} transition-transform duration-500 ease-out group-hover/member:scale-105`}
         />
       ) : (
         <span className="absolute inset-0 grid place-items-center font-display text-sm font-semibold tracking-tight text-[var(--ink)]/80 dark:text-white/80">
@@ -242,7 +257,7 @@ function Portrait({ member, index }: { member: Member; index: number }) {
 }
 
 export function MemberDirectory() {
-  const { members } = useMemberRecords();
+  const { members, records } = useMemberRecords();
   const root = useRef<HTMLDivElement>(null);
   const searchAnchor = useRef<HTMLDivElement>(null);
   const searchSurface = useRef<HTMLDivElement>(null);
@@ -252,6 +267,10 @@ export function MemberDirectory() {
   const [profileSearchIndex, setProfileSearchIndex] = useState<Record<string, string>>({});
   const [scrollResetVersion, setScrollResetVersion] = useState(0);
   const deferredQuery = useDeferredValue(query);
+  const recordsBySlug = useMemo(
+    () => new Map(records.map((record) => [record.slug, record])),
+    [records],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -282,10 +301,10 @@ export function MemberDirectory() {
         if (!matchesFilter(member, filter)) return [];
         if (!matchesRequestedExperience(profileSearchIndex[member.slug], deferredQuery)) return [];
         const score = scoreMember(member, deferredQuery, profileSearchIndex[member.slug]);
-        return score < 0 ? [] : [{ member, score }];
+        return score < 0 ? [] : [{ member, record: recordsBySlug.get(member.slug), score }];
       })
       .toSorted((a, b) => b.score - a.score || a.member.name.localeCompare(b.member.name));
-  }, [deferredQuery, filter, members, profileSearchIndex]);
+  }, [deferredQuery, filter, members, profileSearchIndex, recordsBySlug]);
 
   useLayoutEffect(() => {
     const element = root.current;
@@ -437,7 +456,7 @@ export function MemberDirectory() {
 
             {filteredMembers.length ? (
               <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                {filteredMembers.map(({ member }, index) => (
+                {filteredMembers.map(({ member, record }, index) => (
                   <article
                     key={member.slug}
                     className="member-card min-w-0 py-1 [content-visibility:auto]"
@@ -448,7 +467,12 @@ export function MemberDirectory() {
                     >
                       <div className="relative z-0 rounded-2xl border border-[var(--line)] bg-background p-5 shadow-[var(--shadow-1)] transition-[transform,border-color,box-shadow] duration-300 group-hover/member:z-10 group-hover/member:-translate-y-0.5 group-hover/member:border-brand-blue/45 group-hover/member:shadow-[0_20px_40px_-30px_rgba(14,17,22,0.5)] dark:bg-[#171c24]">
                         <div className="flex gap-4">
-                          <Portrait member={member} index={index} />
+                          <Portrait
+                            member={member}
+                            index={index}
+                            photoKey={record?.profile.photoKey}
+                            sourceSlug={record?.sourceSlug}
+                          />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
                               <div>

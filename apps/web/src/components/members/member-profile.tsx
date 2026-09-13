@@ -327,10 +327,12 @@ function ProfilePortrait({
   member,
   photoKey,
   photoPosition,
+  sourceSlug,
 }: {
   member: Member;
   photoKey?: string;
   photoPosition?: CmsMemberProfile["photoPosition"];
+  sourceSlug?: string;
 }) {
   const initials = member.name
     .split(" ")
@@ -356,7 +358,11 @@ function ProfilePortrait({
         // Uploaded portraits resolve through a short-lived signed storage URL.
         // The browser can follow it directly; the Next image optimizer rejects it.
         <Image
-          src={photoKey ? `/api/member-cms/media/${photoKey}` : `/members/${member.slug}.png`}
+          src={
+            photoKey
+              ? `/api/member-cms/media/${photoKey}`
+              : `/members/${sourceSlug ?? member.slug}.png`
+          }
           alt={`Portrait of ${member.name}`}
           fill
           sizes="(max-width: 1023px) 100vw, 30vw"
@@ -664,6 +670,7 @@ export function MemberProfile({ member }: { member: Member }) {
               member={effectiveMember}
               photoKey={cmsProfile?.photoKey}
               photoPosition={cmsProfile?.photoPosition}
+              sourceSlug={override?.sourceSlug}
             />
             <ContactLinks links={cmsProfile?.links} profile={{ contacts: {}, raw: "" }} />
           </aside>
