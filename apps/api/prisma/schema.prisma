@@ -6,3 +6,10 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model CmsMember {
+  slug      String   @id
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

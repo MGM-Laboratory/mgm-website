@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowUpRight, Search, X } from "lucide-react";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { MEMBERS, type Member, type MemberDivision } from "@/data/members";
+import { type Member, type MemberDivision } from "@/data/members";
+import { useMemberRecords } from "@/hooks/use-member-records";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 
 type Filter = "All" | MemberDivision;
@@ -241,6 +242,7 @@ function Portrait({ member, index }: { member: Member; index: number }) {
 }
 
 export function MemberDirectory() {
+  const { members } = useMemberRecords();
   const root = useRef<HTMLDivElement>(null);
   const searchAnchor = useRef<HTMLDivElement>(null);
   const searchSurface = useRef<HTMLDivElement>(null);
@@ -275,13 +277,15 @@ export function MemberDirectory() {
   }, []);
 
   const filteredMembers = useMemo(() => {
-    return MEMBERS.flatMap((member) => {
-      if (!matchesFilter(member, filter)) return [];
-      if (!matchesRequestedExperience(profileSearchIndex[member.slug], deferredQuery)) return [];
-      const score = scoreMember(member, deferredQuery, profileSearchIndex[member.slug]);
-      return score < 0 ? [] : [{ member, score }];
-    }).toSorted((a, b) => b.score - a.score || a.member.name.localeCompare(b.member.name));
-  }, [deferredQuery, filter, profileSearchIndex]);
+    return members
+      .flatMap((member) => {
+        if (!matchesFilter(member, filter)) return [];
+        if (!matchesRequestedExperience(profileSearchIndex[member.slug], deferredQuery)) return [];
+        const score = scoreMember(member, deferredQuery, profileSearchIndex[member.slug]);
+        return score < 0 ? [] : [{ member, score }];
+      })
+      .toSorted((a, b) => b.score - a.score || a.member.name.localeCompare(b.member.name));
+  }, [deferredQuery, filter, members, profileSearchIndex]);
 
   useLayoutEffect(() => {
     const element = root.current;
@@ -294,7 +298,7 @@ export function MemberDirectory() {
   }, []);
 
   const countFor = (candidate: Filter) =>
-    MEMBERS.filter((member) => matchesFilter(member, candidate)).length;
+    members.filter((member) => matchesFilter(member, candidate)).length;
   const isSearching = query !== deferredQuery;
   useLayoutEffect(() => {
     if (!shouldResetDirectoryScroll.current) return;
@@ -389,7 +393,7 @@ export function MemberDirectory() {
             <div className="rounded-2xl border border-[var(--line)] bg-black/[0.015] p-2 dark:bg-white/[0.025]">
               <FilterButton
                 active={filter === "All"}
-                count={MEMBERS.length}
+                count={members.length}
                 filter="All"
                 onClick={() => updateFilter("All")}
               />

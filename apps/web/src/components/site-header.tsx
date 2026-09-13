@@ -1,3 +1,7 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/nav/logo-mark";
 import { NavMenu } from "@/components/nav/nav-menu";
@@ -10,6 +14,9 @@ import { NavMenu } from "@/components/nav/nav-menu";
 // lower z-index than this header, so the header (logo + toggle) stays
 // crisp and clickable on top while the panel slides in below it.
 export function SiteHeader() {
+  const pathname = usePathname();
+  if (pathname.startsWith("/admin")) return null;
+
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between gap-4 border-b border-[var(--line)] bg-background px-6 sm:px-10">
       <LogoMark />

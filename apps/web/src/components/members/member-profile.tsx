@@ -28,6 +28,8 @@ import {
 
 import { GithubGlyph, LinkedinGlyph, WhatsappGlyph } from "@/components/social-icons";
 import type { Member } from "@/data/members";
+import { useMemberRecords } from "@/hooks/use-member-records";
+import type { CmsMemberProfile } from "@/lib/member-cms";
 
 type PublicProfile = {
   contacts: {
@@ -44,6 +46,7 @@ type PublicProfile = {
 type DatePart = { month: number; year: number };
 type Experience = {
   company: string;
+  description?: string;
   end?: DatePart;
   isCurrent: boolean;
   location?: string;
@@ -318,7 +321,15 @@ function useCurrentMonth() {
   return now;
 }
 
-function ProfilePortrait({ member }: { member: Member }) {
+function ProfilePortrait({
+  member,
+  photoKey,
+  photoPosition,
+}: {
+  member: Member;
+  photoKey?: string;
+  photoPosition?: CmsMemberProfile["photoPosition"];
+}) {
   const initials = member.name
     .split(" ")
     .filter(Boolean)
@@ -339,13 +350,21 @@ function ProfilePortrait({ member }: { member: Member }) {
         aria-hidden="true"
         className="absolute right-0 top-0 h-[58%] w-[22%] bg-[var(--ink)]/90 dark:bg-white/15"
       />
-      {member.hasPortrait ? (
+      {member.hasPortrait || photoKey ? (
         <Image
-          src={`/members/${member.slug}.png`}
+          src={photoKey ? `/api/member-cms/media/${photoKey}` : `/members/${member.slug}.png`}
           alt={`Portrait of ${member.name}`}
           fill
           sizes="(max-width: 1023px) 100vw, 30vw"
-          className="object-contain object-bottom"
+          className={photoKey ? "object-cover" : "object-contain object-bottom"}
+          style={
+            photoKey && photoPosition
+              ? {
+                  objectPosition: `${photoPosition.x}% ${photoPosition.y}%`,
+                  transform: `scale(${photoPosition.zoom})`,
+                }
+              : undefined
+          }
         />
       ) : (
         <span className="absolute inset-x-0 bottom-12 text-center font-display text-8xl font-semibold tracking-tighter text-[var(--ink)]/80 dark:text-white/80">
@@ -401,7 +420,13 @@ function ExternalLink({
     </a>
   );
 }
-function ContactLinks({ profile }: { profile: PublicProfile }) {
+function ContactLinks({
+  profile,
+  links = [],
+}: {
+  links?: NonNullable<CmsMemberProfile["links"]>;
+  profile: PublicProfile;
+}) {
   const { contacts } = profile;
   const whatsappNumber = contacts.phone?.replace(/\D/g, "");
   const whatsappHref = whatsappNumber
@@ -433,6 +458,16 @@ function ContactLinks({ profile }: { profile: PublicProfile }) {
         {whatsappHref ? (
           <ExternalLink href={whatsappHref} icon={WhatsappGlyph} label="WhatsApp" />
         ) : null}
+        {links
+          .filter((link) => link.url && link.label)
+          .map((link) => (
+            <ExternalLink
+              href={link.url}
+              icon={Globe2}
+              key={`${link.label}-${link.url}`}
+              label={link.label}
+            />
+          ))}
       </div>
     </div>
   );
@@ -479,6 +514,11 @@ function ExperienceList({ items, now }: { items: readonly Experience[]; now: Dat
                   <span>{formatPeriod(item, now)}</span>
                   {item.location ? <span>{item.location}</span> : null}
                 </div>
+                {item.description ? (
+                  <p className="max-w-3xl text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
+                    {item.description}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ol>
@@ -530,17 +570,21 @@ function DetailList({ items }: { items: readonly string[] }) {
 export function MemberProfile({ member }: { member: Member }) {
   const root = useRef<HTMLElement>(null);
   const [profile, setProfile] = useState<PublicProfile>();
+  const { records } = useMemberRecords();
+  const override = records.find((record) => record.slug === member.slug);
+  const effectiveMember = override?.member ?? member;
+  const cmsProfile = override?.profile;
   const now = useCurrentMonth();
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/member-profiles/${member.slug}.json`, { signal: controller.signal })
+    fetch(`/member-profiles/${effectiveMember.slug}.json`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : undefined))
       .then((data: PublicProfile | undefined) => setProfile(data))
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) setProfile(undefined);
       });
     return () => controller.abort();
-  }, [member.slug]);
+  }, [effectiveMember.slug]);
   useLayoutEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -559,8 +603,51 @@ export function MemberProfile({ member }: { member: Member }) {
     return () => context.revert();
   }, []);
   const parsed = useMemo(
-    () => (profile ? parseProfile(member, profile.raw) : undefined),
-    [member, profile],
+    () => (profile ? parseProfile(effectiveMember, profile.raw) : undefined),
+    [effectiveMember, profile],
+  );
+  const displayed = useMemo(
+    () => ({
+      ...parsed,
+      achievements: cmsProfile?.achievements?.length
+        ? cmsProfile.achievements.map((item) =>
+            [item.title, item.issuer, item.description].filter(Boolean).join(" · "),
+          )
+        : (parsed?.achievements ?? []),
+      bio: cmsProfile?.bio?.trim() || parsed?.bio || effectiveMember.bio,
+      certifications: cmsProfile?.certificates?.length
+        ? cmsProfile.certificates.map((item) =>
+            [item.title, item.issuer].filter(Boolean).join(" · "),
+          )
+        : (parsed?.certifications ?? []),
+      education: cmsProfile?.education?.length
+        ? cmsProfile.education.map((item) => ({
+            detail: [item.degree, item.detail].filter(Boolean).join(" · "),
+            institution: item.institution,
+          }))
+        : (parsed?.education ?? []),
+      experience: cmsProfile?.experience?.length
+        ? cmsProfile.experience.map((item) => ({
+            company: item.company,
+            description: item.description,
+            end: item.end,
+            isCurrent: Boolean(item.current),
+            location: item.location,
+            start: item.start,
+            title: item.title,
+          }))
+        : (parsed?.experience ?? []),
+      languages: cmsProfile?.languages?.length
+        ? cmsProfile.languages.map((item) =>
+            [item.name, item.proficiency].filter(Boolean).join(" · "),
+          )
+        : (parsed?.languages ?? []),
+      projects: parsed?.projects ?? [],
+      skills: cmsProfile?.skills?.length
+        ? cmsProfile.skills
+        : (parsed?.skills ?? [...effectiveMember.labFocus]),
+    }),
+    [cmsProfile, effectiveMember.bio, effectiveMember.labFocus, parsed],
   );
   return (
     <main ref={root} className="px-5 pb-20 pt-28 sm:px-8 sm:pt-32 lg:px-12 lg:pb-28">
@@ -574,20 +661,27 @@ export function MemberProfile({ member }: { member: Member }) {
         </Link>
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(19rem,0.75fr)_minmax(0,1.25fr)] lg:gap-20">
           <aside className="profile-reveal self-start lg:sticky lg:top-24">
-            <ProfilePortrait member={member} />
-            {profile ? (
-              <ContactLinks profile={profile} />
+            <ProfilePortrait
+              member={effectiveMember}
+              photoKey={cmsProfile?.photoKey}
+              photoPosition={cmsProfile?.photoPosition}
+            />
+            {profile || cmsProfile ? (
+              <ContactLinks
+                links={cmsProfile?.links}
+                profile={profile ?? { contacts: {}, raw: "" }}
+              />
             ) : (
               <div className="mt-5 h-20 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />
             )}
           </aside>
           <header className="min-w-0 self-start">
             <h1 className="profile-reveal font-display text-[clamp(2.75rem,6vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-[var(--ink)] dark:text-white">
-              {member.name}
+              {effectiveMember.name}
             </h1>
             <div className="profile-reveal">
-              {parsed ? (
-                <Bio value={parsed.bio} />
+              {profile || cmsProfile ? (
+                <Bio value={displayed.bio} />
               ) : (
                 <div className="mt-7 h-24 animate-pulse rounded-2xl bg-black/[0.045] dark:bg-white/[0.06]" />
               )}
@@ -596,17 +690,17 @@ export function MemberProfile({ member }: { member: Member }) {
         </div>
         <div className="profile-reveal mt-20">
           <ProfileSection icon={BriefcaseBusiness} title="Experience">
-            <ExperienceList items={parsed?.experience ?? []} now={now} />
+            <ExperienceList items={displayed.experience} now={now} />
           </ProfileSection>
         </div>
         <div className="profile-reveal grid gap-x-14 lg:grid-cols-2 lg:gap-y-0">
           <div className="lg:border-r lg:border-[var(--line)] lg:pr-14 dark:border-white/10">
             <ProfileSection icon={GraduationCap} title="Education">
-              <EducationList items={parsed?.education ?? []} />
+              <EducationList items={displayed.education} />
             </ProfileSection>
             <ProfileSection icon={Sparkles} title="Skills">
               <div className="flex flex-wrap gap-2">
-                {(parsed?.skills ?? member.labFocus).map((skill) => (
+                {displayed.skills.map((skill) => (
                   <span
                     key={skill}
                     className="rounded-full border border-[var(--line-strong)] px-3 py-1.5 text-sm text-[var(--ink-2)] dark:border-white/15 dark:text-white/70"
@@ -616,26 +710,26 @@ export function MemberProfile({ member }: { member: Member }) {
                 ))}
               </div>
             </ProfileSection>
-            {parsed?.languages.length ? (
+            {displayed.languages.length ? (
               <ProfileSection icon={Languages} title="Languages">
-                <DetailList items={parsed.languages} />
+                <DetailList items={displayed.languages} />
               </ProfileSection>
             ) : null}
           </div>
           <div className="lg:pl-14">
-            {parsed?.achievements.length ? (
+            {displayed.achievements.length ? (
               <ProfileSection icon={BadgeCheck} title="Achievements">
-                <DetailList items={parsed.achievements} />
+                <DetailList items={displayed.achievements} />
               </ProfileSection>
             ) : null}
-            {parsed?.certifications.length ? (
+            {displayed.certifications.length ? (
               <ProfileSection icon={BadgeCheck} title="Certifications">
-                <DetailList items={parsed.certifications} />
+                <DetailList items={displayed.certifications} />
               </ProfileSection>
             ) : null}
-            {parsed?.projects.length ? (
+            {displayed.projects.length ? (
               <ProfileSection icon={FolderKanban} title="Projects">
-                <DetailList items={parsed.projects} />
+                <DetailList items={displayed.projects} />
               </ProfileSection>
             ) : null}
           </div>
@@ -643,4 +737,17 @@ export function MemberProfile({ member }: { member: Member }) {
       </div>
     </main>
   );
+}
+
+export function MemberProfileBySlug({ slug }: { slug: string }) {
+  const { members, ready } = useMemberRecords();
+  const member = members.find((candidate) => candidate.slug === slug);
+  if (!member) {
+    return (
+      <main className="grid min-h-[100dvh] place-items-center px-6 pt-16 text-sm text-[var(--ink-2)] dark:text-white/65">
+        {ready ? "This member profile is not available." : "Loading member profile…"}
+      </main>
+    );
+  }
+  return <MemberProfile member={member} />;
 }

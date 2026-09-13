@@ -1,4 +1,5 @@
 import compression from "compression";
+import { json } from "express";
 import helmet from "helmet";
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -10,7 +11,9 @@ import { AppModule } from "./app.module.js";
 import type { Env } from "./config/env.validation.js";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, bodyParser: false });
+
+  app.use(json({ limit: "8mb" }));
 
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();

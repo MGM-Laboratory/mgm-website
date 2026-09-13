@@ -1,0 +1,113 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Put,
+  Res,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { ApiTags } from "@nestjs/swagger";
+import { randomUUID, timingSafeEqual } from "node:crypto";
+import type { Response } from "express";
+import { z } from "zod";
+
+import type { Prisma } from "../generated/prisma/client.js";
+import type { Env } from "../config/env.validation.js";
+import { StorageService } from "../storage/storage.service.js";
+import { CmsMembersService } from "./cms-members.service.js";
+
+const memberSchema = z.object({
+  member: z.object({
+    accent: z.enum(["blue", "yellow", "red", "green"]),
+    bio: z.string(),
+    division: z.string(),
+    group: z.string(),
+    hasPortrait: z.boolean(),
+    labFocus: z.array(z.string()),
+    name: z.string().min(1),
+    nickname: z.string().optional(),
+    role: z.string(),
+    slug: z.string().min(1),
+    unit: z.string().optional(),
+  }),
+  profile: z.record(z.string(), z.unknown()),
+});
+
+const imageSchema = z.object({ image: z.string().startsWith("data:image/") });
+
+function safeEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+@ApiTags("cms-members")
+@Controller("cms/members")
+export class CmsMembersController {
+  constructor(
+    private readonly members: CmsMembersService,
+    private readonly storage: StorageService,
+    private readonly config: ConfigService<Env, true>,
+  ) {}
+
+  @Get()
+  async all() {
+    return { records: await this.members.all() };
+  }
+
+  @Get("media/:key")
+  async media(@Param("key") key: string, @Res() response: Response) {
+    const url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
+    return response.redirect(url);
+  }
+
+  @Put(":slug")
+  async save(
+    @Param("slug") slug: string,
+    @Body() body: unknown,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    const document = memberSchema.parse(body);
+    if (document.member.slug !== slug) throw new UnauthorizedException("Slug mismatch");
+    return this.members.save(slug, document as unknown as Prisma.InputJsonValue);
+  }
+
+  @Delete(":slug")
+  async remove(@Param("slug") slug: string, @Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    await this.members.remove(slug);
+    return { ok: true };
+  }
+
+  @Post(":slug/photo")
+  async uploadPhoto(
+    @Param("slug") slug: string,
+    @Body() body: unknown,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    const { image } = imageSchema.parse(body);
+    const [meta, payload] = image.split(",", 2);
+    const contentType = meta.match(/^data:(image\/(?:jpeg|png|webp));base64$/)?.[1];
+    const buffer = Buffer.from(payload ?? "", "base64");
+    if (!contentType || !buffer.length || buffer.length > 6 * 1024 * 1024) {
+      throw new UnauthorizedException("Invalid image upload");
+    }
+    const extension =
+      contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+    const key = `member-${slug}-${randomUUID()}.${extension}`;
+    await this.storage.uploadFile({ body: buffer, contentType, key });
+    return { key };
+  }
+
+  private assertAdmin(value: string) {
+    const configured = this.config.getOrThrow<string>("ADMIN_PASSPHRASE");
+    if (!safeEqual(value, configured)) throw new UnauthorizedException("Unauthorized");
+  }
+}
