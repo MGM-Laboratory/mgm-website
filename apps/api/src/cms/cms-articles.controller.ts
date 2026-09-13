@@ -14,6 +14,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiTags } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Response } from "express";
 import { z } from "zod";
@@ -112,6 +113,10 @@ export class CmsArticlesController {
     };
   }
 
+  // Article pages request hundreds of media redirects in a single burst, so
+  // the global rate limit must not apply here. The key allowlist below keeps
+  // the route safe without a request budget.
+  @SkipThrottle()
   @Get("media/:key")
   async media(@Param("key") key: string, @Res() response: Response) {
     if (!MEDIA_KEY_PATTERN.test(key)) {
