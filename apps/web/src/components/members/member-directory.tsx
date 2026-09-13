@@ -7,7 +7,6 @@ import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState
 
 import { type Member, type MemberDivision } from "@/data/members";
 import { useMemberRecords } from "@/hooks/use-member-records";
-import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 
 type Filter = "All" | MemberDivision;
 
@@ -309,16 +308,6 @@ export function MemberDirectory() {
       .toSorted((a, b) => b.score - a.score || a.member.name.localeCompare(b.member.name));
   }, [deferredQuery, filter, members, profileSearchIndex, recordsBySlug]);
 
-  useLayoutEffect(() => {
-    const element = root.current;
-    if (!element) return;
-
-    const reveal = fadeUpOnScroll(element, ".member-directory-reveal", { stagger: 0.12, y: 26 });
-    return () => {
-      reveal?.kill();
-    };
-  }, []);
-
   const countFor = (candidate: Filter) =>
     members.filter((member) => matchesFilter(member, candidate)).length;
   const isSearching = query !== deferredQuery;
@@ -349,7 +338,7 @@ export function MemberDirectory() {
 
   return (
     <section ref={root} className="relative px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
-      <div className="member-directory-reveal mx-auto max-w-[1440px]">
+      <div className="mx-auto max-w-[1440px]">
         <div className="border-b border-[var(--line)] pb-8">
           <div>
             <p className="font-mono text-xs tracking-[0.16em] text-brand-blue uppercase">
@@ -364,7 +353,7 @@ export function MemberDirectory() {
         <div ref={searchAnchor} aria-hidden="true" className="mt-8 h-0" />
         <div
           ref={searchSurface}
-          className="member-directory-reveal group/search sticky top-16 z-30 isolate -mx-3 bg-background px-3 py-3 shadow-[0_18px_30px_-28px_rgba(14,17,22,0.28)] dark:shadow-[0_18px_30px_-28px_rgba(0,0,0,0.75)]"
+          className="group/search sticky top-16 z-30 isolate -mx-3 bg-background px-3 py-3 shadow-[0_18px_30px_-28px_rgba(14,17,22,0.28)] dark:shadow-[0_18px_30px_-28px_rgba(0,0,0,0.75)]"
         >
           <div className="absolute -inset-2 rounded-[1.35rem] bg-brand-blue/10 opacity-0 blur-xl transition-opacity duration-500 group-focus-within/search:opacity-100" />
           <div className="relative flex items-center rounded-2xl border border-[var(--line-strong)] bg-background px-4 py-3 shadow-[var(--shadow-1)] transition-[border-color,box-shadow,background-color] duration-300 focus-within:border-brand-blue focus-within:bg-white focus-within:shadow-[0_16px_45px_-28px_rgba(58,109,197,0.75)] dark:focus-within:bg-[#1b202a]">
@@ -411,7 +400,7 @@ export function MemberDirectory() {
         </div>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
-          <aside className="member-directory-reveal lg:sticky lg:top-[11.5rem]">
+          <aside className="lg:sticky lg:top-[11.5rem]">
             <div className="rounded-2xl border border-[var(--line)] bg-black/[0.015] p-2 dark:bg-white/[0.025]">
               <FilterButton
                 active={filter === "All"}
@@ -439,7 +428,7 @@ export function MemberDirectory() {
           </aside>
 
           <div className="min-w-0">
-            <div className="member-directory-reveal flex items-center justify-between gap-4 pb-5">
+            <div className="flex items-center justify-between gap-4 pb-5">
               <p className="text-sm text-[var(--ink-2)] dark:text-white/60">
                 <span className="font-semibold text-[var(--ink)] dark:text-white">
                   {filteredMembers.length}
@@ -460,10 +449,7 @@ export function MemberDirectory() {
             {filteredMembers.length ? (
               <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                 {filteredMembers.map(({ member, record }, index) => (
-                  <article
-                    key={member.slug}
-                    className="member-card min-w-0 py-1 [content-visibility:auto]"
-                  >
+                  <article key={member.slug} className="member-card min-w-0 py-1">
                     <Link
                       href={`/member/${member.slug}`}
                       className="group/member relative z-0 block focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-4 focus-visible:outline-none hover:z-10 dark:focus-visible:ring-offset-[#15181e]"
@@ -520,7 +506,7 @@ export function MemberDirectory() {
                 ))}
               </div>
             ) : (
-              <div className="member-directory-reveal grid min-h-80 place-items-center border border-dashed border-[var(--line-strong)] px-6 text-center">
+              <div className="grid min-h-80 place-items-center border border-dashed border-[var(--line-strong)] px-6 text-center">
                 <div>
                   <p className="font-display text-2xl font-semibold tracking-tight text-[var(--ink)] dark:text-white">
                     No published profile matches that search.
