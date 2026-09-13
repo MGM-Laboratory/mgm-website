@@ -17,5 +17,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
   async onModuleInit() {
     await this.$connect();
+    // The CMS table is introduced after the original deployment and must be
+    // available before the first CMS request. The statement is idempotent so
+    // existing Railway and local databases are left intact.
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CmsMember" (
+        "slug" TEXT PRIMARY KEY,
+        "data" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `);
   }
 }
