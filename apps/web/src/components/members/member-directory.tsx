@@ -8,7 +8,7 @@ import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState
 import { MEMBERS, type Member, type MemberDivision } from "@/data/members";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 
-type Filter = "All" | "Research and Development" | MemberDivision;
+type Filter = "All" | MemberDivision;
 
 const STOP_WORDS = new Set([
   "a",
@@ -47,19 +47,11 @@ const FILTER_GROUPS: ReadonlyArray<{
   { label: "People", items: ["Professors"] },
   {
     label: "Research and Development",
-    items: ["Research and Development", "Website", "Mobile", "HCI/UX", "Game & XR"],
+    items: ["Website", "Mobile", "HCI/UX", "Game & XR"],
   },
   {
     label: "Laboratory teams",
-    items: [
-      "IT & Infrastructure",
-      "Public Relations",
-      "Media",
-      "Curriculum",
-      "Human Resource",
-      "Academic Support",
-      "Secretariat",
-    ],
+    items: ["IT & Infrastructure", "Public Relations", "Media", "Curriculum", "Human Resource"],
   },
 ];
 
@@ -75,6 +67,18 @@ const ACCENT_COLORS = {
   red: "bg-brand-red",
   green: "bg-brand-green",
 } as const;
+const DIVISION_LOGOS: Record<MemberDivision, string> = {
+  Professors: "/logo.svg",
+  Website: "/logo/rnd.svg",
+  Mobile: "/logo/rnd.svg",
+  "HCI/UX": "/logo/rnd.svg",
+  "Game & XR": "/logo/rnd.svg",
+  "IT & Infrastructure": "/logo/infra.svg",
+  "Public Relations": "/logo/pr.svg",
+  Media: "/logo/media.svg",
+  Curriculum: "/logo/curriculum.svg",
+  "Human Resource": "/logo/hr.svg",
+};
 
 function normalize(value: string) {
   return value
@@ -128,6 +132,7 @@ function scoreMember(member: Member, query: string, profileText = "") {
     member.nickname ?? "",
     member.division,
     member.group,
+    member.unit ?? "",
     member.bio,
     ...member.labFocus,
   ].map(normalize);
@@ -149,7 +154,6 @@ function scoreMember(member: Member, query: string, profileText = "") {
 
 function matchesFilter(member: Member, filter: Filter) {
   if (filter === "All") return true;
-  if (filter === "Research and Development") return member.group === filter;
   return member.division === filter;
 }
 
@@ -163,14 +167,13 @@ function FilterButton({
   count,
   filter,
   onClick,
-  nested = false,
 }: {
   active: boolean;
   count: number;
   filter: Filter;
-  nested?: boolean;
   onClick: () => void;
 }) {
+  const logo = filter === "All" ? undefined : DIVISION_LOGOS[filter];
   return (
     <button
       type="button"
@@ -180,9 +183,21 @@ function FilterButton({
         active
           ? "bg-brand-blue text-white shadow-[0_8px_20px_-14px_rgba(58,109,197,0.8)]"
           : "text-[var(--ink-2)] hover:bg-black/[0.045] dark:text-white/70 dark:hover:bg-white/[0.07]"
-      } ${nested ? "ml-3 w-[calc(100%-0.75rem)] text-[13px]" : "font-medium"}`}
+      } font-medium`}
     >
-      <span>{filter}</span>
+      <span className="flex min-w-0 items-center gap-2">
+        {logo ? (
+          <Image
+            src={logo}
+            alt=""
+            aria-hidden="true"
+            width={18}
+            height={18}
+            className="size-[18px] shrink-0 object-contain"
+          />
+        ) : null}
+        <span>{filter}</span>
+      </span>
       <span
         className={`font-mono text-[11px] ${active ? "text-white/70" : "text-[var(--ink-3)] dark:text-white/40"}`}
       >
@@ -361,10 +376,6 @@ export function MemberDirectory() {
                       active={filter === item}
                       count={countFor(item)}
                       filter={item}
-                      nested={
-                        group.label === "Research and Development" &&
-                        item !== "Research and Development"
-                      }
                       onClick={() => setFilter(item)}
                     />
                   ))}
@@ -397,20 +408,27 @@ export function MemberDirectory() {
                 {filteredMembers.map(({ member }, index) => (
                   <article
                     key={member.slug}
-                    className="member-card min-w-0 [content-visibility:auto]"
+                    className="member-card min-w-0 py-1 [content-visibility:auto]"
                   >
                     <Link
                       href={`/member/${member.slug}`}
-                      className="group/member block focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-4 focus-visible:outline-none dark:focus-visible:ring-offset-[#15181e]"
+                      className="group/member relative z-0 block focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-4 focus-visible:outline-none hover:z-10 dark:focus-visible:ring-offset-[#15181e]"
                     >
-                      <div className="rounded-2xl border border-[var(--line)] bg-background p-5 shadow-[var(--shadow-1)] transition-[transform,border-color,box-shadow] duration-300 group-hover/member:-translate-y-0.5 group-hover/member:border-brand-blue/45 group-hover/member:shadow-[0_20px_40px_-30px_rgba(14,17,22,0.5)] dark:bg-[#171c24]">
+                      <div className="relative z-0 rounded-2xl border border-[var(--line)] bg-background p-5 shadow-[var(--shadow-1)] transition-[transform,border-color,box-shadow] duration-300 group-hover/member:z-10 group-hover/member:-translate-y-0.5 group-hover/member:border-brand-blue/45 group-hover/member:shadow-[0_20px_40px_-30px_rgba(14,17,22,0.5)] dark:bg-[#171c24]">
                         <div className="flex gap-4">
                           <Portrait member={member} index={index} />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
-                              <p className="text-xs font-medium text-brand-blue">
-                                {member.division}
-                              </p>
+                              <div>
+                                <p className="text-xs font-medium text-brand-blue">
+                                  {member.division}
+                                </p>
+                                {member.unit ? (
+                                  <p className="mt-0.5 text-[11px] font-medium text-[var(--ink-3)] dark:text-white/45">
+                                    {member.unit}
+                                  </p>
+                                ) : null}
+                              </div>
                               <ArrowUpRight
                                 aria-hidden="true"
                                 size={18}

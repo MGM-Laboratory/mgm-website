@@ -8,9 +8,7 @@ export type MemberDivision =
   | "Public Relations"
   | "Media"
   | "Curriculum"
-  | "Human Resource"
-  | "Academic Support"
-  | "Secretariat";
+  | "Human Resource";
 
 export type MemberAccent = "blue" | "yellow" | "red" | "green";
 
@@ -25,13 +23,14 @@ export type Member = {
   nickname?: string;
   role: "Student Member" | "Professor";
   slug: string;
+  unit?: "Assistant Coordinator" | "Secretariat";
 };
 
-type DivisionConfig = Pick<Member, "division" | "group">;
+type DivisionConfig = Pick<Member, "division" | "group" | "unit">;
 
 const DIVISIONS: Record<string, DivisionConfig> = {
   CURRICULUM: { division: "Curriculum", group: "People" },
-  ASKOR: { division: "Academic Support", group: "Operations" },
+  ASKOR: { division: "Curriculum", group: "People", unit: "Assistant Coordinator" },
   "IT & INFRASTRUCTURE": { division: "IT & Infrastructure", group: "Operations" },
   "RND - Interactive Media": { division: "Game & XR", group: "Research and Development" },
   "RND - Website": { division: "Website", group: "Research and Development" },
@@ -40,7 +39,7 @@ const DIVISIONS: Record<string, DivisionConfig> = {
   MEDIA: { division: "Media", group: "People" },
   RELATION: { division: "Public Relations", group: "People" },
   "HUMAN RESOURCE": { division: "Human Resource", group: "People" },
-  SEKBEN: { division: "Secretariat", group: "Operations" },
+  SEKBEN: { division: "Human Resource", group: "People", unit: "Secretariat" },
 };
 
 const FOCUS_BY_DIVISION: Record<MemberDivision, readonly string[]> = {
@@ -54,8 +53,6 @@ const FOCUS_BY_DIVISION: Record<MemberDivision, readonly string[]> = {
   Media: ["Visual storytelling", "Content", "Production"],
   Curriculum: ["Learning design", "Curriculum", "Student development"],
   "Human Resource": ["People operations", "Team culture", "Recruitment"],
-  "Academic Support": ["Academic support", "Coordination", "Student development"],
-  Secretariat: ["Operations", "Administration", "Coordination"],
 };
 
 const MISSING_PORTRAITS = new Set(["a-agung-ngurah-bayu-widia-putra"]);
@@ -141,7 +138,7 @@ const ACCENTS: readonly MemberAccent[] = ["blue", "yellow", "red", "green"];
 
 export const MEMBERS: readonly Member[] = MEMBER_SEEDS.map(
   ([sourceDivision, name, nickname], index) => {
-    const { division, group } = DIVISIONS[sourceDivision];
+    const { division, group, unit } = DIVISIONS[sourceDivision];
     const slug = slugify(name);
 
     return {
@@ -155,6 +152,7 @@ export const MEMBERS: readonly Member[] = MEMBER_SEEDS.map(
       nickname,
       role: "Student Member",
       slug,
+      unit,
     };
   },
 );
@@ -170,8 +168,6 @@ export const MEMBER_DIVISIONS = [
   "Media",
   "Curriculum",
   "Human Resource",
-  "Academic Support",
-  "Secretariat",
 ] as const satisfies readonly MemberDivision[];
 
 export function getMemberBySlug(slug: string) {
