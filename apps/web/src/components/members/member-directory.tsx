@@ -242,9 +242,13 @@ function Portrait({ member, index }: { member: Member; index: number }) {
 
 export function MemberDirectory() {
   const root = useRef<HTMLDivElement>(null);
+  const searchAnchor = useRef<HTMLDivElement>(null);
+  const searchSurface = useRef<HTMLDivElement>(null);
+  const shouldResetDirectoryScroll = useRef(false);
   const [filter, setFilter] = useState<Filter>("All");
   const [query, setQuery] = useState("");
   const [profileSearchIndex, setProfileSearchIndex] = useState<Record<string, string>>({});
+  const [scrollResetVersion, setScrollResetVersion] = useState(0);
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
@@ -292,6 +296,30 @@ export function MemberDirectory() {
   const countFor = (candidate: Filter) =>
     MEMBERS.filter((member) => matchesFilter(member, candidate)).length;
   const isSearching = query !== deferredQuery;
+  useLayoutEffect(() => {
+    if (!shouldResetDirectoryScroll.current) return;
+
+    const anchor = searchAnchor.current;
+    const surface = searchSurface.current;
+    if (!anchor || !surface) return;
+
+    const stickyTop = Number.parseFloat(window.getComputedStyle(surface).top) || 0;
+    const anchorTop = window.scrollY + anchor.getBoundingClientRect().top;
+    window.scrollTo({ behavior: "auto", top: Math.max(0, anchorTop - stickyTop) });
+    shouldResetDirectoryScroll.current = false;
+  }, [scrollResetVersion]);
+  const requestScrollReset = () => {
+    shouldResetDirectoryScroll.current = true;
+    setScrollResetVersion((version) => version + 1);
+  };
+  const updateFilter = (nextFilter: Filter) => {
+    requestScrollReset();
+    setFilter(nextFilter);
+  };
+  const updateQuery = (nextQuery: string) => {
+    requestScrollReset();
+    setQuery(nextQuery);
+  };
 
   return (
     <section ref={root} className="relative px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
@@ -307,7 +335,11 @@ export function MemberDirectory() {
           </div>
         </div>
 
-        <div className="member-directory-reveal group/search relative mt-8">
+        <div ref={searchAnchor} aria-hidden="true" className="mt-8 h-0" />
+        <div
+          ref={searchSurface}
+          className="member-directory-reveal group/search sticky top-20 z-30 isolate -mx-3 bg-background px-3 py-3 shadow-[0_18px_30px_-28px_rgba(14,17,22,0.28)] sm:top-24 dark:shadow-[0_18px_30px_-28px_rgba(0,0,0,0.75)]"
+        >
           <div className="absolute -inset-2 rounded-[1.35rem] bg-brand-blue/10 opacity-0 blur-xl transition-opacity duration-500 group-focus-within/search:opacity-100" />
           <div className="relative flex items-center rounded-2xl border border-[var(--line-strong)] bg-background px-4 py-3 shadow-[var(--shadow-1)] transition-[border-color,box-shadow,background-color] duration-300 focus-within:border-brand-blue focus-within:bg-white focus-within:shadow-[0_16px_45px_-28px_rgba(58,109,197,0.75)] dark:focus-within:bg-[#1b202a]">
             <Search
@@ -322,14 +354,14 @@ export function MemberDirectory() {
             <input
               id="member-search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateQuery(event.target.value)}
               placeholder="Try “JavaScript”, “Flutter”, “XR”, or a name"
               className="min-w-0 flex-1 bg-transparent px-3 text-base text-[var(--ink)] placeholder:text-[var(--ink-3)] focus:outline-none dark:text-white dark:placeholder:text-white/40 sm:text-lg"
             />
             {query ? (
               <button
                 type="button"
-                onClick={() => setQuery("")}
+                onClick={() => updateQuery("")}
                 className="grid size-9 shrink-0 place-items-center rounded-full text-[var(--ink-2)] transition-colors hover:bg-black/[0.06] hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
                 aria-label="Clear member search"
               >
@@ -353,7 +385,7 @@ export function MemberDirectory() {
         </div>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
-          <aside className="member-directory-reveal lg:sticky lg:top-24">
+          <aside className="member-directory-reveal lg:sticky lg:top-[13.5rem]">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)] dark:text-white">
               <SlidersHorizontal size={18} strokeWidth={2.25} className="text-brand-blue" />
               Filter by division
@@ -363,7 +395,7 @@ export function MemberDirectory() {
                 active={filter === "All"}
                 count={MEMBERS.length}
                 filter="All"
-                onClick={() => setFilter("All")}
+                onClick={() => updateFilter("All")}
               />
               {FILTER_GROUPS.map((group) => (
                 <div key={group.label} className="mt-4 first:mt-2">
@@ -376,7 +408,7 @@ export function MemberDirectory() {
                       active={filter === item}
                       count={countFor(item)}
                       filter={item}
-                      onClick={() => setFilter(item)}
+                      onClick={() => updateFilter(item)}
                     />
                   ))}
                 </div>
@@ -395,7 +427,7 @@ export function MemberDirectory() {
               {filter !== "All" ? (
                 <button
                   type="button"
-                  onClick={() => setFilter("All")}
+                  onClick={() => updateFilter("All")}
                   className="text-sm font-medium text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
                 >
                   Reset filter
@@ -472,8 +504,8 @@ export function MemberDirectory() {
                   <button
                     type="button"
                     onClick={() => {
-                      setFilter("All");
-                      setQuery("");
+                      updateFilter("All");
+                      updateQuery("");
                     }}
                     className="mt-5 font-medium text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
                   >
