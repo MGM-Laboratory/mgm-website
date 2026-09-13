@@ -25,7 +25,17 @@ export function useMemberRecords() {
 
   useEffect(() => {
     const controller = new AbortController();
-    const refresh = () => void loadRecords();
+    const applyRecord = (record: CmsMemberRecord) => {
+      setRecords((current) => [...current.filter((item) => item.slug !== record.slug), record]);
+    };
+    const refresh = (event?: Event | MessageEvent<{ record?: CmsMemberRecord }>) => {
+      const record =
+        event instanceof MessageEvent
+          ? event.data?.record
+          : (event as CustomEvent<CmsMemberRecord | undefined> | undefined)?.detail;
+      if (record?.slug) applyRecord(record);
+      void loadRecords();
+    };
     const channel = new BroadcastChannel("mgm-member-cms");
 
     const initialLoad = window.setTimeout(() => void loadRecords(controller.signal), 0);

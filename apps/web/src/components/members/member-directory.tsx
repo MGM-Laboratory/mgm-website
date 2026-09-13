@@ -212,11 +212,13 @@ function Portrait({
   member,
   index,
   photoKey,
+  recordsReady,
   sourceSlug,
 }: {
   member: Member;
   index: number;
   photoKey?: string;
+  recordsReady: boolean;
   sourceSlug?: string;
 }) {
   const initials = member.name
@@ -234,7 +236,7 @@ function Portrait({
         aria-hidden="true"
         className={`absolute -right-3 -bottom-3 size-8 rounded-full ${ACCENT_COLORS[member.accent]} opacity-90`}
       />
-      {member.hasPortrait ? (
+      {photoKey || (recordsReady && member.hasPortrait) ? (
         <Image
           src={
             photoKey
@@ -243,6 +245,7 @@ function Portrait({
           }
           alt=""
           fill
+          key={photoKey ?? sourceSlug ?? member.slug}
           sizes="48px"
           unoptimized={Boolean(photoKey)}
           className={`${photoKey ? "object-cover" : "object-contain object-bottom"} transition-transform duration-500 ease-out group-hover/member:scale-105`}
@@ -257,7 +260,7 @@ function Portrait({
 }
 
 export function MemberDirectory() {
-  const { members, records } = useMemberRecords();
+  const { members, ready: recordsReady, records } = useMemberRecords();
   const root = useRef<HTMLDivElement>(null);
   const searchAnchor = useRef<HTMLDivElement>(null);
   const searchSurface = useRef<HTMLDivElement>(null);
@@ -471,6 +474,7 @@ export function MemberDirectory() {
                             member={member}
                             index={index}
                             photoKey={record?.profile.photoKey}
+                            recordsReady={recordsReady}
                             sourceSlug={record?.sourceSlug}
                           />
                           <div className="min-w-0 flex-1">

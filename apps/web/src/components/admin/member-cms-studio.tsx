@@ -134,7 +134,10 @@ async function cropPortrait(source: string, crop: Area) {
     canvas.width,
     canvas.height,
   );
-  return canvas.toDataURL("image/jpeg", 0.9);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const hasTransparency = pixels.some((_, index) => index % 4 === 3 && pixels[index] < 255);
+  // WebP retains alpha for transparent cut-outs; JPEG stays smaller for opaque portraits.
+  return canvas.toDataURL(hasTransparency ? "image/webp" : "image/jpeg", 0.9);
 }
 
 function PhotoEditorDialog({
@@ -435,7 +438,7 @@ export function MemberCmsStudio() {
                       type="button"
                     >
                       <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
-                        {member.hasPortrait ? (
+                        {member.hasPortrait || record?.profile.photoKey ? (
                           <Image
                             alt=""
                             className="object-contain object-bottom"
@@ -700,9 +703,9 @@ function MemberEditor({
       if (!response.ok) throw new Error(await responseError(response, "Profile save failed."));
       const savedRecord = (await response.json()) as CmsMemberRecord;
       onSaved(savedRecord);
-      window.dispatchEvent(new CustomEvent("mgm:member-updated"));
+      window.dispatchEvent(new CustomEvent("mgm:member-updated", { detail: savedRecord }));
       const channel = new BroadcastChannel("mgm-member-cms");
-      channel.postMessage({ type: "member-updated" });
+      channel.postMessage({ record: savedRecord, type: "member-updated" });
       channel.close();
       setPhotoUpload(undefined);
       setStatus("saved");

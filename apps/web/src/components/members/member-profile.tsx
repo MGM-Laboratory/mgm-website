@@ -327,11 +327,13 @@ function ProfilePortrait({
   member,
   photoKey,
   photoPosition,
+  recordsReady,
   sourceSlug,
 }: {
   member: Member;
   photoKey?: string;
   photoPosition?: CmsMemberProfile["photoPosition"];
+  recordsReady: boolean;
   sourceSlug?: string;
 }) {
   const initials = member.name
@@ -354,7 +356,7 @@ function ProfilePortrait({
         aria-hidden="true"
         className="absolute right-0 top-0 h-[58%] w-[22%] bg-[var(--ink)]/90 dark:bg-white/15"
       />
-      {member.hasPortrait || photoKey ? (
+      {photoKey || (recordsReady && member.hasPortrait) ? (
         // Uploaded portraits resolve through a short-lived signed storage URL.
         // The browser can follow it directly; the Next image optimizer rejects it.
         <Image
@@ -365,6 +367,7 @@ function ProfilePortrait({
           }
           alt={`Portrait of ${member.name}`}
           fill
+          key={photoKey ?? sourceSlug ?? member.slug}
           sizes="(max-width: 1023px) 100vw, 30vw"
           unoptimized={Boolean(photoKey)}
           className={photoKey ? "object-cover" : "object-contain object-bottom"}
@@ -588,7 +591,7 @@ function DetailList({ items }: { items: readonly string[] }) {
 
 export function MemberProfile({ member }: { member: Member }) {
   const root = useRef<HTMLElement>(null);
-  const { records } = useMemberRecords();
+  const { ready: recordsReady, records } = useMemberRecords();
   const override = records.find((record) => record.slug === member.slug);
   const effectiveMember = override?.member ?? member;
   const cmsProfile = override?.profile;
@@ -670,6 +673,7 @@ export function MemberProfile({ member }: { member: Member }) {
               member={effectiveMember}
               photoKey={cmsProfile?.photoKey}
               photoPosition={cmsProfile?.photoPosition}
+              recordsReady={recordsReady}
               sourceSlug={override?.sourceSlug}
             />
             <ContactLinks links={cmsProfile?.links} profile={{ contacts: {}, raw: "" }} />
