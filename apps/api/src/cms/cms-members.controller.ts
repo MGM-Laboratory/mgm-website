@@ -98,8 +98,15 @@ export class CmsMembersController {
         document as unknown as Prisma.InputJsonValue,
       );
     } catch (error) {
-      if (error instanceof Error && error.message === "CMS_MEMBER_SLUG_CONFLICT") {
-        throw new ConflictException("That profile URL is already in use.");
+      if (error instanceof Error) {
+        if (error.message === "CMS_MEMBER_SLUG_CONFLICT") {
+          throw new ConflictException("That profile URL is already in use.");
+        }
+        if (error.message === "CMS_MEMBER_AMBIGUOUS_RENAME") {
+          throw new ConflictException(
+            "More than one existing profile has this name. Please contact an administrator.",
+          );
+        }
       }
       throw error;
     }

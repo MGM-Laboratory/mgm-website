@@ -497,7 +497,9 @@ export function MemberCmsStudio() {
                   }
                   onSaved={(record) => {
                     setRecords((current) => [
-                      ...current.filter((item) => item.slug !== record.slug),
+                      ...current.filter(
+                        (item) => item.slug !== record.slug && item.slug !== record.sourceSlug,
+                      ),
                       record,
                     ]);
                     setSelectedSlug(record.slug);
