@@ -15,6 +15,7 @@ if (typeof window !== "undefined") {
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const pendingKillRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
+  const isAdminRoute = pathname.startsWith("/admin");
   const shouldSmooth = pathname === "/";
 
   useLayoutEffect(() => {
@@ -53,6 +54,12 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       }, 0);
     };
   }, [shouldSmooth]);
+
+  // The public-site header is deliberately outside this wrapper and the
+  // content receives its 64px offset below. Admin owns its own chrome, so
+  // retaining this wrapper there produced a blank, differently coloured band
+  // above the workspace. Keep the CMS in the native document flow instead.
+  if (isAdminRoute) return <>{children}</>;
 
   return (
     <div id="smooth-wrapper">

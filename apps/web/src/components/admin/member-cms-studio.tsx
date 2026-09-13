@@ -2,11 +2,18 @@
 
 import {
   ArrowSquareOut,
+  Books,
+  Briefcase,
   Camera,
+  CaretUpDown,
   Check,
   FloppyDisk,
+  Flask,
+  GraduationCap,
+  House,
   ImageSquare,
   MagnifyingGlass,
+  Newspaper,
   Plus,
   SignOut,
   Trash,
@@ -55,6 +62,35 @@ const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: st
   { id: "members", label: "Member" },
   { id: "careers", label: "Careers" },
 ];
+
+const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
+  { id: "overview", label: "Overview", tone: "text-brand-blue" },
+  { id: "articles", label: "Articles", tone: "text-brand-yellow" },
+  { id: "projects", label: "Projects", tone: "text-brand-red" },
+  { id: "publications", label: "Publications", tone: "text-brand-green" },
+  { id: "research", label: "Research", tone: "text-brand-blue" },
+  { id: "members", label: "Member", tone: "text-brand-red" },
+  { id: "careers", label: "Careers", tone: "text-brand-yellow" },
+];
+
+function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size?: number }) {
+  switch (section) {
+    case "articles":
+      return <Newspaper size={size} weight="duotone" />;
+    case "projects":
+      return <Briefcase size={size} weight="duotone" />;
+    case "publications":
+      return <Books size={size} weight="duotone" />;
+    case "research":
+      return <Flask size={size} weight="duotone" />;
+    case "members":
+      return <UsersThree size={size} weight="duotone" />;
+    case "careers":
+      return <GraduationCap size={size} weight="duotone" />;
+    default:
+      return <House size={size} weight="duotone" />;
+  }
+}
 
 const emptyProfile = (): CmsMemberProfile => ({
   achievements: [],
@@ -307,6 +343,8 @@ export function MemberCmsStudio() {
   const [showNew, setShowNew] = useState(false);
   const [newKey, setNewKey] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const workspacePickerRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(
     () => members.find((member) => member.slug === selectedSlug),
@@ -349,35 +387,108 @@ export function MemberCmsStudio() {
     if (nextSection !== section && !confirmDiscard()) return;
     if (nextSection !== section) setHasUnsavedChanges(false);
     setSection(nextSection);
+    setWorkspaceOpen(false);
   };
   const currentMember = selected ?? members[0] ?? MEMBERS[0];
+  const activeWorkspace = WORKSPACES.find((workspace) => workspace.id === section) ?? WORKSPACES[0];
+  const isEditingMember = section === "members" && !showNew;
+
+  useEffect(() => {
+    const closePicker = (event: MouseEvent) => {
+      if (event.target instanceof Node && !workspacePickerRef.current?.contains(event.target)) {
+        setWorkspaceOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setWorkspaceOpen(false);
+    };
+    document.addEventListener("mousedown", closePicker);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closePicker);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
 
   return (
     <main className="admin-shell min-h-[100dvh] bg-[#f5f7fb] text-[#171b25] dark:bg-[#0f1117] dark:text-white">
       <header className="sticky top-0 z-40 border-b border-[#dee4ef] bg-[#f5f7fb]/95 px-5 py-3 backdrop-blur dark:border-white/10 dark:bg-[#0f1117]/95 sm:px-7">
         <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-blue text-white">
-              <UsersThree size={21} weight="duotone" />
-            </span>
-            <div>
-              <p className="font-display text-lg font-semibold tracking-[-0.04em]">
-                Editorial workspace
-              </p>
-              <p className="font-mono text-[10px] tracking-[0.13em] text-[#768096] uppercase dark:text-white/40">
-                MGM Laboratory CMS
-              </p>
-            </div>
+          <div className="relative min-w-0" ref={workspacePickerRef}>
+            <button
+              aria-expanded={workspaceOpen}
+              aria-haspopup="menu"
+              className="group flex min-w-[14rem] items-center gap-3 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue/15 dark:hover:bg-white/[0.06]"
+              onClick={() => setWorkspaceOpen((current) => !current)}
+              type="button"
+            >
+              <span
+                className={`grid size-9 shrink-0 place-items-center rounded-xl bg-white ${activeWorkspace.tone} shadow-[0_8px_20px_-16px_rgba(20,32,58,0.55)] dark:bg-white/10`}
+              >
+                <WorkspaceIcon section={section} size={21} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-display text-lg font-semibold tracking-[-0.04em]">
+                  {activeWorkspace.label}
+                </span>
+                <span className="block font-mono text-[10px] tracking-[0.13em] text-[#768096] uppercase dark:text-white/40">
+                  MGM Laboratory CMS
+                </span>
+              </span>
+              <CaretUpDown
+                aria-hidden="true"
+                className="mr-1 shrink-0 text-[#768096] transition group-aria-expanded:rotate-180 dark:text-white/45"
+                size={16}
+              />
+            </button>
+            {workspaceOpen ? (
+              <div
+                aria-label="Editorial workspaces"
+                className="absolute left-0 top-[calc(100%+0.55rem)] z-50 w-[min(20rem,calc(100vw-2.5rem))] rounded-2xl border border-[#dfe4ee] bg-white p-2 shadow-[0_24px_55px_-28px_rgba(20,32,58,0.36)] dark:border-white/10 dark:bg-[#171b25]"
+                role="menu"
+              >
+                <p className="px-3 pb-2 pt-1 font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
+                  Switch workspace
+                </p>
+                <div className="space-y-1">
+                  {WORKSPACES.map((workspace) => {
+                    const available = workspace.id === "overview" || workspace.id === "members";
+                    return (
+                      <button
+                        aria-current={workspace.id === section ? "page" : undefined}
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${workspace.id === section ? "bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/20" : "text-[#4f5a6f] hover:bg-[#f5f7fb] dark:text-white/65 dark:hover:bg-white/[0.06]"}`}
+                        key={workspace.id}
+                        onClick={() => changeSection(workspace.id)}
+                        role="menuitem"
+                        type="button"
+                      >
+                        <span className={workspace.tone}>
+                          <WorkspaceIcon section={workspace.id} size={19} />
+                        </span>
+                        <span className="flex-1">{workspace.label}</span>
+                        <span
+                          className={`font-mono text-[10px] font-normal ${available ? "text-brand-green" : "text-[#8993a7] dark:text-white/30"}`}
+                        >
+                          {available ? "LIVE" : "SOON"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              className="hidden rounded-lg px-3 py-2 text-sm text-[#5d687d] transition hover:bg-white hover:text-brand-blue sm:inline-flex dark:text-white/55 dark:hover:bg-white/10"
-              href={selectedSlug ? `/member/${selectedSlug}` : "/member"}
-              target="_blank"
-            >
-              <ArrowSquareOut className="mr-1.5" size={16} />
-              View profile
-            </Link>
+            {isEditingMember ? (
+              <Link
+                className="hidden rounded-lg px-3 py-2 text-sm text-[#5d687d] transition hover:bg-white hover:text-brand-blue sm:inline-flex dark:text-white/55 dark:hover:bg-white/10"
+                href={`/member/${currentMember.slug}`}
+                target="_blank"
+              >
+                <ArrowSquareOut className="mr-1.5" size={16} />
+                View profile
+              </Link>
+            ) : null}
             <form
               action="/api/admin/logout"
               method="post"
@@ -399,27 +510,8 @@ export function MemberCmsStudio() {
 
       <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
         <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
-          <p className="px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
-            Editorial
-          </p>
-          <nav className="mt-2 space-y-1">
-            <SidebarItem
-              active={section === "overview"}
-              label="Overview"
-              onClick={() => changeSection("overview")}
-            />
-            {EDITORIAL_SECTIONS.map((item) => (
-              <SidebarItem
-                active={section === item.id}
-                key={item.id}
-                label={item.label}
-                live={item.id === "members"}
-                onClick={() => changeSection(item.id)}
-              />
-            ))}
-          </nav>
           {section === "members" ? (
-            <div className="mt-7 border-t border-[#dee4ef] pt-5 dark:border-white/10">
+            <div>
               <div className="relative">
                 <MagnifyingGlass
                   className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
@@ -487,7 +579,21 @@ export function MemberCmsStudio() {
                 })}
               </nav>
             </div>
-          ) : null}
+          ) : (
+            <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+              <span
+                className={`grid size-9 place-items-center rounded-xl bg-white ${activeWorkspace.tone} dark:bg-white/10`}
+              >
+                <WorkspaceIcon section={section} size={20} />
+              </span>
+              <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">
+                {activeWorkspace.label}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
+                Collection-specific controls will live here as this workspace becomes available.
+              </p>
+            </div>
+          )}
         </aside>
 
         <section className="admin-editor-enter min-w-0 p-5 sm:p-8 lg:p-10">
@@ -551,34 +657,6 @@ export function MemberCmsStudio() {
   );
 }
 
-function SidebarItem({
-  active,
-  label,
-  live = false,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  live?: boolean;
-  onClick: () => void;
-}) {
-  const status = live ? "LIVE" : label === "Overview" ? "HOME" : "SOON";
-  return (
-    <button
-      className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${active ? "bg-white text-brand-blue shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "text-[#566177] hover:bg-white/70 dark:text-white/55 dark:hover:bg-white/[0.05]"}`}
-      onClick={onClick}
-      type="button"
-    >
-      <span>{label}</span>
-      <span
-        className={`font-mono text-[10px] font-normal ${live ? "text-brand-blue" : "text-[#8993a7] dark:text-white/30"}`}
-      >
-        {status}
-      </span>
-    </button>
-  );
-}
-
 function EditorialOverview({
   onChooseMembers,
   section,
@@ -601,7 +679,7 @@ function EditorialOverview({
       {section === "members" ? null : (
         <p className="mt-5 max-w-xl text-base leading-7 text-[#6b768b] dark:text-white/55">
           {section === "overview"
-            ? "Choose a collection from the sidebar. Member profiles are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
+            ? "Choose a collection with the workspace switcher above. Member profiles are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
             : `${label} is reserved for its own editorial workflow. It will be added here without changing the member workspace.`}
         </p>
       )}
