@@ -338,7 +338,7 @@ export function MemberDirectory() {
         <div ref={searchAnchor} aria-hidden="true" className="mt-8 h-0" />
         <div
           ref={searchSurface}
-          className="member-directory-reveal group/search sticky top-20 z-30 isolate -mx-3 bg-background px-3 py-3 shadow-[0_18px_30px_-28px_rgba(14,17,22,0.28)] sm:top-24 dark:shadow-[0_18px_30px_-28px_rgba(0,0,0,0.75)]"
+          className="member-directory-reveal group/search sticky top-16 z-30 isolate -mx-3 bg-background px-3 py-3 shadow-[0_18px_30px_-28px_rgba(14,17,22,0.28)] dark:shadow-[0_18px_30px_-28px_rgba(0,0,0,0.75)]"
         >
           <div className="absolute -inset-2 rounded-[1.35rem] bg-brand-blue/10 opacity-0 blur-xl transition-opacity duration-500 group-focus-within/search:opacity-100" />
           <div className="relative flex items-center rounded-2xl border border-[var(--line-strong)] bg-background px-4 py-3 shadow-[var(--shadow-1)] transition-[border-color,box-shadow,background-color] duration-300 focus-within:border-brand-blue focus-within:bg-white focus-within:shadow-[0_16px_45px_-28px_rgba(58,109,197,0.75)] dark:focus-within:bg-[#1b202a]">
@@ -385,7 +385,7 @@ export function MemberDirectory() {
         </div>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
-          <aside className="member-directory-reveal lg:sticky lg:top-[13.5rem]">
+          <aside className="member-directory-reveal lg:sticky lg:top-[11.5rem]">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)] dark:text-white">
               <SlidersHorizontal size={18} strokeWidth={2.25} className="text-brand-blue" />
               Filter by division
