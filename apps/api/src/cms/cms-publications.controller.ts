@@ -1,0 +1,229 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Put,
+  Req,
+  Res,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { ApiTags } from "@nestjs/swagger";
+import { randomUUID, timingSafeEqual } from "node:crypto";
+import type { Request, Response } from "express";
+import { z } from "zod";
+
+import type { Prisma } from "../generated/prisma/client.js";
+import type { Env } from "../config/env.validation.js";
+import { StorageService } from "../storage/storage.service.js";
+import { CmsPublicationsService } from "./cms-publications.service.js";
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export const PUBLICATION_TYPES = [
+  "journal-article",
+  "conference-paper",
+  "preprint",
+  "book-chapter",
+  "thesis",
+] as const;
+
+const authorSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  name: z.string().trim().min(1).max(200),
+  affiliation: z.string().trim().max(300).optional(),
+  memberSlug: z.string().trim().min(1).max(120).optional(),
+});
+
+const publicationSchema = z.object({
+  publication: z.object({
+    slug: z.string().regex(SLUG_PATTERN, "Use lowercase letters, numbers, and hyphens."),
+    title: z.string().trim().min(1).max(400),
+    type: z.enum(PUBLICATION_TYPES),
+    date: z.string().regex(DATE_PATTERN),
+    journal: z.string().trim().max(300),
+    volume: z.string().trim().max(40).optional(),
+    issue: z.string().trim().max(40).optional(),
+    pages: z.string().trim().max(80).optional(),
+    publisher: z.string().trim().max(200).optional(),
+    doi: z
+      .string()
+      .trim()
+      .regex(
+        /^10\.\d{4,9}\/[-._;()/:a-zA-Z0-9]+$/,
+        "Use the DOI identifier only, e.g. 10.1000/xyz123.",
+      )
+      .optional(),
+    url: z.string().trim().max(500).optional(),
+    license: z.string().trim().max(120).optional(),
+    keywords: z.array(z.string().trim().min(1).max(80)).max(20),
+    abstract: z.string().trim().max(50_000),
+    authors: z.array(authorSchema).min(1).max(50),
+    draft: z.boolean(),
+    paperKey: z.string().min(1).max(500).optional(),
+    paperName: z.string().trim().max(300).optional(),
+    paperSize: z.number().int().nonnegative().max(1_073_741_824).optional(),
+  }),
+});
+const bootstrapSchema = z.object({ records: z.array(publicationSchema).min(1).max(200) });
+const savePublicationSchema = publicationSchema.extend({
+  sourceSlug: z.string().min(1).optional(),
+});
+
+// Every uploaded paper key is minted by the upload endpoint with a
+// `paper-<slug>-<uuid>.pdf` shape. Anything else belongs to another namespace
+// (covers, portraits, arbitrary bucket objects) and is refused.
+const PAPER_KEY_PATTERN =
+  /^paper-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/;
+
+function safeEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function isPdf(buffer: Buffer) {
+  return buffer.length >= 5 && buffer.subarray(0, 5).toString("ascii") === "%PDF-";
+}
+
+@ApiTags("cms-publications")
+@Controller("cms/publications")
+export class CmsPublicationsController {
+  constructor(
+    private readonly publications: CmsPublicationsService,
+    private readonly storage: StorageService,
+    private readonly config: ConfigService<Env, true>,
+  ) {}
+
+  @Get()
+  async all() {
+    // Drafts are filtered server-side; this route feeds the public site.
+    return { records: await this.publications.all() };
+  }
+
+  @Get("admin")
+  async allIncludingDrafts(@Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    return { records: await this.publications.allIncludingDrafts() };
+  }
+
+  // The light feed, the paper redirect, and the admin list sit above ":slug"
+  // so the reserved paths can never be shadowed by a slug.
+  @Get("feed")
+  async feed() {
+    return { records: await this.publications.feed() };
+  }
+
+  @Get("paper/:key")
+  async paper(@Param("key") key: string, @Res() response: Response) {
+    if (!PAPER_KEY_PATTERN.test(key)) {
+      throw new BadRequestException("Unknown paper key");
+    }
+    let url: string;
+    try {
+      url = await this.storage.getSignedDownloadUrl(key, 60 * 60);
+    } catch {
+      throw new BadRequestException("Media storage is not configured in this environment.");
+    }
+    return response.redirect(url);
+  }
+
+  @Get(":slug")
+  async one(@Param("slug") slug: string) {
+    return { record: await this.publications.bySlug(slug) };
+  }
+
+  @Post("bootstrap")
+  async bootstrap(@Req() request: Request, @Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    const { records } = bootstrapSchema.parse(request.body);
+    return {
+      records: await this.publications.bootstrap(
+        records.map((record) => ({
+          data: record as unknown as Prisma.InputJsonValue,
+          slug: record.publication.slug,
+        })),
+      ),
+    };
+  }
+
+  @Put(":slug")
+  async save(
+    @Param("slug") slug: string,
+    @Req() request: Request,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    const document = savePublicationSchema.parse(request.body);
+    try {
+      return await this.publications.save(
+        slug,
+        document.publication.slug,
+        document as unknown as Prisma.InputJsonValue,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message === "CMS_PUBLICATION_SLUG_CONFLICT") {
+        throw new ConflictException("That publication URL is already in use.");
+      }
+      throw error;
+    }
+  }
+
+  @Delete(":slug")
+  async remove(@Param("slug") slug: string, @Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    await this.publications.remove(slug);
+    return { ok: true };
+  }
+
+  // The paper arrives as raw `application/pdf` bytes — the express raw body
+  // parser for that content type is registered in main.ts with the same
+  // configured size ceiling enforced here again for a friendly message.
+  @Post(":slug/paper")
+  async uploadPaper(
+    @Param("slug") slug: string,
+    @Req() request: Request,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    const contentType = String(request.headers["content-type"] ?? "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    const body = Buffer.isBuffer(request.body) ? request.body : undefined;
+    const maxBytes = this.config.getOrThrow<number>("CMS_MAX_PAPER_BYTES");
+
+    if (contentType !== "application/pdf" || !body?.length) {
+      throw new BadRequestException("The paper must be a PDF file.");
+    }
+    if (body.length > maxBytes) {
+      throw new BadRequestException(
+        `The paper must be under ${Math.floor(maxBytes / 1024 / 1024)} MB.`,
+      );
+    }
+    if (!isPdf(body)) {
+      throw new BadRequestException("That file is not a valid PDF.");
+    }
+
+    const key = `paper-${slug}-${randomUUID()}.pdf`;
+    try {
+      await this.storage.uploadFile({ body, contentType: "application/pdf", key });
+    } catch {
+      throw new BadRequestException(
+        "Paper storage is not configured in this environment, so papers cannot be uploaded.",
+      );
+    }
+    return { key, size: body.length };
+  }
+
+  private assertAdmin(value: string) {
+    const configured = this.config.getOrThrow<string>("ADMIN_PASSPHRASE");
+    if (!safeEqual(value, configured)) throw new UnauthorizedException("Unauthorized");
+  }
+}

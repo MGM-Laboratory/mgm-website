@@ -36,5 +36,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "updatedAt" TIMESTAMP(3) NOT NULL
       )
     `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CmsPublication" (
+        "slug" TEXT PRIMARY KEY,
+        "data" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `);
   }
 }

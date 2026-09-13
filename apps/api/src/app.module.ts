@@ -9,6 +9,7 @@ import { AppService } from "./app.service.js";
 import { CacheModule } from "./cache/cache.module.js";
 import { CmsArticlesModule } from "./cms/cms-articles.module.js";
 import { CmsMembersModule } from "./cms/cms-members.module.js";
+import { CmsPublicationsModule } from "./cms/cms-publications.module.js";
 import { validateEnv } from "./config/env.validation.js";
 import { HealthModule } from "./health/health.module.js";
 import { MailModule } from "./mail/mail.module.js";
@@ -40,6 +41,7 @@ import { StorageModule } from "./storage/storage.module.js";
     PrismaModule,
     CmsMembersModule,
     CmsArticlesModule,
+    CmsPublicationsModule,
     HealthModule,
     StorageModule,
     MailModule,

@@ -1,5 +1,5 @@
 import compression from "compression";
-import { json } from "express";
+import { json, raw } from "express";
 import helmet from "helmet";
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -19,6 +19,15 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   const configService = app.get(ConfigService<Env, true>);
+
+  // Publication papers arrive as raw PDF bytes (never JSON); the size ceiling
+  // comes from configuration so it can change without touching code.
+  app.use(
+    raw({
+      type: "application/pdf",
+      limit: configService.getOrThrow<number>("CMS_MAX_PAPER_BYTES"),
+    }),
+  );
 
   app.use(helmet());
   app.use(compression());

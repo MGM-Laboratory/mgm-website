@@ -22,6 +22,8 @@ const envSchema = z.object({
     .preprocess((value: unknown) => value === "true", z.boolean())
     .default(false),
   CMS_LOCAL_MEDIA_DIR: optionalString(),
+  // Largest accepted publication paper upload, in bytes (200 MB by default).
+  CMS_MAX_PAPER_BYTES: z.coerce.number().int().positive().max(1_073_741_824).default(209_715_200),
   SES_FROM_EMAIL: optionalString(z.email()),
 });
 
