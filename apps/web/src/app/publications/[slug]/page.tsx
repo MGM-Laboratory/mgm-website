@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: PublicationPageProps): Promis
   const { publication } = record;
   return {
     title: `${publication.title} | MGM Laboratory`,
-    description: publication.abstract.slice(0, 160) || undefined,
+    description: publication.abstract?.slice(0, 160) || undefined,
   };
 }
 
