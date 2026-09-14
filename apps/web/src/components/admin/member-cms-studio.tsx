@@ -631,7 +631,6 @@ export function MemberCmsStudio({
   };
   const currentMember = selected ?? members[0] ?? MEMBERS[0];
   const activeWorkspace = WORKSPACES.find((workspace) => workspace.id === section) ?? WORKSPACES[0];
-  const isEditingMember = section === "members" && !showNew;
   const selectedArticle = sortedArticleRecords.find(
     (record) => record.slug === selectedArticleSlug,
   );
@@ -739,16 +738,6 @@ export function MemberCmsStudio({
                 {viewer.name}
               </span>
             </div>
-            {isEditingMember ? (
-              <Link
-                className="hidden rounded-lg px-3 py-2 text-sm text-[#5d687d] transition hover:bg-white hover:text-brand-blue sm:inline-flex dark:text-white/55 dark:hover:bg-white/10"
-                href={`/member/${currentMember.slug}`}
-                target="_blank"
-              >
-                <ArrowSquareOut className="mr-1.5" size={16} />
-                View profile
-              </Link>
-            ) : null}
             <form
               action="/api/admin/logout"
               method="post"
@@ -1093,6 +1082,11 @@ export function MemberCmsStudio({
                     activeTab={activeTab}
                     initialMember={showNew ? undefined : currentMember}
                     initialProfile={showNew ? undefined : selectedRecord?.profile}
+                    onDeleted={(slug) => {
+                      setRecords((current) => current.filter((item) => item.slug !== slug));
+                      setSelectedSlug(undefined);
+                      setHasUnsavedChanges(false);
+                    }}
                     onDirtyChange={setHasUnsavedChanges}
                     sourceMemberSlug={
                       showNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
@@ -1294,6 +1288,7 @@ function MemberEditor({
   activeTab,
   initialMember,
   initialProfile,
+  onDeleted,
   onDirtyChange,
   onSaved,
   sourceMemberSlug,
@@ -1302,6 +1297,7 @@ function MemberEditor({
   activeTab: EditorTab;
   initialMember?: Member;
   initialProfile?: CmsMemberProfile;
+  onDeleted: (slug: string) => void;
   onDirtyChange: (isDirty: boolean) => void;
   onSaved: (record: CmsMemberRecord) => void;
   sourceMemberSlug?: string;
@@ -1434,6 +1430,22 @@ function MemberEditor({
       toast.error("Changes were not saved", { description: message });
     }
   };
+  const remove = async () => {
+    if (!originalRecordSlug) return;
+    if (!window.confirm(`Delete “${draft.name || originalRecordSlug}” permanently?`)) return;
+    try {
+      const response = await fetch(`/api/admin/members/${encodeURIComponent(originalRecordSlug)}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error(await responseError(response, "Delete failed."));
+      onDeleted(originalRecordSlug);
+      toast.success("Member deleted");
+    } catch (deleteError) {
+      toast.error("Member was not deleted", {
+        description: deleteError instanceof Error ? deleteError.message : undefined,
+      });
+    }
+  };
   return (
     <div>
       <div className="mt-10 flex flex-wrap items-start justify-between gap-5 border-b border-[#dee4ef] pb-7 dark:border-white/10">
@@ -1448,6 +1460,26 @@ function MemberEditor({
             Structured fields publish directly to the member profile.
           </p>
         </div>
+        {initialMember ? (
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <Link
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-[#5d687d] transition hover:bg-white hover:text-brand-blue dark:text-white/60 dark:hover:bg-white/10"
+              href={`/member/${initialMember.slug}`}
+              target="_blank"
+            >
+              <ArrowSquareOut size={15} />
+              View profile
+            </Link>
+            <button
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-[#5d687d] transition hover:bg-brand-red-50 hover:text-brand-red dark:text-white/60 dark:hover:bg-brand-red/15"
+              onClick={() => void remove()}
+              type="button"
+            >
+              <Trash size={15} />
+              Delete
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="sticky top-[7.5rem] z-30 mt-5 flex justify-end pointer-events-none">
         <div className="flex flex-col items-end gap-2 pointer-events-auto">
