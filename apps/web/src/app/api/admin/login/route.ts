@@ -4,23 +4,24 @@ import { createAdminSession, isValidPassphrase, SUPERADMIN_ACCOUNT_ID } from "@/
 import type { CmsAdminRecord } from "@/lib/admin-permissions";
 import { apiBaseUrl } from "@/lib/cms-api";
 
-function publicOrigin(request: Request) {
-  const requestUrl = new URL(request.url);
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  const protocol = request.headers.get("x-forwarded-proto") ?? requestUrl.protocol.slice(0, -1);
-
-  return host ? `${protocol}://${host}` : requestUrl.origin;
+/**
+ * A redirect back into the admin panel. The Location is relative so it
+ * resolves against the request's own origin: forwarded host headers are
+ * attacker-controlled and the container's internal address (behind the
+ * Railway proxy) is unreachable from a browser, so neither is consulted.
+ */
+function redirectTo(path: string) {
+  return new NextResponse(null, { status: 303, headers: { location: path } });
 }
 
 export async function POST(request: Request) {
   const form = await request.formData();
   const passphrase = String(form.get("passphrase") ?? "");
-  const origin = publicOrigin(request);
 
   // The environment passphrase logs in as the superadmin.
   if (isValidPassphrase(passphrase)) {
     await createAdminSession(SUPERADMIN_ACCOUNT_ID, 1);
-    return NextResponse.redirect(new URL("/admin", origin), 303);
+    return redirectTo("/admin");
   }
 
   // Otherwise the passphrase belongs to a managed admin account. The verify
@@ -36,9 +37,9 @@ export async function POST(request: Request) {
     const { account } = (await response.json()) as { account?: CmsAdminRecord };
     if (account?.slug) {
       await createAdminSession(account.slug, account.sessionVersion);
-      return NextResponse.redirect(new URL("/admin", origin), 303);
+      return redirectTo("/admin");
     }
   }
 
-  return NextResponse.redirect(new URL("/admin/login?error=1", origin), 303);
+  return redirectTo("/admin/login?error=1");
 }
