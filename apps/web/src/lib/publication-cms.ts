@@ -122,7 +122,7 @@ export function draftToPublication(draft: PublicationDraft): PublicationDraft {
   return {
     ...draft,
     title: draft.title.trim(),
-    journal: draft.journal.trim(),
+    journal: draft.journal?.trim() || "",
     volume: draft.volume?.trim() || undefined,
     issue: draft.issue?.trim() || undefined,
     pages: draft.pages?.trim() || undefined,
@@ -146,6 +146,7 @@ export function draftToPublication(draft: PublicationDraft): PublicationDraft {
 export function publicationToDraft(publication: PublicationDraft): PublicationDraft {
   return {
     ...publication,
+    journal: publication.journal ?? "",
     volume: publication.volume ?? "",
     issue: publication.issue ?? "",
     pages: publication.pages ?? "",
