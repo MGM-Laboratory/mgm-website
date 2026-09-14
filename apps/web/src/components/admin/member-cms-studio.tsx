@@ -18,6 +18,7 @@ import {
   Plus,
   ShieldCheck,
   SignOut,
+  Star,
   Trash,
   UsersThree,
   X,
@@ -1013,8 +1014,16 @@ export function MemberCmsStudio({
                           )}
                         </span>
                         <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold">
+                          <span className="flex items-center gap-1 truncate text-sm font-semibold">
                             {member.name}
+                            {member.highlighted ? (
+                              <Star
+                                aria-label="Highlighted"
+                                className="shrink-0 text-brand-yellow"
+                                size={12}
+                                weight="fill"
+                              />
+                            ) : null}
                           </span>
                           <span className="mt-0.5 block truncate text-xs text-[#778299] dark:text-white/45">
                             {member.division}
@@ -1307,6 +1316,7 @@ function MemberEditor({
           division: "Website",
           group: "Research and Development",
           hasPortrait: false,
+          highlighted: false,
           labFocus: [],
           name: "",
           nickname: "",
@@ -1611,6 +1621,33 @@ function ProfileTab({
             </select>
           </Field>
         </div>
+      </div>
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+        <div>
+          <p className="flex items-center gap-1.5 text-sm font-semibold">
+            <Star
+              size={15}
+              weight={draft.highlighted ? "fill" : "regular"}
+              className="text-brand-yellow"
+            />
+            Highlighted (Coordinator)
+          </p>
+          <p className="mt-0.5 text-xs leading-5 text-[#8490a5] dark:text-white/40">
+            Pins this member to the front of their division, and of “All”, on the public directory
+            with a “Coordinator” badge. Multiple members per division can be highlighted.
+          </p>
+        </div>
+        <button
+          aria-checked={draft.highlighted}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition ${draft.highlighted ? "bg-brand-yellow" : "bg-[#c6cedd] dark:bg-white/15"}`}
+          onClick={() => updateDraft("highlighted", !draft.highlighted)}
+          role="switch"
+          type="button"
+        >
+          <span
+            className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${draft.highlighted ? "left-[1.375rem]" : "left-0.5"}`}
+          />
+        </button>
       </div>
       <div>
         <Field label="Bio">
