@@ -75,6 +75,7 @@ export type CmsJobApplicationRecord = {
     status: "inbox" | "archived";
   };
   slug: string;
+  createdAt?: string;
   updatedAt?: string;
 };
 

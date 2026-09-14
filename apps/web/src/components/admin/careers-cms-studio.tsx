@@ -3,6 +3,7 @@
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 
+import { ApplicationsInbox } from "@/components/admin/careers-applications-inbox";
 import { CareersJobEditor, JobStatusBadge } from "@/components/admin/careers-job-editor";
 import { useCareerRecords } from "@/hooks/use-career-records";
 import { useJobApplications } from "@/hooks/use-job-applications";
@@ -27,7 +28,8 @@ export function CareersCmsStudio({
 }) {
   const [tab, setTab] = useState<"openings" | "applications">("openings");
   const { ready, records, setRecords } = useCareerRecords(initialJobs);
-  const { records: applications } = useJobApplications(initialApplications);
+  const { records: applications, setRecords: setApplications } =
+    useJobApplications(initialApplications);
 
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState<string>();
@@ -208,17 +210,7 @@ export function CareersCmsStudio({
           </section>
         </div>
       ) : (
-        <div className="mt-8 grid h-full min-h-96 place-items-center rounded-2xl border border-dashed border-[#d9dfeb] px-8 text-center dark:border-white/10">
-          <div>
-            <p className="font-display text-xl font-semibold tracking-[-0.03em]">
-              The applications inbox lands next
-            </p>
-            <p className="mt-2 max-w-sm text-sm leading-6 text-[#778299] dark:text-white/45">
-              Incoming applications with unread states, archiving, and bulk actions are being wired
-              up in this tab.
-            </p>
-          </div>
-        </div>
+        <ApplicationsInbox records={applications} setRecords={setApplications} />
       )}
     </div>
   );

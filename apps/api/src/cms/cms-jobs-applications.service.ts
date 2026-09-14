@@ -11,7 +11,11 @@ export type ApplicationStatePatch = {
 };
 export type ApplicationBulkAction = "archive" | "unarchive" | "markRead" | "markUnread" | "delete";
 
-type PublicApplicationRecord = Record<string, unknown> & { slug: string; updatedAt: string };
+type PublicApplicationRecord = Record<string, unknown> & {
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 @Injectable()
 export class CmsJobApplicationsService {
@@ -28,6 +32,7 @@ export class CmsJobApplicationsService {
     return records.map((record) => ({
       ...(record.data as Record<string, unknown>),
       slug: record.slug,
+      createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     }));
   }
@@ -38,6 +43,7 @@ export class CmsJobApplicationsService {
     const publicRecord: PublicApplicationRecord = {
       ...(record.data as Record<string, unknown>),
       slug: record.slug,
+      createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     };
     return publicRecord;
