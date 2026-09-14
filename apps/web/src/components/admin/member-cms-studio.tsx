@@ -12,9 +12,11 @@ import {
   GraduationCap,
   House,
   ImageSquare,
+  Lock,
   MagnifyingGlass,
   Newspaper,
   Plus,
+  ShieldCheck,
   SignOut,
   Trash,
   UsersThree,
@@ -26,6 +28,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { MEMBER_DIVISIONS, MEMBERS, type Member } from "@/data/members";
+import {
+  can,
+  type AdminPageId,
+  type AdminViewer,
+  type CmsAdminRecord,
+} from "@/lib/admin-permissions";
 import { ArticleEditor } from "@/components/admin/article-cms-editor";
 import { PublicationEditor } from "@/components/admin/publication-cms-editor";
 import {
@@ -77,6 +85,18 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "members", label: "Member", tone: "text-brand-red" },
   { id: "careers", label: "Careers", tone: "text-brand-yellow" },
 ];
+
+const LIVE_WORKSPACES = new Set<EditorialSection>(["members", "articles", "publications"]);
+
+/** Each editorial workspace maps to the permission page that gates it. */
+const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
+  articles: "articles",
+  publications: "publications",
+  members: "members",
+  projects: "projects",
+  research: "research",
+  careers: "careers",
+};
 
 function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size?: number }) {
   switch (section) {
@@ -370,10 +390,12 @@ export function MemberCmsStudio({
   initialArticles = [],
   initialPublications = [],
   paperLimitBytes = 209_715_200,
+  session,
 }: {
   initialArticles?: CmsArticleRecord[];
   initialPublications?: CmsPublicationRecord[];
   paperLimitBytes?: number;
+  session: AdminViewer;
 }) {
   const { members, ready, records, setRecords } = useMemberRecords();
   const {
@@ -403,6 +425,29 @@ export function MemberCmsStudio({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const workspacePickerRef = useRef<HTMLDivElement>(null);
+  const [viewer, setViewer] = useState<AdminViewer>(session);
+
+  // Refresh the viewer on mount so permission changes made elsewhere in the
+  // panel re-gate this session without a full reload.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((response) => (response.ok ? response.json() : undefined))
+      .then((next: AdminViewer | undefined) => {
+        if (!cancelled && next) setViewer(next);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const canAccess = (target: EditorialSection) => {
+    if (target === "overview") return true;
+    if (viewer.role === "superadmin") return true;
+    const page = SECTION_PAGE[target];
+    return page !== undefined && can(viewer.permissions, page, "read");
+  };
 
   const selected = useMemo(
     () => members.find((member) => member.slug === selectedSlug),
@@ -581,12 +626,8 @@ export function MemberCmsStudio({
                   Switch workspace
                 </p>
                 <div className="space-y-1">
-                  {WORKSPACES.map((workspace) => {
-                    const available =
-                      workspace.id === "overview" ||
-                      workspace.id === "members" ||
-                      workspace.id === "articles" ||
-                      workspace.id === "publications";
+                  {WORKSPACES.filter((workspace) => canAccess(workspace.id)).map((workspace) => {
+                    const available = LIVE_WORKSPACES.has(workspace.id);
                     return (
                       <button
                         aria-current={workspace.id === section ? "page" : undefined}
@@ -613,6 +654,16 @@ export function MemberCmsStudio({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-full border border-[#dfe4ee] bg-white py-1 pr-3 pl-1 sm:flex dark:border-white/10 dark:bg-white/[0.06]">
+              <span
+                className={`rounded-full px-2 py-0.5 font-mono text-[9px] font-bold tracking-[0.12em] uppercase ${viewer.role === "superadmin" ? "bg-brand-blue text-white" : "bg-brand-green text-white"}`}
+              >
+                {viewer.role === "superadmin" ? "Superadmin" : "Admin"}
+              </span>
+              <span className="text-sm font-semibold text-[#3e4859] dark:text-white/85">
+                {viewer.name}
+              </span>
+            </div>
             {isEditingMember ? (
               <Link
                 className="hidden rounded-lg px-3 py-2 text-sm text-[#5d687d] transition hover:bg-white hover:text-brand-blue sm:inline-flex dark:text-white/55 dark:hover:bg-white/10"
@@ -642,327 +693,363 @@ export function MemberCmsStudio({
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
-        <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
-          {section === "articles" ? (
-            <div className="flex min-h-0 flex-col lg:h-full">
-              <div className="shrink-0">
-                <div className="relative">
-                  <MagnifyingGlass
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-                    size={17}
-                  />
-                  <input
-                    className={`${inputClass} pl-9`}
-                    onChange={(event) => setArticleQuery(event.target.value)}
-                    placeholder="Find an article"
-                    value={articleQuery}
-                  />
-                </div>
-                <button
-                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
-                  onClick={startNewArticle}
-                  type="button"
-                >
-                  <Plus size={17} weight="bold" />
-                  New article
-                </button>
-                <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
-                  Editorial · {articlesReady ? articleRecords.length : "…"}
-                </p>
-              </div>
-              <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
-                {visibleArticleRecords.map((record) => (
+      {!canAccess(section) ? (
+        <DeniedScreen onBack={() => changeSection("overview")} />
+      ) : (
+        <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
+          <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
+            {section === "articles" ? (
+              <div className="flex min-h-0 flex-col lg:h-full">
+                <div className="shrink-0">
+                  <div className="relative">
+                    <MagnifyingGlass
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                      size={17}
+                    />
+                    <input
+                      className={`${inputClass} pl-9`}
+                      onChange={(event) => setArticleQuery(event.target.value)}
+                      placeholder="Find an article"
+                      value={articleQuery}
+                    />
+                  </div>
                   <button
-                    className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${record.slug === selectedArticleSlug && !showNewArticle ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
-                    key={record.slug}
-                    onClick={() => selectArticle(record.slug)}
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
+                    onClick={startNewArticle}
                     type="button"
                   >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">
-                        {record.article.title || "Untitled article"}
-                      </span>
-                      <span className="mt-0.5 flex items-center gap-2 text-xs text-[#778299] dark:text-white/45">
-                        <span>{record.article.date}</span>
-                        {record.article.draft ? (
-                          <span className="rounded-full bg-brand-yellow-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#a97b1c] uppercase">
-                            Draft
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
+                    <Plus size={17} weight="bold" />
+                    New article
                   </button>
-                ))}
-                {!visibleArticleRecords.length ? (
-                  <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
-                    No articles yet. Start one with “New article”.
+                  <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                    Editorial · {articlesReady ? articleRecords.length : "…"}
                   </p>
-                ) : null}
-              </nav>
-            </div>
-          ) : section === "publications" ? (
-            <div className="flex min-h-0 flex-col lg:h-full">
-              <div className="shrink-0">
-                <div className="relative">
-                  <MagnifyingGlass
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-                    size={17}
-                  />
-                  <input
-                    className={`${inputClass} pl-9`}
-                    onChange={(event) => setPublicationQuery(event.target.value)}
-                    placeholder="Find a publication"
-                    value={publicationQuery}
-                  />
                 </div>
-                <button
-                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-green/45 bg-brand-green/[0.04] text-sm font-semibold text-brand-green transition hover:bg-brand-green hover:text-white active:scale-[0.98]"
-                  onClick={startNewPublication}
-                  type="button"
-                >
-                  <Plus size={17} weight="bold" />
-                  New publication
-                </button>
-                <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
-                  Editorial · {publicationsReady ? publicationRecords.length : "…"}
-                </p>
-              </div>
-              <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
-                {visiblePublicationRecords.map((record) => (
-                  <button
-                    className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${record.slug === selectedPublicationSlug && !showNewPublication ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
-                    key={record.slug}
-                    onClick={() => selectPublication(record.slug)}
-                    type="button"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">
-                        {record.publication.title || "Untitled publication"}
-                      </span>
-                      <span className="mt-0.5 flex items-center gap-2 text-xs text-[#778299] dark:text-white/45">
-                        <span>{record.publication.date}</span>
-                        {record.publication.draft ? (
-                          <span className="rounded-full bg-brand-yellow-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#a97b1c] uppercase">
-                            Draft
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-                {!visiblePublicationRecords.length ? (
-                  <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
-                    No publications yet. Start one with “New publication”.
-                  </p>
-                ) : null}
-              </nav>
-            </div>
-          ) : section === "members" ? (
-            <div className="flex min-h-0 flex-col lg:h-full">
-              <div className="shrink-0">
-                <div className="relative">
-                  <MagnifyingGlass
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-                    size={17}
-                  />
-                  <input
-                    className={`${inputClass} pl-9`}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Find a member"
-                    value={query}
-                  />
-                </div>
-                <button
-                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
-                  onClick={startNew}
-                  type="button"
-                >
-                  <Plus size={17} weight="bold" />
-                  New member
-                </button>
-                <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
-                  Directory · {ready ? members.length : "…"}
-                </p>
-              </div>
-              <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
-                {visibleMembers.map((member) => {
-                  const record = records.find((item) => item.slug === member.slug);
-                  const photoKey = record?.profile.photoKey;
-                  return (
+                <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                  {visibleArticleRecords.map((record) => (
                     <button
-                      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${member.slug === selectedSlug && !showNew ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
-                      key={member.slug}
-                      onClick={() => selectMember(member)}
+                      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${record.slug === selectedArticleSlug && !showNewArticle ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                      key={record.slug}
+                      onClick={() => selectArticle(record.slug)}
                       type="button"
                     >
-                      <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
-                        {photoKey ? (
-                          // Native media avoids an image-component rehydration
-                          // race for freshly uploaded, private CMS assets.
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            alt=""
-                            className="size-full object-contain object-bottom"
-                            key={photoKey}
-                            src={`/api/member-cms/media/${photoKey}`}
-                          />
-                        ) : (
-                          <span className="pb-2 text-xs font-semibold text-[#778299]">
-                            {member.name
-                              .split(" ")
-                              .map((part) => part[0])
-                              .slice(0, 2)
-                              .join("")}
-                          </span>
-                        )}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold">{member.name}</span>
-                        <span className="mt-0.5 block truncate text-xs text-[#778299] dark:text-white/45">
-                          {member.division}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">
+                          {record.article.title || "Untitled article"}
+                        </span>
+                        <span className="mt-0.5 flex items-center gap-2 text-xs text-[#778299] dark:text-white/45">
+                          <span>{record.article.date}</span>
+                          {record.article.draft ? (
+                            <span className="rounded-full bg-brand-yellow-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#a97b1c] uppercase">
+                              Draft
+                            </span>
+                          ) : null}
                         </span>
                       </span>
                     </button>
-                  );
-                })}
-              </nav>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
-              <span
-                className={`grid size-9 place-items-center rounded-xl bg-white ${activeWorkspace.tone} dark:bg-white/10`}
-              >
-                <WorkspaceIcon section={section} size={20} />
-              </span>
-              <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">
-                {activeWorkspace.label}
-              </p>
-              <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
-                Collection-specific controls will live here as this workspace becomes available.
-              </p>
-            </div>
-          )}
-        </aside>
-
-        <section className="admin-editor-enter min-w-0 p-5 sm:p-8 lg:p-10">
-          <div className="mx-auto max-w-5xl">
-            {section === "members" ? (
-              <>
-                <div className="mt-6 flex gap-1 overflow-x-auto border-b border-[#dee4ef] dark:border-white/10">
-                  {TABS.map((tab) => (
+                  ))}
+                  {!visibleArticleRecords.length ? (
+                    <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
+                      No articles yet. Start one with “New article”.
+                    </p>
+                  ) : null}
+                </nav>
+              </div>
+            ) : section === "publications" ? (
+              <div className="flex min-h-0 flex-col lg:h-full">
+                <div className="shrink-0">
+                  <div className="relative">
+                    <MagnifyingGlass
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                      size={17}
+                    />
+                    <input
+                      className={`${inputClass} pl-9`}
+                      onChange={(event) => setPublicationQuery(event.target.value)}
+                      placeholder="Find a publication"
+                      value={publicationQuery}
+                    />
+                  </div>
+                  <button
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-green/45 bg-brand-green/[0.04] text-sm font-semibold text-brand-green transition hover:bg-brand-green hover:text-white active:scale-[0.98]"
+                    onClick={startNewPublication}
+                    type="button"
+                  >
+                    <Plus size={17} weight="bold" />
+                    New publication
+                  </button>
+                  <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                    Editorial · {publicationsReady ? publicationRecords.length : "…"}
+                  </p>
+                </div>
+                <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                  {visiblePublicationRecords.map((record) => (
                     <button
-                      className={`relative whitespace-nowrap px-4 py-3 text-sm font-semibold transition ${activeTab === tab.id ? "text-brand-blue" : "text-[#758097] hover:text-[#202532] dark:text-white/45 dark:hover:text-white"}`}
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${record.slug === selectedPublicationSlug && !showNewPublication ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                      key={record.slug}
+                      onClick={() => selectPublication(record.slug)}
                       type="button"
                     >
-                      {tab.label}
-                      {activeTab === tab.id ? (
-                        <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-blue" />
-                      ) : null}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">
+                          {record.publication.title || "Untitled publication"}
+                        </span>
+                        <span className="mt-0.5 flex items-center gap-2 text-xs text-[#778299] dark:text-white/45">
+                          <span>{record.publication.date}</span>
+                          {record.publication.draft ? (
+                            <span className="rounded-full bg-brand-yellow-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#a97b1c] uppercase">
+                              Draft
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
                     </button>
                   ))}
+                  {!visiblePublicationRecords.length ? (
+                    <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
+                      No publications yet. Start one with “New publication”.
+                    </p>
+                  ) : null}
+                </nav>
+              </div>
+            ) : section === "members" ? (
+              <div className="flex min-h-0 flex-col lg:h-full">
+                <div className="shrink-0">
+                  <div className="relative">
+                    <MagnifyingGlass
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                      size={17}
+                    />
+                    <input
+                      className={`${inputClass} pl-9`}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Find a member"
+                      value={query}
+                    />
+                  </div>
+                  <button
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
+                    onClick={startNew}
+                    type="button"
+                  >
+                    <Plus size={17} weight="bold" />
+                    New member
+                  </button>
+                  <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                    Directory · {ready ? members.length : "…"}
+                  </p>
                 </div>
-                <MemberEditor
+                <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                  {visibleMembers.map((member) => {
+                    const record = records.find((item) => item.slug === member.slug);
+                    const photoKey = record?.profile.photoKey;
+                    return (
+                      <button
+                        className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${member.slug === selectedSlug && !showNew ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                        key={member.slug}
+                        onClick={() => selectMember(member)}
+                        type="button"
+                      >
+                        <span className="relative grid size-9 shrink-0 place-items-end overflow-hidden rounded-lg bg-[#e9edf5] dark:bg-white/10">
+                          {photoKey ? (
+                            // Native media avoids an image-component rehydration
+                            // race for freshly uploaded, private CMS assets.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              alt=""
+                              className="size-full object-contain object-bottom"
+                              key={photoKey}
+                              src={`/api/member-cms/media/${photoKey}`}
+                            />
+                          ) : (
+                            <span className="pb-2 text-xs font-semibold text-[#778299]">
+                              {member.name
+                                .split(" ")
+                                .map((part) => part[0])
+                                .slice(0, 2)
+                                .join("")}
+                            </span>
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">
+                            {member.name}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-[#778299] dark:text-white/45">
+                            {member.division}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+                <span
+                  className={`grid size-9 place-items-center rounded-xl bg-white ${activeWorkspace.tone} dark:bg-white/10`}
+                >
+                  <WorkspaceIcon section={section} size={20} />
+                </span>
+                <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">
+                  {activeWorkspace.label}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
+                  Collection-specific controls will live here as this workspace becomes available.
+                </p>
+              </div>
+            )}
+          </aside>
+
+          <section className="admin-editor-enter min-w-0 p-5 sm:p-8 lg:p-10">
+            <div className="mx-auto max-w-5xl">
+              {section === "members" ? (
+                <>
+                  <div className="mt-6 flex gap-1 overflow-x-auto border-b border-[#dee4ef] dark:border-white/10">
+                    {TABS.map((tab) => (
+                      <button
+                        className={`relative whitespace-nowrap px-4 py-3 text-sm font-semibold transition ${activeTab === tab.id ? "text-brand-blue" : "text-[#758097] hover:text-[#202532] dark:text-white/45 dark:hover:text-white"}`}
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        type="button"
+                      >
+                        {tab.label}
+                        {activeTab === tab.id ? (
+                          <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-blue" />
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                  <MemberEditor
+                    key={
+                      showNew
+                        ? `new-${newKey}`
+                        : `${currentMember.slug}-${selectedRecord?.updatedAt ?? "base"}`
+                    }
+                    activeTab={activeTab}
+                    initialMember={showNew ? undefined : currentMember}
+                    initialProfile={showNew ? undefined : selectedRecord?.profile}
+                    onDirtyChange={setHasUnsavedChanges}
+                    sourceMemberSlug={
+                      showNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
+                    }
+                    sourceRecordSlug={
+                      showNew ? undefined : (selectedRecord?.slug ?? currentMember.slug)
+                    }
+                    onSaved={(record) => {
+                      setRecords((current) => [
+                        ...current.filter(
+                          (item) => item.slug !== record.slug && item.slug !== record.sourceSlug,
+                        ),
+                        record,
+                      ]);
+                      setSelectedSlug(record.slug);
+                      setShowNew(false);
+                      setHasUnsavedChanges(false);
+                    }}
+                  />
+                </>
+              ) : section === "publications" ? (
+                <PublicationEditor
                   key={
-                    showNew
-                      ? `new-${newKey}`
-                      : `${currentMember.slug}-${selectedRecord?.updatedAt ?? "base"}`
+                    showNewPublication
+                      ? `new-${publicationNewKey}`
+                      : `${selectedPublication?.slug ?? "none"}-${selectedPublication?.updatedAt ?? "base"}`
                   }
-                  activeTab={activeTab}
-                  initialMember={showNew ? undefined : currentMember}
-                  initialProfile={showNew ? undefined : selectedRecord?.profile}
+                  initialRecord={showNewPublication ? undefined : selectedPublication}
+                  members={members}
+                  paperLimitBytes={paperLimitBytes}
+                  onDeleted={(slug) => {
+                    setPublicationRecords((current) =>
+                      current.filter((record) => record.slug !== slug),
+                    );
+                    setSelectedPublicationSlug(undefined);
+                    setHasUnsavedChanges(false);
+                  }}
                   onDirtyChange={setHasUnsavedChanges}
-                  sourceMemberSlug={
-                    showNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
-                  }
-                  sourceRecordSlug={
-                    showNew ? undefined : (selectedRecord?.slug ?? currentMember.slug)
-                  }
                   onSaved={(record) => {
-                    setRecords((current) => [
-                      ...current.filter(
-                        (item) => item.slug !== record.slug && item.slug !== record.sourceSlug,
-                      ),
+                    setPublicationRecords((current) => [
+                      ...current.filter((item) => item.slug !== record.slug),
                       record,
                     ]);
-                    setSelectedSlug(record.slug);
-                    setShowNew(false);
+                    setSelectedPublicationSlug(record.slug);
+                    setShowNewPublication(false);
                     setHasUnsavedChanges(false);
                   }}
                 />
-              </>
-            ) : section === "publications" ? (
-              <PublicationEditor
-                key={
-                  showNewPublication
-                    ? `new-${publicationNewKey}`
-                    : `${selectedPublication?.slug ?? "none"}-${selectedPublication?.updatedAt ?? "base"}`
-                }
-                initialRecord={showNewPublication ? undefined : selectedPublication}
-                members={members}
-                paperLimitBytes={paperLimitBytes}
-                onDeleted={(slug) => {
-                  setPublicationRecords((current) =>
-                    current.filter((record) => record.slug !== slug),
-                  );
-                  setSelectedPublicationSlug(undefined);
-                  setHasUnsavedChanges(false);
-                }}
-                onDirtyChange={setHasUnsavedChanges}
-                onSaved={(record) => {
-                  setPublicationRecords((current) => [
-                    ...current.filter((item) => item.slug !== record.slug),
-                    record,
-                  ]);
-                  setSelectedPublicationSlug(record.slug);
-                  setShowNewPublication(false);
-                  setHasUnsavedChanges(false);
-                }}
-              />
-            ) : section === "articles" ? (
-              <ArticleEditor
-                key={
-                  showNewArticle
-                    ? `new-${articleNewKey}`
-                    : `${selectedArticle?.slug ?? "none"}-${selectedArticle?.updatedAt ?? "base"}`
-                }
-                initialRecord={showNewArticle ? undefined : selectedArticle}
-                members={members}
-                onDeleted={(slug) => {
-                  setArticleRecords((current) => current.filter((record) => record.slug !== slug));
-                  setSelectedArticleSlug(undefined);
-                  setHasUnsavedChanges(false);
-                }}
-                onDirtyChange={setHasUnsavedChanges}
-                onSaved={(record) => {
-                  setArticleRecords((current) => [
-                    ...current.filter((item) => item.slug !== record.slug),
-                    record,
-                  ]);
-                  setSelectedArticleSlug(record.slug);
-                  setShowNewArticle(false);
-                  setHasUnsavedChanges(false);
-                }}
-              />
-            ) : (
-              <EditorialOverview
-                section={section}
-                onChoose={(nextSection) => changeSection(nextSection)}
-              />
-            )}
-          </div>
-        </section>
-      </div>
+              ) : section === "articles" ? (
+                <ArticleEditor
+                  key={
+                    showNewArticle
+                      ? `new-${articleNewKey}`
+                      : `${selectedArticle?.slug ?? "none"}-${selectedArticle?.updatedAt ?? "base"}`
+                  }
+                  initialRecord={showNewArticle ? undefined : selectedArticle}
+                  members={members}
+                  onDeleted={(slug) => {
+                    setArticleRecords((current) =>
+                      current.filter((record) => record.slug !== slug),
+                    );
+                    setSelectedArticleSlug(undefined);
+                    setHasUnsavedChanges(false);
+                  }}
+                  onDirtyChange={setHasUnsavedChanges}
+                  onSaved={(record) => {
+                    setArticleRecords((current) => [
+                      ...current.filter((item) => item.slug !== record.slug),
+                      record,
+                    ]);
+                    setSelectedArticleSlug(record.slug);
+                    setShowNewArticle(false);
+                    setHasUnsavedChanges(false);
+                  }}
+                />
+              ) : (
+                <EditorialOverview
+                  canAccess={canAccess}
+                  section={section}
+                  onChoose={(nextSection) => changeSection(nextSection)}
+                />
+              )}
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
 
+function DeniedScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="admin-editor-enter mx-auto grid min-h-[calc(100dvh-69px)] w-full max-w-[1680px] place-items-center px-5 py-16">
+      <div className="w-full max-w-md rounded-2xl border border-[#dfe4ee] bg-white p-8 text-center shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-brand-red-50 text-brand-red">
+          <Lock size={24} weight="duotone" />
+        </div>
+        <h2 className="mt-5 font-display text-2xl font-semibold tracking-[-0.03em]">
+          You don&apos;t have permission
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[#68758a] dark:text-white/55">
+          Please ask your administrator to grant access to this workspace.
+        </p>
+        <button
+          className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white shadow-[0_18px_35px_-16px_rgba(20,32,58,0.55)] transition hover:bg-brand-blue active:scale-[0.98]"
+          onClick={onBack}
+          type="button"
+        >
+          Back to overview
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EditorialOverview({
+  canAccess,
   onChoose,
   section,
 }: {
+  canAccess: (section: EditorialSection) => boolean;
   onChoose: (section: EditorialSection) => void;
   section: EditorialSection;
 }) {
@@ -986,9 +1073,8 @@ function EditorialOverview({
         </p>
       )}
       <div className="mt-10 grid gap-3 sm:grid-cols-2">
-        {EDITORIAL_SECTIONS.map((item) => {
-          const available =
-            item.id === "members" || item.id === "articles" || item.id === "publications";
+        {EDITORIAL_SECTIONS.filter((item) => canAccess(item.id)).map((item) => {
+          const available = LIVE_WORKSPACES.has(item.id);
           return (
             <button
               className={`rounded-2xl border p-5 text-left transition ${available ? "border-brand-blue/30 bg-brand-blue/[0.04] hover:border-brand-blue hover:bg-brand-blue/[0.08]" : "border-[#dfe4ee] bg-white/55 opacity-60 dark:border-white/10 dark:bg-white/[0.025]"}`}

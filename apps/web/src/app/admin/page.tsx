@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { MemberCmsStudio } from "@/components/admin/member-cms-studio";
-import { hasAdminSession } from "@/lib/admin-session";
+import { getAdminSession } from "@/lib/admin-session";
 import { ensureArticleCmsSeeded } from "@/lib/article-cms-seed";
 import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 import { ensurePublicationCmsSeeded } from "@/lib/publication-cms-seed";
@@ -12,7 +12,8 @@ import { ensurePublicationCmsSeeded } from "@/lib/publication-cms-seed";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  if (!(await hasAdminSession())) redirect("/admin/login");
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
   const [articles, , publications] = await Promise.all([
     ensureArticleCmsSeeded().catch(() => undefined),
     ensureMemberCmsSeeded().catch(() => undefined),
@@ -23,6 +24,7 @@ export default async function AdminPage() {
       initialArticles={articles ?? []}
       initialPublications={publications ?? []}
       paperLimitBytes={Number(process.env.CMS_MAX_PAPER_BYTES ?? 209_715_200)}
+      session={session}
     />
   );
 }
