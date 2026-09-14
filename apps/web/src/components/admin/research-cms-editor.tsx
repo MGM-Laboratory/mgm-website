@@ -920,6 +920,83 @@ export function ResearchEditor({
             Type <span className="font-semibold">/</span> for blocks, drag the ⋮⋮ handle to
             rearrange, and drop images straight into the page.
           </p>
+
+          {/* Milestones and linked outputs live under the writing surface:
+              both lists can grow long with real records, and the wide left
+              column fits them far better than the narrow sidebar rail. */}
+          <div className="mt-8 grid items-start gap-5 xl:grid-cols-2">
+            <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+              <div>
+                <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
+                  Milestones
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#8490a5] dark:text-white/40">
+                  Only meaningful public events: prototype tests, evaluations, accepted papers,
+                  releases, deliveries. No internal meetings or raw notes.
+                </p>
+              </div>
+              <div className="space-y-3">
+                {draft.milestones.map((milestone) => (
+                  <MilestoneEditor
+                    key={milestone.id}
+                    milestone={milestone}
+                    onChange={(next) =>
+                      updateDraft(
+                        "milestones",
+                        draft.milestones.map((item) => (item.id === next.id ? next : item)),
+                      )
+                    }
+                    onRemove={() =>
+                      updateDraft(
+                        "milestones",
+                        draft.milestones.filter((item) => item.id !== milestone.id),
+                      )
+                    }
+                  />
+                ))}
+              </div>
+              <AddButton
+                onClick={() => updateDraft("milestones", [...draft.milestones, newMilestone()])}
+              >
+                Add milestone
+              </AddButton>
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+              <div>
+                <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
+                  Linked outputs
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#8490a5] dark:text-white/40">
+                  Projects, publications, and articles that grew out of this study. Link real
+                  records only.
+                </p>
+              </div>
+              <div className="space-y-3">
+                {draft.outputs.map((output) => (
+                  <OutputEditor
+                    key={output.id}
+                    onChange={(next) =>
+                      updateDraft(
+                        "outputs",
+                        draft.outputs.map((item) => (item.id === next.id ? next : item)),
+                      )
+                    }
+                    onRemove={() =>
+                      updateDraft(
+                        "outputs",
+                        draft.outputs.filter((item) => item.id !== output.id),
+                      )
+                    }
+                    output={output}
+                  />
+                ))}
+              </div>
+              <AddButton onClick={() => updateDraft("outputs", [...draft.outputs, newOutput()])}>
+                Add linked output
+              </AddButton>
+            </div>
+          </div>
         </div>
 
         <aside className="space-y-5 xl:sticky xl:top-[4.75rem]">
@@ -1074,78 +1151,6 @@ export function ResearchEditor({
                 values={draft.methods}
               />
             </Field>
-          </div>
-
-          <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
-            <div>
-              <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
-                Milestones
-              </p>
-              <p className="mt-1 text-xs leading-5 text-[#8490a5] dark:text-white/40">
-                Only meaningful public events: prototype tests, evaluations, accepted papers,
-                releases, deliveries. No internal meetings or raw notes.
-              </p>
-            </div>
-            <div className="space-y-3">
-              {draft.milestones.map((milestone) => (
-                <MilestoneEditor
-                  key={milestone.id}
-                  milestone={milestone}
-                  onChange={(next) =>
-                    updateDraft(
-                      "milestones",
-                      draft.milestones.map((item) => (item.id === next.id ? next : item)),
-                    )
-                  }
-                  onRemove={() =>
-                    updateDraft(
-                      "milestones",
-                      draft.milestones.filter((item) => item.id !== milestone.id),
-                    )
-                  }
-                />
-              ))}
-            </div>
-            <AddButton
-              onClick={() => updateDraft("milestones", [...draft.milestones, newMilestone()])}
-            >
-              Add milestone
-            </AddButton>
-          </div>
-
-          <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
-            <div>
-              <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
-                Linked outputs
-              </p>
-              <p className="mt-1 text-xs leading-5 text-[#8490a5] dark:text-white/40">
-                Projects, publications, and articles that grew out of this study. Link real records
-                only.
-              </p>
-            </div>
-            <div className="space-y-3">
-              {draft.outputs.map((output) => (
-                <OutputEditor
-                  key={output.id}
-                  onChange={(next) =>
-                    updateDraft(
-                      "outputs",
-                      draft.outputs.map((item) => (item.id === next.id ? next : item)),
-                    )
-                  }
-                  onRemove={() =>
-                    updateDraft(
-                      "outputs",
-                      draft.outputs.filter((item) => item.id !== output.id),
-                    )
-                  }
-                  output={output}
-                />
-              ))}
-            </div>
-            <AddButton onClick={() => updateDraft("outputs", [...draft.outputs, newOutput()])}>
-              Add linked output
-            </AddButton>
           </div>
 
           <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
