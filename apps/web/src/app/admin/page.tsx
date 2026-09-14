@@ -5,8 +5,10 @@ import { can } from "@/lib/admin-permissions";
 import { fetchAdminAccounts } from "@/lib/admin-records";
 import { getAdminSession } from "@/lib/admin-session";
 import { ensureArticleCmsSeeded } from "@/lib/article-cms-seed";
+import { fetchCareerAdminList, fetchCareerApplications } from "@/lib/career-cms-server";
 import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 import { ensurePublicationCmsSeeded } from "@/lib/publication-cms-seed";
+import { ensureResearchCmsSeeded } from "@/lib/research-cms-server";
 
 // The auth check reads the session cookie, so this page must never be
 // statically prerendered: at build time there is no cookie and the
@@ -19,7 +21,7 @@ export default async function AdminPage() {
   // The seed helpers speak for the superadmin, so the draft feeds must not
   // reach accounts without read access to the matching page — the UI hides
   // the workspace, and the server must not ship its data either.
-  const [articles, , publications, admins] = await Promise.all([
+  const [articles, , publications, admins, jobs, applications, research] = await Promise.all([
     can(session.permissions, "articles", "read")
       ? ensureArticleCmsSeeded().catch(() => undefined)
       : Promise.resolve(undefined),
@@ -28,12 +30,24 @@ export default async function AdminPage() {
       ? ensurePublicationCmsSeeded().catch(() => undefined)
       : Promise.resolve(undefined),
     session.role === "superadmin" ? fetchAdminAccounts().catch(() => []) : Promise.resolve([]),
+    can(session.permissions, "careers", "read")
+      ? fetchCareerAdminList().catch(() => [])
+      : Promise.resolve([]),
+    can(session.permissions, "careers", "read")
+      ? fetchCareerApplications().catch(() => [])
+      : Promise.resolve([]),
+    can(session.permissions, "research", "read")
+      ? ensureResearchCmsSeeded().catch(() => undefined)
+      : Promise.resolve(undefined),
   ]);
   return (
     <MemberCmsStudio
       initialAdmins={admins}
+      initialApplications={applications ?? []}
       initialArticles={articles ?? []}
+      initialJobs={jobs ?? []}
       initialPublications={publications ?? []}
+      initialResearch={research ?? []}
       paperLimitBytes={Number(process.env.CMS_MAX_PAPER_BYTES ?? 209_715_200)}
       session={session}
     />

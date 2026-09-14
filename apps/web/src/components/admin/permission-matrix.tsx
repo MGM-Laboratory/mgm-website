@@ -13,8 +13,8 @@ export const MATRIX_PAGES: { id: AdminPageId; label: string; soon: boolean }[] =
   { id: "publications", label: "Publications", soon: false },
   { id: "members", label: "Members", soon: false },
   { id: "projects", label: "Projects", soon: true },
-  { id: "research", label: "Research", soon: true },
-  { id: "careers", label: "Careers", soon: true },
+  { id: "research", label: "Research", soon: false },
+  { id: "careers", label: "Careers", soon: false },
 ];
 
 const ACTIONS: AdminAction[] = ["read", "write", "delete"];

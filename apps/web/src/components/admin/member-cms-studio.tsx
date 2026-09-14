@@ -37,6 +37,7 @@ import {
 import { AdminManagementPanel } from "@/components/admin/admin-management-panel";
 import { ArticleEditor } from "@/components/admin/article-cms-editor";
 import { PublicationEditor } from "@/components/admin/publication-cms-editor";
+import { ResearchEditor } from "@/components/admin/research-cms-editor";
 import {
   draftToMember,
   memberToDraft,
@@ -53,8 +54,12 @@ import {
 import { useMemberRecords } from "@/hooks/use-member-records";
 import { useArticleRecords } from "@/hooks/use-article-records";
 import { usePublicationRecords } from "@/hooks/use-publication-records";
+import { useResearchRecords } from "@/hooks/use-research-records";
+import { CareersCmsStudio } from "@/components/admin/careers-cms-studio";
 import type { CmsArticleRecord } from "@/lib/article-cms";
 import type { CmsPublicationRecord } from "@/lib/publication-cms";
+import type { CmsJobApplicationRecord, CmsJobRecord } from "@/lib/career-cms";
+import type { CmsResearchRecord } from "@/lib/research-cms";
 
 type EditorTab = "profile" | "experience" | "education" | "credentials";
 type EditorialSection =
@@ -95,7 +100,13 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
 
-const LIVE_WORKSPACES = new Set<EditorialSection>(["members", "articles", "publications"]);
+const LIVE_WORKSPACES = new Set<EditorialSection>([
+  "members",
+  "articles",
+  "publications",
+  "careers",
+  "research",
+]);
 
 /** Each editorial workspace maps to the permission page that gates it. */
 const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
@@ -401,12 +412,18 @@ export function MemberCmsStudio({
   initialArticles = [],
   initialPublications = [],
   initialAdmins = [],
+  initialJobs = [],
+  initialApplications = [],
+  initialResearch = [],
   paperLimitBytes = 209_715_200,
   session,
 }: {
   initialArticles?: CmsArticleRecord[];
   initialPublications?: CmsPublicationRecord[];
   initialAdmins?: CmsAdminRecord[];
+  initialJobs?: CmsJobRecord[];
+  initialApplications?: CmsJobApplicationRecord[];
+  initialResearch?: CmsResearchRecord[];
   paperLimitBytes?: number;
   session: AdminViewer;
 }) {
@@ -421,6 +438,11 @@ export function MemberCmsStudio({
     records: publicationRecords,
     setRecords: setPublicationRecords,
   } = usePublicationRecords(initialPublications);
+  const {
+    ready: researchReady,
+    records: researchRecords,
+    setRecords: setResearchRecords,
+  } = useResearchRecords(initialResearch);
   const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");
@@ -435,6 +457,10 @@ export function MemberCmsStudio({
   const [selectedPublicationSlug, setSelectedPublicationSlug] = useState<string>();
   const [showNewPublication, setShowNewPublication] = useState(false);
   const [publicationNewKey, setPublicationNewKey] = useState(0);
+  const [researchQuery, setResearchQuery] = useState("");
+  const [selectedResearchSlug, setSelectedResearchSlug] = useState<string>();
+  const [showNewResearch, setShowNewResearch] = useState(false);
+  const [researchNewKey, setResearchNewKey] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const workspacePickerRef = useRef<HTMLDivElement>(null);
@@ -522,6 +548,24 @@ export function MemberCmsStudio({
     );
   }, [publicationQuery, sortedPublicationRecords]);
 
+  const sortedResearchRecords = useMemo(
+    () =>
+      [...researchRecords].sort((left, right) =>
+        (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""),
+      ),
+    [researchRecords],
+  );
+  const visibleResearchRecords = useMemo(() => {
+    const needle = researchQuery.trim().toLocaleLowerCase();
+    if (!needle) return sortedResearchRecords;
+    return sortedResearchRecords.filter((record) =>
+      [record.research.title, record.research.slug, record.research.question]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(needle),
+    );
+  }, [researchQuery, sortedResearchRecords]);
+
   const confirmDiscard = () =>
     !hasUnsavedChanges || window.confirm("You have unsaved changes. Discard them and continue?");
   const selectMember = (member: Member) => {
@@ -565,6 +609,19 @@ export function MemberCmsStudio({
     setShowNewPublication(true);
     setPublicationNewKey((current) => current + 1);
   };
+  const selectResearch = (slug: string) => {
+    if ((showNewResearch || slug !== selectedResearchSlug) && !confirmDiscard()) return;
+    setHasUnsavedChanges(false);
+    setShowNewResearch(false);
+    setSelectedResearchSlug(slug);
+  };
+  const startNewResearch = () => {
+    if (!confirmDiscard()) return;
+    setHasUnsavedChanges(false);
+    setSelectedResearchSlug(undefined);
+    setShowNewResearch(true);
+    setResearchNewKey((current) => current + 1);
+  };
   const changeSection = (nextSection: EditorialSection) => {
     if (nextSection !== section && !confirmDiscard()) return;
     if (nextSection !== section) setHasUnsavedChanges(false);
@@ -579,6 +636,9 @@ export function MemberCmsStudio({
   );
   const selectedPublication = sortedPublicationRecords.find(
     (record) => record.slug === selectedPublicationSlug,
+  );
+  const selectedResearch = sortedResearchRecords.find(
+    (record) => record.slug === selectedResearchSlug,
   );
 
   useEffect(() => {
@@ -709,6 +769,10 @@ export function MemberCmsStudio({
 
       {!canAccess(section) ? (
         <DeniedScreen onBack={() => changeSection("overview")} />
+      ) : section === "careers" ? (
+        // The careers workspace renders its own full-bleed layout: the job
+        // openings editor and the applications inbox, no aside rail.
+        <CareersCmsStudio initialApplications={initialApplications} initialJobs={initialJobs} />
       ) : (
         <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
           <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
@@ -822,6 +886,69 @@ export function MemberCmsStudio({
                   {!visiblePublicationRecords.length ? (
                     <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
                       No publications yet. Start one with “New publication”.
+                    </p>
+                  ) : null}
+                </nav>
+              </div>
+            ) : section === "research" ? (
+              <div className="flex min-h-0 flex-col lg:h-full">
+                <div className="shrink-0">
+                  <div className="relative">
+                    <MagnifyingGlass
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                      size={17}
+                    />
+                    <input
+                      className={`${inputClass} pl-9`}
+                      onChange={(event) => setResearchQuery(event.target.value)}
+                      placeholder="Find an initiative"
+                      value={researchQuery}
+                    />
+                  </div>
+                  <button
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-red/45 bg-brand-red/[0.04] text-sm font-semibold text-brand-red transition hover:bg-brand-red hover:text-white active:scale-[0.98]"
+                    onClick={startNewResearch}
+                    type="button"
+                  >
+                    <Plus size={17} weight="bold" />
+                    New initiative
+                  </button>
+                  <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                    Initiatives · {researchReady ? researchRecords.length : "…"}
+                  </p>
+                </div>
+                <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                  {visibleResearchRecords.map((record) => (
+                    <button
+                      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${record.slug === selectedResearchSlug && !showNewResearch ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                      key={record.slug}
+                      onClick={() => selectResearch(record.slug)}
+                      type="button"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">
+                          {record.research.title || "Untitled initiative"}
+                        </span>
+                        <span className="mt-0.5 flex items-center gap-2 text-xs text-[#778299] dark:text-white/45">
+                          <span className="truncate">
+                            {record.research.startDate || record.research.status}
+                          </span>
+                          {record.research.draft ? (
+                            <span className="shrink-0 rounded-full bg-brand-yellow-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#a97b1c] uppercase">
+                              Draft
+                            </span>
+                          ) : record.research.featured ? (
+                            <span className="shrink-0 rounded-full bg-brand-red-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-brand-red uppercase">
+                              Featured
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                  {!visibleResearchRecords.length ? (
+                    <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
+                      No initiatives yet. Start one with “New initiative”.
                     </p>
                   ) : null}
                 </nav>
@@ -1032,6 +1159,33 @@ export function MemberCmsStudio({
                     setHasUnsavedChanges(false);
                   }}
                 />
+              ) : section === "research" ? (
+                <ResearchEditor
+                  key={
+                    showNewResearch
+                      ? `new-${researchNewKey}`
+                      : `${selectedResearch?.slug ?? "none"}-${selectedResearch?.updatedAt ?? "base"}`
+                  }
+                  initialRecord={showNewResearch ? undefined : selectedResearch}
+                  members={members}
+                  onDeleted={(slug) => {
+                    setResearchRecords((current) =>
+                      current.filter((record) => record.slug !== slug),
+                    );
+                    setSelectedResearchSlug(undefined);
+                    setHasUnsavedChanges(false);
+                  }}
+                  onDirtyChange={setHasUnsavedChanges}
+                  onSaved={(record) => {
+                    setResearchRecords((current) => [
+                      ...current.filter((item) => item.slug !== record.slug),
+                      record,
+                    ]);
+                    setSelectedResearchSlug(record.slug);
+                    setShowNewResearch(false);
+                    setHasUnsavedChanges(false);
+                  }}
+                />
               ) : section === "administration" ? (
                 <AdminManagementPanel initialAdmins={initialAdmins} />
               ) : (
@@ -1098,7 +1252,7 @@ function EditorialOverview({
       {section === "members" ? null : (
         <p className="mt-5 max-w-xl text-base leading-7 text-[#6b768b] dark:text-white/55">
           {section === "overview"
-            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, and Publications are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
+            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, Publications, Research, and Careers are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
             : `${label} is reserved for its own editorial workflow. It will be added here without changing the member, article, or publication workspaces.`}
         </p>
       )}
