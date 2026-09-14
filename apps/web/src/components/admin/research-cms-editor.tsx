@@ -921,10 +921,11 @@ export function ResearchEditor({
             rearrange, and drop images straight into the page.
           </p>
 
-          {/* Milestones and linked outputs live under the writing surface:
-              both lists can grow long with real records, and the wide left
-              column fits them far better than the narrow sidebar rail. */}
-          <div className="mt-8 grid items-start gap-5 xl:grid-cols-2">
+          {/* Milestones and linked outputs live under the writing surface,
+              stacked one above the other: both lists can grow long with real
+              records, and the wide left column fits them far better than the
+              narrow sidebar rail. */}
+          <div className="mt-8 space-y-5">
             <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
               <div>
                 <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
