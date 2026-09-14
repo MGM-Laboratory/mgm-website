@@ -502,8 +502,18 @@ export function PublicationEditor({
   const fileInput = useRef<HTMLInputElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const photoTarget = useRef<string | undefined>(undefined);
+  // The baseline must carry the same shape as the live signature below —
+  // JSON.stringify drops undefined keys, so a shorter literal here would
+  // never compare equal and the editor would report unsaved changes the
+  // moment it mounts.
   const [baseline, setBaseline] = useState(() =>
-    JSON.stringify({ draft: initial, paperFile: undefined, paperRemoved: false }),
+    JSON.stringify({
+      draft: initial,
+      paperFile: undefined,
+      paperRemoved: false,
+      authorPhotos: [],
+      removedAuthorPhotos: [],
+    }),
   );
   const signature = JSON.stringify({
     draft,
