@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import type { Prisma } from "../generated/prisma/client.js";
 
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -73,6 +74,44 @@ export class CmsJobsService {
     return records;
   }
 
+  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+    const record = await this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.cmsJobPosting.findUnique({ where: { slug: currentSlug } });
+
+      if (!current) {
+        if (currentSlug !== nextSlug) throw new NotFoundException("Job record not found");
+        return transaction.cmsJobPosting.create({ data: { slug: nextSlug, data } });
+      }
+
+      if (currentSlug !== nextSlug) {
+        const destination = await transaction.cmsJobPosting.findUnique({
+          where: { slug: nextSlug },
+        });
+        if (destination) throw new Error("CMS_JOB_SLUG_CONFLICT");
+      }
+
+      return transaction.cmsJobPosting.update({
+        where: { slug: currentSlug },
+        data: { data, slug: nextSlug },
+      });
+    });
+    await this.invalidateRecords();
+    return {
+      ...(record.data as Record<string, unknown>),
+      slug: record.slug,
+      updatedAt: record.updatedAt.toISOString(),
+    };
+  }
+
+  async remove(slug: string) {
+    try {
+      await this.prisma.cmsJobPosting.delete({ where: { slug } });
+    } catch {
+      throw new NotFoundException("Job record not found");
+    }
+    await this.invalidateRecords();
+  }
+
   private async readAll(): Promise<PublicJobRecord[]> {
     const records = await this.prisma.cmsJobPosting.findMany({ orderBy: { updatedAt: "desc" } });
     return records.map((record) => ({
@@ -80,5 +119,12 @@ export class CmsJobsService {
       slug: record.slug,
       updatedAt: record.updatedAt.toISOString(),
     }));
+  }
+
+  private async invalidateRecords() {
+    await Promise.all([
+      this.cache.remove(JOBS_RECORDS_CACHE_KEY),
+      this.cache.remove(JOBS_ADMIN_CACHE_KEY),
+    ]);
   }
 }
