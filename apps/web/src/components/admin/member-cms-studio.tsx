@@ -34,6 +34,7 @@ import {
   type AdminViewer,
   type CmsAdminRecord,
 } from "@/lib/admin-permissions";
+import { AdminManagementPanel } from "@/components/admin/admin-management-panel";
 import { ArticleEditor } from "@/components/admin/article-cms-editor";
 import { PublicationEditor } from "@/components/admin/publication-cms-editor";
 import {
@@ -57,7 +58,14 @@ import type { CmsPublicationRecord } from "@/lib/publication-cms";
 
 type EditorTab = "profile" | "experience" | "education" | "credentials";
 type EditorialSection =
-  "overview" | "articles" | "projects" | "publications" | "research" | "members" | "careers";
+  | "overview"
+  | "articles"
+  | "projects"
+  | "publications"
+  | "research"
+  | "members"
+  | "careers"
+  | "administration";
 type DateValue = { month: number; year: number };
 
 const TABS: { id: EditorTab; label: string }[] = [
@@ -84,6 +92,7 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "research", label: "Research", tone: "text-brand-blue" },
   { id: "members", label: "Member", tone: "text-brand-red" },
   { id: "careers", label: "Careers", tone: "text-brand-yellow" },
+  { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
 
 const LIVE_WORKSPACES = new Set<EditorialSection>(["members", "articles", "publications"]);
@@ -112,6 +121,8 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
       return <UsersThree size={size} weight="duotone" />;
     case "careers":
       return <GraduationCap size={size} weight="duotone" />;
+    case "administration":
+      return <ShieldCheck size={size} weight="duotone" />;
     default:
       return <House size={size} weight="duotone" />;
   }
@@ -389,11 +400,13 @@ function EditRow({ children, onRemove }: { children: React.ReactNode; onRemove: 
 export function MemberCmsStudio({
   initialArticles = [],
   initialPublications = [],
+  initialAdmins = [],
   paperLimitBytes = 209_715_200,
   session,
 }: {
   initialArticles?: CmsArticleRecord[];
   initialPublications?: CmsPublicationRecord[];
+  initialAdmins?: CmsAdminRecord[];
   paperLimitBytes?: number;
   session: AdminViewer;
 }) {
@@ -627,7 +640,8 @@ export function MemberCmsStudio({
                 </p>
                 <div className="space-y-1">
                   {WORKSPACES.filter((workspace) => canAccess(workspace.id)).map((workspace) => {
-                    const available = LIVE_WORKSPACES.has(workspace.id);
+                    const available =
+                      LIVE_WORKSPACES.has(workspace.id) || workspace.id === "administration";
                     return (
                       <button
                         aria-current={workspace.id === section ? "page" : undefined}
@@ -884,6 +898,20 @@ export function MemberCmsStudio({
                   })}
                 </nav>
               </div>
+            ) : section === "administration" ? (
+              <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+                <span
+                  className={`grid size-9 place-items-center rounded-xl bg-white ${activeWorkspace.tone} dark:bg-white/10`}
+                >
+                  <WorkspaceIcon section={section} size={20} />
+                </span>
+                <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">
+                  {activeWorkspace.label}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
+                  Administrator accounts, passphrases, and per-page permissions.
+                </p>
+              </div>
             ) : (
               <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
                 <span
@@ -1004,6 +1032,8 @@ export function MemberCmsStudio({
                     setHasUnsavedChanges(false);
                   }}
                 />
+              ) : section === "administration" ? (
+                <AdminManagementPanel initialAdmins={initialAdmins} />
               ) : (
                 <EditorialOverview
                   canAccess={canAccess}
