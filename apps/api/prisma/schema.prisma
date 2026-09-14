@@ -27,3 +27,10 @@ model CmsPublication {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model CmsAdmin {
+  slug      String   @id
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
