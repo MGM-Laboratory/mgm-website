@@ -111,7 +111,7 @@ const researchSchema = z
     coverKey: z.string().min(1).max(500).optional(),
     coverAlt: z.string().trim().max(300).optional(),
     milestones: z.array(milestoneSchema).max(50),
-    outputs: z.array(outputSchema).max(30),
+    outputs: z.array(outputSchema).max(100),
     partners: z.array(partnerSchema).max(10).optional(),
     seoTitle: z.string().trim().max(120).optional(),
     seoDescription: z.string().trim().max(300).optional(),
