@@ -53,29 +53,40 @@ const blockSchema = z
   })
   .passthrough();
 
+// Site paths (a single leading slash, never protocol-relative) and http(s)
+// URLs only; javascript:, data:, and every other scheme are refused.
+const SAFE_URL_PATTERN = /^(\/(?!\/)|https?:\/\/)/i;
+
 const milestoneSchema = z.object({
   id: z.string().min(1),
   date: z.string().regex(DATE_PATTERN, "Use a YYYY-MM-DD date."),
   title: z.string().trim().min(1).max(200),
   summary: z.string().trim().min(1).max(600),
-  relatedUrl: z.string().trim().max(500).optional(),
+  relatedUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((value) => !value || SAFE_URL_PATTERN.test(value), "Use a URL or a site path.")
+    .optional(),
   relatedLabel: z.string().trim().max(120).optional(),
 });
-
-// Internal paths and http(s) URLs only; anything else is refused.
-const OUTPUT_HREF_PATTERN = /^(\/|https?:\/\/)/i;
 
 const outputSchema = z.object({
   id: z.string().min(1),
   type: z.enum(["project", "publication", "article"]),
   label: z.string().trim().min(1).max(200),
-  href: z.string().trim().min(1).max(500).regex(OUTPUT_HREF_PATTERN, "Use a URL or a site path."),
+  href: z.string().trim().min(1).max(500).regex(SAFE_URL_PATTERN, "Use a URL or a site path."),
   recordSlug: z.string().regex(SLUG_PATTERN).optional(),
 });
 
 const partnerSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  url: z.string().trim().max(500).optional(),
+  url: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((value) => !value || SAFE_URL_PATTERN.test(value), "Use a URL or a site path.")
+    .optional(),
 });
 
 const researchSchema = z

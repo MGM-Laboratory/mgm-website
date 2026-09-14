@@ -13,6 +13,7 @@ import {
   publishedResearch,
   researchCoverUrl,
   researchMembers,
+  safeResearchHref,
   RESEARCH_AREA_DESCRIPTIONS,
   RESEARCH_AREA_LABELS,
   RESEARCH_AREAS,
@@ -367,18 +368,27 @@ export default async function ResearchPage({
                   </h3>
                   {links.length ? (
                     <ul className="mt-4 space-y-2.5">
-                      {links.map((link) => (
-                        <li key={`${type}:${link.href}`}>
-                          <a
-                            className="text-sm leading-6 text-[var(--ink-2)] underline decoration-[var(--line-strong)] underline-offset-4 transition hover:text-brand-red hover:decoration-brand-red/50 dark:text-white/70"
-                            href={link.href}
-                            rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                            target={link.href.startsWith("http") ? "_blank" : undefined}
+                      {links.map((link) =>
+                        safeResearchHref(link.href) ? (
+                          <li key={`${type}:${link.href}`}>
+                            <a
+                              className="text-sm leading-6 text-[var(--ink-2)] underline decoration-[var(--line-strong)] underline-offset-4 transition hover:text-brand-red hover:decoration-brand-red/50 dark:text-white/70"
+                              href={link.href}
+                              rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                              target={link.href.startsWith("http") ? "_blank" : undefined}
+                            >
+                              {link.label}
+                            </a>
+                          </li>
+                        ) : (
+                          <li
+                            className="text-sm leading-6 text-[var(--ink-2)] dark:text-white/70"
+                            key={`${type}:${link.href}`}
                           >
                             {link.label}
-                          </a>
-                        </li>
-                      ))}
+                          </li>
+                        ),
+                      )}
                     </ul>
                   ) : (
                     <p className="mt-4 text-sm leading-6 text-[var(--ink-3)]">

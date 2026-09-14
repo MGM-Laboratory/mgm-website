@@ -207,6 +207,18 @@ export function researchCoverUrl(coverKey?: string) {
   return `/api/research-cms/media/${encodeURIComponent(coverKey)}`;
 }
 
+/**
+ * CMS-authored links are trusted but rendered publicly, so non-web schemes
+ * are refused outright. Site paths (a single leading slash, never
+ * protocol-relative) and http(s) URLs only; javascript:, data:, and
+ * everything else must render as plain text instead of a link.
+ */
+export function safeResearchHref(value: string) {
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^\/(?!\/)/.test(value)) return value;
+  return undefined;
+}
+
 /** "Sabtu, 31 Agustus 2024" — the same long form articles and publications use. */
 export function formatResearchDate(value: string) {
   return formatArticleDate(value);

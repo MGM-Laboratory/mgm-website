@@ -12,6 +12,7 @@ import {
   formatResearchPeriod,
   researchCoverUrl,
   researchMembers,
+  safeResearchHref,
   RESEARCH_AREA_LABELS,
   RESEARCH_STATUS_LABELS,
   type ResearchMilestone,
@@ -103,7 +104,7 @@ function MilestoneEntry({ milestone }: { milestone: ResearchMilestone }) {
       <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--ink-2)] dark:text-white/65">
         {milestone.summary}
       </p>
-      {milestone.relatedUrl ? (
+      {milestone.relatedUrl && safeResearchHref(milestone.relatedUrl) ? (
         <a
           className="mt-2 inline-block text-sm font-medium text-brand-blue underline decoration-brand-blue/40 underline-offset-2 transition hover:decoration-brand-blue"
           href={milestone.relatedUrl}
@@ -112,6 +113,10 @@ function MilestoneEntry({ milestone }: { milestone: ResearchMilestone }) {
         >
           {milestone.relatedLabel || "Related link"}
         </a>
+      ) : milestone.relatedUrl ? (
+        <p className="mt-2 text-sm font-medium text-[var(--ink-3)]">
+          {milestone.relatedLabel || "Related link"}
+        </p>
       ) : null}
     </li>
   );
@@ -131,18 +136,27 @@ function OutputGroup({
       <h2 className="font-display text-lg font-semibold text-[#0e1116] dark:text-white">{label}</h2>
       {links.length ? (
         <ul className="mt-4 space-y-2.5">
-          {links.map((link) => (
-            <li key={link.id}>
-              <a
-                className="text-sm leading-6 text-[var(--ink-2)] underline decoration-[var(--line-strong)] underline-offset-4 transition hover:text-brand-red hover:decoration-brand-red/50 dark:text-white/70"
-                href={link.href}
-                rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                target={link.href.startsWith("http") ? "_blank" : undefined}
+          {links.map((link) =>
+            safeResearchHref(link.href) ? (
+              <li key={link.id}>
+                <a
+                  className="text-sm leading-6 text-[var(--ink-2)] underline decoration-[var(--line-strong)] underline-offset-4 transition hover:text-brand-red hover:decoration-brand-red/50 dark:text-white/70"
+                  href={link.href}
+                  rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  target={link.href.startsWith("http") ? "_blank" : undefined}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ) : (
+              <li
+                className="text-sm leading-6 text-[var(--ink-2)] dark:text-white/70"
+                key={link.id}
               >
                 {link.label}
-              </a>
-            </li>
-          ))}
+              </li>
+            ),
+          )}
         </ul>
       ) : (
         <p className="mt-4 text-sm leading-6 text-[var(--ink-3)]">{empty}</p>
@@ -343,7 +357,7 @@ export default async function ResearchDetailPage({ params }: ResearchPageProps) 
               <ul className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
                 {research.partners.map((partner, index) => (
                   <li className="text-sm text-[var(--ink-2)] dark:text-white/70" key={index}>
-                    {partner.url ? (
+                    {partner.url && safeResearchHref(partner.url) ? (
                       <a
                         className="underline decoration-[var(--line-strong)] underline-offset-4 transition hover:text-brand-red hover:decoration-brand-red/50"
                         href={partner.url}

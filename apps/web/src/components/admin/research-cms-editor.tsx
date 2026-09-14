@@ -401,6 +401,11 @@ function newPartner(): ResearchPartner {
   return { name: "" };
 }
 
+/** Site paths (a single leading slash) and http(s) URLs only, like the API. */
+function isSafeLink(value: string) {
+  return /^https?:\/\//i.test(value) || /^\/(?!\/)/.test(value);
+}
+
 function MilestoneEditor({
   milestone,
   onChange,
@@ -685,10 +690,24 @@ export function ResearchEditor({
         toast.error("Every milestone needs a date, title, and summary.");
         return;
       }
+      if (milestone.relatedUrl && !isSafeLink(milestone.relatedUrl)) {
+        toast.error("Milestone links must be site paths or https:// URLs.");
+        return;
+      }
     }
     for (const output of research.outputs) {
       if (!output.label.trim() || !output.href.trim()) {
         toast.error("Every linked output needs a label and a link.");
+        return;
+      }
+      if (!isSafeLink(output.href)) {
+        toast.error("Linked outputs must use site paths or https:// URLs.");
+        return;
+      }
+    }
+    for (const partner of research.partners ?? []) {
+      if (partner.url && !isSafeLink(partner.url)) {
+        toast.error("Partner websites must use https:// URLs.");
         return;
       }
     }
