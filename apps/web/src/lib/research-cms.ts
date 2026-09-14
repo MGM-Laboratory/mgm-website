@@ -194,10 +194,20 @@ export function latestMilestone(research: ResearchDraft) {
   return [...research.milestones].sort((left, right) => right.date.localeCompare(left.date))[0];
 }
 
-/** The representative year for year filters: start date wins, end date falls back. */
-export function researchYear(research: ResearchDraft) {
-  const value = research.startDate ?? research.endDate;
-  return value ? value.slice(0, 4) : undefined;
+/**
+ * Every year a record was active in, for the year filter: the date span
+ * plus the milestone dates. Milestones carry the real years of activity
+ * (papers, releases, evaluations), which a start date alone misses.
+ */
+export function researchYears(research: ResearchDraft) {
+  const years = new Set<string>();
+  const add = (value?: string) => {
+    if (value) years.add(value.slice(0, 4));
+  };
+  add(research.startDate);
+  add(research.endDate);
+  for (const milestone of research.milestones) add(milestone.date);
+  return [...years].sort();
 }
 
 /** Resolves a cover key to a loadable URL — bundled seed art or CMS media. */

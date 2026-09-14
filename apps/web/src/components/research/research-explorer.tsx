@@ -11,7 +11,7 @@ import {
   RESEARCH_STATUSES,
   RESEARCH_STATUS_LABELS,
   researchMembers,
-  researchYear,
+  researchYears,
   formatResearchDateShort,
   type CmsResearchRecord,
   type ResearchArea,
@@ -71,8 +71,7 @@ export function ResearchExplorer({
   const years = useMemo(() => {
     const found = new Set<string>();
     for (const record of records) {
-      const value = researchYear(record.research);
-      if (value) found.add(value);
+      for (const value of researchYears(record.research)) found.add(value);
     }
     return [...found].sort((left, right) => right.localeCompare(left));
   }, [records]);
@@ -83,7 +82,7 @@ export function ResearchExplorer({
         const research = record.research;
         if (area !== "all" && !research.areas.includes(area)) return false;
         if (status !== "all" && research.status !== status) return false;
-        if (year !== "all" && researchYear(research) !== year) return false;
+        if (year !== "all" && !researchYears(research).includes(year)) return false;
         return true;
       }),
     [area, records, status, year],
