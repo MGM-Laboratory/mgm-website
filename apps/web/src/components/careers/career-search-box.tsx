@@ -6,17 +6,9 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Drives the server-side job search through the URL: typing debounces into
- * `/careers?q=...` so results stay server-rendered and shareable. The active
- * focus/commitment/mode filters are preserved across searches.
+ * `/careers?q=...` so results stay server-rendered and shareable.
  */
-export function CareerSearchBox({
-  initialQuery = "",
-  preservedParams = "",
-}: {
-  initialQuery?: string;
-  /** Pre-built "focus=...&mode=..." query string without a leading `?`. */
-  preservedParams?: string;
-}) {
+export function CareerSearchBox({ initialQuery = "" }: { initialQuery?: string }) {
   const router = useRouter();
   const [value, setValue] = useState(initialQuery);
   const [lastQuery, setLastQuery] = useState(initialQuery);
@@ -38,10 +30,9 @@ export function CareerSearchBox({
 
   const navigate = (next: string) => {
     const trimmed = next.trim();
-    const parts = [preservedParams, trimmed ? `q=${encodeURIComponent(trimmed)}` : ""].filter(
-      Boolean,
+    router.replace(
+      trimmed ? `/careers?q=${encodeURIComponent(trimmed)}#careers` : "/careers#careers",
     );
-    router.replace(parts.length ? `/careers?${parts.join("&")}#careers` : "/careers#careers");
   };
 
   const change = (next: string) => {
