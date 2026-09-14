@@ -20,11 +20,9 @@ const inputClass =
 export function CareersCmsStudio({
   initialApplications = [],
   initialJobs = [],
-  maxCvBytes = 104_857_600,
 }: {
   initialApplications?: CmsJobApplicationRecord[];
   initialJobs?: CmsJobRecord[];
-  maxCvBytes?: number;
 }) {
   const [tab, setTab] = useState<"openings" | "applications">("openings");
   const { ready, records, setRecords } = useCareerRecords(initialJobs);
