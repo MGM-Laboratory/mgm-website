@@ -164,19 +164,22 @@ export function CareersJobEditor({
           method: "PUT",
         },
       );
-      const payload = (await response.json().catch(() => ({}))) as {
-        record?: CmsJobRecord;
+      // The save endpoint answers with the saved record itself (the same
+      // contract as articles), not a `{ record }` wrapper.
+      const payload = (await response.json().catch(() => ({}))) as Partial<CmsJobRecord> & {
         message?: string;
       };
-      if (!response.ok || !payload.record) {
+      if (!response.ok || !payload.job || !payload.slug) {
         throw new Error(
           typeof payload.message === "string" && payload.message
             ? payload.message
             : responseError(response),
         );
       }
-      onSaved(payload.record);
-      window.dispatchEvent(new CustomEvent("mgm:career-updated", { detail: payload.record }));
+      onSaved(payload as CmsJobRecord);
+      window.dispatchEvent(
+        new CustomEvent("mgm:career-updated", { detail: payload as CmsJobRecord }),
+      );
       setStatus("idle");
       toast.success("Role saved.");
     } catch (error) {
