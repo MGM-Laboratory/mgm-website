@@ -130,3 +130,11 @@ export async function requireAdminPermission(
   }
   return { status: 403 };
 }
+
+/** Gate for routes only the superadmin may use, like admin account CRUD. */
+export async function requireSuperadmin(): Promise<PermissionGate> {
+  const session = await getAdminSession();
+  if (!session) return { status: 401 };
+  if (session.role !== "superadmin") return { status: 403 };
+  return { status: 200, session };
+}
