@@ -13,6 +13,7 @@ import {
   Languages,
   Mail,
   Sparkles,
+  Star,
   type LucideIcon,
 } from "lucide-react";
 import gsap from "gsap";
@@ -327,12 +328,10 @@ function ProfilePortrait({
   member,
   photoKey,
   photoPosition,
-  sourceSlug,
 }: {
   member: Member;
   photoKey?: string;
   photoPosition?: CmsMemberProfile["photoPosition"];
-  sourceSlug?: string;
 }) {
   const initials = member.name
     .split(" ")
@@ -354,23 +353,19 @@ function ProfilePortrait({
         aria-hidden="true"
         className="absolute right-0 top-0 h-[58%] w-[22%] bg-[var(--ink)]/90 dark:bg-white/15"
       />
-      {photoKey || member.hasPortrait ? (
+      {photoKey ? (
         // Uploaded portraits resolve through a short-lived signed storage URL.
         // The browser can follow it directly; the Next image optimizer rejects it.
         <Image
-          src={
-            photoKey
-              ? `/api/member-cms/media/${photoKey}`
-              : `/members/${sourceSlug ?? member.slug}.png`
-          }
+          src={`/api/member-cms/media/${photoKey}`}
           alt={`Portrait of ${member.name}`}
           fill
-          key={photoKey ?? sourceSlug ?? member.slug}
+          key={photoKey}
           sizes="(max-width: 1023px) 100vw, 30vw"
-          unoptimized={Boolean(photoKey)}
-          className={photoKey ? "object-cover" : "object-contain object-bottom"}
+          unoptimized
+          className="object-cover"
           style={
-            photoKey && photoPosition
+            photoPosition
               ? {
                   objectPosition: `${photoPosition.x}% ${photoPosition.y}%`,
                   transform: `scale(${photoPosition.zoom})`,
@@ -675,11 +670,16 @@ export function MemberProfile({
               member={effectiveMember}
               photoKey={cmsProfile?.photoKey}
               photoPosition={cmsProfile?.photoPosition}
-              sourceSlug={override?.sourceSlug}
             />
             <ContactLinks links={cmsProfile?.links} profile={{ contacts: {}, raw: "" }} />
           </aside>
           <header className="min-w-0 self-start">
+            {effectiveMember.highlighted ? (
+              <span className="profile-reveal mb-4 inline-flex items-center gap-1.5 rounded-full bg-brand-yellow px-3 py-1 text-xs font-bold tracking-[0.08em] text-[var(--ink)] uppercase">
+                <Star size={13} strokeWidth={2.5} fill="currentColor" />
+                Coordinator
+              </span>
+            ) : null}
             <h1 className="profile-reveal font-display text-[clamp(2.75rem,6vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-[var(--ink)] dark:text-white">
               {effectiveMember.name}
             </h1>
