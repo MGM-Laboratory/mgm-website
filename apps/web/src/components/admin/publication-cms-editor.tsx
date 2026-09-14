@@ -10,6 +10,7 @@ import {
   FloppyDisk,
   ImageSquare,
   LinkSimple,
+  MagnifyingGlass,
   Plus,
   Tag,
   Trash,
@@ -127,6 +128,141 @@ function KeywordEditor({
 
 type AuthorPhotoUpload = { dataUrl: string; position: PhotoCropPosition };
 
+/**
+ * Searchable member picker for residence authors. With fifty-plus members a
+ * plain dropdown is unusable; this popover searches name, nickname, and
+ * division as you type.
+ */
+function MemberPicker({
+  members,
+  onClear,
+  onChoose,
+  selectedSlug,
+}: {
+  members: readonly Member[];
+  onClear: () => void;
+  onChoose: (memberSlug: string) => void;
+  selectedSlug?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const closeOnOutside = (event: MouseEvent) => {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  const selected = members.find((member) => member.slug === selectedSlug);
+  const needle = query.trim().toLocaleLowerCase();
+  const visible = members.filter(
+    (member) =>
+      !needle ||
+      [member.name, member.nickname, member.division]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(needle),
+  );
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <button
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className={`${inputClass} flex items-center gap-2 px-3 text-left`}
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <User className="shrink-0 text-[#8490a5]" size={16} />
+        <span
+          className={`min-w-0 flex-1 truncate ${selected ? "text-[#171b25] dark:text-white" : "text-[#9ba4b5] dark:text-white/25"}`}
+        >
+          {selected ? selected.name : "Search a member…"}
+        </span>
+        {selected ? (
+          <span
+            aria-label="Clear selected member"
+            className="grid size-6 shrink-0 place-items-center rounded-md text-[#8490a5] transition hover:bg-brand-red-50 hover:text-brand-red"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClear();
+            }}
+            role="button"
+          >
+            <X size={12} weight="bold" />
+          </span>
+        ) : (
+          <span className="shrink-0 font-mono text-[10px] text-[#9ba4b5]">{members.length}</span>
+        )}
+      </button>
+
+      {open ? (
+        <div
+          aria-label="Lab members"
+          className="absolute left-0 top-[calc(100%+0.4rem)] z-40 w-full rounded-2xl border border-[#dfe4ee] bg-white p-2 shadow-[0_24px_55px_-28px_rgba(20,32,58,0.36)] dark:border-white/10 dark:bg-[#171b25]"
+          role="listbox"
+        >
+          <div className="relative">
+            <MagnifyingGlass
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+              size={14}
+            />
+            <input
+              autoFocus
+              className="h-9 w-full rounded-lg border border-[#d9dfeb] bg-white pl-8 pr-3 text-sm outline-none focus:border-brand-blue dark:border-white/10 dark:bg-white/[0.05] dark:text-white"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search name, nickname, or division"
+              value={query}
+            />
+          </div>
+          <div className="mt-2 max-h-56 overflow-y-auto">
+            {visible.map((member) => {
+              const active = member.slug === selectedSlug;
+              return (
+                <button
+                  aria-selected={active}
+                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition ${active ? "bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/20" : "text-[#4f5a6f] hover:bg-[#f5f7fb] dark:text-white/70 dark:hover:bg-white/[0.06]"}`}
+                  key={member.slug}
+                  onClick={() => {
+                    onChoose(member.slug);
+                    setOpen(false);
+                  }}
+                  role="option"
+                  type="button"
+                >
+                  <span
+                    className={`grid size-4 shrink-0 place-items-center rounded border transition ${active ? "border-brand-blue bg-brand-blue text-white" : "border-[#c6cedd] dark:border-white/20"}`}
+                  >
+                    {active ? <Check size={11} weight="bold" /> : null}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{member.name}</span>
+                  <span className="shrink-0 truncate text-[11px] text-[#9ba4b5]">
+                    {member.division}
+                  </span>
+                </button>
+              );
+            })}
+            {!visible.length ? (
+              <p className="px-2 py-4 text-center text-xs text-[#9ba4b5]">No members match.</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function AuthorRow({
   author,
   index,
@@ -229,24 +365,12 @@ function AuthorRow({
       {kind === "residence" ? (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Field label="Lab member">
-            <div className="relative">
-              <User
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-                size={16}
-              />
-              <select
-                className={`${inputClass} appearance-none pl-9 pr-8`}
-                onChange={(event) => chooseMember(event.target.value)}
-                value={author.memberSlug ?? ""}
-              >
-                <option value="">Choose a member</option>
-                {members.map((member) => (
-                  <option key={member.slug} value={member.slug}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <MemberPicker
+              members={members}
+              onChoose={chooseMember}
+              onClear={() => onChange({ ...author, memberSlug: undefined, name: "" })}
+              selectedSlug={author.memberSlug}
+            />
           </Field>
           <Field label="Affiliation / organization">
             <input
