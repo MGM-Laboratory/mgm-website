@@ -26,13 +26,16 @@ import { StorageService } from "../storage/storage.service.js";
 import { CmsPublicationsService } from "./cms-publications.service.js";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+// Full dates for freshly published records; year-only for older records
+// whose month and day the sources never state.
+const DATE_PATTERN = /^\d{4}(?:-\d{2}-\d{2})?$/;
 
 export const PUBLICATION_TYPES = [
   "journal-article",
   "conference-paper",
   "preprint",
   "book-chapter",
+  "book",
   "thesis",
 ] as const;
 

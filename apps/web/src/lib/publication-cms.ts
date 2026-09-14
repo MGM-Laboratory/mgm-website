@@ -1,7 +1,7 @@
 /** Shared types and citation tooling for the publications editorial workflow. */
 
 export type PublicationType =
-  "journal-article" | "conference-paper" | "preprint" | "book-chapter" | "thesis";
+  "journal-article" | "conference-paper" | "preprint" | "book-chapter" | "book" | "thesis";
 
 export type PublicationAuthorKind = "residence" | "non-residence";
 
@@ -70,6 +70,7 @@ export const PUBLICATION_TYPES: {
   { id: "conference-paper", label: "Conference Paper", bibtex: "inproceedings", ris: "CONF" },
   { id: "preprint", label: "Preprint", bibtex: "misc", ris: "ELEC" },
   { id: "book-chapter", label: "Book Chapter", bibtex: "incollection", ris: "CHAP" },
+  { id: "book", label: "Book", bibtex: "book", ris: "BOOK" },
   { id: "thesis", label: "Thesis", bibtex: "phdthesis", ris: "THES" },
 ];
 
@@ -187,10 +188,13 @@ export function doiUrl(doi?: string) {
   return `https://doi.org/${doi}`;
 }
 
-/** Formats an ISO date the way the article template does: "Sabtu, 31 Agustus 2024". */
+/** Formats an ISO date the way the article template does: "Sabtu, 31 Agustus 2024".
+ *  Year-only dates (older records whose month and day were never stated)
+ *  render as just the year. */
 export function formatPublicationDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return value;
+  if (!year) return value;
+  if (!month || !day) return String(year);
   return new Date(year, month - 1, day).toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",
