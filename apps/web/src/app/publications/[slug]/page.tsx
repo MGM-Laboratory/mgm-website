@@ -144,7 +144,7 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
             <MetaRow label="Publisher" value={publication.publisher} />
             <MetaRow
               label="Published"
-              value={formatPublicationDate(publication.date).split(",").slice(1).join(",").trim()}
+              value={formatPublicationDate(publication.date).replace(/^[^,]+, /, "")}
             />
             <MetaRow label="License" value={publication.license} />
             <MetaRow
@@ -199,17 +199,19 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
           ) : null}
 
           {/* Abstract. */}
-          <section aria-labelledby="abstract-heading" className="mt-14">
-            <h2
-              className="font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white"
-              id="abstract-heading"
-            >
-              Abstract
-            </h2>
-            <p className="mt-4 max-w-[720px] text-[1.0625rem] leading-8 text-[var(--ink-2)] dark:text-[#c3c7d1]">
-              {publication.abstract}
-            </p>
-          </section>
+          {publication.abstract ? (
+            <section aria-labelledby="abstract-heading" className="mt-14">
+              <h2
+                className="font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white"
+                id="abstract-heading"
+              >
+                Abstract
+              </h2>
+              <p className="mt-4 max-w-[720px] text-[1.0625rem] leading-8 text-[var(--ink-2)] dark:text-[#c3c7d1]">
+                {publication.abstract}
+              </p>
+            </section>
+          ) : null}
 
           {/* The paper itself. */}
           <div className="mt-14">
