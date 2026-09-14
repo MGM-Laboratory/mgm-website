@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
-import { fetchCareerFeed, openJobs } from "@/lib/career-cms";
+import { openJobs } from "@/lib/career-cms";
+import { fetchCareerFeed } from "@/lib/career-cms-server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

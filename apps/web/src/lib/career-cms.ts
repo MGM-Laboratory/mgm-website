@@ -1,6 +1,3 @@
-import "server-only";
-
-import { cmsApi } from "@/lib/cms-api";
 import { formatArticleDate, type ArticleBlock } from "@/lib/article-cms";
 
 export const JOB_COMMITMENTS = [
@@ -16,6 +13,26 @@ export const JOB_STATUSES = ["draft", "published", "closed"] as const;
 export type JobCommitment = (typeof JOB_COMMITMENTS)[number];
 export type JobMode = (typeof JOB_MODES)[number];
 export type JobStatus = (typeof JOB_STATUSES)[number];
+
+export const COMMITMENT_LABELS: Record<JobCommitment, string> = {
+  "full-time": "Full-time",
+  "part-time": "Part-time",
+  project: "Project-based",
+  internship: "Internship",
+  volunteer: "Volunteer",
+};
+
+export const MODE_LABELS: Record<JobMode, string> = {
+  onsite: "On-site",
+  remote: "Remote",
+  hybrid: "Hybrid",
+};
+
+export const STATUS_LABELS: Record<JobStatus, string> = {
+  draft: "Draft",
+  published: "Published",
+  closed: "Closed",
+};
 
 export type JobDraft = {
   slug: string;
@@ -94,31 +111,15 @@ export function daysUntilDeadline(job: JobDraft, now = todayUtc()) {
   return Math.round((deadlineMs - nowMs) / 86_400_000);
 }
 
-export async function fetchCareerFeed(): Promise<CmsJobRecord[]> {
-  const response = await cmsApi("/cms/jobs");
-  if (!response.ok) return [];
-  const payload = (await response.json()) as { records?: CmsJobRecord[] };
-  return payload.records ?? [];
-}
-
-/** One role with its full document, or undefined for missing/draft records. */
-export async function fetchCareerRecord(slug: string): Promise<CmsJobRecord | undefined> {
-  const response = await cmsApi(`/cms/jobs/${encodeURIComponent(slug)}`);
-  if (!response.ok) return undefined;
-  const payload = (await response.json()) as { record?: CmsJobRecord };
-  return payload.record;
-}
-
-export async function fetchCareerAdminList(): Promise<CmsJobRecord[]> {
-  const response = await cmsApi("/cms/jobs/admin");
-  if (!response.ok) return [];
-  const payload = (await response.json()) as { records?: CmsJobRecord[] };
-  return payload.records ?? [];
-}
-
-export async function fetchCareerApplications(): Promise<CmsJobApplicationRecord[]> {
-  const response = await cmsApi("/cms/jobs/applications");
-  if (!response.ok) return [];
-  const payload = (await response.json()) as { records?: CmsJobApplicationRecord[] };
-  return payload.records ?? [];
+export function emptyJobDraft(): JobDraft {
+  return {
+    slug: "",
+    title: "",
+    focus: "",
+    commitment: "part-time",
+    mode: "hybrid",
+    deadline: "",
+    perks: [],
+    status: "draft",
+  };
 }
