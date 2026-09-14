@@ -380,11 +380,12 @@ export class CmsJobsController {
   }
 
   /**
-   * Falls back to 100 MB when the variable is unset so a missing env entry
-   * can never take the route down.
+   * Read straight from process.env: the validated config may not know this
+   * variable yet, and the route must never depend on that. Falls back to
+   * 100 MB when unset.
    */
   private maxCvBytes() {
-    const configured = this.config.get<number>("CMS_MAX_CV_BYTES");
-    return typeof configured === "number" && configured > 0 ? configured : 104_857_600;
+    const configured = Number(process.env.CMS_MAX_CV_BYTES);
+    return Number.isFinite(configured) && configured > 0 ? configured : 104_857_600;
   }
 }

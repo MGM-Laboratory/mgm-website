@@ -42,5 +42,13 @@ export async function POST(request: Request, { params }: Context) {
     // Node's fetch requires an explicit duplex mode for streamed bodies.
     duplex: "half",
   } as RequestInit);
-  return NextResponse.json(await response.json(), { status: response.status });
+  // The API answers JSON; anything else (an upstream HTML error page) must
+  // not blow up the proxy — relay it as a readable failure instead.
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    body = { message: "We could not submit your application right now. Please try again." };
+  }
+  return NextResponse.json(body, { status: response.status });
 }
