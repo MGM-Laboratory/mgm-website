@@ -20,7 +20,7 @@ export default async function AdminLoginPage({
           Editor access
         </h1>
         <p className="mt-3 max-w-sm text-sm leading-6 text-[#68758a]">
-          Enter the laboratory passphrase to manage member profiles.
+          Enter your administrator passphrase to open the workspace.
         </p>
         <form action="/api/admin/login" method="post" className="mt-8 space-y-3">
           <label className="block text-sm font-medium text-[#3e4859]" htmlFor="passphrase">
@@ -36,7 +36,9 @@ export default async function AdminLoginPage({
             type="password"
           />
           {error ? (
-            <p className="text-sm text-brand-red-200">That passphrase does not match.</p>
+            <p className="text-sm text-brand-red-200">
+              That passphrase does not match an administrator account.
+            </p>
           ) : null}
           <button
             className="mt-3 inline-flex h-12 w-full items-center justify-center rounded-xl bg-brand-blue px-5 text-sm font-semibold text-white transition hover:bg-brand-blue/90 active:scale-[0.98]"
