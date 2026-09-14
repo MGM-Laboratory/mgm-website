@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { createAdminSession, isValidPassphrase } from "@/lib/admin-session";
+import { createAdminSession, isValidPassphrase, SUPERADMIN_ACCOUNT_ID } from "@/lib/admin-session";
+import type { CmsAdminRecord } from "@/lib/admin-permissions";
+import { apiBaseUrl } from "@/lib/cms-api";
 
 function publicOrigin(request: Request) {
   const requestUrl = new URL(request.url);
@@ -15,10 +17,28 @@ export async function POST(request: Request) {
   const passphrase = String(form.get("passphrase") ?? "");
   const origin = publicOrigin(request);
 
-  if (!isValidPassphrase(passphrase)) {
-    return NextResponse.redirect(new URL("/admin/login?error=1", origin), 303);
+  // The environment passphrase logs in as the superadmin.
+  if (isValidPassphrase(passphrase)) {
+    await createAdminSession(SUPERADMIN_ACCOUNT_ID, 1);
+    return NextResponse.redirect(new URL("/admin", origin), 303);
   }
 
-  await createAdminSession();
-  return NextResponse.redirect(new URL("/admin", origin), 303);
+  // Otherwise the passphrase belongs to a managed admin account. The verify
+  // endpoint is public by design, so this fetch deliberately sends no
+  // x-cms-passphrase header.
+  const response = await fetch(`${apiBaseUrl()}/cms/admins/verify`, {
+    method: "POST",
+    cache: "no-store",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ passphrase }),
+  });
+  if (response.ok) {
+    const { account } = (await response.json()) as { account?: CmsAdminRecord };
+    if (account?.slug) {
+      await createAdminSession(account.slug, account.sessionVersion);
+      return NextResponse.redirect(new URL("/admin", origin), 303);
+    }
+  }
+
+  return NextResponse.redirect(new URL("/admin/login?error=1", origin), 303);
 }
