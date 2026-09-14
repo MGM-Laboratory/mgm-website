@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { CareerDescriptionPreview } from "@/components/careers/career-description-preview";
+import { ArticleBody } from "@/components/articles/article-body";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import {
   COMMITMENT_LABELS,
@@ -26,19 +26,19 @@ export async function generateMetadata({
   if (!record) return { title: "Role not found | MGM Laboratory" };
   return {
     title: `${record.job.title} | MGM Laboratory`,
-    description: `${record.job.focus} role — apply by ${formatJobDeadline(record.job.deadline)}.`,
+    description: `${record.job.focus} role. Apply by ${formatJobDeadline(record.job.deadline)}.`,
   };
 }
 
 const META_CELL = "bg-white p-5 dark:bg-[#0e1116]";
 
-function ApplyButton({ slug, label = "Apply now" }: { slug: string; label?: string }) {
+function ApplyButton({ slug }: { slug: string }) {
   return (
     <Link
       className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#0e1116] px-8 text-sm font-semibold text-white transition hover:bg-brand-blue active:scale-[0.98] dark:bg-white dark:text-[#0e1116] dark:hover:bg-brand-yellow"
       href={`/careers/${slug}/apply`}
     >
-      {label}
+      Apply now
       <ArrowRight aria-hidden="true" size={16} strokeWidth={2.25} />
     </Link>
   );
@@ -58,7 +58,11 @@ function ClosedBanner() {
           This role is no longer accepting applications.
         </p>
         <p className="mt-1 text-sm leading-6 text-[var(--ink-2)] dark:text-[#c3c7d1]">
-          The deadline has passed or the lab closed the opening. Browse the other open roles.
+          The deadline has passed or the lab closed the opening.{" "}
+          <Link className="text-brand-blue hover:underline" href="/careers">
+            Browse the other open roles
+          </Link>
+          .
         </p>
       </div>
     </div>
@@ -133,24 +137,11 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
             <MetaPanel job={job} />
           </div>
 
-          {/* The Apply CTA sits above the fold of the description on purpose:
-              applicants should see where to apply before reading everything. */}
-          <div className="mt-8">{accepting ? <ApplyButton slug={slug} /> : <ClosedBanner />}</div>
-
-          {content.length ? (
-            <div className="mt-14">
-              <h2 className="font-mono text-[10px] font-bold tracking-[0.16em] text-[var(--ink-3)] uppercase dark:text-white/45">
-                About the role
-              </h2>
-              <div className="mt-6">
-                <CareerDescriptionPreview blocks={content} />
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-14 border-t border-[var(--line)] pt-10">
+          {/* The deadline sits directly above the single Apply CTA so applicants
+              see both at once, before reading the full description. */}
+          <div className="mt-8">
             {accepting ? (
-              <div>
+              <>
                 <p className="text-sm text-[var(--ink-2)] dark:text-[#c3c7d1]">
                   Applications are open until{" "}
                   <span className="font-semibold text-[var(--ink)] dark:text-white">
@@ -158,14 +149,25 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                   </span>
                   .
                 </p>
-                <div className="mt-5">
-                  <ApplyButton slug={slug} label="Apply for this role" />
+                <div className="mt-4">
+                  <ApplyButton slug={slug} />
                 </div>
-              </div>
+              </>
             ) : (
               <ClosedBanner />
             )}
           </div>
+
+          {content.length ? (
+            <div className="mt-14">
+              <h2 className="font-mono text-[10px] font-bold tracking-[0.16em] text-[var(--ink-3)] uppercase dark:text-white/45">
+                About the role
+              </h2>
+              <div className="mt-6">
+                <ArticleBody blocks={content} />
+              </div>
+            </div>
+          ) : null}
         </section>
       </main>
       <CtaFooter />

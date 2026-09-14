@@ -66,7 +66,7 @@ export function JobApplicationForm({
         : "Enter your full name."
       : null;
   // Email is validated on blur only, and an empty field is left alone until
-  // the applicant actually submits — no punishing an in-progress field.
+  // the applicant actually submits - no punishing an in-progress field.
   const emailError =
     touched.email || attempted
       ? email.trim()
@@ -94,7 +94,7 @@ export function JobApplicationForm({
     touched.motivation || attempted
       ? motivation.trim().length >= 10
         ? null
-        : "Tell us a bit more — at least 10 characters."
+        : "Tell us a bit more, at least 10 characters."
       : null;
   const termsError = attempted && !agreedToTerms ? "You must agree to continue." : null;
 
@@ -113,7 +113,7 @@ export function JobApplicationForm({
   const submit = async () => {
     setAttempted(true);
     setSubmitError(null);
-    // Validated from the live field values — render-time errors only cover
+    // Validated from the live field values - render-time errors only cover
     // touched fields, and an untouched empty field must not slip through.
     const firstError = [
       fullName.trim().length >= 2 ? null : "Enter your full name.",
@@ -131,7 +131,7 @@ export function JobApplicationForm({
           : "Your NIM is required for Universitas Brawijaya applicants."
         : null,
       isUb && !faculty ? "Choose the faculty you're based in." : null,
-      motivation.trim().length >= 10 ? null : "Tell us a bit more — at least 10 characters.",
+      motivation.trim().length >= 10 ? null : "Tell us a bit more, at least 10 characters.",
       agreedToTerms ? null : "You must agree to continue.",
     ].find((message) => message !== null);
     if (firstError || !cvFile) return;
@@ -216,7 +216,7 @@ export function JobApplicationForm({
                 Universitas Brawijaya student
               </span>
               <span className="mt-1 block text-xs leading-5 text-[var(--ink-3)]">
-                You&apos;re a UB student or lecturer — include your NIM/NIDN and faculty.
+                You&apos;re a UB student or lecturer, so include your NIM/NIDN and faculty.
               </span>
             </span>
           </button>

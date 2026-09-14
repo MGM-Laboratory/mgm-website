@@ -116,7 +116,7 @@ export function CareerCvDropzone({
               Drag &amp; drop your CV here, or <span className="text-brand-blue">browse files</span>
             </p>
             <p className="mt-1 text-xs text-[var(--ink-3)]">
-              PDF or Word (.pdf, .doc, .docx) — up to {Math.floor(maxBytes / 1024 / 1024)} MB
+              PDF or Word (.pdf, .doc, .docx), up to {Math.floor(maxBytes / 1024 / 1024)} MB
             </p>
           </>
         )}

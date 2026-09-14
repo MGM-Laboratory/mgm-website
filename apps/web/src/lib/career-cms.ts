@@ -89,7 +89,7 @@ export function isOpenJob(job: JobDraft, now = todayUtc()) {
   return job.status === "published" && job.deadline >= now;
 }
 
-/** Open roles, soonest deadline first — the public listing order. */
+/** Open roles, soonest deadline first - the public listing order. */
 export function openJobs(records: readonly CmsJobRecord[], now = todayUtc()) {
   return records
     .filter((record) => isOpenJob(record.job, now))
@@ -100,7 +100,7 @@ export function jobAcceptingApplications(job: JobDraft, now = todayUtc()) {
   return isOpenJob(job, now);
 }
 
-/** "Rabu, 31 Desember 2099" — the same id-ID long form articles use. */
+/** "Rabu, 31 Desember 2099" - the same id-ID long form articles use. */
 export function formatJobDeadline(value: string) {
   return formatArticleDate(value);
 }

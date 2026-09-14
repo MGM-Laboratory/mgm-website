@@ -19,7 +19,7 @@ export async function generateMetadata({
   const record = await fetchCareerRecord(slug);
   if (!record) return { title: "Role not found | MGM Laboratory" };
   return {
-    title: `Apply — ${record.job.title} | MGM Laboratory`,
+    title: `Apply to ${record.job.title} | MGM Laboratory`,
     description: `Submit your application for ${record.job.title} at MGM Laboratory.`,
   };
 }
