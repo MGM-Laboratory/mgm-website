@@ -20,7 +20,7 @@ import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 import { MEMBERS } from "@/data/members";
 
 export const metadata: Metadata = {
-  title: "Articles — MGM Laboratory",
+  title: "Articles | MGM Laboratory",
   description: "Writing from MGM Laboratory on research, design, and engineering.",
 };
 
@@ -88,7 +88,7 @@ export default async function ArticlesPage({
             Articles
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-7 text-[var(--ink-2)] dark:text-[#c3c7d1]">
-            Notes and write-ups from the lab — research findings, design decisions, and engineering
+            Notes and write-ups from the lab: research findings, design decisions, and engineering
             lessons worth sharing.
           </p>
         </section>
