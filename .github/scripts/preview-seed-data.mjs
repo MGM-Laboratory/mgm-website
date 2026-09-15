@@ -157,14 +157,37 @@ const previewS3 = new S3Client({
   },
 });
 
-let copied = 0;
-let skipped = 0;
-for (const key of storageKeys) {
+// A single hanging GetObject/PutObject used to stall the whole job forever —
+// confirmed live: a run sat silent for 6+ minutes on the very first object
+// with zero AWS SDK error, because S3Client has no request timeout by
+// default. Every call now races against an AbortController, and objects
+// copy with bounded concurrency instead of one at a time so 278 objects
+// doesn't mean 278 sequential round trips.
+const PER_REQUEST_TIMEOUT_MS = 20_000;
+const CONCURRENCY = 8;
+
+function withTimeout(ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error(`timed out after ${ms}ms`)),
+    ms,
+  ).unref();
+  return { signal: controller.signal, clear: () => clearTimeout(timer) };
+}
+
+async function copyObject(key) {
+  const get = withTimeout(PER_REQUEST_TIMEOUT_MS);
+  let obj;
   try {
-    const obj = await prodS3.send(
-      new GetObjectCommand({ Bucket: prodVars.AWS_S3_BUCKET, Key: key }),
-    );
-    const bytes = await obj.Body.transformToByteArray();
+    obj = await prodS3.send(new GetObjectCommand({ Bucket: prodVars.AWS_S3_BUCKET, Key: key }), {
+      abortSignal: get.signal,
+    });
+  } finally {
+    get.clear();
+  }
+  const bytes = await obj.Body.transformToByteArray();
+  const put = withTimeout(PER_REQUEST_TIMEOUT_MS);
+  try {
     await previewS3.send(
       new PutObjectCommand({
         Bucket: previewVars.AWS_S3_BUCKET,
@@ -172,13 +195,33 @@ for (const key of storageKeys) {
         Body: bytes,
         ContentType: obj.ContentType,
       }),
+      { abortSignal: put.signal },
     );
-    copied++;
-  } catch (err) {
-    skipped++;
-    console.warn(`Skipping object ${key}: ${err.message}`);
+  } finally {
+    put.clear();
   }
 }
+
+let copied = 0;
+let skipped = 0;
+const keys = [...storageKeys];
+let cursor = 0;
+async function worker() {
+  while (cursor < keys.length) {
+    const key = keys[cursor++];
+    try {
+      await copyObject(key);
+      copied++;
+    } catch (err) {
+      skipped++;
+      console.warn(`Skipping object ${key}: ${err.message}`);
+    }
+    if ((copied + skipped) % 25 === 0) {
+      console.log(`Storage copy progress: ${copied + skipped}/${keys.length}`);
+    }
+  }
+}
+await Promise.all(Array.from({ length: Math.min(CONCURRENCY, keys.length) }, worker));
 
 console.log("Minting a fresh superadmin...");
 const ALL_PAGES = ["articles", "publications", "members", "projects", "research", "careers"];
