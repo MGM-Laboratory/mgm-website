@@ -1,20 +1,28 @@
 "use client";
 
-import { FloppyDisk, MapPin, Plus, Trash, X } from "@phosphor-icons/react";
+import {
+  ArrowSquareOut,
+  Camera,
+  Check,
+  FloppyDisk,
+  MapPin,
+  Plus,
+  Trash,
+  X,
+} from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
+import Cropper, { type Area } from "react-easy-crop";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { isArticleSlug, slugify, type ArticleBlock } from "@/lib/article-cms";
 import {
-  EVENT_COLORS,
   dateOnlyToUtcMidnightIso,
   emptyEventDraft,
   utcIsoToDateOnly,
   utcIsoToWibLocal,
   wibLocalToUtcIso,
   type CmsEventRecord,
-  type EventColor,
   type EventDraft,
   type EventRundownItem,
   type EventSpeaker,
@@ -53,20 +61,6 @@ const RESERVED_EVENT_SLUGS = new Set([
   "resolve-maps-link",
 ]);
 
-const COLOR_LABELS: Record<EventColor, string> = {
-  blue: "Blue",
-  yellow: "Yellow",
-  red: "Red",
-  green: "Green",
-};
-
-const COLOR_SWATCH: Record<EventColor, string> = {
-  blue: "bg-brand-blue",
-  yellow: "bg-brand-yellow",
-  red: "bg-brand-red",
-  green: "bg-brand-green",
-};
-
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -74,6 +68,140 @@ function readAsDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error("Could not read the file."));
     reader.readAsDataURL(file);
   });
+}
+
+/** Canvas-crops a source image to the given pixel area, re-encoded as a JPEG data URL. */
+async function cropImage(source: string, crop: Area) {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new window.Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("This image could not be prepared."));
+    element.src = source;
+  });
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+  const width = Math.max(1, Math.round(crop.width * scaleX));
+  const height = Math.max(1, Math.round(crop.height * scaleY));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("This image could not be prepared.");
+  context.drawImage(
+    image,
+    Math.round(crop.x * scaleX),
+    Math.round(crop.y * scaleY),
+    width,
+    height,
+    0,
+    0,
+    width,
+    height,
+  );
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
+/** Locks the thumbnail to 16:9 — every event card and detail cover renders at that ratio. */
+function ThumbnailCropDialog({
+  image,
+  onClose,
+  onConfirm,
+}: {
+  image: string;
+  onClose: () => void;
+  onConfirm: (thumbnail: string) => void;
+}) {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedArea, setCroppedArea] = useState<Area>();
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const confirm = async () => {
+    if (!croppedArea) return;
+    setBusy(true);
+    try {
+      onConfirm(await cropImage(image, croppedArea));
+    } catch (error) {
+      toast.error("Thumbnail could not be prepared", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#0e1116]/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl dark:bg-[#171b25]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-display text-lg font-semibold tracking-[-0.03em]">Crop thumbnail</p>
+            <p className="mt-0.5 text-xs text-[#7e899d] dark:text-white/45">
+              Thumbnails always render at a 16:9 ratio.
+            </p>
+          </div>
+          <button
+            aria-label="Close thumbnail cropper"
+            className="rounded-lg p-2 text-[#7e899d] transition hover:bg-brand-red-50 hover:text-brand-red dark:hover:bg-brand-red/15"
+            onClick={onClose}
+            type="button"
+          >
+            <X size={17} />
+          </button>
+        </div>
+        <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-xl bg-[#e8ecf4] dark:bg-[#1a202b]">
+          <Cropper
+            aspect={16 / 9}
+            crop={crop}
+            image={image}
+            objectFit="contain"
+            onCropChange={setCrop}
+            onCropComplete={(_area, areaPixels) => setCroppedArea(areaPixels)}
+            onZoomChange={setZoom}
+            zoom={zoom}
+          />
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <span className="text-xs font-semibold text-[#7e899d] dark:text-white/45">Zoom</span>
+          <input
+            className="flex-1 accent-brand-blue"
+            max={3}
+            min={1}
+            onChange={(event) => setZoom(Number(event.target.value))}
+            step={0.01}
+            type="range"
+            value={zoom}
+          />
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            className="h-10 rounded-xl px-4 text-sm font-semibold text-[#5d687d] transition hover:bg-[#f5f7fb] dark:text-white/60 dark:hover:bg-white/10"
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white transition hover:bg-brand-blue active:scale-[0.98] disabled:opacity-60"
+            disabled={busy || !croppedArea}
+            onClick={() => void confirm()}
+            type="button"
+          >
+            <Check size={16} weight="bold" />
+            {busy ? "Cropping…" : "Use thumbnail"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function responseError(response: Response) {
@@ -106,7 +234,6 @@ export function EventEditor({
           allDay: initialRecord.allDay,
           location: initialRecord.location ?? "",
           meetingLink: initialRecord.meetingLink ?? "",
-          color: initialRecord.color,
           draft: initialRecord.draft,
           thumbnailKey: initialRecord.thumbnailKey,
           speakers: initialRecord.speakers.map((speaker) => ({ ...speaker })),
@@ -128,6 +255,7 @@ export function EventEditor({
   const [slugTouched, setSlugTouched] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [thumbnailToEdit, setThumbnailToEdit] = useState<string>();
   const [resolvingMaps, setResolvingMaps] = useState(false);
   const sourceSlug = initialRecord?.slug;
   const uploadSlug = sourceSlug ?? (draft.slug || "draft");
@@ -164,12 +292,7 @@ export function EventEditor({
             : null
       : null;
 
-  async function uploadImage(file: File): Promise<string | undefined> {
-    if (file.size > 6 * 1024 * 1024) {
-      toast.error("Images must be under 6 MB.");
-      return undefined;
-    }
-    const dataUrl = await readAsDataUrl(file);
+  async function uploadDataUrl(dataUrl: string): Promise<string | undefined> {
     const response = await fetch(`/api/admin/events/${encodeURIComponent(uploadSlug)}/media`, {
       body: JSON.stringify({ image: dataUrl }),
       headers: { "content-type": "application/json" },
@@ -185,13 +308,28 @@ export function EventEditor({
     return payload.key;
   }
 
-  const pickThumbnail = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  async function uploadImage(file: File): Promise<string | undefined> {
+    if (file.size > 6 * 1024 * 1024) {
+      toast.error("Images must be under 6 MB.");
+      return undefined;
+    }
+    return uploadDataUrl(await readAsDataUrl(file));
+  }
+
+  const pickThumbnail = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file) return;
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => setThumbnailToEdit(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const confirmThumbnailCrop = async (cropped: string) => {
+    setThumbnailToEdit(undefined);
     setUploadingThumbnail(true);
     try {
-      const key = await uploadImage(file);
+      const key = await uploadDataUrl(cropped);
       if (key) setDraft((current) => ({ ...current, thumbnailKey: key }));
     } catch (error) {
       toast.error("Could not upload the thumbnail.", {
@@ -411,6 +549,17 @@ export function EventEditor({
             {status === "saving" ? "Saving…" : "Save event"}
           </button>
           {initialRecord ? (
+            <a
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
+              href={`/events/${initialRecord.slug}`}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <ArrowSquareOut size={15} weight="bold" />
+              See event
+            </a>
+          ) : null}
+          {initialRecord ? (
             <button
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-red/40 hover:text-brand-red dark:border-white/10 dark:text-white/55"
               onClick={() => void remove()}
@@ -446,17 +595,20 @@ export function EventEditor({
           />
         </Field>
         <Field label="URL">
-          <input
-            className={inputClass}
-            onBlur={() => setSlugTouched(true)}
-            onChange={(event) => {
-              setSlugTouched(true);
-              setDraft((current) => ({ ...current, slug: event.target.value }));
-            }}
-            placeholder="autumn-demo-night"
-            type="text"
-            value={draft.slug}
-          />
+          <div className="flex h-10 items-center overflow-hidden rounded-xl border border-[#d9dfeb] bg-white pl-3 transition focus-within:border-brand-blue focus-within:ring-4 focus-within:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045]">
+            <span className="shrink-0 text-sm text-[#9ba4b5] select-none">events/</span>
+            <input
+              className="h-full w-full border-0 bg-transparent px-1 text-sm text-[#171b25] outline-none placeholder:text-[#9ba4b5] dark:text-white dark:placeholder:text-white/25"
+              onBlur={() => setSlugTouched(true)}
+              onChange={(event) => {
+                setSlugTouched(true);
+                setDraft((current) => ({ ...current, slug: event.target.value }));
+              }}
+              placeholder="autumn-demo-night"
+              type="text"
+              value={draft.slug}
+            />
+          </div>
           {slugError ? <p className="mt-1.5 text-xs text-brand-red">{slugError}</p> : null}
         </Field>
       </div>
@@ -473,53 +625,32 @@ export function EventEditor({
         />
       </Field>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Thumbnail">
-          <div className="flex items-center gap-3">
-            {mediaUrl(draft.thumbnailKey) ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                alt=""
-                className="size-16 shrink-0 rounded-xl object-cover"
-                src={mediaUrl(draft.thumbnailKey)}
-              />
-            ) : (
-              <div className="grid size-16 shrink-0 place-items-center rounded-xl bg-[#f2f5fa] text-[10px] text-[#9ba4b5] dark:bg-white/[0.06]">
-                None
-              </div>
-            )}
-            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55">
-              {uploadingThumbnail ? "Uploading…" : "Upload image"}
-              <input
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                disabled={uploadingThumbnail}
-                onChange={(event) => void pickThumbnail(event)}
-                type="file"
-              />
-            </label>
-          </div>
-        </Field>
-        <Field label="Category color">
-          <div className="flex flex-wrap gap-2">
-            {EVENT_COLORS.map((color) => (
-              <button
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                  draft.color === color
-                    ? "border-transparent bg-[#171b25] text-white dark:bg-white dark:text-[#0e1116]"
-                    : "border-[#d9dfeb] text-[#5d687d] hover:border-brand-blue/50 dark:border-white/10 dark:text-white/55"
-                }`}
-                key={color}
-                onClick={() => setDraft((current) => ({ ...current, color }))}
-                type="button"
-              >
-                <span className={`size-2.5 rounded-full ${COLOR_SWATCH[color]}`} />
-                {COLOR_LABELS[color]}
-              </button>
-            ))}
-          </div>
-        </Field>
-      </div>
+      <Field label="Thumbnail (16:9)">
+        <div className="flex items-center gap-3">
+          {mediaUrl(draft.thumbnailKey) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt=""
+              className="aspect-video w-28 shrink-0 rounded-lg object-cover"
+              src={mediaUrl(draft.thumbnailKey)}
+            />
+          ) : (
+            <div className="grid aspect-video w-28 shrink-0 place-items-center rounded-lg bg-[#f2f5fa] text-[10px] text-[#9ba4b5] dark:bg-white/[0.06]">
+              None
+            </div>
+          )}
+          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55">
+            {uploadingThumbnail ? "Uploading…" : "Upload image"}
+            <input
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              disabled={uploadingThumbnail}
+              onChange={pickThumbnail}
+              type="file"
+            />
+          </label>
+        </div>
+      </Field>
 
       <div className="grid gap-6 sm:grid-cols-2">
         <label className="flex items-center gap-2 text-sm font-semibold text-[#5d687d] sm:col-span-2 dark:text-white/55">
@@ -727,16 +858,29 @@ export function EventEditor({
               className="flex flex-wrap items-center gap-3 rounded-xl border border-[#eef1f7] p-3 dark:border-white/[0.06]"
               key={index}
             >
-              {mediaUrl(speaker.photoKey) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt=""
-                  className="size-10 shrink-0 rounded-full object-cover"
-                  src={mediaUrl(speaker.photoKey)}
+              <label
+                className={`relative size-10 shrink-0 cursor-pointer overflow-hidden rounded-full border-2 transition hover:border-brand-blue ${
+                  mediaUrl(speaker.photoKey)
+                    ? "border-[#d9dfeb] dark:border-white/15"
+                    : "border-dashed border-[#d9dfeb] dark:border-white/15"
+                }`}
+                title="Upload speaker photo"
+              >
+                {mediaUrl(speaker.photoKey) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img alt="" className="size-full object-cover" src={mediaUrl(speaker.photoKey)} />
+                ) : (
+                  <span className="grid size-full place-items-center text-[#9ba4b5] dark:text-white/35">
+                    <Camera size={15} weight="bold" />
+                  </span>
+                )}
+                <input
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(event) => void pickSpeakerPhoto(index, event)}
+                  type="file"
                 />
-              ) : (
-                <div className="size-10 shrink-0 rounded-full bg-[#f2f5fa] dark:bg-white/[0.06]" />
-              )}
+              </label>
               <input
                 className={`${inputClass} w-40 flex-1`}
                 onChange={(event) => updateSpeaker(index, { name: event.target.value })}
@@ -751,15 +895,6 @@ export function EventEditor({
                 type="text"
                 value={speaker.title ?? ""}
               />
-              <label className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-[#d9dfeb] px-2.5 text-xs font-semibold text-[#5d687d] dark:border-white/10 dark:text-white/55">
-                Photo
-                <input
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(event) => void pickSpeakerPhoto(index, event)}
-                  type="file"
-                />
-              </label>
               <button
                 aria-label="Remove speaker"
                 className="text-[#8993a7] transition hover:text-brand-red"
@@ -792,15 +927,17 @@ export function EventEditor({
         <div className="space-y-2">
           {draft.rundown.map((row, index) => (
             <div className="flex items-center gap-3" key={index}>
+              <div className="w-28 shrink-0">
+                <input
+                  className={inputClass}
+                  onChange={(event) => updateRundownItem(index, { time: event.target.value })}
+                  placeholder="09:00"
+                  type="text"
+                  value={row.time}
+                />
+              </div>
               <input
-                className={`${inputClass} w-28 shrink-0`}
-                onChange={(event) => updateRundownItem(index, { time: event.target.value })}
-                placeholder="09:00"
-                type="text"
-                value={row.time}
-              />
-              <input
-                className={`${inputClass} flex-1`}
+                className={`${inputClass} min-w-0 flex-1`}
                 onChange={(event) => updateRundownItem(index, { item: event.target.value })}
                 placeholder="Registration & coffee"
                 type="text"
@@ -865,6 +1002,14 @@ export function EventEditor({
           />
         </div>
       </div>
+
+      {thumbnailToEdit ? (
+        <ThumbnailCropDialog
+          image={thumbnailToEdit}
+          onClose={() => setThumbnailToEdit(undefined)}
+          onConfirm={(cropped) => void confirmThumbnailCrop(cropped)}
+        />
+      ) : null}
     </div>
   );
 }
