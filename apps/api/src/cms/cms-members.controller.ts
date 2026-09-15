@@ -31,6 +31,7 @@ const memberSchema = z.object({
     division: z.string(),
     group: z.string(),
     hasPortrait: z.boolean(),
+    highlighted: z.boolean().default(false),
     labFocus: z.array(z.string()),
     name: z.string().min(1),
     nickname: z.string().optional(),

@@ -67,6 +67,7 @@ export type MemberDraft = {
   division: MemberDivision;
   group: Member["group"];
   hasPortrait: boolean;
+  highlighted: boolean;
   labFocus: string[];
   name: string;
   nickname: string;
@@ -78,6 +79,7 @@ export type MemberDraft = {
 export function memberToDraft(member: Member): MemberDraft {
   return {
     ...member,
+    highlighted: member.highlighted ?? false,
     labFocus: [...member.labFocus],
     nickname: member.nickname ?? "",
     unit: member.unit ?? "",
@@ -91,6 +93,7 @@ export function draftToMember(draft: MemberDraft): Member {
     division: draft.division,
     group: draft.group,
     hasPortrait: draft.hasPortrait,
+    highlighted: draft.highlighted,
     labFocus: draft.labFocus.map((skill) => skill.trim()).filter(Boolean),
     name: draft.name.trim(),
     nickname: draft.nickname.trim() || undefined,

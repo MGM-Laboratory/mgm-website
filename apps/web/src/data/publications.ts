@@ -2,83 +2,100 @@ import type { CmsPublicationRecord } from "@/lib/publication-cms";
 
 /**
  * Seed publications shown on a fresh database (local or Railway) until the
- * editorial team publishes real papers. Every entry is editable through the
- * admin workspace — the bootstrap only runs when the publications collection
- * is empty, so publishing or deleting any of these keeps them gone.
+ * editorial team publishes their own. The entries are real papers from the
+ * laboratory's publication list; the bootstrap only runs when the collection
+ * is empty, so editing or deleting them through the admin keeps them gone.
  */
 export const SEED_PUBLICATIONS: CmsPublicationRecord[] = [
   {
-    slug: "touch-first-research-tools-for-field-work",
+    slug: "location-based-augmented-reality-information-for-bus-route-planning-system",
     publication: {
-      slug: "touch-first-research-tools-for-field-work",
-      title: "Designing Touch-First Research Tools for Field Work",
+      slug: "location-based-augmented-reality-information-for-bus-route-planning-system",
+      title: "Location-Based Augmented Reality Information for Bus Route Planning System",
       type: "journal-article",
-      date: "2024-08-31",
-      journal: "Journal of Usability Studies",
-      volume: "12",
-      issue: "3",
-      pages: "45–58",
-      publisher: "Usability Professionals Association",
-      doi: "10.5555/example.touch-first",
-      license: "CC BY 4.0",
-      keywords: ["usability study", "field research", "mobile capture", "prototyping"],
+      date: "2015-02-01",
+      journal: "International Journal of Electrical and Computer Engineering (IJECE)",
+      volume: "5",
+      issue: "1",
+      pages: "142–149",
+      publisher: "Institute of Advanced Engineering and Science (IAES)",
+      url: "https://doi.org/10.11591/ijece.v5i1.pp142-149",
+      keywords: [
+        "Computer science",
+        "Planner",
+        "Android (operating system)",
+        "Augmented reality",
+        "Smart phone",
+        "Phone",
+        "Plan (archaeology)",
+        "Android application",
+      ],
       abstract:
-        "Researchers in the field rarely sit at a desk. Notes are taken on phones, data is captured between conversations, and prototypes are tested in hallways. Yet most research tooling still assumes a keyboard, a large screen, and an uninterrupted hour. This paper reports on a usability study of a touch-first capture tool designed for student research groups at MGM Laboratory, and extracts four constraints — one-handed input, offline-first storage, reviewable capture, and cross-device continuity — that should drive the design of any field capture software.",
+        "Bus Route Planner applications will unfold their full potential when bus passengers are enabled to get information about the shortest path route, make a travel plan and get the correct buses in order to reduce the travel time. However, all these information are provided in text based and map view. It is difficult to understand them for the person who does not know place in the map. This paper describes the android base application of Augmented Reality (AR) that has feature to support the action of a bus user in an innovative and dynamic ways by putting additional information layer on smart phone camera screen and give the instruction assistant that leading the user way to the nearest bus stop. The experimental results show that, the overall functional of proposed application can be run well in various type of Android smart phone. When compared with similar bus traveling applications, the proposed application works more efficient.",
       authors: [
         {
           id: "a1",
-          name: "Muhammad Gilang Hafizh",
-          affiliation: "MGM Laboratory, University of Brawijaya",
-          memberSlug: "muhammad-gilang-hafizh",
+          name: "Komang Candra Brata",
+          affiliation: "University of Brawijaya",
+          kind: "non-residence",
         },
         {
           id: "a2",
-          name: "Kania Khalifa Kurniadi",
-          affiliation: "MGM Laboratory, University of Brawijaya",
-          memberSlug: "kania-khalifa-kurniadi",
+          name: "Deron Liang",
+          affiliation: "National Central University",
+          kind: "non-residence",
         },
         {
           id: "a3",
-          name: "Ayu Paramitha",
-          affiliation: "Faculty of Computer Science, University of Brawijaya",
+          name: "Sholeh Hadi Pramono",
+          affiliation: "University of Brawijaya",
+          kind: "non-residence",
         },
       ],
       draft: false,
-      paperKey: "static/publications/touch-first-field-work.pdf",
-      paperName: "touch-first-field-work.pdf",
-      paperSize: 20313,
+      doi: "10.11591/ijece.v5i1.pp142-149",
+      paperKey:
+        "static/publications/location-based-augmented-reality-information-for-bus-route-planning-system.pdf",
+      paperName:
+        "2015_location-based-augmented-reality-information-for-bus-route-planning-system.pdf",
+      paperSize: 669289,
     },
   },
   {
-    slug: "capture-before-you-classify",
+    slug: "hanasu-interactive-japanese-language-m-learning-application-to-support-listening",
     publication: {
-      slug: "capture-before-you-classify",
-      title: "Capture Before You Classify: Deferring Annotation in Field Notes",
+      slug: "hanasu-interactive-japanese-language-m-learning-application-to-support-listening",
+      title:
+        "Hanasu: Interactive Japanese language m-learning application to support listening and speaking exercise",
       type: "conference-paper",
-      date: "2024-09-14",
-      journal: "Proceedings of the 8th International Conference on HCI and Usability (CHIuXiD)",
-      pages: "112–119",
-      publisher: "ACM",
-      doi: "10.5555/example.capture-classify",
-      license: "CC BY-NC 4.0",
-      keywords: ["annotation", "field notes", "interaction design"],
-      abstract:
-        "Asking field researchers to classify their own notes breaks their flow. In a two-week study with eight participants, we moved classification from the capture moment to a post-session review stage and measured a measurable improvement in entry completeness. This paper describes the review interface and argues that capture tools should optimise for speed and defer structure.",
+      date: "2019",
+      draft: false,
       authors: [
         {
-          id: "b1",
-          name: "Muhammad Naufal Mathara Rahman",
-          affiliation: "MGM Laboratory, University of Brawijaya",
-          memberSlug: "muhammad-naufal-mathara-rahman",
+          id: "a1",
+          name: "Komang Candra Brata",
+          kind: "non-residence",
         },
         {
-          id: "b2",
-          name: "Muhammad Gilang Hafizh",
-          affiliation: "MGM Laboratory, University of Brawijaya",
-          memberSlug: "muhammad-gilang-hafizh",
+          id: "a2",
+          name: "Adam Hendra Brata",
+          kind: "non-residence",
+        },
+        {
+          id: "a3",
+          name: "Eko Prasetyo Lukman",
+          kind: "non-residence",
         },
       ],
-      draft: false,
+      abstract:
+        "The Japanese language is not only one of the most favorite foreign languages in Indonesian higher education, but it is also considered a difficult foreign language to learn. This fact creates many mobile learning (m-learning) applications that were developed to help learners learn the Japanese language independently. Existing Japanese m-learning apps concentrate only on improving vocabulary, writing and reading skills. Although improving vocabulary and reading skills are important, practicing Japanese pronunciation is also crucial in fundamental Japanese learning. This study introduces the idea of utilizing the listening and speaking exercise in the M-learning implementation to provide learners with a new experience in term of Japanese language learning method. In addition, this paper also describes preliminary learning outcomes from a small-scale assessment of the learners when they are using the speaking input in m-learning. Evaluation result indicates that the listening and speaking method is feasible for future implementation of m-learning with promising learning outcome enhancement compared to the conventional learning method.",
+      pages: "311–315",
+      doi: "10.1145/3345120.3345155",
+      journal:
+        "Proceedings of the 2019 3rd International Conference on Education and Multimedia Technology - ICEMT 2019",
+      publisher: "ACM Press",
+      url: "http://dl.acm.org/citation.cfm?doid=3345120.3345155",
+      keywords: [],
     },
   },
 ];
