@@ -99,59 +99,61 @@ export function CoreCompetenciesSection() {
           Where MGM Laboratory concentrates its work — research, design, and engineering under one
           roof.
         </p>
+      </div>
 
-        <ScrollStack className="mt-14">
-          {COMPETENCIES.map((c, i) => (
-            <ScrollStackItem
-              key={c.title}
-              href={c.href}
+      <ScrollStack className="mx-auto mt-14 w-full max-w-[1800px]">
+        {COMPETENCIES.map((c, i) => (
+          <ScrollStackItem
+            key={c.title}
+            href={c.href}
+            className={cn(
+              "group overflow-hidden rounded-3xl p-10 shadow-[0_20px_50px_-20px_rgba(14,17,22,0.35)] transition-colors sm:p-14 lg:p-16",
+              "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground",
+              CARD_BG[c.color],
+            )}
+          >
+            <div
+              ref={(el) => {
+                motifRefs.current[i] = el;
+              }}
+              className="pointer-events-none absolute -top-12 -right-12 size-56 rotate-6 sm:size-72 lg:size-96"
+            >
+              <CompetencyMotifShape
+                motif={c.motif}
+                stroke={MOTIF_STROKE[c.color]}
+                className="h-full w-full"
+              />
+            </div>
+
+            <div
               className={cn(
-                "group overflow-hidden rounded-3xl p-8 shadow-[0_20px_50px_-20px_rgba(14,17,22,0.35)] transition-colors sm:p-10",
-                "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground",
-                CARD_BG[c.color],
+                "relative z-10 flex min-h-64 flex-col justify-between sm:min-h-72",
+                CARD_TEXT[c.color],
               )}
             >
-              <div
-                ref={(el) => {
-                  motifRefs.current[i] = el;
-                }}
-                className="pointer-events-none absolute -top-10 -right-10 size-48 rotate-6 sm:size-64"
-              >
-                <CompetencyMotifShape
-                  motif={c.motif}
-                  stroke={MOTIF_STROKE[c.color]}
-                  className="h-full w-full"
-                />
+              <h3 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+                {c.title}
+              </h3>
+              <div>
+                <p
+                  className={cn("max-w-xl text-base sm:text-lg lg:text-xl", CARD_SUBTEXT[c.color])}
+                >
+                  {c.description}
+                </p>
+                <span
+                  className={cn(
+                    "mt-6 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium backdrop-blur-sm transition-colors",
+                    CARD_PILL[c.color],
+                  )}
+                >
+                  Explore
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+                </span>
               </div>
-
-              <div
-                className={cn(
-                  "relative z-10 flex min-h-52 flex-col justify-between",
-                  CARD_TEXT[c.color],
-                )}
-              >
-                <h3 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {c.title}
-                </h3>
-                <div>
-                  <p className={cn("max-w-md text-base sm:text-lg", CARD_SUBTEXT[c.color])}>
-                    {c.description}
-                  </p>
-                  <span
-                    className={cn(
-                      "mt-5 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium backdrop-blur-sm transition-colors",
-                      CARD_PILL[c.color],
-                    )}
-                  >
-                    Explore
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                  </span>
-                </div>
-              </div>
-            </ScrollStackItem>
-          ))}
-        </ScrollStack>
-      </div>
+            </div>
+          </ScrollStackItem>
+        ))}
+      </ScrollStack>
     </section>
   );
 }
