@@ -145,6 +145,21 @@ export async function deployServiceInstance(token, serviceId, environmentId) {
   return data.serviceInstanceDeployV2;
 }
 
+export async function deploymentLogs(token, deploymentId, limit = 30) {
+  const data = await railway(
+    token,
+    `query($deploymentId: String!, $limit: Int) {
+      deploymentLogs(deploymentId: $deploymentId, limit: $limit) {
+        timestamp
+        severity
+        message
+      }
+    }`,
+    { deploymentId, limit },
+  );
+  return data.deploymentLogs;
+}
+
 export async function generateServiceDomain(token, serviceId, environmentId, targetPort) {
   const data = await railway(
     token,
