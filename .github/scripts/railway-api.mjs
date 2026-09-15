@@ -21,6 +21,11 @@ export const PROJECT_ID = "810d3a40-d9d2-410c-b117-289d2aff095f";
 export const PRODUCTION_ENVIRONMENT_ID = "42acf786-e8f4-41f8-8d4f-715bee1655f8";
 export const API_SERVICE_ID = "b401b859-90cb-44cf-9787-054cc14290fd";
 export const WEB_SERVICE_ID = "4969778e-0bff-4200-9472-6b5a13f037da";
+// Same logical services (and same ids) in every environment forked from
+// production, same as API_SERVICE_ID/WEB_SERVICE_ID — only the per-
+// environment instance differs.
+export const POSTGRES_SERVICE_ID = "702df22d-7432-4a04-a52d-53fab670e59c";
+export const REDIS_SERVICE_ID = "ea85a601-8ce9-4e3b-965b-1fb83c4accb9";
 
 export function previewEnvironmentName(prNumber) {
   return `preview-pr-${prNumber}`;
@@ -89,7 +94,14 @@ export async function listServiceInstances(token, environmentId) {
     `query($id: String!) {
       environment(id: $id) {
         serviceInstances {
-          edges { node { serviceId serviceName domains { serviceDomains { domain } } } }
+          edges {
+            node {
+              serviceId
+              serviceName
+              domains { serviceDomains { domain } }
+              hasEverDeployed
+            }
+          }
         }
       }
     }`,

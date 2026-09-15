@@ -8,15 +8,19 @@ import { randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import {
   API_SERVICE_ID,
+  POSTGRES_SERVICE_ID,
+  REDIS_SERVICE_ID,
   WEB_SERVICE_ID,
   bucketS3Credentials,
   createBucket,
   createPreviewEnvironment,
+  deployServiceInstance,
   findBucketByName,
   findEnvironmentByName,
   generateServiceDomain,
   listServiceInstances,
   previewEnvironmentName,
+  railway,
   setVariables,
 } from "./railway-api.mjs";
 
@@ -38,8 +42,43 @@ if (isNew) {
 let instances = await listServiceInstances(token, environment.id);
 const apiInstance = instances.find((i) => i.serviceId === API_SERVICE_ID);
 const webInstance = instances.find((i) => i.serviceId === WEB_SERVICE_ID);
-if (!apiInstance || !webInstance) {
-  throw new Error("Expected api and web service instances to exist in the duplicated environment");
+const postgresInstance = instances.find((i) => i.serviceId === POSTGRES_SERVICE_ID);
+const redisInstance = instances.find((i) => i.serviceId === REDIS_SERVICE_ID);
+if (!apiInstance || !webInstance || !postgresInstance || !redisInstance) {
+  throw new Error(
+    "Expected api/web/Postgres/Redis service instances in the duplicated environment",
+  );
+}
+
+// environmentCreate used skipInitialDeploys: true so web/api don't try to
+// build from GitHub source before push-and-deploy points them at images —
+// but that skips Postgres/Redis too, and they have nothing else to trigger
+// their first deploy. Without this, api crashes on boot with
+// DatabaseNotReachable (confirmed live on the first real /preview run).
+const dbDeploymentIds = [];
+if (!postgresInstance.hasEverDeployed) {
+  console.log("Deploying Postgres for the first time...");
+  dbDeploymentIds.push(await deployServiceInstance(token, POSTGRES_SERVICE_ID, environment.id));
+}
+if (!redisInstance.hasEverDeployed) {
+  console.log("Deploying Redis for the first time...");
+  dbDeploymentIds.push(await deployServiceInstance(token, REDIS_SERVICE_ID, environment.id));
+}
+// Wait for both to actually come up before this job finishes — api gets
+// deployed in a later job and would otherwise crash-loop against a
+// database that hasn't finished starting yet.
+for (const id of dbDeploymentIds) {
+  const deadline = Date.now() + 3 * 60 * 1000;
+  let status = "unknown";
+  while (Date.now() < deadline) {
+    const data = await railway(token, `query($id: String!) { deployment(id: $id) { status } }`, {
+      id,
+    });
+    status = data.deployment.status;
+    if (["SUCCESS", "FAILED", "CRASHED"].includes(status)) break;
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  console.log(`Database deployment ${id} -> ${status}`);
 }
 
 const bucketName = `preview-pr-${prNumber}`.slice(0, 63);
