@@ -34,6 +34,14 @@ async function bootstrap() {
   // it never shadows the JSON parser used everywhere else.
   app.use("/api/contact/attachments", raw({ type: () => true, limit: "26mb" }));
 
+  // Project demo videos arrive as raw bytes the same way.
+  app.use(
+    raw({
+      type: ["video/mp4", "video/webm"],
+      limit: configService.getOrThrow<number>("CMS_MAX_VIDEO_BYTES"),
+    }),
+  );
+
   app.use(helmet());
   app.use(compression());
   app.enableCors({

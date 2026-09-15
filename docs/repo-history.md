@@ -23,6 +23,13 @@ Other standing rules:
 - Only commit when the user has asked or it's clearly part of the ongoing task they're driving.
 - Do not push new commits to the `legacy` remote — it's a frozen backup.
 
+### Two paths to `main` since the 2026-09-15 CI/CD build-out
+
+`main` now has a branch-protection ruleset requiring a PR + every required check for anyone to merge — but repo admins bypass it. In practice that means:
+
+- **External contributors** go through `CONTRIBUTING.md`'s full fork → branch → PR flow, and need CI/security/e2e/Sonar/Harness all green before a maintainer merges.
+- **The owner (and this agent, working as the owner)** keeps the granular-commit, direct-`git push origin main` workflow described above, unchanged. The ruleset's bypass exists specifically so this doesn't have to change.
+
 ## Known loose ends
 
 - `apps/web/public/logo/` (department logos: `curriculum.svg`, `hr.svg`, `infra.svg`, `media.svg`, `pr.svg`, `rnd.svg`) is **untracked** and has been deliberately left alone through past work. Ask before committing it.

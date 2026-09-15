@@ -1,0 +1,56 @@
+name: PR status comment
+
+on:
+  workflow_run:
+    workflows: ["CI", "Security", "E2E", "Harness"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-status-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    # Only react to runs that were triggered by a pull_request event — a
+    # plain push to main has nothing to comment on. workflow_run always
+    # executes the version of this file on the default branch, regardless of
+    # which PR/fork triggered the upstream run, so this job never runs
+    # untrusted workflow code.
+    if: contains(fromJSON('["pull_request", "pull_request_target"]'), github.event.workflow_run.event)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Find associated pull request
+        id: pr
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.payload.workflow_run.head_sha,
+            });
+            const open = prs.find((p) => p.state === "open");
+            core.setOutput("number", open ? String(open.number) : "");
+
+      - name: Generate a bot token
+        if: steps.pr.outputs.number != ''
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Post status comment
+        if: steps.pr.outputs.number != ''
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: node .github/scripts/pr-status-comment.mjs

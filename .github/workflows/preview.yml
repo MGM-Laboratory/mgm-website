@@ -1,0 +1,222 @@
+name: Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to preview
+        required: true
+
+concurrency:
+  group: preview-pr-${{ github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Job A — no PR code touched, safe to hold Railway secrets. Provisions (or
+  # reuses) the preview-pr-<n> environment forked from production.
+  provision:
+    runs-on: ubuntu-latest
+    outputs:
+      environment_id: ${{ steps.provision.outputs.environment_id }}
+      api_domain: ${{ steps.provision.outputs.api_domain }}
+      web_domain: ${{ steps.provision.outputs.web_domain }}
+    steps:
+      - name: Validate pr_number
+        run: |
+          if ! [[ "${{ github.event.inputs.pr_number }}" =~ ^[0-9]+$ ]]; then
+            echo "::error::pr_number must be a plain integer"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Provision preview environment
+        id: provision
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+        run: node .github/scripts/preview-provision.mjs
+
+  # Job B — builds the PR's own code. Deliberately has zero secrets: this is
+  # the only job that runs code from a PR head, which for a fork PR is
+  # fully untrusted.
+  build:
+    runs-on: ubuntu-latest
+    needs: provision
+    steps:
+      - name: Look up the PR head
+        id: pr
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number("${{ github.event.inputs.pr_number }}"),
+            });
+            core.setOutput("sha", pr.head.sha);
+            core.setOutput("ref", pr.head.sha); // pin to the sha, not a mutable branch name
+
+      - name: Checkout PR head
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          load: true
+          tags: preview-api:${{ steps.pr.outputs.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          load: true
+          tags: preview-web:${{ steps.pr.outputs.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://${{ needs.provision.outputs.api_domain }}/api
+
+      - name: Save images
+        run: |
+          docker save preview-api:${{ steps.pr.outputs.sha }} -o /tmp/preview-api.tar
+          docker save preview-web:${{ steps.pr.outputs.sha }} -o /tmp/preview-web.tar
+
+      - name: Upload images
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-images
+          path: /tmp/preview-*.tar
+          retention-days: 1
+
+      - name: Save sha
+        run: echo "${{ steps.pr.outputs.sha }}" > /tmp/sha.txt
+
+      - name: Upload sha
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-sha
+          path: /tmp/sha.txt
+          retention-days: 1
+
+  # Job C — has secrets again, but only ever touches the images Job B
+  # produced, never the PR's source directly.
+  push-and-deploy:
+    runs-on: ubuntu-latest
+    needs: [provision, build]
+    steps:
+      - name: Download images
+        uses: actions/download-artifact@v4
+        with:
+          name: preview-images
+          path: /tmp
+
+      - name: Download sha
+        uses: actions/download-artifact@v4
+        with:
+          name: preview-sha
+          path: /tmp
+
+      - name: Load images
+        id: sha
+        run: |
+          SHA=$(cat /tmp/sha.txt)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          docker load -i /tmp/preview-api.tar
+          docker load -i /tmp/preview-web.tar
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag and push
+        id: images
+        run: |
+          API_TAG="${{ vars.DOCKERHUB_USERNAME }}/website-api:pr-${{ github.event.inputs.pr_number }}-${{ steps.sha.outputs.sha }}"
+          WEB_TAG="${{ vars.DOCKERHUB_USERNAME }}/website-web:pr-${{ github.event.inputs.pr_number }}-${{ steps.sha.outputs.sha }}"
+          docker tag preview-api:${{ steps.sha.outputs.sha }} "$API_TAG"
+          docker tag preview-web:${{ steps.sha.outputs.sha }} "$WEB_TAG"
+          docker push "$API_TAG"
+          docker push "$WEB_TAG"
+          echo "api_image=$API_TAG" >> "$GITHUB_OUTPUT"
+          echo "web_image=$WEB_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Point services at the new images and deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          ENVIRONMENT_ID: ${{ needs.provision.outputs.environment_id }}
+          API_IMAGE: ${{ steps.images.outputs.api_image }}
+          WEB_IMAGE: ${{ steps.images.outputs.web_image }}
+        run: node .github/scripts/preview-point-images.mjs
+
+  # Job D — secrets again: seeds sanitized data into the now-running preview,
+  # mints a superadmin, comments the result on the PR.
+  seed-and-announce:
+    runs-on: ubuntu-latest
+    needs: [provision, push-and-deploy]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install postgresql-client 18 (matches the Railway Postgres image)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends wget ca-certificates gnupg
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo wget -q -O /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-18
+
+      - name: Generate a bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Seed data and announce
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          BOT_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+          ENVIRONMENT_ID: ${{ needs.provision.outputs.environment_id }}
+          API_DOMAIN: ${{ needs.provision.outputs.api_domain }}
+          WEB_DOMAIN: ${{ needs.provision.outputs.web_domain }}
+        run: node .github/scripts/preview-seed-data.mjs

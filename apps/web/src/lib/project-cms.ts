@@ -1,0 +1,285 @@
+import { formatArticleDate, slugify as slugifyText, type ArticleBlock } from "@/lib/article-cms";
+
+/** Shared types and helpers for the projects editorial workflow. */
+
+export const PROJECT_CATEGORIES = ["website", "mobile", "hci-ux", "game"] as const;
+export const PROJECT_STATUSES = ["planned", "in-progress", "completed", "archived"] as const;
+export const PROJECT_VIDEO_MODES = ["none", "upload", "url", "youtube"] as const;
+
+export type ProjectCategory = (typeof PROJECT_CATEGORIES)[number];
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+export type ProjectVideoMode = (typeof PROJECT_VIDEO_MODES)[number];
+
+export const PROJECT_CATEGORY_LABELS: Record<ProjectCategory, string> = {
+  website: "Website",
+  mobile: "Mobile",
+  "hci-ux": "HCI/UX",
+  game: "Game",
+};
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  planned: "Planned",
+  "in-progress": "In progress",
+  completed: "Completed",
+  archived: "Archived",
+};
+
+export type ProjectContributorKind = "residence" | "non-residence";
+
+export type ProjectContributor = {
+  id: string;
+  /** Residence contributors resolve through the member CMS; non-residence
+   *  contributors carry their own portrait and public link. Omitted on
+   *  older records, where the presence of memberSlug decides. */
+  kind?: ProjectContributorKind;
+  name: string;
+  /** What they did on this project, e.g. "Lead Developer" (optional). */
+  role?: string;
+  affiliation?: string;
+  memberSlug?: string;
+  url?: string;
+  photoKey?: string;
+  photoPosition?: { x: number; y: number; zoom: number };
+};
+
+/** Legacy records decide residence by the presence of a member link. */
+export function contributorKind(contributor: ProjectContributor): ProjectContributorKind {
+  if (contributor.kind) return contributor.kind;
+  return contributor.memberSlug ? "residence" : "non-residence";
+}
+
+export type ProjectOrganization = { name: string; url?: string };
+export type ProjectLink = { id: string; label: string; url: string };
+
+export type ProjectOutputLink = {
+  id: string;
+  type: "research" | "publication" | "article";
+  label: string;
+  href: string;
+  recordSlug?: string;
+};
+
+export type ProjectDraft = {
+  slug: string;
+  title: string;
+  summary: string;
+  categories: ProjectCategory[];
+  techStack: string[];
+  status: ProjectStatus;
+  /** YYYY-MM-DD. */
+  startDate?: string;
+  endDate?: string;
+  /** The lab's role on the project, e.g. "Design & development partner". */
+  role?: string;
+  /** Free-text platform summary, e.g. "Web, iOS, Android". */
+  platform?: string;
+  featured: boolean;
+  draft: boolean;
+  /** S3 media key, or a `static/<public-path>` key for bundled seed art. */
+  coverKey?: string;
+  coverAlt?: string;
+  galleryKeys: string[];
+  videoMode: ProjectVideoMode;
+  /** S3 media key (upload mode). */
+  videoKey?: string;
+  videoName?: string;
+  videoSize?: number;
+  /** A direct file / Vimeo URL (url mode) or a YouTube URL (youtube mode). */
+  videoUrl?: string;
+  links: ProjectLink[];
+  contributors: ProjectContributor[];
+  organizations: ProjectOrganization[];
+  outputs: ProjectOutputLink[];
+  seoTitle?: string;
+  seoDescription?: string;
+};
+
+export type CmsProjectRecord = {
+  project: ProjectDraft;
+  body: ArticleBlock[];
+  slug: string;
+  updatedAt?: string;
+};
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function slugify(value: string) {
+  return slugifyText(value);
+}
+
+export function isProjectSlug(value: string) {
+  return SLUG_PATTERN.test(value);
+}
+
+export function emptyProjectDraft(): ProjectDraft {
+  return {
+    slug: "",
+    title: "",
+    summary: "",
+    categories: [],
+    techStack: [],
+    status: "planned",
+    featured: false,
+    draft: true,
+    galleryKeys: [],
+    videoMode: "none",
+    links: [],
+    contributors: [],
+    organizations: [],
+    outputs: [],
+  };
+}
+
+export function draftToProject(draft: ProjectDraft): ProjectDraft {
+  return {
+    ...draft,
+    title: draft.title.trim(),
+    summary: draft.summary.trim(),
+    categories: [...new Set(draft.categories)],
+    techStack: [...new Set(draft.techStack.map((item) => item.trim()).filter(Boolean))],
+    startDate: draft.startDate || undefined,
+    endDate: draft.endDate || undefined,
+    role: draft.role?.trim() || undefined,
+    platform: draft.platform?.trim() || undefined,
+    coverAlt: draft.coverAlt?.trim() || undefined,
+    galleryKeys: [...draft.galleryKeys],
+    videoUrl: draft.videoUrl?.trim() || undefined,
+    videoName: draft.videoName?.trim() || undefined,
+    links: draft.links.map((link) => ({ ...link, label: link.label.trim(), url: link.url.trim() })),
+    contributors: draft.contributors
+      .map((contributor) => ({
+        ...contributor,
+        name: contributor.name.trim(),
+        role: contributor.role?.trim() || undefined,
+        affiliation: contributor.affiliation?.trim() || undefined,
+        url: contributor.url?.trim() || undefined,
+      }))
+      .filter((contributor) => Boolean(contributor.name)),
+    organizations: draft.organizations
+      .map((organization) => ({
+        ...organization,
+        name: organization.name.trim(),
+        url: organization.url?.trim() || undefined,
+      }))
+      .filter((organization) => Boolean(organization.name)),
+    outputs: draft.outputs.map((output) => ({
+      ...output,
+      label: output.label.trim(),
+      href: output.href.trim(),
+      recordSlug: output.recordSlug?.trim() || undefined,
+    })),
+    seoTitle: draft.seoTitle?.trim() || undefined,
+    seoDescription: draft.seoDescription?.trim() || undefined,
+  };
+}
+
+export function projectToDraft(project: ProjectDraft): ProjectDraft {
+  return {
+    ...project,
+    categories: [...project.categories],
+    techStack: [...project.techStack],
+    startDate: project.startDate ?? "",
+    endDate: project.endDate ?? "",
+    role: project.role ?? "",
+    platform: project.platform ?? "",
+    coverAlt: project.coverAlt ?? "",
+    galleryKeys: [...project.galleryKeys],
+    videoUrl: project.videoUrl ?? "",
+    videoName: project.videoName ?? "",
+    links: project.links.map((link) => ({ ...link })),
+    contributors: project.contributors.map((contributor) => ({
+      ...contributor,
+      kind: contributorKind(contributor),
+      role: contributor.role ?? "",
+      affiliation: contributor.affiliation ?? "",
+      url: contributor.url ?? "",
+    })),
+    organizations: project.organizations.map((organization) => ({ ...organization })),
+    outputs: project.outputs.map((output) => ({ ...output })),
+    seoTitle: project.seoTitle ?? "",
+    seoDescription: project.seoDescription ?? "",
+  };
+}
+
+/** Newest activity first: the end date, falling back to the start date, then the save time. */
+function projectSortKey(record: CmsProjectRecord) {
+  return record.project.endDate ?? record.project.startDate ?? record.updatedAt ?? "";
+}
+
+export function publishedProjects(records: readonly CmsProjectRecord[]) {
+  return records
+    .filter((record) => !record.project.draft)
+    .sort((left, right) => projectSortKey(right).localeCompare(projectSortKey(left)));
+}
+
+/** Resolves a media key to a loadable URL — bundled seed art or CMS media. */
+export function projectMediaUrl(key?: string) {
+  if (!key) return undefined;
+  if (key.startsWith("static/")) return `/${key.slice("static/".length)}`;
+  return `/api/projects-cms/media/${encodeURIComponent(key)}`;
+}
+
+/** Resolves an uploaded demo video key to a loadable, range-seekable URL. */
+export function projectVideoUrl(key?: string) {
+  if (!key) return undefined;
+  return `/api/projects-cms/video/${encodeURIComponent(key)}`;
+}
+
+/** The card carousel / gallery source list: the cover first, then the gallery, deduplicated. */
+export function projectGalleryKeys(project: ProjectDraft) {
+  const keys = [project.coverKey, ...project.galleryKeys].filter((key): key is string =>
+    Boolean(key),
+  );
+  return [...new Set(keys)];
+}
+
+/**
+ * CMS-authored links are trusted but rendered publicly, so non-web schemes
+ * are refused outright. Site paths (a single leading slash, never
+ * protocol-relative) and http(s) URLs only; javascript:, data:, and
+ * everything else must render as plain text instead of a link.
+ */
+export function safeProjectHref(value: string) {
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^\/(?!\/)/.test(value)) return value;
+  return undefined;
+}
+
+export function parseYoutubeId(url: string) {
+  return url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/i)?.[1];
+}
+
+export function parseVimeoId(url: string) {
+  return url.match(/vimeo\.com\/(?:video\/)?(\d+)/i)?.[1];
+}
+
+/** "Sabtu, 31 Agustus 2024" — the same long form articles and publications use. */
+export function formatProjectDate(value: string) {
+  return formatArticleDate(value);
+}
+
+/** "31 Agustus 2024" without the weekday, for compact cards and meta rows. */
+export function formatProjectDateShort(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Date(year, month - 1, day).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/** A date range label like "2025 to present" (no em dashes in site copy). */
+export function formatProjectPeriod(project: ProjectDraft) {
+  const start = project.startDate?.slice(0, 4);
+  const end = project.endDate?.slice(0, 4);
+  if (!start && !end) return undefined;
+  if (start && end && start === end) return start;
+  return `${start ?? "Unknown"} to ${end ?? "present"}`;
+}
+
+export function formatVideoSize(bytes?: number) {
+  if (!bytes) return undefined;
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}

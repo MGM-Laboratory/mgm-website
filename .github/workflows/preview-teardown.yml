@@ -1,0 +1,31 @@
+name: Preview teardown
+
+on:
+  # pull_request_target (not pull_request): this always runs the workflow
+  # file from main with full secrets, regardless of which fork opened the
+  # PR — safe here because the job never checks out or executes PR code, it
+  # only calls the Railway API with the PR number from the event payload.
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Delete preview environment (if any)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/preview-teardown.mjs

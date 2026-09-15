@@ -1,0 +1,47 @@
+pipeline:
+  name: harness-security
+  identifier: harness_security
+  projectIdentifier: default_project
+  orgIdentifier: default
+  variables:
+    - name: commit_sha
+      type: String
+      default: main
+      value: <+input>
+  stages:
+    - stage:
+        name: sast-and-secrets
+        identifier: sast_and_secrets
+        type: CI
+        spec:
+          cloneCodebase: false
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: checkout
+                  identifier: checkout
+                  spec:
+                    shell: Sh
+                    command: |-
+                      set -eu
+                      git clone --quiet https://github.com/MGM-Laboratory/mgm-website.git repo
+                      cd repo
+                      git checkout --quiet "<+pipeline.variables.commit_sha>"
+              - step:
+                  type: Run
+                  name: semgrep
+                  identifier: semgrep
+                  spec:
+                    shell: Sh
+                    image: returntocorp/semgrep:latest
+                    command: |-
+                      set -eu
+                      cd repo
+                      semgrep --config auto --error --metrics off .
