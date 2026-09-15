@@ -30,7 +30,7 @@ if (normalized === "lgtm") {
   process.exit(0);
 }
 
-if (!["/check", "/preview", "/merge"].includes(normalized)) {
+if (!["/check", "/preview", "/merge", "/close"].includes(normalized)) {
   process.exit(0); // not a command we handle
 }
 
@@ -82,4 +82,12 @@ if (normalized === "/merge") {
     body: JSON.stringify({ ref: "main", inputs: { pr_number: String(prNumber) } }),
   });
   await reply("Checking that everything's ready to ship...");
+}
+
+if (normalized === "/close") {
+  await ghRequest(actionsToken, `/repos/${repo}/actions/workflows/close.yml/dispatches`, {
+    method: "POST",
+    body: JSON.stringify({ ref: "main", inputs: { pr_number: String(prNumber) } }),
+  });
+  await reply("Closing this PR without merging, and sweeping its preview environment...");
 }

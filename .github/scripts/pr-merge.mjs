@@ -14,10 +14,8 @@ import {
   API_SERVICE_ID,
   PRODUCTION_ENVIRONMENT_ID,
   WEB_SERVICE_ID,
-  deleteEnvironment,
-  findEnvironmentByName,
   listServiceInstances,
-  previewEnvironmentName,
+  tearDownPreviewEnvironment,
 } from "./railway-api.mjs";
 
 const token = process.env.GITHUB_TOKEN; // contents:write + pull-requests:write
@@ -151,21 +149,13 @@ if (!sameRepo) {
   }
 }
 
-// Preview teardown — scoped strictly to this PR's own environment. The
-// lookup is by the deterministic preview-pr-<n> name, and the production
-// environment id is asserted against defensively so a naming coincidence can
-// never take down the real deployment.
-let previewNote = "No preview environment was running for this PR.";
+// Preview teardown — scoped strictly to this PR's own environment via the
+// shared helper (also used by /close and the pull_request_target teardown
+// workflow), which asserts the resolved id against production defensively
+// so a naming coincidence can never take down the real deployment.
+let previewNote;
 try {
-  const previewName = previewEnvironmentName(prNumber);
-  const environment = await findEnvironmentByName(railwayToken, previewName);
-  if (environment) {
-    if (environment.id === PRODUCTION_ENVIRONMENT_ID) {
-      throw new Error("refusing to delete: environment resolved to production");
-    }
-    await deleteEnvironment(railwayToken, environment.id);
-    previewNote = `Deleted preview environment \`${previewName}\`.`;
-  }
+  previewNote = (await tearDownPreviewEnvironment(railwayToken, prNumber)).note;
 } catch (err) {
   previewNote = `Could not clean up the preview environment: ${err.message}`;
 }

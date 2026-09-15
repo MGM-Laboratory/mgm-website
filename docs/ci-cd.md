@@ -13,9 +13,10 @@ Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, sec
 | `docker-publish.yml`   | push to `main`, `v*.*.*` tags, dispatch              | Builds & pushes `website-api`/`website-web` to Docker Hub, then per image: Trivy image scan, CycloneDX SBOM (`anchore/sbom-action`, attested via `actions/attest-sbom`), keyless cosign signing (GitHub OIDC, no key-pair secret)                         |
 | `harness.yml`          | PR to `main` (`pull_request_target`), push to `main` | Triggers the three Harness pipelines below via API, polls, posts each as a GitHub commit status                                                                                                                                                           |
 | `pr-bot.yml`           | `workflow_run` (CI/Security/E2E/Harness)             | Upserts one PR comment (as "ren-automation") summarizing every check-run + commit status for that SHA                                                                                                                                                     |
-| `pr-commands.yml`      | PR comment created                                   | `LGTM` → GIF, for anyone, no side effects. `/check`, `/preview`, `/merge` — gated to OWNER/MEMBER/COLLABORATOR or anyone listed in `CODEOWNERS`                                                                                                           |
+| `pr-commands.yml`      | PR comment created                                   | `LGTM` → GIF, for anyone, no side effects. `/check`, `/preview`, `/merge`, `/close` — gated to OWNER/MEMBER/COLLABORATOR or anyone listed in `CODEOWNERS`                                                                                                 |
 | `preview.yml`          | `workflow_dispatch` (from `/preview`)                | See "Preview environments" below                                                                                                                                                                                                                          |
 | `merge.yml`            | `workflow_dispatch` (from `/merge`)                  | See "Merging (`/merge`)" below                                                                                                                                                                                                                            |
+| `close.yml`            | `workflow_dispatch` (from `/close`)                  | See "Closing (`/close`)" below                                                                                                                                                                                                                            |
 | `preview-teardown.yml` | PR closed (`pull_request_target`)                    | Deletes that PR's preview environment                                                                                                                                                                                                                     |
 | `preview-reaper.yml`   | daily, dispatch                                      | Deletes any preview environment whose PR is no longer open, or that's older than 7 days regardless                                                                                                                                                        |
 | `stale.yml`            | daily, dispatch                                      | Labels/closes inactive issues and PRs after 30/37 days                                                                                                                                                                                                    |
@@ -74,6 +75,14 @@ Commenting `/merge` on a PR (maintainers/CODEOWNERS only) runs `merge.yml`, enti
 4. Deletes the head branch only if it's genuinely safe: same repo (not a fork), not the default branch, and no other open PR still points at it.
 5. Tears down that PR's `preview-pr-<n>` Railway environment if one exists — the lookup is asserted against the production environment id first, so it can never touch the real deployment.
 6. Watches the merge commit's own checks and production's post-merge deployment (Railway's GitHub integration deploys independently of this workflow — the signal watched is the production service instances' `latestDeployment` actually changing, not just going back to `SUCCESS`) for up to 10 minutes, then posts a final success comment or a CODEOWNERS-mention if anything came back unhealthy.
+
+## Closing (`/close`)
+
+Commenting `/close` on a PR (maintainers/CODEOWNERS only) runs `close.yml`, entirely API-driven — no PR code is ever checked out, and unlike `/merge` there's no readiness gate since closing doesn't ship anything:
+
+1. Closes the PR (`state: closed`) — the code is **not** merged into `main`.
+2. Leaves the head branch alone entirely — nothing is deleted, so the branch can be reopened or pushed to again later.
+3. Tears down that PR's `preview-pr-<n>` Railway environment if one exists, using the exact same production-id-asserted lookup `/merge` uses (shared in `railway-api.mjs`'s `tearDownPreviewEnvironment`), so a closed PR's preview never keeps running or billing after the fact.
 
 ## Railway
 

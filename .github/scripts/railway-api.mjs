@@ -88,6 +88,28 @@ export async function deleteEnvironment(token, environmentId) {
   });
 }
 
+// Shared by /merge, /close, and the pull_request_target teardown workflow so
+// there's exactly one place that knows how to safely find-and-delete a PR's
+// preview environment — in particular the production-id assertion, which a
+// naming coincidence should never be able to bypass regardless of which
+// caller triggered the teardown.
+export async function tearDownPreviewEnvironment(token, prNumber) {
+  const name = previewEnvironmentName(prNumber);
+  const environment = await findEnvironmentByName(token, name);
+  if (!environment) {
+    return {
+      deleted: false,
+      name,
+      note: `No preview environment was running for PR #${prNumber}.`,
+    };
+  }
+  if (environment.id === PRODUCTION_ENVIRONMENT_ID) {
+    throw new Error("refusing to delete: environment resolved to production");
+  }
+  await deleteEnvironment(token, environment.id);
+  return { deleted: true, name, note: `Deleted preview environment \`${name}\`.` };
+}
+
 export async function listVolumeInstances(token, environmentId) {
   const data = await railway(
     token,

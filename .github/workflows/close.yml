@@ -1,0 +1,49 @@
+name: Close
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to close without merging
+        required: true
+
+concurrency:
+  group: close-pr-${{ github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
+permissions:
+  pull-requests: write
+
+jobs:
+  # Everything here is API-driven — no PR code is ever checked out or run,
+  # so this is safe even against a fork PR with write-scoped secrets in
+  # scope. Closing the PR does not touch the branch or main, so this needs
+  # none of merge.yml's contents/checks/statuses/actions permissions.
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate pr_number
+        run: |
+          if ! [[ "${{ github.event.inputs.pr_number }}" =~ ^[0-9]+$ ]]; then
+            echo "::error::pr_number must be a plain integer"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Generate a bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Close PR and sweep its preview environment
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BOT_TOKEN: ${{ steps.app-token.outputs.token }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+        run: node .github/scripts/pr-close.mjs
