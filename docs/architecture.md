@@ -8,7 +8,7 @@ pnpm workspaces (pnpm 11.3.0, Node 22, Turbo 2.10):
 apps/web/              Next.js 16.3.4 marketing site (React 19.2.8, Tailwind v4, GSAP 3.15)
 apps/api/              NestJS API (ESM, Prisma, oxlint, vitest) — port 4000
 packages/@repo/shared  shared code consumed via workspace:*
-.github/workflows/     ci.yaml + docker-publish.yml
+.github/workflows/     ci.yaml + publish-docker-image-{api,web,latest,staging}.yml
 ```
 
 `apps/web/package.json` carries most of the interesting dependencies: `gsap`, `lucide-react`, `next-themes`, `framer-motion`, `@tanstack/react-query`, `react-hook-form` + `zod`, `zustand`, `sonner`, `tiptap`, `class-variance-authority` + `tailwind-merge` + `clsx`, `pdfjs-dist` (the publications PDF viewer, worker bundled via `new URL(..., import.meta.url)`). Note: `framer-motion` and some of the form/table/editor libs are installed but the current site is animated entirely with **GSAP** — check actual usage before assuming a lib is in play.

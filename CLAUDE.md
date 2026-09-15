@@ -54,7 +54,7 @@ apps/web/            Next.js 16 marketing site (the focus of most work)
   public/            logo.svg, patterns/*.svg (pattern tiles), logo/*.svg (dept logos, untracked)
 apps/api/            NestJS + Prisma API (health, mail, storage modules; port 4000)
 packages/@repo/shared  shared workspace package (workspace:*)
-.github/workflows/   ci.yaml (lint/typecheck/test/build), docker-publish.yml (Docker Hub)
+.github/workflows/   ci.yaml (lint/typecheck/test/build), publish-docker-image-*.yml (Docker Hub)
 DESIGN_SYSTEM.md     brand/design source of truth
 docs/                deep-dive documentation (read them)
 ```
@@ -65,6 +65,6 @@ docs/                deep-dive documentation (read them)
 
 ## CI/CD at a glance
 
-- **GitHub Actions**: `ci.yaml` runs on push to `main` + PRs + manual dispatch; `docker-publish.yml` builds & pushes `website-web`/`website-api` images to Docker Hub on push to `main` and `v*.*.*` tags (Docker Hub creds live at org level).
+- **GitHub Actions**: `ci.yaml` runs on push to `main` + PRs + manual dispatch; `publish-docker-image-latest.yml` (push to `main`) and `publish-docker-image-staging.yml` (any PR) call the reusable `publish-docker-image-api.yml`/`publish-docker-image-web.yml` workflows to build & push `website-api`/`website-web` images to Docker Hub (Docker Hub creds live at org level).
 - **Railway**: project `mgm-company-profile` (`810d3a40-d9d2-410c-b117-289d2aff095f`), production env `42acf786-e8f4-41f8-8d4f-715bee1655f8`. Services `web` + `api` source from this repo's `main` and **auto-deploy on every push** (~30s). Postgres + `mgm-storage` bucket attached.
 - Every push to `main` therefore triggers: GitHub Actions CI → Docker images → Railway deploys. Full details + verification commands: `docs/ci-cd.md`.
