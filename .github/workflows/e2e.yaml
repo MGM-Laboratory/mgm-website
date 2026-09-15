@@ -1,0 +1,81 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            project: chromium
+          - os: ubuntu-latest
+            project: firefox
+          - os: ubuntu-latest
+            project: webkit
+          - os: ubuntu-latest
+            project: mobile-chrome
+          - os: ubuntu-latest
+            project: mobile-safari
+          - os: windows-latest
+            project: chromium
+          - os: macos-latest
+            project: webkit
+    runs-on: ${{ matrix.os }}
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project == 'mobile-safari' && 'webkit' || matrix.project }}
+
+      - name: Build web
+        run: pnpm turbo run build --filter=web
+
+      - name: Run Playwright tests
+        run: pnpm --filter web exec playwright test --project=${{ matrix.project }}
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ matrix.os }}-${{ matrix.project }}
+          path: apps/web/playwright-report/
+          retention-days: 14
+
+      - name: Upload updated snapshots (only produced on mismatch/missing)
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && matrix.project == 'chromium' && matrix.os == 'ubuntu-latest' }}
+        with:
+          name: visual-snapshots-actual
+          path: apps/web/e2e/**/*-actual.png
+          if-no-files-found: ignore
+          retention-days: 14

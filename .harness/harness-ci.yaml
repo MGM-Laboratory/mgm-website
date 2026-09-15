@@ -1,0 +1,42 @@
+pipeline:
+  name: harness-ci
+  identifier: harness_ci
+  projectIdentifier: default_project
+  orgIdentifier: default
+  variables:
+    - name: commit_sha
+      type: String
+      default: main
+      value: <+input>
+  stages:
+    - stage:
+        name: build-and-test
+        identifier: build_and_test
+        type: CI
+        spec:
+          cloneCodebase: false
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: build-and-test
+                  identifier: build_and_test
+                  spec:
+                    shell: Sh
+                    command: |-
+                      set -eu
+                      git clone --quiet https://github.com/MGM-Laboratory/mgm-website.git repo
+                      cd repo
+                      git checkout --quiet "<+pipeline.variables.commit_sha>"
+                      corepack enable
+                      pnpm install --frozen-lockfile
+                      pnpm lint
+                      pnpm typecheck
+                      pnpm test
+                      pnpm build

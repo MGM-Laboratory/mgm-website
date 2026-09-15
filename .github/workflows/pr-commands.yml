@@ -1,0 +1,42 @@
+name: PR comment commands
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: pr-commands-${{ github.event.issue.number }}-${{ github.event.comment.id }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Generate a bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      # COMMENT_BODY is untrusted, attacker-controlled text — it only ever
+      # reaches this job as a Node environment variable (process.env), never
+      # interpolated into a shell command string, so it can't inject anything.
+      - name: Handle command
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          COMMENT_ASSOCIATION: ${{ github.event.comment.author_association }}
+        run: node .github/scripts/pr-command.mjs
