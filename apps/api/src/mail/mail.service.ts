@@ -19,6 +19,7 @@ export class MailService {
     subject: string;
     html: string;
     from?: string;
+    replyTo?: string;
   }): Promise<void> {
     const from = params.from ?? this.fromEmail;
     if (!from) {
@@ -35,6 +36,7 @@ export class MailService {
           Subject: { Data: params.subject },
           Body: { Html: { Data: params.html } },
         },
+        ReplyToAddresses: params.replyTo ? [params.replyTo] : undefined,
       }),
     );
   }
