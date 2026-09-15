@@ -92,3 +92,8 @@ if (status === "Success") {
 }
 
 console.log(`${pipelineId}: ${status}`);
+
+// The commit status (used as the branch-protection signal) is already
+// posted above regardless — this just makes the GitHub Actions job itself
+// fail too, instead of always showing green no matter what Harness did.
+if (status !== "Success") process.exit(1);
