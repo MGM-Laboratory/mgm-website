@@ -107,3 +107,7 @@ After the repo migration, push-triggered runs silently stopped firing on the fre
 ## Historical: Harness removed (2026-09-15)
 
 This repo used to run a second CI platform on Harness Cloud (three checks: `harness-ci`, `harness-security`, `harness-supply-chain`, triggered via `harness.yml` and `.harness/*.yaml`). It was removed entirely — the account needed a credit card on file to run anything at all, and rather than leave a permanently-red, unfixable check gating `/merge`, the whole integration (workflow, trigger script, pipeline YAML, secret) was deleted. CodeQL, gitleaks, Trivy, and SonarCloud remain as the security/quality coverage.
+
+## Historical: /merge and /close live verification (2026-09-15)
+
+After migrating to this repo, `/check`, `/preview`, `/merge`, and `/close` were each exercised end-to-end against real PRs (this very note landed via one of them) to confirm the full pipeline — readiness gating, the thank-you comment, the actual merge, safe branch deletion, preview teardown, and post-merge production verification — still works unchanged on the new repo.
