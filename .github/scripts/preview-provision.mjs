@@ -151,7 +151,11 @@ if (!webDomain) {
 // Confirmed live. A random suffix on the name sidesteps ever colliding
 // with a stale record like that again.
 const existingApiVars = await getVariables(token, environment.id, API_SERVICE_ID);
-let apiVars = { NODE_ENV: "production" };
+// Duplication copies CORS_ORIGIN over as production's literal web domain, not
+// a reference — left alone, every browser fetch from the preview web app to
+// the preview api gets rejected by CORS and the site renders empty. Confirmed
+// live against a running preview.
+let apiVars = { NODE_ENV: "production", CORS_ORIGIN: `https://${webDomain}` };
 
 if (existingApiVars.AWS_S3_BUCKET) {
   console.log(`Reusing existing bucket ${existingApiVars.AWS_S3_BUCKET} for this environment.`);
