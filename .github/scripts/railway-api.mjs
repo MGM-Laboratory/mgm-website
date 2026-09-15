@@ -109,13 +109,14 @@ export async function updateServiceInstance(token, serviceId, environmentId, inp
 }
 
 export async function deployServiceInstance(token, serviceId, environmentId) {
-  await railway(
+  const data = await railway(
     token,
     `mutation($serviceId: String!, $environmentId: String!) {
       serviceInstanceDeployV2(serviceId: $serviceId, environmentId: $environmentId)
     }`,
     { serviceId, environmentId },
   );
+  return data.serviceInstanceDeployV2;
 }
 
 export async function generateServiceDomain(token, serviceId, environmentId, targetPort) {
