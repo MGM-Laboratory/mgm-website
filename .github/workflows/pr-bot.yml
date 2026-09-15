@@ -2,7 +2,7 @@ name: PR status comment
 
 on:
   workflow_run:
-    workflows: ["CI", "Security", "E2E"]
+    workflows: ["CI", "Security", "E2E", "Harness"]
     types: [completed]
 
 permissions:
@@ -19,7 +19,7 @@ jobs:
     # executes the version of this file on the default branch, regardless of
     # which PR/fork triggered the upstream run, so this job never runs
     # untrusted workflow code.
-    if: github.event.workflow_run.event == 'pull_request'
+    if: contains(fromJSON('["pull_request", "pull_request_target"]'), github.event.workflow_run.event)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
