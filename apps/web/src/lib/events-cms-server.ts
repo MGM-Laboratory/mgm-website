@@ -10,3 +10,11 @@ export async function fetchEventsFeed(): Promise<CmsEventRecord[]> {
   const data = (await response.json()) as { records?: CmsEventRecord[] };
   return data.records ?? [];
 }
+
+/** A single published event, or `undefined` if missing/unpublished. */
+export async function fetchEventBySlug(slug: string): Promise<CmsEventRecord | undefined> {
+  const response = await cmsApi(`/cms/events/${encodeURIComponent(slug)}`);
+  if (!response.ok) return undefined;
+  const data = (await response.json()) as { record?: CmsEventRecord };
+  return data.record;
+}

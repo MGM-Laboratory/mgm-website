@@ -1,5 +1,10 @@
+import type { ArticleBlock } from "@/lib/article-cms";
+
 export const EVENT_COLORS = ["blue", "yellow", "red", "green"] as const;
 export type EventColor = (typeof EVENT_COLORS)[number];
+
+export type EventSpeaker = { name: string; title?: string; photoKey?: string };
+export type EventRundownItem = { time: string; item: string };
 
 export type CmsEventRecord = {
   slug: string;
@@ -12,8 +17,90 @@ export type CmsEventRecord = {
   meetingLink?: string;
   color: EventColor;
   draft: boolean;
+  thumbnailKey?: string;
+  speakers: EventSpeaker[];
+  organizer?: string;
+  coordinator?: string;
+  attendees?: string;
+  rundown: EventRundownItem[];
+  mapsUrl?: string;
+  mapsLat?: number;
+  mapsLng?: number;
+  registrationEnabled: boolean;
+  registrationCapacity?: number;
+  content: ArticleBlock[];
   updatedAt: string;
 };
+
+/** The editable fields, split from `content` the same way the Jobs editor splits `job`/`content`. */
+export type EventDraft = Omit<CmsEventRecord, "content" | "updatedAt">;
+
+export function emptyEventDraft(): EventDraft {
+  return {
+    slug: "",
+    title: "",
+    description: "",
+    startAt: "",
+    endAt: "",
+    allDay: false,
+    location: "",
+    meetingLink: "",
+    color: "blue",
+    draft: true,
+    thumbnailKey: undefined,
+    speakers: [],
+    organizer: "",
+    coordinator: "",
+    attendees: "",
+    rundown: [],
+    mapsUrl: "",
+    mapsLat: undefined,
+    mapsLng: undefined,
+    registrationEnabled: false,
+    registrationCapacity: undefined,
+  };
+}
+
+export type CmsEventRegistrationRecord = {
+  slug: string;
+  registration: {
+    eventSlug: string;
+    eventTitle: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    read: boolean;
+    readAt: string | null;
+    status: "inbox" | "archived";
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+/** A `datetime-local` input value, always interpreted as WIB wall-clock time. */
+export function wibLocalToUtcIso(value: string): string {
+  return new Date(`${value}:00+07:00`).toISOString();
+}
+
+/** The inverse, for populating a `datetime-local` input when editing. */
+export function utcIsoToWibLocal(iso: string): string {
+  const shifted = new Date(new Date(iso).getTime() + WIB_OFFSET_MS);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}`;
+}
+
+/** An all-day event's date, stored as UTC midnight (see `calendarDateParts` below). */
+export function dateOnlyToUtcMidnightIso(value: string): string {
+  return new Date(`${value}T00:00:00.000Z`).toISOString();
+}
+
+export function utcIsoToDateOnly(iso: string): string {
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
 
 // Tint background + solid-color text, the same convention the research
 // explorer's area/status badges already use — every brand color stays
