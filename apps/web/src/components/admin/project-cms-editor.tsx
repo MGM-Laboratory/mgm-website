@@ -1051,8 +1051,8 @@ export function ProjectEditor({
     if (status === "saved") setStatus("idle");
   };
 
-  const save = async () => {
-    let project = draftToProject(draft);
+  const save = async (overrideDraft?: ProjectDraft) => {
+    let project = draftToProject(overrideDraft ?? draft);
     if (!project.title || !project.slug) {
       toast.error("Title and project URL are required.");
       return;
@@ -1238,6 +1238,15 @@ export function ProjectEditor({
     }
   };
 
+  // The Publication card's switch and button both flip and save in one
+  // step, so publishing never depends on remembering the separate
+  // "Save project" action above.
+  const togglePublish = () => {
+    const nextDraft: ProjectDraft = { ...draft, draft: !draft.draft };
+    setDraft(nextDraft);
+    void save(nextDraft);
+  };
+
   const remove = async () => {
     if (!originalRecordSlug) return;
     if (!window.confirm(`Delete “${draft.title || originalRecordSlug}” permanently?`)) return;
@@ -1285,7 +1294,7 @@ export function ProjectEditor({
             aria-label="Save project changes"
             className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white shadow-[0_18px_35px_-16px_rgba(20,32,58,0.55)] transition hover:bg-brand-red active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
             disabled={status === "saving"}
-            onClick={save}
+            onClick={() => save()}
             type="button"
           >
             {status === "saved" ? (
@@ -1679,25 +1688,37 @@ export function ProjectEditor({
             </p>
             <div className="mt-3 flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold">{draft.draft ? "Draft" : "Published"}</p>
+                <p className="text-sm font-semibold">
+                  {draft.draft ? "Draft mode is on" : "Published"}
+                </p>
                 <p className="mt-0.5 text-xs leading-5 text-[#8490a5] dark:text-white/40">
                   {draft.draft
-                    ? "Visible only in this workspace."
-                    : "Visible to everyone at the project URL."}
+                    ? "Only visible in this admin workspace — not on the public site yet."
+                    : "Live for everyone at the project URL."}
                 </p>
               </div>
               <button
-                aria-checked={!draft.draft}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition ${draft.draft ? "bg-[#c6cedd] dark:bg-white/15" : "bg-brand-green"}`}
-                onClick={() => updateDraft("draft", !draft.draft)}
+                aria-checked={draft.draft}
+                aria-label={draft.draft ? "Draft mode is on" : "Draft mode is off"}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${draft.draft ? "bg-brand-yellow" : "bg-brand-green"}`}
+                disabled={status === "saving"}
+                onClick={togglePublish}
                 role="switch"
                 type="button"
               >
                 <span
-                  className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${draft.draft ? "left-0.5" : "left-[1.375rem]"}`}
+                  className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${draft.draft ? "left-[1.375rem]" : "left-0.5"}`}
                 />
               </button>
             </div>
+            <button
+              className="mt-3 h-9 w-full rounded-xl text-xs font-semibold transition disabled:cursor-wait disabled:opacity-70 bg-[#171b25] text-white hover:bg-brand-red dark:bg-white/90 dark:text-[#171b25]"
+              disabled={status === "saving"}
+              onClick={togglePublish}
+              type="button"
+            >
+              {draft.draft ? "Publish this project" : "Unpublish · move back to draft"}
+            </button>
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#e6eaf2] pt-4 dark:border-white/10">
               <div>
                 <p className="text-sm font-semibold">Featured</p>
@@ -1733,50 +1754,46 @@ export function ProjectEditor({
               </div>
             </Field>
             <Field label="Status">
-              <div className="flex h-10 items-center gap-1 rounded-xl border border-[#d9dfeb] bg-white p-1 dark:border-white/10 dark:bg-white/[0.045]">
+              <select
+                className={inputClass}
+                onChange={(event) => updateDraft("status", event.target.value as ProjectStatus)}
+                value={draft.status}
+              >
                 {PROJECT_STATUSES.map((entry) => (
-                  <button
-                    aria-pressed={draft.status === entry}
-                    className={`h-8 flex-1 rounded-lg text-[11px] font-semibold transition ${draft.status === entry ? "bg-[#171b25] text-white dark:bg-white/90 dark:text-[#171b25]" : "text-[#768096] hover:text-[#171b25] dark:text-white/45 dark:hover:text-white"}`}
-                    key={entry}
-                    onClick={() => updateDraft("status", entry as ProjectStatus)}
-                    type="button"
-                  >
+                  <option key={entry} value={entry}>
                     {PROJECT_STATUS_LABELS[entry]}
-                  </button>
+                  </option>
                 ))}
+              </select>
+            </Field>
+            <Field label="Start date">
+              <div className="relative">
+                <CalendarBlank
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                  size={16}
+                />
+                <input
+                  className={`${inputClass} pl-9`}
+                  onChange={(event) => updateDraft("startDate", event.target.value)}
+                  type="date"
+                  value={draft.startDate ?? ""}
+                />
               </div>
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Start date">
-                <div className="relative">
-                  <CalendarBlank
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-                    size={16}
-                  />
-                  <input
-                    className={`${inputClass} pl-9`}
-                    onChange={(event) => updateDraft("startDate", event.target.value)}
-                    type="date"
-                    value={draft.startDate ?? ""}
-                  />
-                </div>
-              </Field>
-              <Field label="End date">
-                <div className="relative">
-                  <CalendarBlank
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
-                    size={16}
-                  />
-                  <input
-                    className={`${inputClass} pl-9`}
-                    onChange={(event) => updateDraft("endDate", event.target.value)}
-                    type="date"
-                    value={draft.endDate ?? ""}
-                  />
-                </div>
-              </Field>
-            </div>
+            <Field label="End date">
+              <div className="relative">
+                <CalendarBlank
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                  size={16}
+                />
+                <input
+                  className={`${inputClass} pl-9`}
+                  onChange={(event) => updateDraft("endDate", event.target.value)}
+                  type="date"
+                  value={draft.endDate ?? ""}
+                />
+              </div>
+            </Field>
             <Field label="Categories">
               <div className="flex flex-wrap gap-1.5">
                 {PROJECT_CATEGORIES.map((category) => {
