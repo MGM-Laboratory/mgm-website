@@ -1,7 +1,9 @@
-<svg width="1049" height="1000" viewBox="0 0 1049 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M0 1000L435.484 322.58V1000H0Z" fill="#F94141"/>
-<path d="M427.42 0L669.355 322.58V0H427.42Z" fill="#F7BF33"/>
-<path d="M669.355 9.15527e-05L435.484 322.58L427.42 9.15527e-05H669.355Z" fill="#F94141"/>
-<path d="M1048.39 838.71L669.355 322.58L548.388 500L669.355 1000H870.968L1048.39 838.71Z" fill="#F7BF33"/>
-<path d="M870.968 1000L435.484 322.58V1000H870.968Z" fill="#3A6DC5"/>
+<svg width="2000" height="2000" viewBox="0 0 2000 2000" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M483 681L1510 674L1507.97 1315L483 681Z" fill="#F7BF33"/>
+<path d="M1510 674L483 676.427L485.42 1316L1510 674Z" fill="#F94141"/>
+<circle cx="575" cy="753" r="25" fill="#F7BF33"/>
+<circle cx="648" cy="753" r="25" fill="#F7BF33"/>
+<circle cx="721" cy="753" r="25" fill="#F7BF33"/>
+<path d="M487.311 1133H1003L846.731 1326H330L487.311 1133Z" fill="#3A6DC5"/>
+<path d="M1511.69 1133H996L1152.27 1326H1669L1511.69 1133Z" fill="#3A6DC5"/>
 </svg>
