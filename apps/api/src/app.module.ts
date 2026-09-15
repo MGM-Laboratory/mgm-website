@@ -8,6 +8,7 @@ import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";
 import { CacheModule } from "./cache/cache.module.js";
 import { CmsArticlesModule } from "./cms/cms-articles.module.js";
+import { CmsContactSettingsModule } from "./cms/cms-contact-settings.module.js";
 import { CmsMembersModule } from "./cms/cms-members.module.js";
 import { CmsPublicationsModule } from "./cms/cms-publications.module.js";
 import { validateEnv } from "./config/env.validation.js";
@@ -42,6 +43,7 @@ import { StorageModule } from "./storage/storage.module.js";
     CmsMembersModule,
     CmsArticlesModule,
     CmsPublicationsModule,
+    CmsContactSettingsModule,
     HealthModule,
     StorageModule,
     MailModule,
