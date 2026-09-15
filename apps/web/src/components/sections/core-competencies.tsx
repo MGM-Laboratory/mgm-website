@@ -101,17 +101,13 @@ export function CoreCompetenciesSection() {
         </p>
       </div>
 
-      <ScrollStack
-        className="mx-auto mt-14 w-full max-w-[1800px]"
-        stackPosition="6%"
-        itemStackDistance={36}
-      >
+      <ScrollStack className="mx-auto mt-14 w-full">
         {COMPETENCIES.map((c, i) => (
           <ScrollStackItem
             key={c.title}
             href={c.href}
             className={cn(
-              "group flex min-h-[80vh] overflow-hidden rounded-3xl p-10 shadow-[0_20px_50px_-20px_rgba(14,17,22,0.35)] transition-colors sm:min-h-[85vh] sm:p-14 lg:min-h-[88vh] lg:p-20",
+              "group overflow-hidden rounded-3xl p-10 shadow-[0_20px_50px_-20px_rgba(14,17,22,0.35)] transition-colors sm:p-14 lg:p-16",
               "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground",
               CARD_BG[c.color],
             )}
@@ -120,7 +116,7 @@ export function CoreCompetenciesSection() {
               ref={(el) => {
                 motifRefs.current[i] = el;
               }}
-              className="pointer-events-none absolute -top-16 -right-16 size-64 rotate-6 sm:size-96 lg:size-[28rem]"
+              className="pointer-events-none absolute -top-12 -right-12 size-56 rotate-6 sm:size-72 lg:size-96"
             >
               <CompetencyMotifShape
                 motif={c.motif}
@@ -131,11 +127,11 @@ export function CoreCompetenciesSection() {
 
             <div
               className={cn(
-                "relative z-10 flex h-full w-full flex-col justify-between",
+                "relative z-10 flex min-h-64 flex-col justify-between sm:min-h-72",
                 CARD_TEXT[c.color],
               )}
             >
-              <h3 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+              <h3 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
                 {c.title}
               </h3>
               <div>
