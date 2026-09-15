@@ -113,6 +113,7 @@ export async function listServiceInstances(token, environmentId) {
               serviceName
               domains { serviceDomains { domain } }
               hasEverDeployed
+              source { image repo }
             }
           }
         }
@@ -188,17 +189,15 @@ export async function createVolume(token, environmentId, serviceId, mountPath) {
   return data.volumeCreate;
 }
 
-export async function findBucketByName(token, name) {
+export async function getVariables(token, environmentId, serviceId) {
   const data = await railway(
     token,
-    `query($projectId: String!) {
-      project(id: $projectId) {
-        buckets { edges { node { id name } } }
-      }
+    `query($projectId: String!, $environmentId: String!, $serviceId: String) {
+      variables(projectId: $projectId, environmentId: $environmentId, serviceId: $serviceId)
     }`,
-    { projectId: PROJECT_ID },
+    { projectId: PROJECT_ID, environmentId, serviceId },
   );
-  return data.project.buckets.edges.map((e) => e.node).find((n) => n.name === name) ?? null;
+  return data.variables;
 }
 
 // BucketCreateInput.environmentId is documented "[unimplemented]" and really

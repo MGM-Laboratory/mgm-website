@@ -12,12 +12,7 @@
 //    for.
 import { execFileSync } from "node:child_process";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import {
-  railway,
-  PRODUCTION_ENVIRONMENT_ID,
-  API_SERVICE_ID,
-  WEB_SERVICE_ID,
-} from "./railway-api.mjs";
+import { PRODUCTION_ENVIRONMENT_ID, API_SERVICE_ID, getVariables } from "./railway-api.mjs";
 import { ghRequest } from "./gh-api.mjs";
 
 const railwayToken = process.env.RAILWAY_TOKEN;
@@ -36,20 +31,9 @@ const WHITELISTED_TABLES = [
   "CmsMember",
 ];
 
-async function serviceVars(environmentId, serviceId) {
-  const data = await railway(
-    railwayToken,
-    `query($projectId: String!, $environmentId: String!, $serviceId: String) {
-      variables(projectId: $projectId, environmentId: $environmentId, serviceId: $serviceId)
-    }`,
-    { projectId: "810d3a40-d9d2-410c-b117-289d2aff095f", environmentId, serviceId },
-  );
-  return data.variables;
-}
-
 const [prodVars, previewVars] = await Promise.all([
-  serviceVars(PRODUCTION_ENVIRONMENT_ID, API_SERVICE_ID),
-  serviceVars(environmentId, API_SERVICE_ID),
+  getVariables(railwayToken, PRODUCTION_ENVIRONMENT_ID, API_SERVICE_ID),
+  getVariables(railwayToken, environmentId, API_SERVICE_ID),
 ]);
 
 const prodDb = prodVars.DATABASE_URL;

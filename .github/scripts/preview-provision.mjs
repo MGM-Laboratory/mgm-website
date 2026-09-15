@@ -16,13 +16,14 @@ import {
   createPreviewEnvironment,
   createVolume,
   deployServiceInstance,
-  findBucketByName,
   findEnvironmentByName,
   generateServiceDomain,
+  getVariables,
   listServiceInstances,
   listVolumeInstances,
   previewEnvironmentName,
   setVariables,
+  updateServiceInstance,
 } from "./railway-api.mjs";
 
 const token = process.env.RAILWAY_TOKEN;
@@ -49,6 +50,30 @@ if (!apiInstance || !webInstance || !postgresInstance || !redisInstance) {
   throw new Error(
     "Expected api/web/Postgres/Redis service instances in the duplicated environment",
   );
+}
+
+// Duplication copies web/api's source as-is: repo main, same as production.
+// skipInitialDeploys only skips the deploy at creation time — it does NOT
+// unsubscribe the instance from GitHub's push-triggered auto-deploy, so
+// every push to main between here and push-and-deploy pointing these at the
+// real PR image was re-deploying *main's own source* into this preview.
+// Confirmed live: both had already deployed from repo/main, successfully,
+// before push-and-deploy ever got a chance to run. Switching to a neutral
+// placeholder image now (scoped to this environment only, via
+// environmentId — verified earlier this never touches production) closes
+// that window; push-and-deploy overwrites it with the real image shortly.
+const PLACEHOLDER_IMAGE = "busybox:latest";
+if (apiInstance.source?.repo) {
+  console.log("Disconnecting api from GitHub auto-deploy for this environment...");
+  await updateServiceInstance(token, API_SERVICE_ID, environment.id, {
+    source: { image: PLACEHOLDER_IMAGE },
+  });
+}
+if (webInstance.source?.repo) {
+  console.log("Disconnecting web from GitHub auto-deploy for this environment...");
+  await updateServiceInstance(token, WEB_SERVICE_ID, environment.id, {
+    source: { image: PLACEHOLDER_IMAGE },
+  });
 }
 
 // Volumes aren't carried over by environmentCreate's sourceEnvironmentId
@@ -101,13 +126,6 @@ async function waitForFirstDeploy(serviceId, label) {
 await waitForFirstDeploy(POSTGRES_SERVICE_ID, "Postgres");
 await waitForFirstDeploy(REDIS_SERVICE_ID, "Redis");
 
-const bucketName = `preview-pr-${prNumber}`.slice(0, 63);
-let bucket = await findBucketByName(token, bucketName);
-if (!bucket) {
-  console.log(`Creating bucket ${bucketName}...`);
-  bucket = await createBucket(token, environment.id, bucketName);
-}
-
 function domainOf(instance) {
   return instance.domains?.serviceDomains?.[0]?.domain ?? null;
 }
@@ -124,32 +142,46 @@ if (!webDomain) {
   webDomain = await generateServiceDomain(token, WEB_SERVICE_ID, environment.id, 3000);
 }
 
-// environmentPatchCommit (inside createBucket) is async — bucketS3Credentials
-// can 404 with "BucketInstance not found" for a few seconds after a fresh
-// create while the instance finishes provisioning. Retry instead of failing.
-let creds = null;
-const bucketAttempts = 12;
-for (let attempt = 0; attempt < bucketAttempts && !creds; attempt++) {
-  try {
-    creds = await bucketS3Credentials(token, bucket.id, environment.id);
-  } catch (err) {
-    if (attempt === bucketAttempts - 1) throw err;
-    console.log(`Bucket instance not ready yet (attempt ${attempt + 1}), retrying...`);
-    await new Promise((r) => setTimeout(r, 5000));
+// Reuse via persisted state (the api service's own vars), not a by-name
+// bucket lookup: bucket records are project-wide and outlive the
+// environment they were meant for (no delete mutation exists), so a
+// previous attempt's environment being deleted and recreated left an
+// orphaned "preview-pr-1" bucket record around — findBucketByName kept
+// finding that dead record on every retry instead of making a fresh one.
+// Confirmed live. A random suffix on the name sidesteps ever colliding
+// with a stale record like that again.
+const existingApiVars = await getVariables(token, environment.id, API_SERVICE_ID);
+let apiVars = { NODE_ENV: "production" };
+
+if (existingApiVars.AWS_S3_BUCKET) {
+  console.log(`Reusing existing bucket ${existingApiVars.AWS_S3_BUCKET} for this environment.`);
+  apiVars.ADMIN_PASSPHRASE =
+    existingApiVars.ADMIN_PASSPHRASE ?? randomBytes(18).toString("base64url");
+} else {
+  const bucketName = `preview-pr-${prNumber}-${randomBytes(4).toString("hex")}`.slice(0, 63);
+  console.log(`Creating bucket ${bucketName}...`);
+  const bucket = await createBucket(token, environment.id, bucketName);
+
+  // environmentPatchCommit (inside createBucket) is async — bucketS3Credentials
+  // can 404 with "BucketInstance not found" for a few seconds after a fresh
+  // create while the instance finishes provisioning. Retry instead of failing.
+  let creds = null;
+  const bucketAttempts = 12;
+  for (let attempt = 0; attempt < bucketAttempts && !creds; attempt++) {
+    try {
+      creds = await bucketS3Credentials(token, bucket.id, environment.id);
+    } catch (err) {
+      if (attempt === bucketAttempts - 1) throw err;
+      console.log(`Bucket instance not ready yet (attempt ${attempt + 1}), retrying...`);
+      await new Promise((r) => setTimeout(r, 5000));
+    }
   }
-}
 
-const adminPassphrase = randomBytes(18).toString("base64url");
-
-const apiVars = {
-  ADMIN_PASSPHRASE: adminPassphrase,
-  NODE_ENV: "production",
-};
-if (creds) {
-  // Deliberately not setting AWS_S3_FORCE_PATH_STYLE here — production
-  // leaves it unset (defaults to false in env.validation.ts) against the
-  // same storage backend, and forcing it on here for no reason risks a
-  // request-signing mismatch that just looks like a bad credential.
+  apiVars.ADMIN_PASSPHRASE = randomBytes(18).toString("base64url");
+  // Deliberately not setting AWS_S3_FORCE_PATH_STYLE — production leaves it
+  // unset (defaults to false in env.validation.ts) against the same
+  // storage backend, and forcing it on here for no reason risks a request-
+  // signing mismatch that just looks like a bad credential.
   Object.assign(apiVars, {
     AWS_S3_BUCKET: creds.bucketName ?? bucketName,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
@@ -158,8 +190,11 @@ if (creds) {
     AWS_REGION: creds.region ?? "auto",
   });
 }
+
 await setVariables(token, environment.id, API_SERVICE_ID, apiVars);
-await setVariables(token, environment.id, WEB_SERVICE_ID, { ADMIN_PASSPHRASE: adminPassphrase });
+await setVariables(token, environment.id, WEB_SERVICE_ID, {
+  ADMIN_PASSPHRASE: apiVars.ADMIN_PASSPHRASE,
+});
 
 // admin_passphrase deliberately never leaves this process: this repo is
 // public, and GitHub Actions job outputs (unlike step-local variables) are
