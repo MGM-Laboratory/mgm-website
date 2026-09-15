@@ -11,6 +11,7 @@ import { CmsAdminsModule } from "./cms/cms-admins.module.js";
 import { CmsArticlesModule } from "./cms/cms-articles.module.js";
 import { CmsJobsModule } from "./cms/cms-jobs.module.js";
 import { CmsMembersModule } from "./cms/cms-members.module.js";
+import { CmsProjectsModule } from "./cms/cms-projects.module.js";
 import { CmsPublicationsModule } from "./cms/cms-publications.module.js";
 import { CmsResearchModule } from "./cms/cms-research.module.js";
 import { validateEnv } from "./config/env.validation.js";
@@ -47,6 +48,7 @@ import { StorageModule } from "./storage/storage.module.js";
     CmsPublicationsModule,
     CmsJobsModule,
     CmsResearchModule,
+    CmsProjectsModule,
     CmsAdminsModule,
     HealthModule,
     StorageModule,
