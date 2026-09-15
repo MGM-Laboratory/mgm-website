@@ -84,13 +84,16 @@ const apiVars = {
   NODE_ENV: "production",
 };
 if (creds) {
+  // Deliberately not setting AWS_S3_FORCE_PATH_STYLE here — production
+  // leaves it unset (defaults to false in env.validation.ts) against the
+  // same storage backend, and forcing it on here for no reason risks a
+  // request-signing mismatch that just looks like a bad credential.
   Object.assign(apiVars, {
     AWS_S3_BUCKET: creds.bucketName ?? bucketName,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
     AWS_ENDPOINT_URL: creds.endpoint,
     AWS_REGION: creds.region ?? "auto",
-    AWS_S3_FORCE_PATH_STYLE: "true",
   });
 }
 await setVariables(token, environment.id, API_SERVICE_ID, apiVars);

@@ -65,7 +65,11 @@ run("pnpm", ["--filter", "api", "exec", "prisma", "migrate", "deploy"], {
 });
 
 console.log(`Copying ${WHITELISTED_TABLES.join(", ")} from production (read-only)...`);
-const tableArgs = WHITELISTED_TABLES.flatMap((t) => ["--table", `"${t}"`]);
+// execFile passes argv entries verbatim (no shell), so table names must NOT
+// be quoted here — pg_dump does its own identifier handling. An earlier
+// version wrapped these in literal double quotes, which pg_dump would have
+// treated as part of the table name and silently matched nothing.
+const tableArgs = WHITELISTED_TABLES.flatMap((t) => ["--table", t]);
 const dump = run(
   "pg_dump",
   [prodDb, "--data-only", "--no-owner", "--no-privileges", "--column-inserts", ...tableArgs],
@@ -75,6 +79,24 @@ run("psql", [previewDb, "-v", "ON_ERROR_STOP=1"], { input: dump });
 
 console.log("Stripping member phone numbers...");
 run("psql", [previewDb, "-c", `UPDATE "CmsMember" SET data = data - 'phone'`]);
+
+console.log("Removing draft/unpublished records (never servable in prod, must not leak here)...");
+// Each table nests its own draft flag under a different key
+// (data.article.draft, data.project.draft, ...) — see isDraft() in each
+// apps/api/src/cms/cms-*.service.ts.
+const DRAFT_PATHS = {
+  CmsArticle: "article",
+  CmsPublication: "publication",
+  CmsProject: "project",
+  CmsResearchInitiative: "research",
+};
+for (const [table, key] of Object.entries(DRAFT_PATHS)) {
+  run("psql", [
+    previewDb,
+    "-c",
+    `DELETE FROM "${table}" WHERE (data->'${key}'->>'draft')::boolean IS TRUE`,
+  ]);
+}
 
 console.log("Finding referenced storage objects...");
 const selectAll = WHITELISTED_TABLES.map((t) => `SELECT data::text FROM "${t}"`).join(" UNION ALL ");
