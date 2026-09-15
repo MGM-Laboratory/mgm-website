@@ -69,11 +69,11 @@ const ACCENT_COLORS = {
   green: "bg-brand-green",
 } as const;
 const DIVISION_LOGOS: Record<MemberDivision, string> = {
-  Professors: "/logo.svg",
-  Website: "/logo/rnd.svg",
-  Mobile: "/logo/rnd.svg",
-  "HCI/UX": "/logo/rnd.svg",
-  "Game & XR": "/logo/rnd.svg",
+  Professors: "/logo/professor.svg",
+  Website: "/logo/web.svg",
+  Mobile: "/logo/mobile.svg",
+  "HCI/UX": "/logo/ux.svg",
+  "Game & XR": "/logo/game.svg",
   "IT & Infrastructure": "/logo/infra.svg",
   "Public Relations": "/logo/pr.svg",
   Media: "/logo/media.svg",
