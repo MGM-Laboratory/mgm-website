@@ -3,8 +3,10 @@
 Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers three things in parallel:
 
 1. **GitHub Actions CI** (`ci.yaml`)
-2. **Docker image build & push** (`docker-publish.yml`)
+2. **Docker image build & push** (`publish-docker-image-latest.yml`)
 3. **Railway auto-deploy** of the `web` and `api` services (~30s)
+
+Every pull request additionally triggers a **staging Docker image build** (`publish-docker-image-staging.yml`), independent of the three above.
 
 ## GitHub Actions
 
@@ -12,9 +14,17 @@ Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers three t
 
 Triggers: push to `main`, PRs to `main`, `workflow_dispatch` (manual). Runs on `ubuntu-latest` with a Postgres 17 service container; env `DATABASE_URL` (local postgres) and `NEXT_PUBLIC_API_URL` (`http://localhost:4000/api`). Steps: checkout → pnpm setup (`pnpm/action-setup@v6`) → Node from `.nvmrc` (22) → `pnpm install --frozen-lockfile` → **lint → typecheck → test → build** (turbo, all workspaces).
 
-### `docker-publish.yml`
+### Docker image workflows
 
-Triggers: push to `main`, tags `v*.*.*`, `workflow_dispatch`. Guard: `if: vars.DOCKERHUB_USERNAME != ''` — if the var is absent the job silently skips (this is how it behaves on forks/CI without creds). Matrix builds two images from repo root context: `website-api` (`apps/api/Dockerfile`) and `website-web` (`apps/web/Dockerfile`). Tag is computed inline: `latest` on a push to `main`, or the pushed tag itself (e.g. `v1.2.3`) on a version tag; each build is pushed under three tags — the base tag, `<tag>-<UTC timestamp>`, and `<tag>-<short sha>`. `linux/amd64` only, GHA cache (scoped per app), `NEXT_PUBLIC_API_URL` build-arg from vars. **Docker Hub credentials live at the GitHub org level** (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` variables/secrets) — nothing is stored per-repo, so new repos in the org inherit them automatically.
+Split into per-image reusable workflows plus thin caller workflows, mirroring the pattern in `rensa` — one file per image, invoked with a `tag` input rather than duplicating build logic per trigger:
+
+- **`publish-docker-image-api.yml`** / **`publish-docker-image-web.yml`** (`workflow_call`, input: `tag`) — the actual build+push logic, one per image (`apps/api/Dockerfile` → `website-api`, `apps/web/Dockerfile` → `website-web`). Guard: `if: vars.DOCKERHUB_USERNAME != ''` — if the var is absent the job silently skips (this is how it behaves on forks/CI without creds). Each build is pushed under three tags: the base `tag` input, `<tag>-<UTC timestamp>`, and `<tag>-<short sha>`. `linux/amd64` only, GHA cache scoped per app, `NEXT_PUBLIC_API_URL` build-arg from vars (web only).
+- **`publish-docker-image-latest.yml`** — caller, triggers on push to `main` + `workflow_dispatch`. Calls both image workflows with `tag: latest`.
+- **`publish-docker-image-staging.yml`** — caller, triggers on any pull request (`branches: ["*"]`) + `workflow_dispatch`. Calls both image workflows with `tag: staging`.
+
+Version-tag-triggered releases (pushing `v*.*.*`) aren't wired up in this split — the previous single-file workflow supported it, this one doesn't yet. Add a third caller workflow if that's needed again.
+
+**Docker Hub credentials live at the GitHub org level** (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` variables/secrets) — nothing is stored per-repo, so new repos in the org inherit them automatically.
 
 Verification commands:
 
