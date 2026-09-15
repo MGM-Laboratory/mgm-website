@@ -34,7 +34,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build web
-        run: pnpm --filter web build
+        run: pnpm turbo run build --filter=web
 
       - name: Run Lighthouse CI
         run: pnpm dlx @lhci/cli@0.15.x autorun --config=.lighthouserc.json

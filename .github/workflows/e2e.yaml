@@ -58,7 +58,7 @@ jobs:
         run: pnpm --filter web exec playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project == 'mobile-safari' && 'webkit' || matrix.project }}
 
       - name: Build web
-        run: pnpm --filter web build
+        run: pnpm turbo run build --filter=web
 
       - name: Run Playwright tests
         run: pnpm --filter web exec playwright test --project=${{ matrix.project }}
