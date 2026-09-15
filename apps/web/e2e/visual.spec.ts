@@ -4,8 +4,13 @@ import { test, expect } from "@playwright/test";
 // single project avoids cross-platform pixel-diff noise on every PR.
 test.describe("visual regression", () => {
   test.beforeEach(async ({}, testInfo) => {
+    // testInfo.project.name is just the browser engine ("chromium") — it
+    // doesn't vary by OS, so this also has to check process.platform
+    // directly. Without it, the windows-latest/chromium matrix job ran this
+    // same comparison against a baseline (homepage-chromium-win32.png) that
+    // was never captured and was never meant to exist, failing every time.
     test.skip(
-      testInfo.project.name !== "chromium",
+      testInfo.project.name !== "chromium" || process.platform !== "linux",
       "Baselines are only maintained for the primary chromium/ubuntu project",
     );
   });
