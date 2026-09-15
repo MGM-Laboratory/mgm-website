@@ -205,7 +205,7 @@ const adminBody = await adminRes.json();
 const generatedPassphrase = adminBody.generatedPassphrase;
 
 const commentBody = [
-  `**Ren's Automation** — preview for PR #${prNumber} is up:`,
+  `**ren-automation** — preview for PR #${prNumber} is up:`,
   "",
   `- Site: https://${webDomain}`,
   `- API: https://${apiDomain}/api`,

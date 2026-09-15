@@ -53,7 +53,7 @@ lines.sort();
 
 const body = [
   MARKER,
-  `**Ren's Automation** — checks for \`${sha.slice(0, 7)}\``,
+  `**ren-automation** — checks for \`${sha.slice(0, 7)}\``,
   "",
   ...(lines.length ? lines : ["- (no checks reported yet)"]),
 ].join("\n");

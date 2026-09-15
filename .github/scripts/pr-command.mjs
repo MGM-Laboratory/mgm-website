@@ -1,7 +1,7 @@
 import { ghRequest } from "./gh-api.mjs";
 
 const actionsToken = process.env.GITHUB_TOKEN; // default token — actions:write only
-const botToken = process.env.BOT_TOKEN; // Ren's Automation installation token — comments only
+const botToken = process.env.BOT_TOKEN; // ren-automation installation token — comments only
 const repo = process.env.REPO;
 const prNumber = process.env.PR_NUMBER;
 const author = process.env.COMMENT_AUTHOR;
