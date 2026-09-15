@@ -1,20 +1,16 @@
 import type { Metadata } from "next";
 
-import { PageBand } from "@/components/sections/page-band";
+import { ContactContent } from "@/components/contact/contact-content";
+import { fetchContactSettings } from "@/lib/contact-settings";
 
 export const metadata: Metadata = {
   title: "Contact — MGM Laboratory",
   description: "Get in touch with MGM Laboratory.",
 };
 
-export default function ContactPage() {
-  return (
-    <PageBand
-      eyebrow="Contact"
-      title="Get in Touch"
-      description="Have a project, a research question, or just want to say hello? We'd love to hear from you."
-      tone="blue"
-      motif="plus"
-    />
-  );
+export const revalidate = 0;
+
+export default async function ContactPage() {
+  const settings = await fetchContactSettings();
+  return <ContactContent settings={settings} />;
 }
