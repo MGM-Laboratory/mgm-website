@@ -37,6 +37,7 @@ import {
 } from "@/lib/admin-permissions";
 import { AdminManagementPanel } from "@/components/admin/admin-management-panel";
 import { ArticleEditor } from "@/components/admin/article-cms-editor";
+import { ProjectEditor } from "@/components/admin/project-cms-editor";
 import { PublicationEditor } from "@/components/admin/publication-cms-editor";
 import { ResearchEditor } from "@/components/admin/research-cms-editor";
 import {
@@ -54,10 +55,12 @@ import {
 } from "@/lib/member-cms";
 import { useMemberRecords } from "@/hooks/use-member-records";
 import { useArticleRecords } from "@/hooks/use-article-records";
+import { useProjectRecords } from "@/hooks/use-project-records";
 import { usePublicationRecords } from "@/hooks/use-publication-records";
 import { useResearchRecords } from "@/hooks/use-research-records";
 import { CareersCmsStudio } from "@/components/admin/careers-cms-studio";
 import type { CmsArticleRecord } from "@/lib/article-cms";
+import type { CmsProjectRecord } from "@/lib/project-cms";
 import type { CmsPublicationRecord } from "@/lib/publication-cms";
 import type { CmsJobApplicationRecord, CmsJobRecord } from "@/lib/career-cms";
 import type { CmsResearchRecord } from "@/lib/research-cms";
@@ -107,6 +110,7 @@ const LIVE_WORKSPACES = new Set<EditorialSection>([
   "publications",
   "careers",
   "research",
+  "projects",
 ]);
 
 /** Each editorial workspace maps to the permission page that gates it. */
@@ -416,7 +420,9 @@ export function MemberCmsStudio({
   initialJobs = [],
   initialApplications = [],
   initialResearch = [],
+  initialProjects = [],
   paperLimitBytes = 209_715_200,
+  videoLimitBytes = 524_288_000,
   session,
 }: {
   initialArticles?: CmsArticleRecord[];
@@ -425,7 +431,9 @@ export function MemberCmsStudio({
   initialJobs?: CmsJobRecord[];
   initialApplications?: CmsJobApplicationRecord[];
   initialResearch?: CmsResearchRecord[];
+  initialProjects?: CmsProjectRecord[];
   paperLimitBytes?: number;
+  videoLimitBytes?: number;
   session: AdminViewer;
 }) {
   const { members, ready, records, setRecords } = useMemberRecords();
@@ -444,6 +452,11 @@ export function MemberCmsStudio({
     records: researchRecords,
     setRecords: setResearchRecords,
   } = useResearchRecords(initialResearch);
+  const {
+    ready: projectsReady,
+    records: projectRecords,
+    setRecords: setProjectRecords,
+  } = useProjectRecords(initialProjects);
   const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");
@@ -462,6 +475,10 @@ export function MemberCmsStudio({
   const [selectedResearchSlug, setSelectedResearchSlug] = useState<string>();
   const [showNewResearch, setShowNewResearch] = useState(false);
   const [researchNewKey, setResearchNewKey] = useState(0);
+  const [projectQuery, setProjectQuery] = useState("");
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState<string>();
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [projectNewKey, setProjectNewKey] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const workspacePickerRef = useRef<HTMLDivElement>(null);
@@ -567,6 +584,24 @@ export function MemberCmsStudio({
     );
   }, [researchQuery, sortedResearchRecords]);
 
+  const sortedProjectRecords = useMemo(
+    () =>
+      [...projectRecords].sort((left, right) =>
+        (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""),
+      ),
+    [projectRecords],
+  );
+  const visibleProjectRecords = useMemo(() => {
+    const needle = projectQuery.trim().toLocaleLowerCase();
+    if (!needle) return sortedProjectRecords;
+    return sortedProjectRecords.filter((record) =>
+      [record.project.title, record.project.slug, ...record.project.techStack]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(needle),
+    );
+  }, [projectQuery, sortedProjectRecords]);
+
   const confirmDiscard = () =>
     !hasUnsavedChanges || window.confirm("You have unsaved changes. Discard them and continue?");
   const selectMember = (member: Member) => {
@@ -623,6 +658,19 @@ export function MemberCmsStudio({
     setShowNewResearch(true);
     setResearchNewKey((current) => current + 1);
   };
+  const selectProject = (slug: string) => {
+    if ((showNewProject || slug !== selectedProjectSlug) && !confirmDiscard()) return;
+    setHasUnsavedChanges(false);
+    setShowNewProject(false);
+    setSelectedProjectSlug(slug);
+  };
+  const startNewProject = () => {
+    if (!confirmDiscard()) return;
+    setHasUnsavedChanges(false);
+    setSelectedProjectSlug(undefined);
+    setShowNewProject(true);
+    setProjectNewKey((current) => current + 1);
+  };
   const changeSection = (nextSection: EditorialSection) => {
     if (nextSection !== section && !confirmDiscard()) return;
     if (nextSection !== section) setHasUnsavedChanges(false);
@@ -639,6 +687,9 @@ export function MemberCmsStudio({
   );
   const selectedResearch = sortedResearchRecords.find(
     (record) => record.slug === selectedResearchSlug,
+  );
+  const selectedProject = sortedProjectRecords.find(
+    (record) => record.slug === selectedProjectSlug,
   );
 
   useEffect(() => {
@@ -943,6 +994,65 @@ export function MemberCmsStudio({
                   ) : null}
                 </nav>
               </div>
+            ) : section === "projects" ? (
+              <div className="flex min-h-0 flex-col lg:h-full">
+                <div className="shrink-0">
+                  <div className="relative">
+                    <MagnifyingGlass
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                      size={17}
+                    />
+                    <input
+                      className={`${inputClass} pl-9`}
+                      onChange={(event) => setProjectQuery(event.target.value)}
+                      placeholder="Find a project"
+                      value={projectQuery}
+                    />
+                  </div>
+                  <button
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-red/45 bg-brand-red/[0.04] text-sm font-semibold text-brand-red transition hover:bg-brand-red hover:text-white active:scale-[0.98]"
+                    onClick={startNewProject}
+                    type="button"
+                  >
+                    <Plus size={17} weight="bold" />
+                    New project
+                  </button>
+                  <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                    Projects · {projectsReady ? projectRecords.length : "…"}
+                  </p>
+                </div>
+                <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                  {visibleProjectRecords.map((record) => (
+                    <button
+                      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${record.slug === selectedProjectSlug && !showNewProject ? "bg-white shadow-[0_10px_24px_-20px_rgba(20,32,58,0.5)] dark:bg-white/10" : "hover:bg-white/70 dark:hover:bg-white/[0.05]"}`}
+                      key={record.slug}
+                      onClick={() => selectProject(record.slug)}
+                      type="button"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">
+                          {record.project.title || "Untitled project"}
+                        </span>
+                        <span className="mt-0.5 flex items-center gap-2 text-xs text-[#778299] dark:text-white/45">
+                          <span className="truncate">
+                            {record.project.startDate || record.project.status}
+                          </span>
+                          {record.project.draft ? (
+                            <span className="shrink-0 rounded-full bg-brand-yellow-50 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#a97b1c] uppercase">
+                              Draft
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                  {!visibleProjectRecords.length ? (
+                    <p className="px-2 py-4 text-xs leading-5 text-[#9ba4b5]">
+                      No projects yet. Start one with “New project”.
+                    </p>
+                  ) : null}
+                </nav>
+              </div>
             ) : section === "members" ? (
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
@@ -1186,6 +1296,34 @@ export function MemberCmsStudio({
                     ]);
                     setSelectedResearchSlug(record.slug);
                     setShowNewResearch(false);
+                    setHasUnsavedChanges(false);
+                  }}
+                />
+              ) : section === "projects" ? (
+                <ProjectEditor
+                  key={
+                    showNewProject
+                      ? `new-${projectNewKey}`
+                      : `${selectedProject?.slug ?? "none"}-${selectedProject?.updatedAt ?? "base"}`
+                  }
+                  initialRecord={showNewProject ? undefined : selectedProject}
+                  members={members}
+                  videoLimitBytes={videoLimitBytes}
+                  onDeleted={(slug) => {
+                    setProjectRecords((current) =>
+                      current.filter((record) => record.slug !== slug),
+                    );
+                    setSelectedProjectSlug(undefined);
+                    setHasUnsavedChanges(false);
+                  }}
+                  onDirtyChange={setHasUnsavedChanges}
+                  onSaved={(record) => {
+                    setProjectRecords((current) => [
+                      ...current.filter((item) => item.slug !== record.slug),
+                      record,
+                    ]);
+                    setSelectedProjectSlug(record.slug);
+                    setShowNewProject(false);
                     setHasUnsavedChanges(false);
                   }}
                 />
