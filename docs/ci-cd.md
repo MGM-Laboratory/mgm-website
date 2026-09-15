@@ -14,7 +14,7 @@ Triggers: push to `main`, PRs to `main`, `workflow_dispatch` (manual). Runs on `
 
 ### `docker-publish.yml`
 
-Triggers: push to `main`, tags `v*.*.*`, `workflow_dispatch`. Guard: `if: vars.DOCKERHUB_USERNAME != ''` — if the var is absent the job silently skips (this is how it behaves on forks/CI without creds). Matrix builds two images from repo root context: `website-api` (`apps/api/Dockerfile`) and `website-web` (`apps/web/Dockerfile`), tags `latest` + branch + semver + short-sha, GHA cache, `NEXT_PUBLIC_API_URL` build-arg from vars. **Docker Hub credentials live at the GitHub org level** (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` variables/secrets) — nothing is stored per-repo, so new repos in the org inherit them automatically.
+Triggers: push to `main`, tags `v*.*.*`, `workflow_dispatch`. Guard: `if: vars.DOCKERHUB_USERNAME != ''` — if the var is absent the job silently skips (this is how it behaves on forks/CI without creds). Matrix builds two images from repo root context: `website-api` (`apps/api/Dockerfile`) and `website-web` (`apps/web/Dockerfile`). Tag is computed inline: `latest` on a push to `main`, or the pushed tag itself (e.g. `v1.2.3`) on a version tag; each build is pushed under three tags — the base tag, `<tag>-<UTC timestamp>`, and `<tag>-<short sha>`. `linux/amd64` only, GHA cache (scoped per app), `NEXT_PUBLIC_API_URL` build-arg from vars. **Docker Hub credentials live at the GitHub org level** (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` variables/secrets) — nothing is stored per-repo, so new repos in the org inherit them automatically.
 
 Verification commands:
 
