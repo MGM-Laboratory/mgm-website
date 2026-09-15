@@ -266,7 +266,7 @@ export class CmsEventsController {
     const record = (await this.events.bySlug(slug)) as unknown as IcsEventRecord;
     const body = buildSingleEventIcs(record);
     response.setHeader("Content-Type", "text/calendar; charset=utf-8");
-    response.setHeader("Content-Disposition", `inline; filename="${slug}.ics"`);
+    response.setHeader("Content-Disposition", `attachment; filename="${slug}.ics"`);
     response.send(body);
   }
 
