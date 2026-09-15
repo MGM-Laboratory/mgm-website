@@ -62,9 +62,30 @@ export class StorageService {
   }
 
   private contentTypeFor(key: string) {
-    if (key.endsWith(".png")) return "image/png";
-    if (key.endsWith(".webp")) return "image/webp";
-    return "image/jpeg";
+    const ext = key.split(".").pop()?.toLowerCase();
+    switch (ext) {
+      case "png":
+        return "image/png";
+      case "webp":
+        return "image/webp";
+      case "jpg":
+      case "jpeg":
+        return "image/jpeg";
+      case "gif":
+        return "image/gif";
+      case "pdf":
+        return "application/pdf";
+      case "zip":
+        return "application/zip";
+      case "doc":
+        return "application/msword";
+      case "docx":
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      case "txt":
+        return "text/plain";
+      default:
+        return "application/octet-stream";
+    }
   }
 
   async uploadFile(params: {

@@ -29,6 +29,11 @@ async function bootstrap() {
     }),
   );
 
+  // Contact-form attachments arrive as raw bytes of whatever type the
+  // browser reports (PDF, image, doc, archive), scoped to this one path so
+  // it never shadows the JSON parser used everywhere else.
+  app.use("/api/contact/attachments", raw({ type: () => true, limit: "26mb" }));
+
   app.use(helmet());
   app.use(compression());
   app.enableCors({

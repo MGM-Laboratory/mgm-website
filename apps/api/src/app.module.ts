@@ -11,6 +11,7 @@ import { CmsArticlesModule } from "./cms/cms-articles.module.js";
 import { CmsContactSettingsModule } from "./cms/cms-contact-settings.module.js";
 import { CmsMembersModule } from "./cms/cms-members.module.js";
 import { CmsPublicationsModule } from "./cms/cms-publications.module.js";
+import { ContactModule } from "./contact/contact.module.js";
 import { validateEnv } from "./config/env.validation.js";
 import { HealthModule } from "./health/health.module.js";
 import { MailModule } from "./mail/mail.module.js";
@@ -44,6 +45,7 @@ import { StorageModule } from "./storage/storage.module.js";
     CmsArticlesModule,
     CmsPublicationsModule,
     CmsContactSettingsModule,
+    ContactModule,
     HealthModule,
     StorageModule,
     MailModule,
