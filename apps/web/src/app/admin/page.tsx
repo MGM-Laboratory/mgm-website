@@ -10,6 +10,7 @@ import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 import { fetchProjectAdminList } from "@/lib/project-cms-server";
 import { ensurePublicationCmsSeeded } from "@/lib/publication-cms-seed";
 import { ensureResearchCmsSeeded } from "@/lib/research-cms-server";
+import { fetchEventAdminList, fetchEventRegistrations } from "@/lib/events-cms-server";
 
 // The auth check reads the session cookie, so this page must never be
 // statically prerendered: at build time there is no cookie and the
@@ -22,34 +23,52 @@ export default async function AdminPage() {
   // The seed helpers speak for the superadmin, so the draft feeds must not
   // reach accounts without read access to the matching page — the UI hides
   // the workspace, and the server must not ship its data either.
-  const [articles, , publications, admins, jobs, applications, research, projects] =
-    await Promise.all([
-      can(session.permissions, "articles", "read")
-        ? ensureArticleCmsSeeded().catch(() => undefined)
-        : Promise.resolve(undefined),
-      ensureMemberCmsSeeded().catch(() => undefined),
-      can(session.permissions, "publications", "read")
-        ? ensurePublicationCmsSeeded().catch(() => undefined)
-        : Promise.resolve(undefined),
-      session.role === "superadmin" ? fetchAdminAccounts().catch(() => []) : Promise.resolve([]),
-      can(session.permissions, "careers", "read")
-        ? fetchCareerAdminList().catch(() => [])
-        : Promise.resolve([]),
-      can(session.permissions, "careers", "read")
-        ? fetchCareerApplications().catch(() => [])
-        : Promise.resolve([]),
-      can(session.permissions, "research", "read")
-        ? ensureResearchCmsSeeded().catch(() => undefined)
-        : Promise.resolve(undefined),
-      can(session.permissions, "projects", "read")
-        ? fetchProjectAdminList().catch(() => [])
-        : Promise.resolve([]),
-    ]);
+  const [
+    articles,
+    ,
+    publications,
+    admins,
+    jobs,
+    applications,
+    research,
+    projects,
+    events,
+    eventRegistrations,
+  ] = await Promise.all([
+    can(session.permissions, "articles", "read")
+      ? ensureArticleCmsSeeded().catch(() => undefined)
+      : Promise.resolve(undefined),
+    ensureMemberCmsSeeded().catch(() => undefined),
+    can(session.permissions, "publications", "read")
+      ? ensurePublicationCmsSeeded().catch(() => undefined)
+      : Promise.resolve(undefined),
+    session.role === "superadmin" ? fetchAdminAccounts().catch(() => []) : Promise.resolve([]),
+    can(session.permissions, "careers", "read")
+      ? fetchCareerAdminList().catch(() => [])
+      : Promise.resolve([]),
+    can(session.permissions, "careers", "read")
+      ? fetchCareerApplications().catch(() => [])
+      : Promise.resolve([]),
+    can(session.permissions, "research", "read")
+      ? ensureResearchCmsSeeded().catch(() => undefined)
+      : Promise.resolve(undefined),
+    can(session.permissions, "projects", "read")
+      ? fetchProjectAdminList().catch(() => [])
+      : Promise.resolve([]),
+    can(session.permissions, "events", "read")
+      ? fetchEventAdminList().catch(() => [])
+      : Promise.resolve([]),
+    can(session.permissions, "events", "read")
+      ? fetchEventRegistrations().catch(() => [])
+      : Promise.resolve([]),
+  ]);
   return (
     <MemberCmsStudio
       initialAdmins={admins}
       initialApplications={applications ?? []}
       initialArticles={articles ?? []}
+      initialEventRegistrations={eventRegistrations ?? []}
+      initialEvents={events ?? []}
       initialJobs={jobs ?? []}
       initialProjects={projects ?? []}
       initialPublications={publications ?? []}

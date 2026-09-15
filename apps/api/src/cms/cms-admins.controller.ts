@@ -17,7 +17,15 @@ import { z } from "zod";
 import type { Env } from "../config/env.validation.js";
 import { CmsAdminsService } from "./cms-admins.service.js";
 
-const PAGES = ["articles", "publications", "members", "projects", "research", "careers"] as const;
+const PAGES = [
+  "articles",
+  "publications",
+  "members",
+  "projects",
+  "research",
+  "careers",
+  "events",
+] as const;
 
 const ACTION_RANK: Record<string, number> = { read: 1, write: 2, delete: 3 };
 

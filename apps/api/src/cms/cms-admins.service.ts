@@ -18,7 +18,15 @@ const ADMIN_RECORDS_CACHE_KEY = "cms:admins:v1";
 const ADMIN_RECORDS_CACHE_TTL_SECONDS = 30;
 const SCRYPT = { N: 16384, r: 8, p: 1 };
 const KEY_LENGTH = 64;
-const PAGES = ["articles", "publications", "members", "projects", "research", "careers"] as const;
+const PAGES = [
+  "articles",
+  "publications",
+  "members",
+  "projects",
+  "research",
+  "careers",
+  "events",
+] as const;
 
 type AdminPageId = (typeof PAGES)[number];
 export type AdminPermissions = Record<AdminPageId, ("read" | "write" | "delete")[]>;

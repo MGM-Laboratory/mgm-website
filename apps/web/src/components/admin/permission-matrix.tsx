@@ -15,6 +15,7 @@ export const MATRIX_PAGES: { id: AdminPageId; label: string; soon: boolean }[] =
   { id: "projects", label: "Projects", soon: true },
   { id: "research", label: "Research", soon: false },
   { id: "careers", label: "Careers", soon: false },
+  { id: "events", label: "Events", soon: false },
 ];
 
 const ACTIONS: AdminAction[] = ["read", "write", "delete"];

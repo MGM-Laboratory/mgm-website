@@ -4,6 +4,7 @@ import {
   ArrowSquareOut,
   Books,
   Briefcase,
+  CalendarBlank,
   Camera,
   CaretUpDown,
   Check,
@@ -59,11 +60,13 @@ import { useProjectRecords } from "@/hooks/use-project-records";
 import { usePublicationRecords } from "@/hooks/use-publication-records";
 import { useResearchRecords } from "@/hooks/use-research-records";
 import { CareersCmsStudio } from "@/components/admin/careers-cms-studio";
+import { EventsCmsStudio } from "@/components/admin/events-cms-studio";
 import type { CmsArticleRecord } from "@/lib/article-cms";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import type { CmsPublicationRecord } from "@/lib/publication-cms";
 import type { CmsJobApplicationRecord, CmsJobRecord } from "@/lib/career-cms";
 import type { CmsResearchRecord } from "@/lib/research-cms";
+import type { CmsEventRecord, CmsEventRegistrationRecord } from "@/lib/events-cms";
 
 type EditorTab = "profile" | "experience" | "education" | "credentials";
 type EditorialSection =
@@ -74,6 +77,7 @@ type EditorialSection =
   | "research"
   | "members"
   | "careers"
+  | "events"
   | "administration";
 type DateValue = { month: number; year: number };
 
@@ -91,6 +95,7 @@ const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: st
   { id: "research", label: "Research" },
   { id: "members", label: "Member" },
   { id: "careers", label: "Careers" },
+  { id: "events", label: "Events" },
 ];
 
 const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
@@ -101,6 +106,7 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "research", label: "Research", tone: "text-brand-blue" },
   { id: "members", label: "Member", tone: "text-brand-red" },
   { id: "careers", label: "Careers", tone: "text-brand-yellow" },
+  { id: "events", label: "Events", tone: "text-brand-green" },
   { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
 
@@ -111,6 +117,7 @@ const LIVE_WORKSPACES = new Set<EditorialSection>([
   "careers",
   "research",
   "projects",
+  "events",
 ]);
 
 /** Each editorial workspace maps to the permission page that gates it. */
@@ -121,6 +128,7 @@ const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
   projects: "projects",
   research: "research",
   careers: "careers",
+  events: "events",
 };
 
 function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size?: number }) {
@@ -137,6 +145,8 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
       return <UsersThree size={size} weight="duotone" />;
     case "careers":
       return <GraduationCap size={size} weight="duotone" />;
+    case "events":
+      return <CalendarBlank size={size} weight="duotone" />;
     case "administration":
       return <ShieldCheck size={size} weight="duotone" />;
     default:
@@ -421,6 +431,8 @@ export function MemberCmsStudio({
   initialApplications = [],
   initialResearch = [],
   initialProjects = [],
+  initialEvents = [],
+  initialEventRegistrations = [],
   paperLimitBytes = 209_715_200,
   videoLimitBytes = 524_288_000,
   session,
@@ -432,6 +444,8 @@ export function MemberCmsStudio({
   initialApplications?: CmsJobApplicationRecord[];
   initialResearch?: CmsResearchRecord[];
   initialProjects?: CmsProjectRecord[];
+  initialEvents?: CmsEventRecord[];
+  initialEventRegistrations?: CmsEventRegistrationRecord[];
   paperLimitBytes?: number;
   videoLimitBytes?: number;
   session: AdminViewer;
@@ -814,6 +828,13 @@ export function MemberCmsStudio({
         // The careers workspace renders its own full-bleed layout: the job
         // openings editor and the applications inbox, no aside rail.
         <CareersCmsStudio initialApplications={initialApplications} initialJobs={initialJobs} />
+      ) : section === "events" ? (
+        // Same full-bleed, no-aside-rail shape as careers: events editor and
+        // registrations inbox, tab-switched inside the studio itself.
+        <EventsCmsStudio
+          initialEvents={initialEvents}
+          initialRegistrations={initialEventRegistrations}
+        />
       ) : (
         <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
           <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
