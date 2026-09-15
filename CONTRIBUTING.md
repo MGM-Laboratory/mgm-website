@@ -39,12 +39,13 @@ See `docs/testing-verification.md` for how UI changes are expected to be verifie
 
 Once a PR is open, anyone can comment:
 
-- **`LGTM`** / **`PTAL`** — just for fun, gets a GIF reply.
+- **`LGTM`** — just for fun, gets a GIF reply. It doesn't do anything else — see `/merge` below for the command that actually ships a PR.
 
-Maintainers/collaborators only:
+Maintainers, or anyone listed in `CODEOWNERS`, can also run:
 
 - **`/check`** — re-runs the latest CI run for the PR's current commit.
-- **`/preview`** — builds the PR's code into Docker images and deploys a throwaway Railway environment (web + api + Postgres + Redis + bucket) seeded with sanitized public production content, then comments the preview URL and a generated superadmin login. It's torn down automatically when the PR closes.
+- **`/preview`** — builds the PR's code into Docker images and deploys a throwaway Railway environment (web + api + Postgres + Redis + bucket) seeded with sanitized public production content, then comments the preview URL and a generated superadmin login. The deploy is watched strictly (checked every minute, retried automatically on a crash, escalated to CODEOWNERS after 10 minutes without giving up, capped at 1 hour) with progress posted to the PR throughout. Torn down automatically when the PR closes, or safe to re-run any time.
+- **`/merge`** — checks that every required check is green and there are no conflicts, thanks the contributor with a comment, merges with a merge commit, deletes the branch if it's safe to, tears down the PR's preview environment, and confirms the resulting production deploy actually succeeds before calling it done. If anything's not ready, it says what and does nothing else.
 
 ## Commit messages
 
