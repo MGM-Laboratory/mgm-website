@@ -11,12 +11,13 @@
 //    reaches the PR comment, which is the disclosure channel that was asked
 //    for.
 import { execFileSync } from "node:child_process";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import {
-  GetObjectCommand,
-  PutObjectCommand,
-  S3Client,
-} from "@aws-sdk/client-s3";
-import { railway, PRODUCTION_ENVIRONMENT_ID, API_SERVICE_ID, WEB_SERVICE_ID } from "./railway-api.mjs";
+  railway,
+  PRODUCTION_ENVIRONMENT_ID,
+  API_SERVICE_ID,
+  WEB_SERVICE_ID,
+} from "./railway-api.mjs";
 import { ghRequest } from "./gh-api.mjs";
 
 const railwayToken = process.env.RAILWAY_TOKEN;
@@ -99,7 +100,9 @@ for (const [table, key] of Object.entries(DRAFT_PATHS)) {
 }
 
 console.log("Finding referenced storage objects...");
-const selectAll = WHITELISTED_TABLES.map((t) => `SELECT data::text FROM "${t}"`).join(" UNION ALL ");
+const selectAll = WHITELISTED_TABLES.map((t) => `SELECT data::text FROM "${t}"`).join(
+  " UNION ALL ",
+);
 const rowsText = run("psql", [previewDb, "-t", "-A", "-c", selectAll]);
 const storageKeys = new Set();
 function collectKeys(value) {
@@ -144,7 +147,9 @@ const previewS3 = new S3Client({
 
 for (const key of storageKeys) {
   try {
-    const obj = await prodS3.send(new GetObjectCommand({ Bucket: prodVars.AWS_S3_BUCKET, Key: key }));
+    const obj = await prodS3.send(
+      new GetObjectCommand({ Bucket: prodVars.AWS_S3_BUCKET, Key: key }),
+    );
     const bytes = await obj.Body.transformToByteArray();
     await previewS3.send(
       new PutObjectCommand({
@@ -192,7 +197,9 @@ const adminRes = await fetch(`https://${apiDomain}/api/cms/admins`, {
   }),
 });
 if (!adminRes.ok) {
-  throw new Error(`Failed to create preview superadmin: ${adminRes.status} ${await adminRes.text()}`);
+  throw new Error(
+    `Failed to create preview superadmin: ${adminRes.status} ${await adminRes.text()}`,
+  );
 }
 const adminBody = await adminRes.json();
 const generatedPassphrase = adminBody.generatedPassphrase;

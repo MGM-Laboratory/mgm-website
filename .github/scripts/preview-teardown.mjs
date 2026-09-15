@@ -1,4 +1,8 @@
-import { deleteEnvironment, findEnvironmentByName, previewEnvironmentName } from "./railway-api.mjs";
+import {
+  deleteEnvironment,
+  findEnvironmentByName,
+  previewEnvironmentName,
+} from "./railway-api.mjs";
 
 const token = process.env.RAILWAY_TOKEN;
 const prNumber = process.env.PR_NUMBER;

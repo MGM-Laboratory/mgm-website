@@ -53,7 +53,9 @@ if (normalized === "/check") {
 
   await Promise.all(
     [...latestByWorkflow.values()].map((run) =>
-      ghRequest(actionsToken, `/repos/${repo}/actions/runs/${run.id}/rerun`, { method: "POST" }).catch(
+      ghRequest(actionsToken, `/repos/${repo}/actions/runs/${run.id}/rerun`, {
+        method: "POST",
+      }).catch(
         () => null, // a run that can't be rerun (e.g. still in progress) isn't fatal
       ),
     ),
@@ -67,5 +69,7 @@ if (normalized === "/preview") {
     method: "POST",
     body: JSON.stringify({ ref: "main", inputs: { pr_number: String(prNumber) } }),
   });
-  await reply("Starting a preview deploy — takes a few minutes, I'll drop the link here when it's up.");
+  await reply(
+    "Starting a preview deploy — takes a few minutes, I'll drop the link here when it's up.",
+  );
 }
