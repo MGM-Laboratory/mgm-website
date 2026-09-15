@@ -14,13 +14,14 @@ import {
   bucketS3Credentials,
   createBucket,
   createPreviewEnvironment,
+  createVolume,
   deployServiceInstance,
   findBucketByName,
   findEnvironmentByName,
   generateServiceDomain,
   listServiceInstances,
+  listVolumeInstances,
   previewEnvironmentName,
-  railway,
   setVariables,
 } from "./railway-api.mjs";
 
@@ -50,36 +51,55 @@ if (!apiInstance || !webInstance || !postgresInstance || !redisInstance) {
   );
 }
 
-// environmentCreate used skipInitialDeploys: true so web/api don't try to
-// build from GitHub source before push-and-deploy points them at images —
-// but that skips Postgres/Redis too, and they have nothing else to trigger
-// their first deploy. Without this, api crashes on boot with
-// DatabaseNotReachable (confirmed live on the first real /preview run).
-const dbDeploymentIds = [];
-if (!postgresInstance.hasEverDeployed) {
-  console.log("Deploying Postgres for the first time...");
-  dbDeploymentIds.push(await deployServiceInstance(token, POSTGRES_SERVICE_ID, environment.id));
+// Volumes aren't carried over by environmentCreate's sourceEnvironmentId
+// duplication either (same as buckets) — Postgres refuses to even start
+// without one ("This service requires a volume to be mounted at
+// /var/lib/postgresql/data"), confirmed live. Creating one attaches it and
+// triggers a deploy in the same call, so track that to avoid double-
+// deploying below.
+const volumeInstances = await listVolumeInstances(token, environment.id);
+const hasVolume = (serviceId) => volumeInstances.some((v) => v.serviceId === serviceId);
+
+if (hasVolume(POSTGRES_SERVICE_ID)) {
+  if (!postgresInstance.hasEverDeployed) {
+    console.log("Deploying Postgres for the first time...");
+    await deployServiceInstance(token, POSTGRES_SERVICE_ID, environment.id);
+  }
+} else {
+  console.log("Creating Postgres volume (this also triggers its first deploy)...");
+  await createVolume(token, environment.id, POSTGRES_SERVICE_ID, "/var/lib/postgresql/data");
 }
-if (!redisInstance.hasEverDeployed) {
-  console.log("Deploying Redis for the first time...");
-  dbDeploymentIds.push(await deployServiceInstance(token, REDIS_SERVICE_ID, environment.id));
+
+if (hasVolume(REDIS_SERVICE_ID)) {
+  if (!redisInstance.hasEverDeployed) {
+    console.log("Deploying Redis for the first time...");
+    await deployServiceInstance(token, REDIS_SERVICE_ID, environment.id);
+  }
+} else {
+  console.log("Creating Redis volume (this also triggers its first deploy)...");
+  await createVolume(token, environment.id, REDIS_SERVICE_ID, "/data");
 }
 // Wait for both to actually come up before this job finishes — api gets
 // deployed in a later job and would otherwise crash-loop against a
-// database that hasn't finished starting yet.
-for (const id of dbDeploymentIds) {
+// database that hasn't finished starting yet. Polling by service (rather
+// than a specific deployment id) covers both paths above uniformly: a
+// deploy triggered explicitly here, or one triggered implicitly by
+// createVolume attaching a volume for the first time.
+async function waitForFirstDeploy(serviceId, label) {
   const deadline = Date.now() + 3 * 60 * 1000;
-  let status = "unknown";
   while (Date.now() < deadline) {
-    const data = await railway(token, `query($id: String!) { deployment(id: $id) { status } }`, {
-      id,
-    });
-    status = data.deployment.status;
-    if (["SUCCESS", "FAILED", "CRASHED"].includes(status)) break;
+    const current = await listServiceInstances(token, environment.id);
+    const instance = current.find((i) => i.serviceId === serviceId);
+    if (instance?.hasEverDeployed) {
+      console.log(`${label} is up.`);
+      return;
+    }
     await new Promise((r) => setTimeout(r, 5000));
   }
-  console.log(`Database deployment ${id} -> ${status}`);
+  console.log(`${label} did not report deployed within 3 minutes — continuing anyway.`);
 }
+await waitForFirstDeploy(POSTGRES_SERVICE_ID, "Postgres");
+await waitForFirstDeploy(REDIS_SERVICE_ID, "Redis");
 
 const bucketName = `preview-pr-${prNumber}`.slice(0, 63);
 let bucket = await findBucketByName(token, bucketName);
@@ -108,11 +128,12 @@ if (!webDomain) {
 // can 404 with "BucketInstance not found" for a few seconds after a fresh
 // create while the instance finishes provisioning. Retry instead of failing.
 let creds = null;
-for (let attempt = 0; attempt < 6 && !creds; attempt++) {
+const bucketAttempts = 12;
+for (let attempt = 0; attempt < bucketAttempts && !creds; attempt++) {
   try {
     creds = await bucketS3Credentials(token, bucket.id, environment.id);
   } catch (err) {
-    if (attempt === 5) throw err;
+    if (attempt === bucketAttempts - 1) throw err;
     console.log(`Bucket instance not ready yet (attempt ${attempt + 1}), retrying...`);
     await new Promise((r) => setTimeout(r, 5000));
   }

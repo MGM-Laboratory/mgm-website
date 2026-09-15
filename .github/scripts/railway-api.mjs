@@ -88,6 +88,19 @@ export async function deleteEnvironment(token, environmentId) {
   });
 }
 
+export async function listVolumeInstances(token, environmentId) {
+  const data = await railway(
+    token,
+    `query($id: String!) {
+      environment(id: $id) {
+        volumeInstances { edges { node { serviceId } } }
+      }
+    }`,
+    { id: environmentId },
+  );
+  return data.environment.volumeInstances.edges.map((e) => e.node);
+}
+
 export async function listServiceInstances(token, environmentId) {
   const data = await railway(
     token,
@@ -159,6 +172,20 @@ export async function setVariables(token, environmentId, serviceId, variables, s
       },
     },
   );
+}
+
+// Unlike buckets, volumeCreate's environmentId is genuinely implemented —
+// verified live: creating one with serviceId + mountPath attaches it and
+// triggers a redeploy in one step, no separate patch-commit needed.
+export async function createVolume(token, environmentId, serviceId, mountPath) {
+  const data = await railway(
+    token,
+    `mutation($input: VolumeCreateInput!) {
+      volumeCreate(input: $input) { id name }
+    }`,
+    { input: { projectId: PROJECT_ID, environmentId, serviceId, mountPath } },
+  );
+  return data.volumeCreate;
 }
 
 export async function findBucketByName(token, name) {
