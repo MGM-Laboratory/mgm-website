@@ -1,0 +1,59 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommitsDisabled"],
+  "timezone": "Asia/Jakarta",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"],
+    "labels": ["dependencies", "security"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major dependencies",
+      "matchFileNames": ["apps/web/package.json"],
+      "groupSlug": "web-minor-patch"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major dependencies",
+      "matchFileNames": ["apps/api/package.json"],
+      "groupSlug": "api-minor-patch"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["major"],
+      "matchFileNames": ["apps/web/package.json", "apps/api/package.json"],
+      "groupName": null,
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "groupName": "Dockerfile base images",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "matchDepNames": ["node"],
+      "matchManagers": ["dockerfile"],
+      "allowedVersions": "22.x"
+    },
+    {
+      "matchDepTypes": ["engines"],
+      "enabled": false
+    }
+  ]
+}
