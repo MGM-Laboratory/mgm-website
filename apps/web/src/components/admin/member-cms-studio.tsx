@@ -7,6 +7,7 @@ import {
   Camera,
   CaretUpDown,
   Check,
+  Envelope,
   FloppyDisk,
   Flask,
   GraduationCap,
@@ -27,6 +28,7 @@ import { toast } from "sonner";
 
 import { MEMBER_DIVISIONS, MEMBERS, type Member } from "@/data/members";
 import { ArticleEditor } from "@/components/admin/article-cms-editor";
+import { ContactSettingsEditor } from "@/components/admin/contact-settings-editor";
 import { PublicationEditor } from "@/components/admin/publication-cms-editor";
 import {
   draftToMember,
@@ -49,7 +51,14 @@ import type { CmsPublicationRecord } from "@/lib/publication-cms";
 
 type EditorTab = "profile" | "experience" | "education" | "credentials";
 type EditorialSection =
-  "overview" | "articles" | "projects" | "publications" | "research" | "members" | "careers";
+  | "overview"
+  | "articles"
+  | "projects"
+  | "publications"
+  | "research"
+  | "members"
+  | "careers"
+  | "contact";
 type DateValue = { month: number; year: number };
 
 const TABS: { id: EditorTab; label: string }[] = [
@@ -66,6 +75,7 @@ const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: st
   { id: "research", label: "Research" },
   { id: "members", label: "Member" },
   { id: "careers", label: "Careers" },
+  { id: "contact", label: "Contact Settings" },
 ];
 
 const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
@@ -76,7 +86,18 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "research", label: "Research", tone: "text-brand-blue" },
   { id: "members", label: "Member", tone: "text-brand-red" },
   { id: "careers", label: "Careers", tone: "text-brand-yellow" },
+  { id: "contact", label: "Contact Settings", tone: "text-brand-green" },
 ];
+
+// Sections with a working editor wired up — everything else renders as
+// "Reserved" in the overview grid and workspace switcher until it gets one.
+const AVAILABLE_SECTIONS = new Set<EditorialSection>([
+  "overview",
+  "articles",
+  "publications",
+  "members",
+  "contact",
+]);
 
 function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size?: number }) {
   switch (section) {
@@ -92,6 +113,8 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
       return <UsersThree size={size} weight="duotone" />;
     case "careers":
       return <GraduationCap size={size} weight="duotone" />;
+    case "contact":
+      return <Envelope size={size} weight="duotone" />;
     default:
       return <House size={size} weight="duotone" />;
   }
@@ -582,11 +605,7 @@ export function MemberCmsStudio({
                 </p>
                 <div className="space-y-1">
                   {WORKSPACES.map((workspace) => {
-                    const available =
-                      workspace.id === "overview" ||
-                      workspace.id === "members" ||
-                      workspace.id === "articles" ||
-                      workspace.id === "publications";
+                    const available = AVAILABLE_SECTIONS.has(workspace.id);
                     return (
                       <button
                         aria-current={workspace.id === section ? "page" : undefined}
@@ -828,6 +847,19 @@ export function MemberCmsStudio({
                 })}
               </nav>
             </div>
+          ) : section === "contact" ? (
+            <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+              <span className="grid size-9 place-items-center rounded-xl bg-white text-brand-green dark:bg-white/10">
+                <Envelope size={20} weight="duotone" />
+              </span>
+              <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">
+                Contact Settings
+              </p>
+              <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
+                A single record — the recipient inbox, HQ address, and map coordinates shown on the
+                public contact page.
+              </p>
+            </div>
           ) : (
             <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
               <span
@@ -946,6 +978,8 @@ export function MemberCmsStudio({
                   setHasUnsavedChanges(false);
                 }}
               />
+            ) : section === "contact" ? (
+              <ContactSettingsEditor onDirtyChange={setHasUnsavedChanges} />
             ) : (
               <EditorialOverview
                 section={section}
@@ -981,14 +1015,13 @@ function EditorialOverview({
       {section === "members" ? null : (
         <p className="mt-5 max-w-xl text-base leading-7 text-[#6b768b] dark:text-white/55">
           {section === "overview"
-            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, and Publications are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
+            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, Publications, and Contact Settings are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
             : `${label} is reserved for its own editorial workflow. It will be added here without changing the member, article, or publication workspaces.`}
         </p>
       )}
       <div className="mt-10 grid gap-3 sm:grid-cols-2">
         {EDITORIAL_SECTIONS.map((item) => {
-          const available =
-            item.id === "members" || item.id === "articles" || item.id === "publications";
+          const available = AVAILABLE_SECTIONS.has(item.id);
           return (
             <button
               className={`rounded-2xl border p-5 text-left transition ${available ? "border-brand-blue/30 bg-brand-blue/[0.04] hover:border-brand-blue hover:bg-brand-blue/[0.08]" : "border-[#dfe4ee] bg-white/55 opacity-60 dark:border-white/10 dark:bg-white/[0.025]"}`}
