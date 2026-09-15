@@ -16,7 +16,10 @@ permissions:
   pull-requests: write
   checks: read
   statuses: read
-  actions: read
+  # write, not read: dispatching ci.yaml/docker-publish.yml against the
+  # merge commit (POST .../dispatches) needs actions:write — read-only
+  # 403s on that call.
+  actions: write
 
 jobs:
   # Everything here is API-driven — no PR code is ever checked out or run,
