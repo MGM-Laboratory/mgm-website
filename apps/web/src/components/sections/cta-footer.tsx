@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PatternTile, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 import { InstagramGlyph, LinkedinGlyph } from "@/components/social-icons";
+import { HQ_ADDRESS_LINES } from "@/data/contact";
 
 const FOOTER_MOSAIC: { kind: PatternKind; bg: PatternTone; fg: PatternTone }[] = [
   { kind: "arcs", bg: "white", fg: "yellow" },
@@ -84,9 +85,12 @@ export function CtaFooter() {
           <div>
             <p className="text-xs font-semibold tracking-wide text-white/40 uppercase">Location</p>
             <p className="mt-3 max-w-[200px] text-sm text-white/70">
-              Faculty of Computer Science, Building F Room F10.4-5
-              <br />
-              Veteran Street No. 8, Malang, 65145, Indonesia
+              {HQ_ADDRESS_LINES.map((line, i) => (
+                <span key={line}>
+                  {i > 0 ? <br /> : null}
+                  {line}
+                </span>
+              ))}
             </p>
           </div>
 
