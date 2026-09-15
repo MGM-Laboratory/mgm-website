@@ -1,0 +1,53 @@
+name: Merge
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to check and merge
+        required: true
+
+concurrency:
+  group: merge-pr-${{ github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+  actions: read
+
+jobs:
+  # Everything here is API-driven — no PR code is ever checked out or run,
+  # so this is safe even against a fork PR with write-scoped secrets in
+  # scope.
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate pr_number
+        run: |
+          if ! [[ "${{ github.event.inputs.pr_number }}" =~ ^[0-9]+$ ]]; then
+            echo "::error::pr_number must be a plain integer"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Generate a bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Check readiness, merge, clean up, verify production
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BOT_TOKEN: ${{ steps.app-token.outputs.token }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node .github/scripts/pr-merge.mjs

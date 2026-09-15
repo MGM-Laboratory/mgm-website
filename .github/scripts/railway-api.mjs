@@ -113,6 +113,7 @@ export async function listServiceInstances(token, environmentId) {
               serviceName
               domains { serviceDomains { domain } }
               hasEverDeployed
+              latestDeployment { id status }
               source { image repo }
             }
           }
