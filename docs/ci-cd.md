@@ -115,3 +115,7 @@ This repo used to run a second CI platform on Harness Cloud (three checks: `harn
 ## Historical: /merge and /close live verification (2026-09-15)
 
 After migrating to this repo, `/check`, `/preview`, `/merge`, and `/close` were each exercised end-to-end against real PRs (this very note landed via one of them) to confirm the full pipeline — readiness gating, the thank-you comment, the actual merge, safe branch deletion, preview teardown, and post-merge production verification — still works unchanged on the new repo.
+
+## Historical: /merge post-merge dispatch fix verified (2026-09-15)
+
+A second live `/merge` run (this note) confirmed the dispatch-based post-merge verification (see "Merging" above) actually works: `ci.yaml` and `docker-publish.yml` were dispatched against this merge commit and the report correctly labeled them as dispatched rather than claiming a result it never checked.
