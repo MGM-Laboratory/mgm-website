@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { EventsExplorer } from "@/components/events/events-explorer";
+import { EventsList } from "@/components/events/events-list";
 import { FlairShape } from "@/components/process/pattern-tile";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { fetchEventsFeed } from "@/lib/events-cms-server";
@@ -48,14 +48,13 @@ export default async function EventsPage() {
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-[var(--ink-2)] dark:text-[#c3c7d1]">
                 Where the lab shares what it&apos;s building and learning with the wider community.
-                Subscribe once and every new event lands on your own calendar.
               </p>
             </div>
           </div>
         </section>
 
         <section className="mx-auto w-full max-w-[1200px] px-6 pb-32 sm:px-10 lg:px-14">
-          <EventsExplorer records={events} />
+          <EventsList records={events} />
         </section>
       </main>
       <CtaFooter />
