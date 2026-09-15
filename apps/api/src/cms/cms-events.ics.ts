@@ -105,3 +105,20 @@ export function buildIcsFeed(records: IcsEventRecord[]) {
   writeIcsLine(lines, "END:VCALENDAR");
   return lines.join("\r\n") + "\r\n";
 }
+
+/**
+ * A single-event VCALENDAR document for the detail page's "Add to calendar"
+ * (Apple/other) download — reuses the same VEVENT writer as the whole-feed
+ * export so both stay byte-for-byte consistent.
+ */
+export function buildSingleEventIcs(record: IcsEventRecord) {
+  const lines: string[] = [];
+  writeIcsLine(lines, "BEGIN:VCALENDAR");
+  writeIcsLine(lines, "VERSION:2.0");
+  writeIcsLine(lines, "PRODID:-//MGM Laboratory//MGM Event Calendar//EN");
+  writeIcsLine(lines, "CALSCALE:GREGORIAN");
+  writeIcsLine(lines, "METHOD:PUBLISH");
+  writeVEvent(lines, record, new Date());
+  writeIcsLine(lines, "END:VCALENDAR");
+  return lines.join("\r\n") + "\r\n";
+}
