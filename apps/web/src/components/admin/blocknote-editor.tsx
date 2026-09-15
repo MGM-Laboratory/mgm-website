@@ -19,24 +19,30 @@ function readAsDataUrl(file: File) {
 }
 
 /**
- * The Notion-style writing surface used by the article editorial workflow.
- * Loaded with `next/dynamic({ ssr: false })` from the studio so the editor
- * bundle never reaches the public site. Images dropped into the document are
- * uploaded through the CMS media endpoint and stored as public media URLs.
+ * The Notion-style writing surface used by the article and research editorial
+ * workflows. Loaded with `next/dynamic({ ssr: false })` from the studio so the
+ * editor bundle never reaches the public site. Images dropped into the
+ * document are uploaded through the CMS media endpoint and stored as public
+ * media URLs.
  */
 export default function BlocknoteEditor({
   initialContent,
+  mediaBase = "/api/articles-cms/media",
   onChange,
   uploadPath,
 }: {
   initialContent?: ArticleBlock[];
+  /** Where uploaded images resolve for the public site. */
+  mediaBase?: string;
   onChange?: (blocks: ArticleBlock[]) => void;
   uploadPath: string;
 }) {
   const uploadPathRef = useRef(uploadPath);
+  const mediaBaseRef = useRef(mediaBase);
   useEffect(() => {
     uploadPathRef.current = uploadPath;
-  }, [uploadPath]);
+    mediaBaseRef.current = mediaBase;
+  }, [mediaBase, uploadPath]);
 
   const editor = useCreateBlockNote(
     {
@@ -53,7 +59,7 @@ export default function BlocknoteEditor({
         });
         if (!response.ok) throw new Error("This image could not be uploaded.");
         const { key } = (await response.json()) as { key: string };
-        return `/api/articles-cms/media/${encodeURIComponent(key)}`;
+        return `${mediaBaseRef.current}/${encodeURIComponent(key)}`;
       },
     },
     [],

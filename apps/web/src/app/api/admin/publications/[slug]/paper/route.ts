@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { hasAdminSession } from "@/lib/admin-session";
+import { requireAdminPermission } from "@/lib/admin-session";
 import { apiBaseUrl } from "@/lib/cms-api";
 
 type Context = { params: Promise<{ slug: string }> };
@@ -14,8 +14,13 @@ export const runtime = "nodejs";
 const maxPaperBytes = () => Number(process.env.CMS_MAX_PAPER_BYTES ?? 209_715_200);
 
 export async function POST(request: Request, { params }: Context) {
-  if (!(await hasAdminSession()))
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const gate = await requireAdminPermission("publications", "write");
+  if (gate.status !== 200) {
+    return NextResponse.json(
+      { error: gate.status === 401 ? "Unauthorized" : "Forbidden" },
+      { status: gate.status },
+    );
+  }
   const { slug } = await params;
 
   const contentType = request.headers.get("content-type") ?? "";

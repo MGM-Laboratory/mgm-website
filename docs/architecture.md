@@ -66,7 +66,7 @@ Theme implementation: Tailwind v4 `@custom-variant dark (&:where(.dark, .dark *)
 
 ## apps/api
 
-NestJS (ESM, `type: "module"`), port 4000, Prisma ORM (`postinstall: prisma generate`, generated client ignored at `apps/api/src/generated/`). Modules: `health` (used by the web status chip), `mail` (AWS SES), `storage` (AWS S3), `prisma`, `config`, and `cms` (members / articles / publications controllers + services — cache-backed records in a `slug` + `data JSONB` table each). Publication papers are raw `application/pdf` uploads (raw body parser registered in `main.ts`, size ceiling from `CMS_MAX_PAPER_BYTES`, default 200 MB) served through signed storage URLs; draft papers stay unservable via an ownership check. Tests: vitest (unit + e2e configs). Lint: oxlint. `docker compose` runs Postgres + api + web locally with env from `.env.example`.
+NestJS (ESM, `type: "module"`), port 4000, Prisma ORM (`postinstall: prisma generate`, generated client ignored at `apps/api/src/generated/`). Modules: `health` (used by the web status chip), `mail` (AWS SES), `storage` (AWS S3), `prisma`, `config`, and `cms` (members / articles / publications / jobs / research controllers + services — cache-backed records in a `slug` + `data JSONB` table each). Publication papers are raw `application/pdf` uploads (raw body parser registered in `main.ts`, size ceiling from `CMS_MAX_PAPER_BYTES`, default 200 MB) served through signed storage URLs; draft papers stay unservable via an ownership check. Tests: vitest (unit + e2e configs). Lint: oxlint. `docker compose` runs Postgres + api + web locally with env from `.env.example`.
 
 ## Environments & secrets
 

@@ -26,13 +26,16 @@ import { StorageService } from "../storage/storage.service.js";
 import { CmsPublicationsService } from "./cms-publications.service.js";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+// Full dates for freshly published records; year-only for older records
+// whose month and day the sources never state.
+const DATE_PATTERN = /^\d{4}(?:-\d{2}-\d{2})?$/;
 
 export const PUBLICATION_TYPES = [
   "journal-article",
   "conference-paper",
   "preprint",
   "book-chapter",
+  "book",
   "thesis",
 ] as const;
 
@@ -62,7 +65,7 @@ const publicationSchema = z.object({
     title: z.string().trim().min(1).max(400),
     type: z.enum(PUBLICATION_TYPES),
     date: z.string().regex(DATE_PATTERN),
-    journal: z.string().trim().max(300),
+    journal: z.string().trim().max(300).optional(),
     volume: z.string().trim().max(40).optional(),
     issue: z.string().trim().max(40).optional(),
     pages: z.string().trim().max(80).optional(),
@@ -78,7 +81,7 @@ const publicationSchema = z.object({
     url: z.string().trim().max(500).optional(),
     license: z.string().trim().max(120).optional(),
     keywords: z.array(z.string().trim().min(1).max(80)).max(20),
-    abstract: z.string().trim().max(50_000),
+    abstract: z.string().trim().max(50_000).optional(),
     authors: z.array(authorSchema).min(1).max(50),
     draft: z.boolean(),
     paperKey: z.string().min(1).max(500).optional(),

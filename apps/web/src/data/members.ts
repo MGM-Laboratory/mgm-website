@@ -18,6 +18,8 @@ export type Member = {
   division: MemberDivision;
   group: "Research and Development" | "Operations" | "People" | "Professors";
   hasPortrait: boolean;
+  /** Pinned to the front of its division (and of "All") on the public directory. Marks division coordinators. */
+  highlighted?: boolean;
   labFocus: readonly string[];
   name: string;
   nickname?: string;

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Search, X } from "lucide-react";
+import { ArrowUpRight, Search, Star, X } from "lucide-react";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { type Member, type MemberDivision } from "@/data/members";
@@ -212,12 +212,10 @@ function Portrait({
   member,
   index,
   photoKey,
-  sourceSlug,
 }: {
   member: Member;
   index: number;
   photoKey?: string;
-  sourceSlug?: string;
 }) {
   const initials = member.name
     .split(" ")
@@ -228,25 +226,21 @@ function Portrait({
 
   return (
     <div
-      className={`relative size-12 shrink-0 overflow-hidden rounded-xl border border-white/55 ${CARD_SURFACES[index % CARD_SURFACES.length]}`}
+      className={`relative size-12 shrink-0 overflow-hidden rounded-xl border ${member.highlighted ? "border-brand-yellow ring-2 ring-brand-yellow/40" : "border-white/55"} ${CARD_SURFACES[index % CARD_SURFACES.length]}`}
     >
       <div
         aria-hidden="true"
         className={`absolute -right-3 -bottom-3 size-8 rounded-full ${ACCENT_COLORS[member.accent]} opacity-90`}
       />
-      {photoKey || member.hasPortrait ? (
+      {photoKey ? (
         <Image
-          src={
-            photoKey
-              ? `/api/member-cms/media/${photoKey}`
-              : `/members/${sourceSlug ?? member.slug}.png`
-          }
+          src={`/api/member-cms/media/${photoKey}`}
           alt=""
           fill
-          key={photoKey ?? sourceSlug ?? member.slug}
+          key={photoKey}
           sizes="48px"
-          unoptimized={Boolean(photoKey)}
-          className={`${photoKey ? "object-cover" : "object-contain object-bottom"} transition-transform duration-500 ease-out group-hover/member:scale-105`}
+          unoptimized
+          className="object-cover transition-transform duration-500 ease-out group-hover/member:scale-105"
         />
       ) : (
         <span className="absolute inset-0 grid place-items-center font-display text-sm font-semibold tracking-tight text-[var(--ink)]/80 dark:text-white/80">
@@ -316,7 +310,12 @@ export function MemberDirectory({
         const score = scoreMember(member, deferredQuery, profileText);
         return score < 0 ? [] : [{ member, record, score }];
       })
-      .toSorted((a, b) => b.score - a.score || a.member.name.localeCompare(b.member.name));
+      .toSorted(
+        (a, b) =>
+          b.score - a.score ||
+          Number(Boolean(b.member.highlighted)) - Number(Boolean(a.member.highlighted)) ||
+          a.member.name.localeCompare(b.member.name),
+      );
   }, [deferredQuery, filter, members, profileSearchIndex, recordsBySlug]);
 
   const countFor = (candidate: Filter) =>
@@ -465,20 +464,33 @@ export function MemberDirectory({
                       href={`/member/${member.slug}`}
                       className="group/member relative z-0 block focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-4 focus-visible:outline-none hover:z-10 dark:focus-visible:ring-offset-[#15181e]"
                     >
-                      <div className="relative z-0 rounded-2xl border border-[var(--line)] bg-background p-5 shadow-[var(--shadow-1)] transition-[transform,border-color,box-shadow] duration-300 group-hover/member:z-10 group-hover/member:-translate-y-0.5 group-hover/member:border-brand-blue/45 group-hover/member:shadow-[0_20px_40px_-30px_rgba(14,17,22,0.5)] dark:bg-[#171c24]">
+                      <div
+                        className={`relative z-0 rounded-2xl border bg-background p-5 shadow-[var(--shadow-1)] transition-[transform,border-color,box-shadow] duration-300 group-hover/member:z-10 group-hover/member:-translate-y-0.5 group-hover/member:shadow-[0_20px_40px_-30px_rgba(14,17,22,0.5)] dark:bg-[#171c24] ${
+                          member.highlighted
+                            ? "border-brand-yellow/70 group-hover/member:border-brand-yellow"
+                            : "border-[var(--line)] group-hover/member:border-brand-blue/45"
+                        }`}
+                      >
                         <div className="flex gap-4">
                           <Portrait
                             member={member}
                             index={index}
                             photoKey={record?.profile.photoKey}
-                            sourceSlug={record?.sourceSlug}
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <p className="text-xs font-medium text-brand-blue">
-                                  {member.division}
-                                </p>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <p className="text-xs font-medium text-brand-blue">
+                                    {member.division}
+                                  </p>
+                                  {member.highlighted ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-yellow px-2 py-0.5 text-[10px] font-bold tracking-[0.06em] text-[var(--ink)] uppercase">
+                                      <Star size={10} strokeWidth={2.5} fill="currentColor" />
+                                      Coordinator
+                                    </span>
+                                  ) : null}
+                                </div>
                                 {member.unit ? (
                                   <p className="mt-0.5 text-[11px] font-medium text-[var(--ink-3)] dark:text-white/45">
                                     {member.unit}
