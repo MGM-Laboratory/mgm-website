@@ -1,12 +1,7 @@
 import { CalendarBlank, MapPin, Microphone, Ticket } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
-import {
-  EVENT_COLOR_CHIP_CLASSES,
-  EVENT_COLOR_LABELS,
-  formatEventDateRange,
-  type CmsEventRecord,
-} from "@/lib/events-cms";
+import { formatEventDateRange, type CmsEventRecord } from "@/lib/events-cms";
 
 function mediaUrl(key?: string) {
   return key ? `/api/events-cms/media/${encodeURIComponent(key)}` : undefined;
@@ -27,7 +22,7 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
 
   return (
     <li className="relative flex gap-5 py-6 sm:gap-6">
-      <div className="relative size-24 shrink-0 overflow-hidden rounded-2xl bg-[var(--surface-muted)] sm:size-32">
+      <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-2xl bg-[var(--surface-muted)] sm:w-40">
         {thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img alt="" className="size-full object-cover" src={thumbnail} />
@@ -40,11 +35,6 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-[0.06em] uppercase ${EVENT_COLOR_CHIP_CLASSES[event.color]}`}
-          >
-            {EVENT_COLOR_LABELS[event.color]}
-          </span>
           <span className="font-mono text-xs tracking-[0.04em] text-[var(--ink-3)] tnum">
             {formatEventDateRange(event)}
           </span>

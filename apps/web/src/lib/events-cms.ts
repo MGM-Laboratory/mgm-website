@@ -1,8 +1,5 @@
 import type { ArticleBlock } from "@/lib/article-cms";
 
-export const EVENT_COLORS = ["blue", "yellow", "red", "green"] as const;
-export type EventColor = (typeof EVENT_COLORS)[number];
-
 export type EventSpeaker = { name: string; title?: string; photoKey?: string };
 export type EventRundownItem = { time: string; item: string };
 
@@ -15,7 +12,6 @@ export type CmsEventRecord = {
   allDay: boolean;
   location?: string;
   meetingLink?: string;
-  color: EventColor;
   draft: boolean;
   thumbnailKey?: string;
   speakers: EventSpeaker[];
@@ -45,7 +41,6 @@ export function emptyEventDraft(): EventDraft {
     allDay: false,
     location: "",
     meetingLink: "",
-    color: "blue",
     draft: true,
     thumbnailKey: undefined,
     speakers: [],
@@ -101,31 +96,6 @@ export function utcIsoToDateOnly(iso: string): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
-
-// Tint background + solid-color text, the same convention the research
-// explorer's area/status badges already use — every brand color stays
-// readable at small sizes without touching the fill-contrast rules in
-// DESIGN_SYSTEM.md §2.3 (yellow never carries text, red only passes AA Large).
-export const EVENT_COLOR_CHIP_CLASSES: Record<EventColor, string> = {
-  blue: "bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/15 dark:text-[#9db8e8]",
-  yellow: "bg-brand-yellow-50 text-[#a97b1c] dark:bg-brand-yellow/15 dark:text-[#e3c36a]",
-  red: "bg-brand-red-50 text-brand-red dark:bg-brand-red/15 dark:text-[#ef9a9a]",
-  green: "bg-brand-green-50 text-brand-green dark:bg-brand-green/15 dark:text-[#7cc9a5]",
-};
-
-export const EVENT_COLOR_DOT_CLASSES: Record<EventColor, string> = {
-  blue: "bg-brand-blue",
-  yellow: "bg-brand-yellow",
-  red: "bg-brand-red",
-  green: "bg-brand-green",
-};
-
-export const EVENT_COLOR_LABELS: Record<EventColor, string> = {
-  blue: "Blue",
-  yellow: "Yellow",
-  red: "Red",
-  green: "Green",
-};
 
 export function sortEventsByStart(records: readonly CmsEventRecord[]) {
   return [...records].sort((left, right) => left.startAt.localeCompare(right.startAt));

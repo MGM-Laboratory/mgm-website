@@ -62,11 +62,6 @@ const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d{3})?Z$/;
 // URLs only; javascript:, data:, and every other scheme are refused.
 const SAFE_URL_PATTERN = /^(\/(?!\/)|https?:\/\/)/i;
 
-// The color palette is closed to the site's four brand tokens
-// (DESIGN_SYSTEM.md §2) — no ad-hoc category colors. Doubles as the public
-// list page's category filter.
-export const EVENT_COLORS = ["blue", "yellow", "red", "green"] as const;
-
 // BlockNote document validation. Unknown block fields must survive the parse
 // so zod's default stripping does not silently rewrite saved documents.
 const blockSchema = z
@@ -108,7 +103,6 @@ const eventSchema = z
       .max(500)
       .refine((value) => !value || SAFE_URL_PATTERN.test(value), "Use a URL or a site path.")
       .optional(),
-    color: z.enum(EVENT_COLORS),
     draft: z.boolean(),
     thumbnailKey: z.string().optional(),
     speakers: z.array(speakerSchema).max(20).default([]),

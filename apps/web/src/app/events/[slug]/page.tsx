@@ -16,13 +16,7 @@ import { EventCard } from "@/components/events/event-card";
 import { EventMap } from "@/components/events/event-map";
 import { EventRegistrationForm } from "@/components/events/event-registration-form";
 import { CtaFooter } from "@/components/sections/cta-footer";
-import {
-  EVENT_COLOR_CHIP_CLASSES,
-  EVENT_COLOR_LABELS,
-  formatEventDateRange,
-  sortEventsByStart,
-  type CmsEventRecord,
-} from "@/lib/events-cms";
+import { formatEventDateRange, sortEventsByStart, type CmsEventRecord } from "@/lib/events-cms";
 import { fetchEventBySlug, fetchEventsFeed } from "@/lib/events-cms-server";
 
 type EventPageProps = { params: Promise<{ slug: string }> };
@@ -92,11 +86,6 @@ export default async function EventPage({ params }: EventPageProps) {
           </Link>
 
           <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-[0.06em] uppercase ${EVENT_COLOR_CHIP_CLASSES[event.color]}`}
-            >
-              {EVENT_COLOR_LABELS[event.color]}
-            </span>
             <span className="font-mono text-xs tracking-[0.04em] text-[var(--ink-3)] tnum">
               {formatEventDateRange(event)}
             </span>
