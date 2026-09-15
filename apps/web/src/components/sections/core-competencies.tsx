@@ -101,7 +101,7 @@ export function CoreCompetenciesSection() {
         </p>
       </div>
 
-      <ScrollStack className="mx-auto mt-14 w-full">
+      <ScrollStack className="-mx-6 mt-14 w-auto px-3 sm:-mx-10 sm:px-4 lg:-mx-16 lg:px-6">
         {COMPETENCIES.map((c, i) => (
           <ScrollStackItem
             key={c.title}
