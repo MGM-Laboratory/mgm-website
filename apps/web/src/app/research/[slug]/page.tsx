@@ -88,9 +88,11 @@ const OUTPUT_EMPTY = {
 function MilestoneEntry({ milestone }: { milestone: ResearchMilestone }) {
   return (
     <li className="relative pl-7">
+      {/* The dot straddles the timeline: -left-[5px] centers the 10px dot
+          on the 1px border line drawn at the list's left edge. */}
       <span
         aria-hidden="true"
-        className="absolute left-0 top-1.5 size-2.5 rounded-full border-2 border-brand-red bg-[var(--surface)]"
+        className="absolute -left-[5px] top-1.5 size-2.5 rounded-full border-2 border-brand-red bg-[var(--surface)]"
       />
       <time
         className="font-mono text-[11px] tracking-[0.08em] text-[var(--ink-3)] uppercase"

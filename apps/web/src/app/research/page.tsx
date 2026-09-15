@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 
 import { FlairShape, PatternTile } from "@/components/process/pattern-tile";
 import { ResearchExplorer } from "@/components/research/research-explorer";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { MEMBERS } from "@/data/members";
+import { articleCoverUrl } from "@/lib/article-cms";
+import { fetchArticleFeed } from "@/lib/article-cms-seed";
 import { mergeMemberRecords } from "@/lib/member-cms";
 import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+import { fetchPublicationFeed } from "@/lib/publication-cms-seed";
 import {
   featuredResearch,
   latestMilestone,
@@ -50,6 +54,22 @@ async function readMembers() {
   }
 }
 
+async function readArticles() {
+  try {
+    return await fetchArticleFeed();
+  } catch {
+    return [] as Awaited<ReturnType<typeof fetchArticleFeed>>;
+  }
+}
+
+async function readPublications() {
+  try {
+    return await fetchPublicationFeed();
+  } catch {
+    return [] as Awaited<ReturnType<typeof fetchPublicationFeed>>;
+  }
+}
+
 const AREA_TONES = {
   website: "blue",
   mobile: "red",
@@ -80,13 +100,28 @@ function collectOutcomes(records: readonly CmsResearchRecord[]) {
 }
 
 export default async function ResearchPage() {
-  const [records, members] = await Promise.all([readRecords(), readMembers()]);
+  const [records, members, articles, publications] = await Promise.all([
+    readRecords(),
+    readMembers(),
+    readArticles(),
+    readPublications(),
+  ]);
   const featured = featuredResearch(records);
   const featuredMembers = featured ? researchMembers(featured, members) : [];
   const featuredMilestone = featured ? latestMilestone(featured.research) : undefined;
   const outcomes = collectOutcomes(records);
   const hasOutcomes =
     outcomes.project.length + outcomes.publication.length + outcomes.article.length > 0;
+  const articleCovers = new Map(
+    articles.flatMap((record) =>
+      record.article.coverKey ? [[record.slug, record.article.coverKey] as const] : [],
+    ),
+  );
+  const publicationAuthors = new Map(
+    publications.map(
+      (record) => [record.slug, record.publication.authors.map((author) => author.name)] as const,
+    ),
+  );
 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
@@ -359,17 +394,50 @@ export default async function ResearchPage() {
                     >
                       {links.map((link) => {
                         const safe = safeResearchHref(link.href);
+                        const slug = safe?.startsWith("/") ? safe.split("/")[2] : undefined;
+                        const authors = slug ? (publicationAuthors.get(slug) ?? []) : [];
+                        const cover = slug ? articleCoverUrl(articleCovers.get(slug)) : undefined;
                         const tile = (
                           <div className="flex h-full w-56 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition hover:border-brand-red/50 dark:border-white/10 dark:bg-white/[0.02]">
-                            <PatternTile
-                              bg="canvas"
-                              className="block w-full aspect-[16/7]"
-                              fg={tones[type]}
-                              kind={patterns[type]}
-                            />
-                            <span className="block px-4 py-3 text-[13px] leading-6 font-medium text-[var(--ink-2)] dark:text-white/70">
-                              {link.label}
-                            </span>
+                            {type === "article" ? (
+                              cover ? (
+                                // The cover is CMS media, outside the image loader.
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  alt=""
+                                  className="block w-full aspect-[16/9] object-cover"
+                                  src={cover}
+                                />
+                              ) : (
+                                <PatternTile
+                                  bg="canvas"
+                                  className="block w-full aspect-[16/9]"
+                                  fg={tones[type]}
+                                  kind={patterns[type]}
+                                />
+                              )
+                            ) : type === "project" ? (
+                              <PatternTile
+                                bg="canvas"
+                                className="block w-full aspect-[16/7]"
+                                fg={tones[type]}
+                                kind={patterns[type]}
+                              />
+                            ) : null}
+                            <div className="flex min-h-0 flex-1 flex-col px-4 py-3">
+                              <span className="line-clamp-2 text-[13px] leading-6 font-medium text-[var(--ink-2)] dark:text-white/70">
+                                {link.label}
+                              </span>
+                              {type === "publication" && authors.length ? (
+                                <span className="mt-1.5 block truncate text-[11px] text-[var(--ink-3)]">
+                                  {authors.join(", ")}
+                                </span>
+                              ) : null}
+                              <span className="mt-auto inline-flex items-center gap-1 pt-2 text-[11px] font-semibold text-brand-blue">
+                                Read more
+                                <ArrowRight aria-hidden="true" size={12} weight="bold" />
+                              </span>
+                            </div>
                           </div>
                         );
                         return safe ? (
