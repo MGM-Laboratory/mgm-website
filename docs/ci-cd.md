@@ -116,3 +116,7 @@ The Railway MCP tools are also available in agent sessions (`list-projects`, `de
 ## Historical: the workflow-rename incident (2026-09-12)
 
 After the repo migration, push-triggered runs silently stopped firing on the fresh repo while `workflow_dispatch` kept working (everything read as enabled — the first-push workflow registration was stale). Renaming `ci.yml` → `ci.yaml` forced a fresh registration and restored push triggers instantly. If push-triggered Actions ever silently stop on a repo while dispatch works, try forcing re-registration (rename the workflow file) before suspecting anything deeper.
+
+## Historical: /merge and /close live verification (2026-09-15)
+
+After migrating to this repo, `/check`, `/preview`, `/merge`, and `/close` were each exercised end-to-end against real PRs (this very note landed via one of them) to confirm the full pipeline — readiness gating, the thank-you comment, the actual merge, safe branch deletion, preview teardown, and post-merge production verification — still works unchanged on the new repo.
