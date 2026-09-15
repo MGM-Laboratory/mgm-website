@@ -244,8 +244,8 @@ export default async function ResearchDetailPage({ params }: ResearchPageProps) 
             </div>
           ) : null}
 
-          <section className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="min-w-0">
+          <section className="mt-12">
+            <div>
               <p className="max-w-2xl text-lg leading-8 text-[var(--ink-2)] dark:text-white/70">
                 {research.summary}
               </p>
@@ -306,20 +306,14 @@ export default async function ResearchDetailPage({ params }: ResearchPageProps) 
                 )}
               </div>
 
-              {record.body.length ? (
-                <div className="mt-12 border-t border-[var(--line)] pt-10 dark:border-white/10">
-                  <ArticleBody blocks={record.body} />
-                </div>
-              ) : null}
-            </div>
-
-            <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 dark:border-white/10 dark:bg-white/[0.02]">
-                <h2 className="font-display text-lg font-semibold text-[#0e1116] dark:text-white">
+              {/* The timeline sits in the main column below the methods so the
+                  page reads as one wide column instead of a narrow sidebar. */}
+              <div className="mt-12 border-t border-[var(--line)] pt-10 dark:border-white/10">
+                <h2 className="font-display text-xl font-semibold tracking-[-0.015em] text-[#0e1116] dark:text-white">
                   Timeline
                 </h2>
                 {research.milestones.length ? (
-                  <ol className="mt-5 space-y-6 border-l border-[var(--line)] dark:border-white/10">
+                  <ol className="mt-6 max-w-3xl space-y-8 border-l border-[var(--line)] dark:border-white/10">
                     {[...research.milestones]
                       .sort((left, right) => right.date.localeCompare(left.date))
                       .map((milestone) => (
@@ -333,7 +327,13 @@ export default async function ResearchDetailPage({ params }: ResearchPageProps) 
                   </p>
                 )}
               </div>
-            </aside>
+
+              {record.body.length ? (
+                <div className="mt-12 border-t border-[var(--line)] pt-10 dark:border-white/10">
+                  <ArticleBody blocks={record.body} />
+                </div>
+              ) : null}
+            </div>
           </section>
 
           <section className="mt-14 border-t border-[var(--line)] pt-10 dark:border-white/10">

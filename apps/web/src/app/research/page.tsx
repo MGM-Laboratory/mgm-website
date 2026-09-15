@@ -50,12 +50,6 @@ async function readMembers() {
   }
 }
 
-type ResearchSearchParams = Promise<{ area?: string | string[] }>;
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 const AREA_TONES = {
   website: "blue",
   mobile: "red",
@@ -85,19 +79,7 @@ function collectOutcomes(records: readonly CmsResearchRecord[]) {
   return outcomes;
 }
 
-export default async function ResearchPage({
-  searchParams,
-}: {
-  searchParams: ResearchSearchParams;
-}) {
-  const resolvedParams = await searchParams;
-  const requestedArea = firstValue(resolvedParams.area)?.trim() ?? "";
-  const initialArea: ResearchArea | "all" = (RESEARCH_AREAS as readonly string[]).includes(
-    requestedArea,
-  )
-    ? (requestedArea as ResearchArea)
-    : "all";
-
+export default async function ResearchPage() {
   const [records, members] = await Promise.all([readRecords(), readMembers()]);
   const featured = featuredResearch(records);
   const featuredMembers = featured ? researchMembers(featured, members) : [];
@@ -143,7 +125,7 @@ export default async function ResearchPage({
           </div>
         </section>
 
-        {/* Research areas — an orderly asymmetric 2-by-2 grid on desktop. */}
+        {/* Research areas — an even 2-by-2 grid on desktop, one column on mobile. */}
         <section
           className="mx-auto w-full max-w-[1200px] scroll-mt-24 px-6 pb-20 sm:px-10 sm:pb-24 lg:px-14"
           id="research-areas"
@@ -154,8 +136,8 @@ export default async function ResearchPage({
           <h2 className="mt-3 font-display text-[clamp(1.75rem,3vw+1rem,2.5rem)] leading-[1.1] font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
             Four focus areas, one shared habit of testing ideas with real people.
           </h2>
-          <div className="mt-12 grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
-            {RESEARCH_AREAS.map((area, index) => {
+          <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {RESEARCH_AREAS.map((area) => {
               const tone = AREA_TONES[area];
               const pattern = AREA_PATTERNS[area];
               const toneText: Record<string, string> = {
@@ -170,10 +152,11 @@ export default async function ResearchPage({
                 yellow: "hover:border-[#a97b1c]/50 dark:hover:border-[#e3c36a]/50",
                 green: "hover:border-brand-green/60",
               };
+              const count = records.filter((record) => record.research.areas.includes(area)).length;
               return (
                 <Link
-                  className={`group relative flex min-h-56 flex-col justify-between overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-7 transition ${toneHover[tone]} ${index % 2 === 1 ? "lg:mt-12" : ""}`}
-                  href={`/research?area=${area}#explorer`}
+                  className={`group relative flex min-h-56 flex-col justify-between overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-7 transition ${toneHover[tone]}`}
+                  href="#explorer"
                   key={area}
                 >
                   <div>
@@ -183,7 +166,7 @@ export default async function ResearchPage({
                       </h3>
                       <PatternTile
                         bg="canvas"
-                        className={`size-12 rounded-lg transition ${index % 2 === 1 ? "lg:scale-x-[-1]" : ""}`}
+                        className="size-12 rounded-lg"
                         fg={tone}
                         kind={pattern}
                       />
@@ -195,10 +178,7 @@ export default async function ResearchPage({
                   <span
                     className={`mt-6 inline-flex items-center gap-1.5 text-sm font-semibold ${toneText[tone]}`}
                   >
-                    {records.filter((record) => record.research.areas.includes(area)).length}{" "}
-                    {records.filter((record) => record.research.areas.includes(area)).length === 1
-                      ? "initiative"
-                      : "initiatives"}
+                    {count} {count === 1 ? "initiative" : "initiatives"}
                   </span>
                 </Link>
               );
@@ -307,7 +287,7 @@ export default async function ResearchPage({
           )}
         </section>
 
-        {/* Research explorer — filters live in a small client component. */}
+        {/* Research explorer — every published initiative, newest activity first. */}
         <section
           className="mx-auto w-full max-w-[1200px] scroll-mt-24 px-6 pb-20 sm:px-10 sm:pb-24 lg:px-14"
           id="explorer"
@@ -316,10 +296,10 @@ export default async function ResearchPage({
             Research explorer
           </p>
           <h2 className="mt-3 font-display text-[clamp(1.75rem,3vw+1rem,2.5rem)] leading-[1.1] font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
-            Every published initiative, filterable by area, status, and year.
+            Every published initiative the lab has run.
           </h2>
           <div className="mt-10">
-            <ResearchExplorer initialArea={initialArea} members={members} records={records} />
+            <ResearchExplorer members={members} records={records} />
           </div>
         </section>
 
@@ -339,7 +319,7 @@ export default async function ResearchPage({
             collections: projects the lab builds, publications it writes, and articles it publishes.
             The links below come from real initiatives only.
           </p>
-          <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="mt-10 space-y-12">
             {(["project", "publication", "article"] as const).map((type) => {
               const labels = {
                 project: "Projects",
@@ -351,45 +331,67 @@ export default async function ResearchPage({
                 publication: "/publications",
                 article: "/articles",
               } as const;
+              const tones = { project: "blue", publication: "green", article: "red" } as const;
+              const patterns = {
+                project: "fans",
+                publication: "leaves",
+                article: "circle",
+              } as const;
               const links = outcomes[type];
               return (
-                <div
-                  className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 dark:border-white/10 dark:bg-white/[0.02]"
-                  key={type}
-                >
-                  <h3 className="flex items-center justify-between gap-3 font-display text-lg font-semibold text-[#0e1116] dark:text-white">
-                    {labels[type]}
+                <div key={type}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-3">
+                    <h3 className="font-display text-xl font-semibold tracking-[-0.015em] text-[#0e1116] dark:text-white">
+                      {labels[type]}
+                    </h3>
                     <Link
-                      className="text-[13px] font-medium text-brand-blue transition hover:underline"
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue transition hover:underline"
                       href={collectionHrefs[type]}
                     >
-                      Browse
+                      See all {labels[type].toLowerCase()}
+                      <span aria-hidden="true">→</span>
                     </Link>
-                  </h3>
+                  </div>
                   {links.length ? (
-                    <ul className="mt-4 space-y-2.5">
-                      {links.map((link) =>
-                        safeResearchHref(link.href) ? (
-                          <li key={`${type}:${link.href}`}>
-                            <a
-                              className="text-sm leading-6 text-[var(--ink-2)] underline decoration-[var(--line-strong)] underline-offset-4 transition hover:text-brand-red hover:decoration-brand-red/50 dark:text-white/70"
-                              href={link.href}
-                              rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                              target={link.href.startsWith("http") ? "_blank" : undefined}
-                            >
+                    <div
+                      aria-label={`${labels[type]} connected to research`}
+                      className="mt-5 flex snap-x gap-4 overflow-x-auto pb-3"
+                    >
+                      {links.map((link) => {
+                        const safe = safeResearchHref(link.href);
+                        const tile = (
+                          <div className="flex h-full w-56 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition hover:border-brand-red/50 dark:border-white/10 dark:bg-white/[0.02]">
+                            <PatternTile
+                              bg="canvas"
+                              className="block w-full aspect-[16/7]"
+                              fg={tones[type]}
+                              kind={patterns[type]}
+                            />
+                            <span className="block px-4 py-3 text-[13px] leading-6 font-medium text-[var(--ink-2)] dark:text-white/70">
                               {link.label}
-                            </a>
-                          </li>
+                            </span>
+                          </div>
+                        );
+                        return safe ? (
+                          <a
+                            className="block w-56 shrink-0 snap-start"
+                            href={safe}
+                            key={`${type}:${link.href}`}
+                            rel={safe.startsWith("http") ? "noopener noreferrer" : undefined}
+                            target={safe.startsWith("http") ? "_blank" : undefined}
+                          >
+                            {tile}
+                          </a>
                         ) : (
-                          <li
-                            className="text-sm leading-6 text-[var(--ink-2)] dark:text-white/70"
+                          <div
+                            className="block w-56 shrink-0 snap-start"
                             key={`${type}:${link.href}`}
                           >
-                            {link.label}
-                          </li>
-                        ),
-                      )}
-                    </ul>
+                            {tile}
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <p className="mt-4 text-sm leading-6 text-[var(--ink-3)]">
                       No linked {labels[type].toLowerCase()} yet.
