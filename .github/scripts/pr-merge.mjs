@@ -181,17 +181,27 @@ console.log("Watching post-merge CI and production deployment...");
 const VERIFY_TIMEOUT_MS = 10 * 60 * 1000;
 const verifyDeadline = Date.now() + VERIFY_TIMEOUT_MS;
 
+// Only these two actually gate whether the push is "live" — E2E is a 7-job
+// cross-browser matrix that routinely runs past this window, and Security
+// scanning doesn't block a deploy either. Waiting on those here would make
+// this step time out on essentially every real merge; they're still
+// reported in the final table, just not waited on.
+const GATING_WORKFLOWS = new Set(["CI", "Build and Push Docker Images"]);
+
 async function waitForRuns() {
+  let latest = [];
   while (Date.now() < verifyDeadline) {
     const { workflow_runs } = await gh(
       `/repos/${repo}/actions/runs?head_sha=${mergeSha}&per_page=20`,
     );
-    if (workflow_runs.length && workflow_runs.every((r) => r.status === "completed")) {
-      return workflow_runs;
+    latest = workflow_runs;
+    const gating = workflow_runs.filter((r) => GATING_WORKFLOWS.has(r.name));
+    if (gating.length && gating.every((r) => r.status === "completed")) {
+      return { runs: workflow_runs, timedOut: false };
     }
     await new Promise((r) => setTimeout(r, 15000));
   }
-  return null;
+  return { runs: latest, timedOut: true };
 }
 
 async function waitForProductionDeploys() {
@@ -216,11 +226,14 @@ async function waitForProductionDeploys() {
   return null;
 }
 
-const [runs, deploys] = await Promise.all([waitForRuns(), waitForProductionDeploys()]);
+const [{ runs, timedOut }, deploys] = await Promise.all([
+  waitForRuns(),
+  waitForProductionDeploys(),
+]);
 
-const runItems = (runs ?? []).map((r) => ({
-  label: r.name,
-  state: r.conclusion ?? "in_progress",
+const runItems = runs.map((r) => ({
+  label: GATING_WORKFLOWS.has(r.name) ? r.name : `${r.name} (non-blocking)`,
+  state: r.status === "completed" ? (r.conclusion ?? "neutral") : "in_progress",
   link: r.html_url,
 }));
 const deployItems = deploys
@@ -234,7 +247,16 @@ const deployItems = deploys
     ];
 
 const allItems = [...runItems, ...deployItems];
-const anyFailed = allItems.some((i) => !PASS_STATES.has(i.state) && i.state !== "SUCCESS");
+// Only the gating workflows and the Railway deploys themselves can fail this
+// check — E2E/Security rows are informational and reported either way.
+const blockingItems = allItems.filter(
+  (i) => GATING_WORKFLOWS.has(i.label) || i.label.startsWith("Railway — "),
+);
+const anyFailed =
+  (timedOut && runItems.some((i) => GATING_WORKFLOWS.has(i.label) && i.state === "in_progress")) ||
+  blockingItems.some(
+    (i) => !PASS_STATES.has(i.state) && i.state !== "SUCCESS" && i.state !== "in_progress",
+  );
 
 const owners = codeowners();
 await reply(
