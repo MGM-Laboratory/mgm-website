@@ -148,12 +148,28 @@ export async function setVariables(token, environmentId, serviceId, variables, s
   );
 }
 
-// Bucket<->environment binding is unimplemented on Railway's side as of this
-// writing (BucketCreateInput.environmentId is documented "[unimplemented]"),
-// so isolation from production comes purely from using a distinctly-named
-// bucket and wiring its own credentials into the preview environment's vars
-// — not from any environment-scoping the API would otherwise provide.
-export async function createBucket(token, name) {
+export async function findBucketByName(token, name) {
+  const data = await railway(
+    token,
+    `query($projectId: String!) {
+      project(id: $projectId) {
+        buckets { edges { node { id name } } }
+      }
+    }`,
+    { projectId: PROJECT_ID },
+  );
+  return data.project.buckets.edges.map((e) => e.node).find((n) => n.name === name) ?? null;
+}
+
+// BucketCreateInput.environmentId is documented "[unimplemented]" and really
+// is a no-op — bucketCreate alone only creates a project-level record with
+// no provisioned instance anywhere (confirmed live: bucketS3Credentials on
+// it fails with "BucketInstance not found"). The instance that actually
+// backs a bucket in a specific environment is provisioned separately,
+// through the same staged-config/patch system the CLI's `railway config`
+// uses: environmentPatchCommit with the bucket's own id as the key under
+// `buckets` in the patch, isCreated: true. Also confirmed live.
+export async function createBucket(token, environmentId, name, region = "sin") {
   const data = await railway(
     token,
     `mutation($input: BucketCreateInput!) {
@@ -161,7 +177,20 @@ export async function createBucket(token, name) {
     }`,
     { input: { projectId: PROJECT_ID, name } },
   );
-  return data.bucketCreate;
+  const bucket = data.bucketCreate;
+
+  await railway(
+    token,
+    `mutation($environmentId: String!, $patch: EnvironmentConfig) {
+      environmentPatchCommit(environmentId: $environmentId, patch: $patch)
+    }`,
+    {
+      environmentId,
+      patch: { buckets: { [bucket.id]: { region, isCreated: true } } },
+    },
+  );
+
+  return bucket;
 }
 
 export async function bucketS3Credentials(token, bucketId, environmentId) {

@@ -12,6 +12,7 @@ import {
   bucketS3Credentials,
   createBucket,
   createPreviewEnvironment,
+  findBucketByName,
   findEnvironmentByName,
   generateServiceDomain,
   listServiceInstances,
@@ -42,14 +43,10 @@ if (!apiInstance || !webInstance) {
 }
 
 const bucketName = `preview-pr-${prNumber}`.slice(0, 63);
-let bucket;
-if (isNew) {
+let bucket = await findBucketByName(token, bucketName);
+if (!bucket) {
   console.log(`Creating bucket ${bucketName}...`);
-  bucket = await createBucket(token, bucketName);
-} else {
-  // Re-running /preview on an existing environment: nothing to look up here,
-  // the bucket name is deterministic from the PR number.
-  bucket = { name: bucketName };
+  bucket = await createBucket(token, environment.id, bucketName);
 }
 
 function domainOf(instance) {
@@ -68,13 +65,18 @@ if (!webDomain) {
   webDomain = await generateServiceDomain(token, WEB_SERVICE_ID, environment.id, 3000);
 }
 
-// bucketCreate doesn't return a usable bucket id in every response shape
-// across Railway API versions, so re-resolve it defensively isn't needed
-// here — bucketCreate's result already carries `id`.
-const bucketId = bucket.id;
+// environmentPatchCommit (inside createBucket) is async — bucketS3Credentials
+// can 404 with "BucketInstance not found" for a few seconds after a fresh
+// create while the instance finishes provisioning. Retry instead of failing.
 let creds = null;
-if (bucketId) {
-  creds = await bucketS3Credentials(token, bucketId, environment.id);
+for (let attempt = 0; attempt < 6 && !creds; attempt++) {
+  try {
+    creds = await bucketS3Credentials(token, bucket.id, environment.id);
+  } catch (err) {
+    if (attempt === 5) throw err;
+    console.log(`Bucket instance not ready yet (attempt ${attempt + 1}), retrying...`);
+    await new Promise((r) => setTimeout(r, 5000));
+  }
 }
 
 const adminPassphrase = randomBytes(18).toString("base64url");
