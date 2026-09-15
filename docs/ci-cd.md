@@ -1,31 +1,30 @@
 # CI/CD
 
-Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud, three Harness checks, and a status comment. `main` is protected: PRs need every required check green to merge; repo admins can bypass for direct pushes.
+Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud and a status comment. `main` is protected: PRs need every required check green to merge; repo admins can bypass for direct pushes.
 
 ## GitHub Actions workflows
 
-| Workflow               | Triggers                                             | What it does                                                                                                                                                                                                                                              |
-| ---------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ci.yaml`              | push/PR to `main`, dispatch                          | pnpm install → format check → lint → typecheck → api test with coverage (uploaded to Codecov, flag `api`) → build, both workspaces, against a Postgres 17 service container                                                                               |
-| `security.yaml`        | push/PR to `main`, weekly, dispatch                  | CodeQL (JS/TS), dependency review (PRs only, fails on new high/critical advisories), gitleaks secret scan (OSS CLI, not the licensed Action — see `.gitleaksignore`), Trivy filesystem scan, weekly OSSF Scorecard — all upload SARIF to the Security tab |
-| `e2e.yaml`             | push/PR to `main`, dispatch                          | Playwright: chromium/firefox/webkit/mobile-chrome/mobile-safari on ubuntu, plus one Windows and one macOS job. Visual-regression baselines only on the primary ubuntu+chromium project                                                                    |
-| `lighthouse.yaml`      | PR to `main`, dispatch                               | Lighthouse CI performance/accessibility/SEO/best-practices budget on `/`, `/about`, `/contact`                                                                                                                                                            |
-| `docker-publish.yml`   | push to `main`, `v*.*.*` tags, dispatch              | Builds & pushes `website-api`/`website-web` to Docker Hub, then per image: Trivy image scan, CycloneDX SBOM (`anchore/sbom-action`, attested via `actions/attest-sbom`), keyless cosign signing (GitHub OIDC, no key-pair secret)                         |
-| `harness.yml`          | PR to `main` (`pull_request_target`), push to `main` | Triggers the three Harness pipelines below via API, polls, posts each as a GitHub commit status                                                                                                                                                           |
-| `pr-bot.yml`           | `workflow_run` (CI/Security/E2E/Harness)             | Upserts one PR comment (as "ren-automation") summarizing every check-run + commit status for that SHA                                                                                                                                                     |
-| `pr-commands.yml`      | PR comment created                                   | `LGTM` → GIF, for anyone, no side effects. `/check`, `/preview`, `/merge`, `/close` — gated to OWNER/MEMBER/COLLABORATOR or anyone listed in `CODEOWNERS`                                                                                                 |
-| `preview.yml`          | `workflow_dispatch` (from `/preview`)                | See "Preview environments" below                                                                                                                                                                                                                          |
-| `merge.yml`            | `workflow_dispatch` (from `/merge`)                  | See "Merging (`/merge`)" below                                                                                                                                                                                                                            |
-| `close.yml`            | `workflow_dispatch` (from `/close`)                  | See "Closing (`/close`)" below                                                                                                                                                                                                                            |
-| `preview-teardown.yml` | PR closed (`pull_request_target`)                    | Deletes that PR's preview environment                                                                                                                                                                                                                     |
-| `preview-reaper.yml`   | daily, dispatch                                      | Deletes any preview environment whose PR is no longer open, or that's older than 7 days regardless                                                                                                                                                        |
-| `stale.yml`            | daily, dispatch                                      | Labels/closes inactive issues and PRs after 30/37 days                                                                                                                                                                                                    |
+| Workflow               | Triggers                                | What it does                                                                                                                                                                                                                                              |
+| ---------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yaml`              | push/PR to `main`, dispatch             | pnpm install → format check → lint → typecheck → api test with coverage (uploaded to Codecov, flag `api`) → build, both workspaces, against a Postgres 17 service container                                                                               |
+| `security.yaml`        | push/PR to `main`, weekly, dispatch     | CodeQL (JS/TS), dependency review (PRs only, fails on new high/critical advisories), gitleaks secret scan (OSS CLI, not the licensed Action — see `.gitleaksignore`), Trivy filesystem scan, weekly OSSF Scorecard — all upload SARIF to the Security tab |
+| `e2e.yaml`             | push/PR to `main`, dispatch             | Playwright: chromium/firefox/webkit/mobile-chrome/mobile-safari on ubuntu, plus one Windows and one macOS job. Visual-regression baselines only on the primary ubuntu+chromium project                                                                    |
+| `lighthouse.yaml`      | PR to `main`, dispatch                  | Lighthouse CI performance/accessibility/SEO/best-practices budget on `/`, `/about`, `/contact`                                                                                                                                                            |
+| `docker-publish.yml`   | push to `main`, `v*.*.*` tags, dispatch | Builds & pushes `website-api`/`website-web` to Docker Hub, then per image: Trivy image scan, CycloneDX SBOM (`anchore/sbom-action`, attested via `actions/attest-sbom`), keyless cosign signing (GitHub OIDC, no key-pair secret)                         |
+| `pr-bot.yml`           | `workflow_run` (CI/Security/E2E)        | Upserts one PR comment (as "ren-automation") summarizing every check-run + commit status for that SHA                                                                                                                                                     |
+| `pr-commands.yml`      | PR comment created                      | `LGTM` → GIF, for anyone, no side effects. `/check`, `/preview`, `/merge`, `/close` — gated to OWNER/MEMBER/COLLABORATOR or anyone listed in `CODEOWNERS`                                                                                                 |
+| `preview.yml`          | `workflow_dispatch` (from `/preview`)   | See "Preview environments" below                                                                                                                                                                                                                          |
+| `merge.yml`            | `workflow_dispatch` (from `/merge`)     | See "Merging (`/merge`)" below                                                                                                                                                                                                                            |
+| `close.yml`            | `workflow_dispatch` (from `/close`)     | See "Closing (`/close`)" below                                                                                                                                                                                                                            |
+| `preview-teardown.yml` | PR closed (`pull_request_target`)       | Deletes that PR's preview environment                                                                                                                                                                                                                     |
+| `preview-reaper.yml`   | daily, dispatch                         | Deletes any preview environment whose PR is no longer open, or that's older than 7 days regardless                                                                                                                                                        |
+| `stale.yml`            | daily, dispatch                         | Labels/closes inactive issues and PRs after 30/37 days                                                                                                                                                                                                    |
 
 Renovate (not Dependabot — see the commit that swapped them) handles npm/Docker/GitHub Actions version updates; GitHub's native Dependabot security alerts stay on regardless.
 
 ### Fork-PR safety model
 
-`/preview`'s `build` job is the only one that ever executes a PR's own code, and it holds zero secrets. Environment provisioning, image push, and data seeding are separate jobs that only ever touch artifacts that job produced — never the PR source directly. `preview-teardown.yml` and `harness.yml` use `pull_request_target` (not `pull_request`) because they need secrets but never run PR code at all — they only read the event payload (PR number, head SHA) and call an API.
+`/preview`'s `build` job is the only one that ever executes a PR's own code, and it holds zero secrets. Environment provisioning, image push, and data seeding are separate jobs that only ever touch artifacts that job produced — never the PR source directly. `preview-teardown.yml` uses `pull_request_target` (not `pull_request`) because it needs secrets but never runs PR code at all — it only reads the event payload (PR number) and calls an API.
 
 ### Verification commands
 
@@ -39,18 +38,6 @@ cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer https
 ## SonarCloud
 
 Wired via SonarCloud's own GitHub App (Automatic Analysis), project `MGM-Laboratory_mgm-website2` — posts its own "SonarCloud Code Analysis" check on every push/PR with no workflow file needed.
-
-## Harness
-
-A second CI platform, independent of GitHub Actions:
-
-1. **`harness-ci`** — build/lint/typecheck/test as a cross-platform second opinion.
-2. **`harness-security`** — Semgrep SAST (distinct coverage from CodeQL).
-3. **`harness-supply-chain`** — syft SBOM + a grype critical-CVE policy gate (distinct from the cosign/attest-sbom path).
-
-Account `zpdJUsWiSYeXsnoCY8whvg`, org `default`, project `default_project`. Pipeline YAML lives in `.harness/`. There's deliberately no Harness-side GitHub connector or webhook trigger — the repo is public, so each pipeline just `git clone`s it directly, and `harness.yml` (GitHub Actions side) triggers executions via the Harness API and posts results back as commit statuses. This also sidesteps a connector-creation schema issue on this account that had no discoverable fix.
-
-**Harness Cloud needs a credit card on file to run anything** ("To use Harness Cloud, you must provide a credit card to validate your account") — a one-time step in Harness account settings. Until then, all three checks fail at the billing gate before any real work runs.
 
 ## Preview environments (`/preview`)
 
@@ -116,6 +103,10 @@ The Railway MCP tools are also available in agent sessions (`list-projects`, `de
 ## Historical: the workflow-rename incident (2026-09-12)
 
 After the repo migration, push-triggered runs silently stopped firing on the fresh repo while `workflow_dispatch` kept working (everything read as enabled — the first-push workflow registration was stale). Renaming `ci.yml` → `ci.yaml` forced a fresh registration and restored push triggers instantly. If push-triggered Actions ever silently stop on a repo while dispatch works, try forcing re-registration (rename the workflow file) before suspecting anything deeper.
+
+## Historical: Harness removed (2026-09-15)
+
+This repo used to run a second CI platform on Harness Cloud (three checks: `harness-ci`, `harness-security`, `harness-supply-chain`, triggered via `harness.yml` and `.harness/*.yaml`). It was removed entirely — the account needed a credit card on file to run anything at all, and rather than leave a permanently-red, unfixable check gating `/merge`, the whole integration (workflow, trigger script, pipeline YAML, secret) was deleted. CodeQL, gitleaks, Trivy, and SonarCloud remain as the security/quality coverage.
 
 ## Historical: /merge and /close live verification (2026-09-15)
 

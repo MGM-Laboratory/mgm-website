@@ -20,7 +20,6 @@ Every PR runs:
 - **Security** — CodeQL, dependency review, secret scanning (gitleaks), Trivy filesystem scan.
 - **E2E** — Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
 - **SonarCloud Code Analysis** — posted automatically by SonarCloud's own GitHub App; no local setup needed.
-- **Harness** — three independent checks (`harness-ci`, `harness-security`, `harness-supply-chain`) running on Harness Cloud as a second CI platform.
 
 Run the fast ones locally before pushing: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format:check`.
 

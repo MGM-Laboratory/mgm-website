@@ -22,8 +22,8 @@ export async function ghRequest(token, path, opts = {}) {
 
 // Shared by the status comment and the /merge readiness check: every check
 // reported against a commit, whether it arrived as a Check Run (workflow
-// jobs, CodeQL, SonarCloud's own App) or a legacy commit Status (Harness,
-// posted via harness-check.mjs), deduplicated by name.
+// jobs, CodeQL, SonarCloud's own App) or a legacy commit Status, deduplicated
+// by name.
 export async function collectChecks(token, repo, sha) {
   const [checkRuns, combinedStatus] = await Promise.all([
     ghRequest(token, `/repos/${repo}/commits/${sha}/check-runs?per_page=100`),
