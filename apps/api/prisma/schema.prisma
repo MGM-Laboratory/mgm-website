@@ -27,3 +27,13 @@ model CmsPublication {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Singleton record — always read/written at slug "contact". Reuses the same
+// slug + data Json shape as the other collections purely for consistency;
+// there is only ever one row.
+model CmsContactSettings {
+  slug      String   @id
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
