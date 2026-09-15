@@ -167,32 +167,41 @@ await reply(
 // Post-merge production verification. Railway's own deploy is triggered by
 // its GitHub webhook independently of this workflow, so the signal to watch
 // is the production service instances' latestDeployment, not an Actions run.
-console.log("Watching post-merge CI and production deployment...");
+//
+// CI and Docker publish are NOT re-watched by searching for a push-triggered
+// run on mergeSha — confirmed live that one never appears. A push made by
+// the Actions-provided GITHUB_TOKEN (which is what merges this PR) does not
+// cascade-trigger other workflows — a deliberate GitHub Actions anti-loop
+// rule, undocumented consequence: the "watch CI on the merge commit" this
+// used to attempt silently found zero runs, and the report below used to
+// paper over that by finding nothing to mark as failed. Dispatching them
+// explicitly (workflow_dispatch via the API is not the suppressed path)
+// gets them running against the merge commit for the record, without
+// pretending this step waited on and verified their result — Railway's own
+// deployment status is the one thing here that's actually watched to
+// completion, and it's what "deployed with no error" really depends on.
+console.log("Dispatching CI and Docker publish against the merge commit...");
+const DISPATCHED_WORKFLOWS = [
+  { file: "ci.yaml", label: "CI" },
+  { file: "docker-publish.yml", label: "Build and Push Docker Images" },
+];
+const dispatched = await Promise.all(
+  DISPATCHED_WORKFLOWS.map(async (wf) => {
+    try {
+      await gh(`/repos/${repo}/actions/workflows/${wf.file}/dispatches`, {
+        method: "POST",
+        body: JSON.stringify({ ref: "main" }),
+      });
+      return { ...wf, ok: true };
+    } catch (err) {
+      return { ...wf, ok: false, error: err.message };
+    }
+  }),
+);
+
+console.log("Watching post-merge production deployment...");
 const VERIFY_TIMEOUT_MS = 10 * 60 * 1000;
 const verifyDeadline = Date.now() + VERIFY_TIMEOUT_MS;
-
-// Only these two actually gate whether the push is "live" — E2E is a 7-job
-// cross-browser matrix that routinely runs past this window, and Security
-// scanning doesn't block a deploy either. Waiting on those here would make
-// this step time out on essentially every real merge; they're still
-// reported in the final table, just not waited on.
-const GATING_WORKFLOWS = new Set(["CI", "Build and Push Docker Images"]);
-
-async function waitForRuns() {
-  let latest = [];
-  while (Date.now() < verifyDeadline) {
-    const { workflow_runs } = await gh(
-      `/repos/${repo}/actions/runs?head_sha=${mergeSha}&per_page=20`,
-    );
-    latest = workflow_runs;
-    const gating = workflow_runs.filter((r) => GATING_WORKFLOWS.has(r.name));
-    if (gating.length && gating.every((r) => r.status === "completed")) {
-      return { runs: workflow_runs, timedOut: false };
-    }
-    await new Promise((r) => setTimeout(r, 15000));
-  }
-  return { runs: latest, timedOut: true };
-}
 
 async function waitForProductionDeploys() {
   const terminal = new Set(["SUCCESS", "FAILED", "CRASHED", "REMOVED", "SKIPPED"]);
@@ -216,15 +225,13 @@ async function waitForProductionDeploys() {
   return null;
 }
 
-const [{ runs, timedOut }, deploys] = await Promise.all([
-  waitForRuns(),
-  waitForProductionDeploys(),
-]);
+const deploys = await waitForProductionDeploys();
 
-const runItems = runs.map((r) => ({
-  label: GATING_WORKFLOWS.has(r.name) ? r.name : `${r.name} (non-blocking)`,
-  state: r.status === "completed" ? (r.conclusion ?? "neutral") : "in_progress",
-  link: r.html_url,
+const dispatchItems = dispatched.map((d) => ({
+  label: `${d.label} (dispatched against main, not waited on here)`,
+  state: d.ok ? "queued" : "error",
+  detail: d.ok ? "" : d.error,
+  link: `https://github.com/${repo}/actions/workflows/${d.file}`,
 }));
 const deployItems = deploys
   ? [
@@ -236,17 +243,10 @@ const deployItems = deploys
       { label: "Railway — web", state: "unknown (timed out watching)" },
     ];
 
-const allItems = [...runItems, ...deployItems];
-// Only the gating workflows and the Railway deploys themselves can fail this
-// check — E2E/Security rows are informational and reported either way.
-const blockingItems = allItems.filter(
-  (i) => GATING_WORKFLOWS.has(i.label) || i.label.startsWith("Railway — "),
-);
-const anyFailed =
-  (timedOut && runItems.some((i) => GATING_WORKFLOWS.has(i.label) && i.state === "in_progress")) ||
-  blockingItems.some(
-    (i) => !PASS_STATES.has(i.state) && i.state !== "SUCCESS" && i.state !== "in_progress",
-  );
+const allItems = [...dispatchItems, ...deployItems];
+// Only the Railway deploys are actually watched to completion here, so
+// they're the only thing that can fail this check.
+const anyFailed = deployItems.some((i) => i.state !== "SUCCESS");
 
 const owners = codeowners();
 await reply(

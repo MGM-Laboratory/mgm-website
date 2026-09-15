@@ -61,7 +61,9 @@ Commenting `/merge` on a PR (maintainers/CODEOWNERS only) runs `merge.yml`, enti
 3. Merges with a merge commit (not squash — this repo keeps granular history, see `docs/repo-history.md`).
 4. Deletes the head branch only if it's genuinely safe: same repo (not a fork), not the default branch, and no other open PR still points at it.
 5. Tears down that PR's `preview-pr-<n>` Railway environment if one exists — the lookup is asserted against the production environment id first, so it can never touch the real deployment.
-6. Watches the merge commit's own checks and production's post-merge deployment (Railway's GitHub integration deploys independently of this workflow — the signal watched is the production service instances' `latestDeployment` actually changing, not just going back to `SUCCESS`) for up to 10 minutes, then posts a final success comment or a CODEOWNERS-mention if anything came back unhealthy.
+6. Dispatches `ci.yaml` and `docker-publish.yml` against the merge commit for the record, then watches production's post-merge deployment (Railway's GitHub integration deploys independently of this workflow — the signal watched is the production service instances' `latestDeployment` actually changing, not just going back to `SUCCESS`) for up to 10 minutes, and posts a final success comment or a CODEOWNERS-mention if the deploy came back unhealthy.
+
+The dispatch in step 6, rather than watching for a push-triggered run on the merge commit, is deliberate: the merge itself is made with the Actions-provided `GITHUB_TOKEN`, and GitHub does not cascade-trigger other workflows from pushes made by that token (an anti-loop rule) — confirmed live, a merge commit never got a push-triggered CI or Docker publish run at all. `workflow_dispatch` via the API isn't subject to that rule, so this gets them running against the merge commit, but their result isn't waited on or gated on here — Railway's own deployment status is the only thing in this step that's actually watched to completion.
 
 ## Closing (`/close`)
 
@@ -70,6 +72,8 @@ Commenting `/close` on a PR (maintainers/CODEOWNERS only) runs `close.yml`, enti
 1. Closes the PR (`state: closed`) — the code is **not** merged into `main`.
 2. Leaves the head branch alone entirely — nothing is deleted, so the branch can be reopened or pushed to again later.
 3. Tears down that PR's `preview-pr-<n>` Railway environment if one exists, using the exact same production-id-asserted lookup `/merge` uses (shared in `railway-api.mjs`'s `tearDownPreviewEnvironment`), so a closed PR's preview never keeps running or billing after the fact.
+
+Note: `preview-teardown.yml`'s `pull_request_target: closed` backstop (row in the table above) never actually fires for a PR closed or merged through `/close` or `/merge` — same `GITHUB_TOKEN`-authored-action limitation as above; GitHub doesn't cascade-trigger it. Harmless here because both `/close` and `/merge` already tear down the preview environment explicitly and don't rely on it. It still fires normally for a PR a human closes through the GitHub UI. `preview-reaper.yml`'s daily sweep is schedule-triggered, unaffected either way, and remains the real backstop for anything either path missed.
 
 ## Railway
 
