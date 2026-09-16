@@ -6,7 +6,6 @@ import {
   Delete,
   Get,
   Headers,
-  NotFoundException,
   Param,
   Post,
   Put,
@@ -82,16 +81,6 @@ export class CmsMembersController {
 
   @Get("media/:key")
   async media(@Param("key") key: string, @Res() response: Response) {
-    const localFile = await this.storage.getLocalFile(key);
-    if (localFile) {
-      response.set({
-        "cache-control": "public, max-age=31536000, immutable",
-        "content-type": localFile.contentType,
-        "x-content-type-options": "nosniff",
-      });
-      return response.send(localFile.body);
-    }
-    if (this.storage.usesLocalMedia()) throw new NotFoundException("Portrait not found");
     const url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
     return response.redirect(url);
   }

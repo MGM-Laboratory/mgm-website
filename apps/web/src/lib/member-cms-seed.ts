@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { MEMBERS, type Member } from "@/data/members";
+import { MEMBER_PORTRAIT_KEYS } from "@/data/member-portrait-keys";
 import { cmsApi } from "@/lib/cms-api";
 import { importPublicMemberProfile } from "@/lib/member-profile-import";
 import type { CmsLink, CmsMemberRecord } from "@/lib/member-cms";
@@ -63,15 +64,20 @@ function linksFrom(contacts: LegacyContacts = {}): CmsLink[] {
   return entries.flatMap(([label, href]) => (href ? [{ label, url: href }] : []));
 }
 
-async function sourceRecord(member: Member): Promise<CmsMemberRecord> {
+const sourceRecord = async (member: Member): Promise<CmsMemberRecord> => {
   const legacy = await legacyProfile(member.slug);
   const profile = importPublicMemberProfile(member, legacy.raw ?? "");
+  const photoKey = MEMBER_PORTRAIT_KEYS[member.slug];
   return {
-    member,
-    profile: { ...profile, links: linksFrom(legacy.contacts) },
+    member: { ...member, hasPortrait: Boolean(photoKey) },
+    profile: {
+      ...profile,
+      links: linksFrom(legacy.contacts),
+      ...(photoKey ? { photoKey } : {}),
+    },
     slug: member.slug,
   };
-}
+};
 
 async function requestRecords() {
   const response = await cmsApi("/cms/members");

@@ -100,22 +100,12 @@ export class ContactController {
     return { key, size: body.length };
   }
 
-  /** Streams a local attachment or redirects to a short-lived cloud download URL. */
+  /** Redirects to a short-lived cloud download URL. */
   @Get("attachments/:key")
   async attachment(@Param("key") key: string, @Res() response: Response) {
     if (!CONTACT_ATTACHMENT_KEY_PATTERN.test(key)) {
       throw new BadRequestException("Unknown attachment key");
     }
-    const localFile = await this.storage.getLocalFile(key);
-    if (localFile) {
-      response.set({
-        "cache-control": "private, max-age=0",
-        "content-type": localFile.contentType,
-        "x-content-type-options": "nosniff",
-      });
-      return response.send(localFile.body);
-    }
-    if (this.storage.usesLocalMedia()) throw new BadRequestException("Attachment not found");
     const url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
     return response.redirect(url);
   }
