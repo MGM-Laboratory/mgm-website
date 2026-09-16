@@ -13,10 +13,10 @@ const CONTACT_SETTINGS_SLUG = "contact";
 const CONTACT_SETTINGS_CACHE_KEY = "cms:contact-settings:v1";
 const CONTACT_SETTINGS_CACHE_TTL_SECONDS = 60 * 10;
 
-// Re-parsed (not just cast) on every read: a record saved before a schema
-// change (new fields, renamed fields) is stored as whatever shape it was
-// written with, and zod backfills anything missing with today's defaults
-// instead of the field coming back `undefined` at runtime.
+/**
+ * Revalidates stored settings so current schema defaults fill missing fields.
+ * Invalid records fall back to the complete default settings.
+ */
 function normalize(data: unknown): ContactSettings {
   const parsed = contactSettingsSchema.safeParse(data);
   return parsed.success ? parsed.data : DEFAULT_CONTACT_SETTINGS;
@@ -29,6 +29,7 @@ export class CmsContactSettingsService {
     private readonly cache: CacheService,
   ) {}
 
+  /** Returns normalized settings from the cache or singleton database record. */
   async get(): Promise<ContactSettings> {
     const cached = await this.cache.getJson<ContactSettings>(CONTACT_SETTINGS_CACHE_KEY);
     if (cached) return normalize(cached);
@@ -45,6 +46,7 @@ export class CmsContactSettingsService {
     return settings;
   }
 
+  /** Upserts the singleton settings record and invalidates its cached value. */
   async save(data: ContactSettings): Promise<ContactSettings> {
     await this.prisma.cmsContactSettings.upsert({
       where: { slug: CONTACT_SETTINGS_SLUG },

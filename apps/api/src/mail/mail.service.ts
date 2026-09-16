@@ -38,6 +38,7 @@ function nextUtcMidnight(): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 }
 
+/** Returns the next UTC month boundary or a fixed 30-day reset time. */
 function nextLongReset(period: MailLongPeriod | undefined): Date {
   const now = new Date();
   if (period === "monthly") {
@@ -82,11 +83,11 @@ export class MailService {
     this.fromEmail = configService.get<string | undefined>("SES_FROM_EMAIL");
   }
 
-  // Booleans + live remaining counts only, never credentials — safe for an
-  // admin-only CMS panel. SES's "configured" flag is a soft hint (explicit
-  // access key present); routing itself always treats SES as available,
-  // since the AWS SDK's default credential chain (e.g. an IAM role) can work
-  // even without one.
+  /**
+   * Returns provider availability hints and live quota counts without exposing
+   * credentials. SES availability reflects an explicit access key, although
+   * routing can still use the AWS SDK's default credential chain.
+   */
   async getStatus(limits: MailProviderLimits): Promise<MailProviderStatus> {
     const providers = {} as MailProviderStatus["providers"];
     for (const id of MAIL_PROVIDER_IDS) {
@@ -147,6 +148,11 @@ export class MailService {
     return quota;
   }
 
+  /**
+   * Sends an HTML email using the requested routing strategy, falling through
+   * ordered candidates on failure. Rejects when the sender is missing, no
+   * provider is eligible, or every candidate fails.
+   */
   async sendEmail(params: {
     to: string | string[];
     subject: string;
@@ -188,9 +194,10 @@ export class MailService {
     throw new Error(`All mail providers failed: ${errors.join("; ")}`);
   }
 
-  // Every strategy resolves to an ORDERED list of candidates; sendEmail walks
-  // it and moves to the next on failure — this is what makes failover
-  // automatic under every strategy, not just "failover" itself.
+  /**
+   * Resolves a routing strategy to the ordered, configured candidates that
+   * sendEmail should attempt, excluding over-quota providers when applicable.
+   */
   private async resolveCandidates(
     strategy: MailStrategy,
     order: MailProviderId[],
@@ -310,10 +317,10 @@ export class MailService {
     return Math.max(0, limit - count);
   }
 
-  // Calendar-mode counters. `dailyRemaining`/`longRemaining` on the config
-  // seed the counter only the first time it's created for a provider — so
-  // an admin can start it below the full limit to account for usage from
-  // outside this app — subsequent periodic resets restore the full limit.
+  /**
+   * Loads calendar-mode usage, creating it from configured remaining counts
+   * when absent and restoring full limits after elapsed reset boundaries.
+   */
   private async getOrInitUsage(id: MailProviderId, config: MailProviderLimitConfig) {
     let row = await this.prisma.mailProviderUsage.findUnique({ where: { provider: id } });
     if (!row) {

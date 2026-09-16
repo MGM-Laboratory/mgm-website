@@ -25,6 +25,10 @@ export class ContactService {
     private readonly inquiries: CmsContactInquiriesService,
   ) {}
 
+  /**
+   * Persists a contact inquiry, then emails the configured recipient through
+   * the saved routing strategy. The inquiry remains stored if delivery fails.
+   */
   async send(payload: ContactFormPayload): Promise<void> {
     const attachmentKeys = payload.attachmentKeys ?? [];
 

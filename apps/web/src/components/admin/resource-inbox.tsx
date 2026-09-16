@@ -57,6 +57,11 @@ export type UseResourceInboxOptions<TRecord extends InboxRecord> = {
   onMutated?: () => void;
 };
 
+/**
+ * Owns shared inbox filtering, selection, and mutation requests. Single-item
+ * state changes are optimistic and roll back on failure; bulk changes apply
+ * after the API succeeds.
+ */
 export function useResourceInbox<TRecord extends InboxRecord>({
   records,
   setRecords,
@@ -240,6 +245,10 @@ export type ResourceInbox<TRecord extends InboxRecord> = ReturnType<
   typeof useResourceInbox<TRecord>
 >;
 
+/**
+ * Renders the shared two-pane inbox around resource-specific row, detail, and
+ * primary-action renderers supplied by the caller.
+ */
 export function ResourceInboxShell<TRecord extends InboxRecord>({
   inbox,
   searchPlaceholder,

@@ -86,6 +86,7 @@ function isSafeBlobUrl(url: string | undefined): url is string {
   return typeof url === "string" && url.startsWith("blob:");
 }
 
+/** Uploads one selected file and returns its storage key, using the API error when available. */
 async function uploadAttachment(file: File): Promise<string> {
   const response = await fetch(`${env.NEXT_PUBLIC_API_URL}/contact/attachments`, {
     method: "POST",
@@ -103,8 +104,7 @@ async function uploadAttachment(file: File): Promise<string> {
   return key;
 }
 
-// Returns true when the response body carried field-level validation errors
-// (already applied to the form via setError) rather than a generic failure.
+/** Applies field-level API errors to the form and reports whether any were present. */
 function applyFieldErrors(
   body: { errors?: Record<string, string[]> } | null,
   setError: UseFormSetError<FormValues>,
@@ -119,6 +119,10 @@ function applyFieldErrors(
   return true;
 }
 
+/**
+ * Renders the contact form, persists text fields as a local draft, uploads
+ * attachments before submission, and clears the draft after a successful send.
+ */
 export function ContactForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);

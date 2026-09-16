@@ -55,10 +55,10 @@ export class CmsContactInquiriesService {
     }));
   }
 
-  // Called directly from ContactService, unconditionally and before any
-  // email send is attempted — this is the guaranteed side effect of a
-  // contact form submission, so an inquiry is never lost to an email
-  // provider outage.
+  /**
+   * Persists an inquiry independently of email delivery. ContactService calls
+   * this before attempting delivery so provider failures do not lose the submission.
+   */
   async create(data: Prisma.InputJsonValue) {
     await this.prisma.cmsContactInquiry.create({
       data: { slug: `inquiry-${randomUUID()}`, data },
@@ -66,7 +66,11 @@ export class CmsContactInquiriesService {
     return { ok: true };
   }
 
-  /** Merge a state patch into one inquiry; never replaces the record. */
+  /**
+   * Merges read and archive state into an inquiry without replacing its payload.
+   * Changing `read` also sets `readAt` to the current time or clears it.
+   * Throws when the inquiry does not exist.
+   */
   async updateState(slug: string, patch: InquiryStatePatch) {
     const record = await this.prisma.cmsContactInquiry.findUnique({ where: { slug } });
     if (!record) throw new NotFoundException("Inquiry not found");
@@ -90,7 +94,10 @@ export class CmsContactInquiriesService {
     };
   }
 
-  /** Bulk inbox operations, mirroring the event-registrations inbox. */
+  /**
+   * Deletes matching inquiries or applies an archive/read action to them in a
+   * transaction. Unknown IDs are ignored; the result reports deletions only.
+   */
   async bulk(ids: string[], action: InquiryBulkAction) {
     if (action === "delete") {
       const { count } = await this.prisma.cmsContactInquiry.deleteMany({

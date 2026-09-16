@@ -46,8 +46,10 @@ export class ContactController {
     private readonly storage: StorageService,
   ) {}
 
-  // Attachments arrive as raw bytes of whatever type the browser reports —
-  // the raw body parser for this exact path is registered in main.ts.
+  /**
+   * Stores a raw attachment and returns its generated key and byte size.
+   * Rejects missing or oversized bodies and unavailable storage.
+   */
   @Post("attachments")
   async uploadAttachment(@Req() request: Request, @Headers("x-filename") rawFilename = "") {
     // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
@@ -95,6 +97,7 @@ export class ContactController {
     return { key, size: body.length };
   }
 
+  /** Streams a local attachment or redirects to a short-lived cloud download URL. */
   @Get("attachments/:key")
   async attachment(@Param("key") key: string, @Res() response: Response) {
     if (!CONTACT_ATTACHMENT_KEY_PATTERN.test(key)) {
@@ -114,6 +117,7 @@ export class ContactController {
     return response.redirect(url);
   }
 
+  /** Rejects invalid messages with field-level errors before submitting valid payloads. */
   @Post()
   async submit(@Req() request: Request) {
     const parsed = contactFormSchema.safeParse(request.body);

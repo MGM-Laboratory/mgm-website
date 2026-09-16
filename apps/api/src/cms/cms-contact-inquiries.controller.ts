@@ -36,6 +36,7 @@ const bulkSchema = z.object({
   action: z.enum(["archive", "unarchive", "markRead", "markUnread", "delete"]),
 });
 
+/** Returns a validated request body or reports the first Zod issue as a 400 response. */
 function parseSafe<T>(schema: z.ZodType<T>, body: unknown): T {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
