@@ -28,7 +28,7 @@ export function ContactContent({ settings }: Readonly<{ settings: ContactSetting
             tone="green"
             className="pointer-events-none absolute -top-10 -right-10 size-64 opacity-25 sm:size-80 dark:opacity-35"
           />
-          <div className="relative mx-auto max-w-3xl">
+          <div className="relative max-w-3xl">
             <p className="text-sm font-semibold tracking-wide text-brand-green uppercase">
               Contact
             </p>
