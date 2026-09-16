@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CONTACT_MAX_ATTACHMENTS,
@@ -29,6 +29,17 @@ const FIELD_NAMES = new Set(Object.keys(formSchema.shape));
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Types a browser can render inline in a new tab rather than just downloading.
+function isPreviewableType(type: string) {
+  return (
+    type === "application/pdf" ||
+    type.startsWith("image/") ||
+    type.startsWith("video/") ||
+    type.startsWith("audio/") ||
+    type.startsWith("text/")
+  );
 }
 
 async function uploadAttachment(file: File): Promise<string> {
@@ -68,6 +79,20 @@ export function ContactForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Object URLs let the browser preview/open a selected file before it's ever
+  // uploaded. Recomputed whenever the file list changes; the previous batch
+  // is revoked in the matching effect cleanup once it's no longer rendered.
+  const previewUrls = useMemo(() => {
+    const map = new Map<File, string>();
+    for (const file of files) map.set(file, URL.createObjectURL(file));
+    return map;
+  }, [files]);
+  useEffect(() => {
+    return () => {
+      for (const url of previewUrls.values()) URL.revokeObjectURL(url);
+    };
+  }, [previewUrls]);
 
   const {
     register,
@@ -267,25 +292,47 @@ export function ContactForm() {
           />
           {files.length ? (
             <ul className="mt-3 space-y-1.5">
-              {files.map((file, index) => (
-                <li
-                  key={`${file.name}-${index}`}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-sm"
-                >
-                  <span className="truncate text-foreground/80">{file.name}</span>
-                  <span className="shrink-0 text-xs text-foreground/45">
-                    {formatBytes(file.size)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(index)}
-                    aria-label={`Remove ${file.name}`}
-                    className="shrink-0 text-foreground/40 transition-colors hover:text-brand-red"
+              {files.map((file, index) => {
+                const url = previewUrls.get(file);
+                const isImage = file.type.startsWith("image/");
+                return (
+                  <li
+                    key={`${file.name}-${index}`}
+                    className="flex items-center gap-3 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-sm"
                   >
-                    <X className="size-4" />
-                  </button>
-                </li>
-              ))}
+                    {isImage && url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- ephemeral local blob: URL, not an optimizable remote asset
+                      <img src={url} alt="" className="size-8 shrink-0 rounded object-cover" />
+                    ) : null}
+                    <span className="min-w-0 flex-1 truncate text-foreground/80">{file.name}</span>
+                    <span className="shrink-0 text-xs text-foreground/45">
+                      {formatBytes(file.size)}
+                    </span>
+                    {url && isPreviewableType(file.type) ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 text-xs font-medium text-brand-blue hover:underline"
+                      >
+                        View
+                      </a>
+                    ) : (
+                      <span className="shrink-0 text-xs text-foreground/35">
+                        Can&apos;t preview
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      aria-label={`Remove ${file.name}`}
+                      className="shrink-0 text-foreground/40 transition-colors hover:text-brand-red"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
         </div>
@@ -302,7 +349,11 @@ export function ContactForm() {
           <Link href="/privacy-policy" className="font-medium text-brand-blue hover:underline">
             Privacy Policy
           </Link>{" "}
-          and to MGM Laboratory contacting me about this enquiry.
+          and{" "}
+          <Link href="/terms-of-services" className="font-medium text-brand-blue hover:underline">
+            Terms of Service
+          </Link>
+          , and to MGM Laboratory contacting me about this enquiry.
         </span>
       </label>
       {showError("agree") ? (
@@ -321,10 +372,6 @@ export function ContactForm() {
         )}
         Send message
       </button>
-      <p className="mt-3 text-xs text-foreground/45">
-        We&apos;ll only use your details to respond. Your message and any files are sent securely
-        and stored privately.
-      </p>
     </form>
   );
 }
