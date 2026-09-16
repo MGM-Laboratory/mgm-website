@@ -1403,7 +1403,10 @@ export function MemberCmsStudio({
               ) : section === "administration" ? (
                 <AdminManagementPanel initialAdmins={initialAdmins} />
               ) : section === "contact" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
-                <ContactSettingsEditor onDirtyChange={setHasUnsavedChanges} />
+                <ContactSettingsEditor
+                  isSuperadmin={viewer.role === "superadmin"}
+                  onDirtyChange={setHasUnsavedChanges}
+                />
               ) : (
                 <EditorialOverview
                   canAccess={canAccess}
