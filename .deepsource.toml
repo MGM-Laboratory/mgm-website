@@ -22,16 +22,18 @@ enabled = true
 
 [[analyzers]]
 name = "javascript"
-# Disabled repo-wide: with no .deepsource.toml on main, this analyzer ran on
-# its dashboard defaults (module_system = "commonjs"), which flags nearly
-# every top-level function in every file in this ESM/TypeScript monorepo as
-# an anti-pattern (JS-0067) -- ~1200 near-entirely-false-positive issues
-# repo-wide, and a permanently-failing required check on every PR that
-# touches JS/TS. The settings below are what this repo actually needs; they
-# take effect once this analyzer is re-enabled. Do not re-enable without also
-# verifying (via `deepsource issues --pr <n>` after a fresh run) that a real
-# PR's issue count reflects genuine findings, not the flood.
-enabled = false
+# `enabled = false` here does NOT actually turn this analyzer off -- confirmed
+# empirically: `deepsource repo status` still lists it active, and a PR
+# touching JS/TS still gets the full flood, even with this file (and this
+# exact setting) live on main. This repo's DeepSource analyzer config is
+# dashboard-managed, not read from this file at all, on any branch. Actually
+# disabling the analyzer (or fixing module_system below, which has the same
+# problem) requires the DeepSource web dashboard:
+# https://app.deepsource.com/gh/MGM-Laboratory/mgm-website/settings
+# The main-protection ruleset already excludes "DeepSource: JavaScript" from
+# required checks as the working mitigation. The settings below are what this
+# analyzer actually needs, for whoever fixes this from the dashboard.
+enabled = true
 
   [analyzers.meta]
   dialect = "typescript"
