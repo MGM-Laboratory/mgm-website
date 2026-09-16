@@ -9,7 +9,7 @@ import {
 } from "@repo/shared";
 import { Loader2, Paperclip, Send, X } from "lucide-react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormSetError } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -46,6 +46,22 @@ async function uploadAttachment(file: File): Promise<string> {
   }
   const { key } = (await response.json()) as { key: string };
   return key;
+}
+
+// Returns true when the response body carried field-level validation errors
+// (already applied to the form via setError) rather than a generic failure.
+function applyFieldErrors(
+  body: { errors?: Record<string, string[]> } | null,
+  setError: UseFormSetError<FormValues>,
+): boolean {
+  const fieldErrors = body?.errors;
+  if (!fieldErrors || typeof fieldErrors !== "object") return false;
+  for (const [field, messages] of Object.entries(fieldErrors)) {
+    if (FIELD_NAMES.has(field) && messages?.[0]) {
+      setError(field as keyof FormValues, { message: messages[0] });
+    }
+  }
+  return true;
 }
 
 export function ContactForm() {
@@ -113,13 +129,7 @@ export function ContactForm() {
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        const fieldErrors = body?.errors as Record<string, string[]> | undefined;
-        if (fieldErrors && typeof fieldErrors === "object") {
-          for (const [field, messages] of Object.entries(fieldErrors)) {
-            if (FIELD_NAMES.has(field) && messages?.[0]) {
-              setError(field as keyof FormValues, { message: messages[0] });
-            }
-          }
+        if (applyFieldErrors(body, setError)) {
           toast.error("Please fix the highlighted fields.");
           return;
         }
@@ -209,20 +219,16 @@ export function ContactForm() {
         </div>
 
         <div className="sm:col-span-2">
-          <label className="text-sm font-medium text-foreground">
+          <label
+            htmlFor="contact-attachments-trigger"
+            className="text-sm font-medium text-foreground"
+          >
             Attachments <span className="text-foreground/40">(optional · up to 25MB each)</span>
           </label>
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Upload attachments"
+          <button
+            id="contact-attachments-trigger"
+            type="button"
             onClick={() => fileInputRef.current?.click()}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                fileInputRef.current?.click();
-              }
-            }}
             onDragOver={(event) => {
               event.preventDefault();
               setDragOver(true);
@@ -234,7 +240,7 @@ export function ContactForm() {
               addFiles(Array.from(event.dataTransfer.files));
             }}
             className={cn(
-              "mt-1.5 cursor-pointer rounded-xl border border-dashed px-6 py-8 text-center transition-colors",
+              "mt-1.5 w-full cursor-pointer rounded-xl border border-dashed px-6 py-8 text-center transition-colors",
               dragOver
                 ? "border-brand-blue bg-brand-blue-50"
                 : "border-[var(--line)] hover:border-brand-blue/60 hover:bg-[var(--surface-muted)]",
@@ -248,17 +254,17 @@ export function ContactForm() {
             <p className="mt-1 text-xs text-foreground/45">
               PDF, images, documents, archives · 25MB max each
             </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(event) => {
-                addFiles(Array.from(event.target.files ?? []));
-                event.currentTarget.value = "";
-              }}
-            />
-          </div>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              addFiles(Array.from(event.target.files ?? []));
+              event.currentTarget.value = "";
+            }}
+          />
           {files.length ? (
             <ul className="mt-3 space-y-1.5">
               {files.map((file, index) => (

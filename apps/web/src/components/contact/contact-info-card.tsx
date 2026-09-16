@@ -12,11 +12,11 @@ function InfoRow({
   icon: Icon,
   label,
   children,
-}: {
+}: Readonly<{
   icon: IconType;
   label: string;
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <div className="flex gap-3">
       <Icon className="mt-0.5 size-5 shrink-0 text-brand-green" strokeWidth={2.25} />
@@ -35,11 +35,11 @@ function ActionButton({
   icon: Icon,
   onClick,
   children,
-}: {
+}: Readonly<{
   icon: IconType;
   onClick: () => void;
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <button type="button" onClick={onClick} className={actionClass}>
       <Icon className="size-4" strokeWidth={2.25} />
@@ -52,11 +52,11 @@ function ActionLink({
   icon: Icon,
   href,
   children,
-}: {
+}: Readonly<{
   icon: IconType;
   href: string;
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <a href={href} target="_blank" rel="noreferrer" className={actionClass}>
       <Icon className="size-4" strokeWidth={2.25} />
@@ -82,7 +82,7 @@ function useCopy() {
   return { copied, copy };
 }
 
-export function ContactInfoCard({ settings }: { settings: ContactSettings }) {
+export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettings }>) {
   const emailCopy = useCopy();
   const addressCopy = useCopy();
   const addressLines = settings.address.split("\n");

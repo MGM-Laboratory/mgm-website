@@ -10,7 +10,7 @@ const inputClass =
 const textareaClass =
   "w-full rounded-xl border border-[#d9dfeb] bg-white px-3 py-2.5 text-sm leading-6 text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
 
-function Field({ children, label }: { children: React.ReactNode; label: string }) {
+function Field({ children, label }: Readonly<{ children: React.ReactNode; label: string }>) {
   return (
     <label className="block min-w-0">
       <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
@@ -42,9 +42,9 @@ const toForm = (settings: ContactSettings): FormState => ({
 
 export function ContactSettingsEditor({
   onDirtyChange,
-}: {
+}: Readonly<{
   onDirtyChange: (dirty: boolean) => void;
-}) {
+}>) {
   const [ready, setReady] = useState(false);
   const [form, setForm] = useState<FormState>({ email: "", address: "", lat: "", lng: "" });
   const [baseline, setBaseline] = useState("");
@@ -75,6 +75,10 @@ export function ContactSettingsEditor({
     setForm(next);
     onDirtyChange(JSON.stringify(next) !== baseline);
   };
+
+  let saveLabel = "Save settings";
+  if (status === "saving") saveLabel = "Saving…";
+  else if (status === "saved" && !isDirty) saveLabel = "Saved";
 
   const save = async () => {
     const lat = Number(form.lat);
@@ -203,11 +207,7 @@ export function ContactSettingsEditor({
             ) : (
               <FloppyDisk size={18} weight="bold" />
             )}
-            {status === "saving"
-              ? "Saving…"
-              : status === "saved" && !isDirty
-                ? "Saved"
-                : "Save settings"}
+            {saveLabel}
           </button>
         </div>
       </div>

@@ -3,7 +3,7 @@
 // controls and attribution strip are baked into the iframe and can't be
 // restyled, so this stays a single plain frame rather than another bordered
 // box wrapping a box — one visual "window", not a widget.
-export function HqMap({ lat, lng }: { lat: number; lng: number }) {
+export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
   const delta = 0.004;
   const bbox = [lng - delta, lat - delta, lng + delta, lat + delta].join("%2C");
   const embedSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;

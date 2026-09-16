@@ -9,7 +9,7 @@ import { ContactInfoCard } from "@/components/contact/contact-info-card";
 import { FlairShape } from "@/components/process/pattern-tile";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 
-export function ContactContent({ settings }: { settings: ContactSettings }) {
+export function ContactContent({ settings }: Readonly<{ settings: ContactSettings }>) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
