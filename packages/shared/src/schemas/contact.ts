@@ -35,6 +35,70 @@ export const contactFormSchema = z.object({
 
 export type ContactFormPayload = z.infer<typeof contactFormSchema>;
 
+export const MAIL_PROVIDER_IDS = ["resend", "smtp", "ses"] as const;
+export type MailProviderId = (typeof MAIL_PROVIDER_IDS)[number];
+
+// The single-provider ids force that one provider, failing loudly if it
+// isn't configured. The rest route across every configured provider, always
+// falling over to the next candidate (per strategy) if one throws.
+export const MAIL_STRATEGIES = [
+  "resend",
+  "smtp",
+  "ses",
+  "failover",
+  "loadBalanceEqual",
+  "loadBalanceWeighted",
+  "loadBalanceLimit",
+] as const;
+export type MailStrategy = (typeof MAIL_STRATEGIES)[number];
+
+// "monthly" resets on the 1st of the calendar month; "30day" resets on a
+// fixed 30-day cadence from whenever it was last reset — distinct because
+// providers commonly define their own quota either way.
+export const MAIL_LONG_PERIODS = ["monthly", "30day"] as const;
+export type MailLongPeriod = (typeof MAIL_LONG_PERIODS)[number];
+
+// "calendar" limits are stored counters (admin-editable "remaining", so
+// usage from outside this app can be accounted for). "rolling" limits are
+// always derived from a log of this app's own sends in the trailing window,
+// so "remaining" can never be manually offset there.
+export const MAIL_LIMIT_WINDOW_MODES = ["calendar", "rolling"] as const;
+export type MailLimitWindowMode = (typeof MAIL_LIMIT_WINDOW_MODES)[number];
+
+// Admin-configured limit settings for one provider — not the live counters,
+// which live in the API's own tables (MailProviderUsage / MailSendLog) since
+// they need atomic, concurrency-safe updates a JSON settings blob can't give.
+export const mailProviderLimitConfigSchema = z.object({
+  windowMode: z.enum(MAIL_LIMIT_WINDOW_MODES).default("calendar"),
+  dailyLimit: z.number().int().positive().optional(),
+  dailyRemaining: z.number().int().min(0).optional(),
+  longPeriod: z.enum(MAIL_LONG_PERIODS).optional(),
+  longLimit: z.number().int().positive().optional(),
+  longRemaining: z.number().int().min(0).optional(),
+});
+export type MailProviderLimitConfig = z.infer<typeof mailProviderLimitConfigSchema>;
+
+// z.record() over a fixed enum requires every key present; these three ids
+// are always optional (an unset provider just means "no weight/limit
+// configured for it"), so a plain object of optional fields fits better.
+const mailProviderWeightsSchema = z
+  .object({
+    resend: z.number().positive().optional(),
+    smtp: z.number().positive().optional(),
+    ses: z.number().positive().optional(),
+  })
+  .default({});
+export type MailProviderWeights = z.infer<typeof mailProviderWeightsSchema>;
+
+const mailProviderLimitsSchema = z
+  .object({
+    resend: mailProviderLimitConfigSchema.optional(),
+    smtp: mailProviderLimitConfigSchema.optional(),
+    ses: mailProviderLimitConfigSchema.optional(),
+  })
+  .default({});
+export type MailProviderLimits = z.infer<typeof mailProviderLimitsSchema>;
+
 // The lab's public contact details — CMS-editable (unlike the credentials in
 // apps/api/.env), since these are ordinary business info, not secrets.
 export const contactSettingsSchema = z.object({
@@ -42,6 +106,10 @@ export const contactSettingsSchema = z.object({
   address: z.string().trim().min(1, "Please enter an address."),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
+  mailStrategy: z.enum(MAIL_STRATEGIES).default("failover"),
+  mailProviderOrder: z.array(z.enum(MAIL_PROVIDER_IDS)).default(["resend", "smtp", "ses"]),
+  mailProviderWeights: mailProviderWeightsSchema,
+  mailProviderLimits: mailProviderLimitsSchema,
 });
 
 export type ContactSettings = z.infer<typeof contactSettingsSchema>;
@@ -55,4 +123,8 @@ export const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
     "Faculty of Computer Science, Building F Room F10.5 and F10.6\nVeteran Street No. 8, Malang, 65145, Indonesia",
   lat: -7.9543,
   lng: 112.6146,
+  mailStrategy: "failover",
+  mailProviderOrder: ["resend", "smtp", "ses"],
+  mailProviderWeights: {},
+  mailProviderLimits: {},
 };

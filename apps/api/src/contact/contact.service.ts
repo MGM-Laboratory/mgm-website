@@ -64,13 +64,17 @@ export class ContactService {
       ${attachmentLines.length ? `<p><strong>Attachments:</strong></p><ul>${attachmentLines.join("")}</ul>` : ""}
     `;
 
-    const { email: recipient } = await this.settings.get();
+    const settings = await this.settings.get();
 
     await this.mail.sendEmail({
-      to: recipient,
+      to: settings.email,
       subject: `New contact form message from ${payload.name}`,
       html,
       replyTo: payload.email,
+      strategy: settings.mailStrategy,
+      providerOrder: settings.mailProviderOrder,
+      weights: settings.mailProviderWeights,
+      limits: settings.mailProviderLimits,
     });
   }
 }

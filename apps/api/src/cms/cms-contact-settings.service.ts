@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { DEFAULT_CONTACT_SETTINGS, type ContactSettings } from "@repo/shared";
+import {
+  contactSettingsSchema,
+  DEFAULT_CONTACT_SETTINGS,
+  type ContactSettings,
+} from "@repo/shared";
 
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -8,6 +12,15 @@ import { PrismaService } from "../prisma/prisma.service.js";
 const CONTACT_SETTINGS_SLUG = "contact";
 const CONTACT_SETTINGS_CACHE_KEY = "cms:contact-settings:v1";
 const CONTACT_SETTINGS_CACHE_TTL_SECONDS = 60 * 10;
+
+// Re-parsed (not just cast) on every read: a record saved before a schema
+// change (new fields, renamed fields) is stored as whatever shape it was
+// written with, and zod backfills anything missing with today's defaults
+// instead of the field coming back `undefined` at runtime.
+function normalize(data: unknown): ContactSettings {
+  const parsed = contactSettingsSchema.safeParse(data);
+  return parsed.success ? parsed.data : DEFAULT_CONTACT_SETTINGS;
+}
 
 @Injectable()
 export class CmsContactSettingsService {
@@ -18,12 +31,12 @@ export class CmsContactSettingsService {
 
   async get(): Promise<ContactSettings> {
     const cached = await this.cache.getJson<ContactSettings>(CONTACT_SETTINGS_CACHE_KEY);
-    if (cached) return cached;
+    if (cached) return normalize(cached);
 
     const record = await this.prisma.cmsContactSettings.findUnique({
       where: { slug: CONTACT_SETTINGS_SLUG },
     });
-    const settings = record ? (record.data as ContactSettings) : DEFAULT_CONTACT_SETTINGS;
+    const settings = normalize(record?.data ?? DEFAULT_CONTACT_SETTINGS);
     await this.cache.setJson(
       CONTACT_SETTINGS_CACHE_KEY,
       settings,
