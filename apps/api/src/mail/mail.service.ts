@@ -42,20 +42,20 @@ type QuotaReservation =
       longResetAt: Date | null;
     };
 
-function nextUtcMidnight(): Date {
+const nextUtcMidnight = (): Date => {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-}
+};
 
 /** Returns the next UTC month boundary or a fixed 30-day reset time. */
-function nextLongReset(period: MailLongPeriod | undefined): Date {
+const nextLongReset = (period: MailLongPeriod | undefined): Date => {
   const now = new Date();
   if (period === "monthly") {
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   }
   // "30day": a fixed cadence rather than a calendar boundary.
   return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-}
+};
 
 @Injectable()
 export class MailService {
@@ -75,22 +75,39 @@ export class MailService {
       configService.get<string | undefined>("AWS_ACCESS_KEY_ID"),
     );
 
-    const resendApiKey = configService.get<string | undefined>("RESEND_API_KEY");
-    this.resend = resendApiKey ? new Resend(resendApiKey) : undefined;
+    const {
+      RESEND_API_KEY: resendApiKey,
+      SMTP_HOST: smtpHost,
+      SMTP_USER: smtpUser,
+      SMTP_PASSWORD: smtpPassword,
+      SMTP_PORT: smtpPort,
+      SMTP_SECURE: smtpSecure,
+      SES_FROM_EMAIL: fromEmail,
+    } = {
+      RESEND_API_KEY: configService.get<string | undefined>("RESEND_API_KEY"),
+      SMTP_HOST: configService.get<string | undefined>("SMTP_HOST"),
+      SMTP_USER: configService.get<string | undefined>("SMTP_USER"),
+      SMTP_PASSWORD: configService.get<string | undefined>("SMTP_PASSWORD"),
+      SMTP_PORT: configService.get<number | undefined>("SMTP_PORT"),
+      SMTP_SECURE: configService.get<boolean>("SMTP_SECURE"),
+      SES_FROM_EMAIL: configService.get<string | undefined>("SES_FROM_EMAIL"),
+    };
 
-    const smtpHost = configService.get<string | undefined>("SMTP_HOST");
-    const smtpUser = configService.get<string | undefined>("SMTP_USER");
-    const smtpPassword = configService.get<string | undefined>("SMTP_PASSWORD");
-    this.smtpTransport = smtpHost
-      ? nodemailer.createTransport({
-          host: smtpHost,
-          port: configService.get<number | undefined>("SMTP_PORT") ?? 587,
-          secure: configService.get<boolean>("SMTP_SECURE"),
-          auth: smtpUser && smtpPassword ? { user: smtpUser, pass: smtpPassword } : undefined,
-        })
-      : undefined;
+    const auth = smtpUser && smtpPassword ? { user: smtpUser, pass: smtpPassword } : undefined;
 
-    this.fromEmail = configService.get<string | undefined>("SES_FROM_EMAIL");
+    const transports = {
+      resend: resendApiKey && new Resend(resendApiKey),
+      smtpTransport: smtpHost && nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort ?? 587,
+        secure: smtpSecure,
+        auth,
+      }),
+    };
+
+    this.resend = transports.resend;
+    this.smtpTransport = transports.smtpTransport;
+    this.fromEmail = fromEmail;
   }
 
   /**
@@ -138,31 +155,6 @@ export class MailService {
     if (config.longLimit) {
       quota.longLimit = config.longLimit;
       quota.longPeriod = config.longPeriod;
-      quota.longRemaining = await this.rollingRemaining(id, 30, config.longLimit);
-    }
-    return quota;
-  }
-
-  private async buildCalendarStatus(id: MailProviderId, config: MailProviderLimitConfig) {
-    const usage = await this.getOrInitUsage(id, config);
-    const quota: Partial<MailProviderStatus["providers"][MailProviderId]> = {};
-    if (config.dailyLimit) {
-      quota.dailyLimit = config.dailyLimit;
-      quota.dailyRemaining = usage.dailyRemaining ?? config.dailyLimit;
-    }
-    if (config.longLimit) {
-      quota.longLimit = config.longLimit;
-      quota.longPeriod = config.longPeriod;
-      quota.longRemaining = usage.longRemaining ?? config.longLimit;
-    }
-    return quota;
-  }
-
-  /**
-   * Sends an HTML email using the requested routing strategy, falling through
-   * ordered candidates on failure. Rejects when the sender is missing, no
-   * provider is eligible, or every candidate fails.
-   */
   async sendEmail(params: {
     to: string | string[];
     subject: string;
@@ -189,6 +181,34 @@ export class MailService {
       throw new Error(
         "No mail provider is available (none configured, or all have reached their configured send limit).",
       );
+    }
+
+    const strategyMap: Record<MailStrategy, MailProviderId[]> = {
+      failover: candidates,
+      random: [...candidates].sort(() => Math.random() - 0.5),
+      weighted: [...candidates].sort((a, b) => (weights[b] ?? 0) - (weights[a] ?? 0)),
+      roundrobin: candidates,
+    };
+    const providers = strategyMap[strategy] ?? strategyMap.failover;
+
+    const errors: Error[] = [];
+    for (const provider of providers) {
+      try {
+        await this.providers[provider].sendMail({
+          to: params.to,
+          subject: params.subject,
+          html: params.html,
+          from,
+          replyTo: params.replyTo,
+        });
+        return;
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+
+    throw new Error(`All mail providers failed: ${errors.map(e => e.message).join(", ")}`);
+  }
     }
 
     const errors: string[] = [];
@@ -243,21 +263,21 @@ export class MailService {
     order: MailProviderId[],
     weights: MailProviderWeights,
   ): Promise<MailProviderId[]> {
-    if (strategy === "resend" || strategy === "smtp" || strategy === "ses") {
+    if (["resend", "smtp", "ses"].includes(strategy)) {
       return this.isConfigured(strategy) ? [strategy] : [];
     }
 
     const configured = order.filter((id) => this.isConfigured(id));
     if (!configured.length) return [];
 
-    if (strategy === "failover") return configured;
-    if (strategy === "loadBalanceEqual") return this.rotate(configured);
-    if (strategy === "loadBalanceWeighted") return MailService.weightedOrder(configured, weights);
+    const strategyHandlers: Record<MailStrategy, (configured: MailProviderId[], weights: MailProviderWeights) => MailProviderId[]> = {
+      failover: (configured) => configured,
+      loadBalanceEqual: (configured) => this.rotate(configured),
+      loadBalanceWeighted: (configured, weights) => MailService.weightedOrder(configured, weights),
+    };
 
-    // loadBalanceLimit reserves quota immediately before each delivery
-    // attempt. Candidate selection stays side-effect free so unused providers
-    // never consume capacity.
-    return configured;
+    const handler = strategyHandlers[strategy];
+    return handler ? handler(configured, weights) : configured;
   }
 
   private isConfigured(id: MailProviderId): boolean {
@@ -304,29 +324,38 @@ export class MailService {
     config?: MailProviderLimitConfig,
   ): Promise<QuotaReservation | null> {
     if (!config || (!config.dailyLimit && !config.longLimit)) return { mode: "unlimited" };
-    if (config.windowMode === "rolling") return this.reserveRollingQuota(id, config);
 
-    const usage = await this.getOrInitUsage(id, config);
-    const constraints: Prisma.MailProviderUsageWhereInput[] = [];
-    const patch: Prisma.MailProviderUsageUpdateManyMutationInput = {};
-    if (config.dailyLimit) {
-      constraints.push({ dailyRemaining: { gt: 0 } });
-      patch.dailyRemaining = { decrement: 1 };
-    }
-    if (config.longLimit) {
-      constraints.push({ longRemaining: { gt: 0 } });
-      patch.longRemaining = { decrement: 1 };
-    }
-    const reserved = await this.prisma.mailProviderUsage.updateMany({
-      data: patch,
-      where: { AND: constraints, provider: id },
-    });
-    if (reserved.count !== 1) return null;
-    return {
-      dailyResetAt: usage.dailyResetAt,
-      longResetAt: usage.longResetAt,
-      mode: "calendar",
+    const modeHandlers: Record<string, () => Promise<QuotaReservation | null>> = {
+      rolling: () => this.reserveRollingQuota(id, config),
+      calendar: async () => {
+        const usage = await this.getOrInitUsage(id, config);
+        const constraints: Prisma.MailProviderUsageWhereInput[] = [];
+        const patch: Prisma.MailProviderUsageUpdateManyMutationInput = {};
+        const limitSpecs = [
+          { flag: "dailyLimit", constraint: { dailyRemaining: { gt: 0 } }, patchKey: "dailyRemaining" },
+          { flag: "longLimit", constraint: { longRemaining: { gt: 0 } }, patchKey: "longRemaining" },
+        ] as const;
+        for (const spec of limitSpecs) {
+          if (config[spec.flag]) {
+            constraints.push(spec.constraint);
+            patch[spec.patchKey] = { decrement: 1 };
+          }
+        }
+        const reserved = await this.prisma.mailProviderUsage.updateMany({
+          data: patch,
+          where: { AND: constraints, provider: id },
+        });
+        if (reserved.count !== 1) return null;
+        return {
+          dailyResetAt: usage.dailyResetAt,
+          longResetAt: usage.longResetAt,
+          mode: "calendar",
+        };
+      },
     };
+
+    const handler = modeHandlers[config.windowMode || "calendar"];
+    return handler();
   }
 
   /** Serializes rolling-window count-and-create operations per provider. */
@@ -366,27 +395,32 @@ export class MailService {
     }
     if (!config) return;
 
-    // Match the reset boundary observed by the reservation so a delivery
-    // failure spanning a reset cannot restore capacity into the new window.
-    if (config.dailyLimit && reservation.dailyResetAt) {
-      await this.prisma.mailProviderUsage.updateMany({
-        data: { dailyRemaining: { increment: 1 } },
-        where: {
-          dailyRemaining: { lt: config.dailyLimit },
-          dailyResetAt: reservation.dailyResetAt,
-          provider: id,
-        },
-      });
-    }
-    if (config.longLimit && reservation.longResetAt) {
-      await this.prisma.mailProviderUsage.updateMany({
-        data: { longRemaining: { increment: 1 } },
-        where: {
-          longRemaining: { lt: config.longLimit },
-          longResetAt: reservation.longResetAt,
-          provider: id,
-        },
-      });
+    const updates = [
+      {
+        limit: config.dailyLimit,
+        resetAt: reservation.dailyResetAt,
+        remainingField: 'dailyRemaining',
+        resetAtField: 'dailyResetAt',
+      },
+      {
+        limit: config.longLimit,
+        resetAt: reservation.longResetAt,
+        remainingField: 'longRemaining',
+        resetAtField: 'longResetAt',
+      },
+    ];
+
+    for (const { limit, resetAt, remainingField, resetAtField } of updates) {
+      if (limit && resetAt) {
+        await this.prisma.mailProviderUsage.updateMany({
+          data: { [remainingField]: { increment: 1 } },
+          where: {
+            [remainingField]: { lt: limit },
+            [resetAtField]: resetAt,
+            provider: id,
+          },
+        });
+      }
     }
   }
 
@@ -398,29 +432,38 @@ export class MailService {
   private async recordUsage(id: MailProviderId, config?: MailProviderLimitConfig): Promise<void> {
     if (!config || (!config.dailyLimit && !config.longLimit)) return;
 
-    if (config.windowMode === "rolling") {
-      await this.prisma.mailSendLog.create({ data: { provider: id } });
-      // Opportunistic cleanup — avoids an unbounded log without a cron job.
-      // Not security-sensitive: just a sampling rate for a housekeeping query.
-      const shouldCleanup = Math.random() < 0.05; // NOSONAR
-      if (shouldCleanup) {
-        const cutoff = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
-        await this.prisma.mailSendLog.deleteMany({
-          where: { provider: id, sentAt: { lt: cutoff } },
-        });
-      }
-      return;
-    }
+    const handlers: Record<string, () => Promise<void>> = {
+      rolling: async () => {
+        await this.prisma.mailSendLog.create({ data: { provider: id } });
+        // Opportunistic cleanup — avoids an unbounded log without a cron job.
+        // Not security-sensitive: just a sampling rate for a housekeeping query.
+        const shouldCleanup = Math.random() < 0.05; // NOSONAR
+        if (shouldCleanup) {
+          const cutoff = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+          await this.prisma.mailSendLog.deleteMany({
+            where: { provider: id, sentAt: { lt: cutoff } },
+          });
+        }
+      },
+      default: async () => {
+        await this.getOrInitUsage(id, config);
+        const patch: Prisma.MailProviderUsageUpdateInput = Object.entries({
+          dailyLimit: 'dailyRemaining',
+          longLimit: 'longRemaining',
+        }).reduce((acc, [configKey, field]) => {
+          if (config[configKey as keyof MailProviderLimitConfig]) {
+            acc[field as keyof Prisma.MailProviderUsageUpdateInput] = { decrement: 1 };
+          }
+          return acc;
+        }, {} as Prisma.MailProviderUsageUpdateInput);
+        if (Object.keys(patch).length) {
+          await this.prisma.mailProviderUsage.update({ data: patch, where: { provider: id } });
+        }
+      },
+    };
 
-    await this.getOrInitUsage(id, config); // ensures the row exists and due resets are applied first
-    const patch: Prisma.MailProviderUsageUpdateInput = {};
-    if (config.dailyLimit) patch.dailyRemaining = { decrement: 1 };
-    if (config.longLimit) patch.longRemaining = { decrement: 1 };
-    if (Object.keys(patch).length) {
-      // Read-modify-write, not a single atomic compare-and-swap: acceptable
-      // at a contact form's expected volume, not safe at high concurrency.
-      await this.prisma.mailProviderUsage.update({ data: patch, where: { provider: id } });
-    }
+    const mode = config.windowMode === 'rolling' ? 'rolling' : 'default';
+    await handlers[mode]();
   }
 
   private async rollingRemaining(
@@ -453,27 +496,39 @@ export class MailService {
       where: { provider: id },
     });
     const now = new Date();
-    if (config.dailyLimit) {
-      await this.prisma.mailProviderUsage.updateMany({
-        data: { dailyRemaining: config.dailyLimit, dailyResetAt: nextUtcMidnight() },
+
+    const resetMap = {
+      daily: {
+        limit: config.dailyLimit,
+        data: {
+          dailyRemaining: config.dailyLimit,
+          dailyResetAt: nextUtcMidnight(),
+        },
         where: {
           OR: [{ dailyRemaining: null }, { dailyResetAt: null }, { dailyResetAt: { lte: now } }],
-          provider: id,
         },
-      });
-    }
-    if (config.longLimit) {
-      await this.prisma.mailProviderUsage.updateMany({
+      },
+      long: {
+        limit: config.longLimit,
         data: {
           longRemaining: config.longLimit,
           longResetAt: nextLongReset(config.longPeriod),
         },
         where: {
           OR: [{ longRemaining: null }, { longResetAt: null }, { longResetAt: { lte: now } }],
-          provider: id,
         },
-      });
+      },
+    };
+
+    for (const { limit, data, where } of Object.values(resetMap)) {
+      if (limit) {
+        await this.prisma.mailProviderUsage.updateMany({
+          data,
+          where: { ...where, provider: id },
+        });
+      }
     }
+
     return this.prisma.mailProviderUsage.findUniqueOrThrow({ where: { provider: id } });
   }
 
@@ -482,31 +537,34 @@ export class MailService {
     from: string,
     params: { to: string | string[]; subject: string; html: string; replyTo?: string },
   ): Promise<void> {
-    if (id === "resend") {
-      if (!this.resend) throw new Error("Resend is not configured (RESEND_API_KEY is missing)");
-      const { error } = await this.resend.emails.send({
-        from,
-        html: params.html,
-        replyTo: params.replyTo,
-        subject: params.subject,
-        to: params.to,
-      });
-      if (error) throw new Error(`Resend: ${error.message}`);
+    const handlers: Record<MailProviderId, () => Promise<void>> = {
+      resend: async () => {
+        if (!this.resend) throw new Error("Resend is not configured (RESEND_API_KEY is missing)");
+        const { error } = await this.resend.emails.send({
+          from,
+          html: params.html,
+          replyTo: params.replyTo,
+          subject: params.subject,
+          to: params.to,
+        });
+        if (error) throw new Error(`Resend: ${error.message}`);
+      },
+      smtp: async () => {
+        if (!this.smtpTransport) throw new Error("SMTP is not configured (SMTP_HOST is missing)");
+        await this.smtpTransport.sendMail({
+          from,
+          html: params.html,
+          replyTo: params.replyTo,
+          subject: params.subject,
+          to: params.to,
+        });
+      },
+    };
+    const handler = handlers[id];
+    if (handler) {
+      await handler();
       return;
     }
-
-    if (id === "smtp") {
-      if (!this.smtpTransport) throw new Error("SMTP is not configured (SMTP_HOST is missing)");
-      await this.smtpTransport.sendMail({
-        from,
-        html: params.html,
-        replyTo: params.replyTo,
-        subject: params.subject,
-        to: params.to,
-      });
-      return;
-    }
-
     await this.client.send(
       new SendEmailCommand({
         Destination: { ToAddresses: Array.isArray(params.to) ? params.to : [params.to] },

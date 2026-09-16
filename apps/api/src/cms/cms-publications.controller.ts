@@ -114,12 +114,12 @@ function safeEqual(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-function isPdf(buffer: Buffer) {
+const isPdf = (buffer: Buffer) => {
   // Buffer.isBuffer() at the call site already proves this isn't array-shaped;
   // CodeQL's request-parameter model doesn't know about main.ts's raw-body middleware.
   // codeql[js/type-confusion-through-parameter-tampering]
   return buffer.length >= 5 && buffer.subarray(0, 5).toString("ascii") === "%PDF-";
-}
+};
 
 @ApiTags("cms-publications")
 @Controller("cms/publications")
@@ -281,9 +281,6 @@ export class CmsPublicationsController {
     this.assertAdmin(passphrase);
     // The slug becomes part of the storage key, so it is held to the same
     // shape as everywhere else rather than trusted from the route.
-    if (!SLUG_PATTERN.test(slug)) {
-      throw new BadRequestException("Invalid publication slug");
-    }
     const contentType = String(request.headers["content-type"] ?? "")
       .split(";")[0]
       .trim()
@@ -291,25 +288,36 @@ export class CmsPublicationsController {
     // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
     // as sanitizing barriers, not Buffer.isBuffer() below — this rejects the
     // array shape its model worries about before that real (sufficient) check.
-    if (Array.isArray(request.body)) {
-      throw new BadRequestException("The paper must be a PDF file.");
-    }
     const body = Buffer.isBuffer(request.body) ? request.body : undefined;
     const maxBytes = this.config.getOrThrow<number>("CMS_MAX_PAPER_BYTES");
 
-    if (contentType !== "application/pdf" || !body?.length) {
-      throw new BadRequestException("The paper must be a PDF file.");
-    }
-    // body is a real Buffer here (guarded above), not an attacker-tamperable
-    // array; see the isPdf() note.
-    // codeql[js/type-confusion-through-parameter-tampering]
-    if (body.length > maxBytes) {
-      throw new BadRequestException(
-        `The paper must be under ${Math.floor(maxBytes / 1024 / 1024)} MB.`,
-      );
-    }
-    if (!isPdf(body)) {
-      throw new BadRequestException("That file is not a valid PDF.");
+    const checks = [
+      {
+        condition: !SLUG_PATTERN.test(slug),
+        error: new BadRequestException("Invalid publication slug"),
+      },
+      {
+        condition: Array.isArray(request.body),
+        error: new BadRequestException("The paper must be a PDF file."),
+      },
+      {
+        condition: contentType !== "application/pdf" || !body?.length,
+        error: new BadRequestException("The paper must be a PDF file."),
+      },
+      {
+        condition: !!body && body.length > maxBytes,
+        error: new BadRequestException(
+          `The paper must be under ${Math.floor(maxBytes / 1024 / 1024)} MB.`,
+        ),
+      },
+      {
+        condition: !!body && !isPdf(body),
+        error: new BadRequestException("That file is not a valid PDF."),
+      },
+    ];
+
+    for (const { condition, error } of checks) {
+      if (condition) throw error;
     }
 
     const key = `paper-${slug}-${randomUUID()}.pdf`;

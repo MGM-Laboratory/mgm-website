@@ -17,10 +17,10 @@ const CONTACT_SETTINGS_CACHE_TTL_SECONDS = 60 * 10;
  * Revalidates stored settings so current schema defaults fill missing fields.
  * Invalid records fall back to the complete default settings.
  */
-function normalize(data: unknown): ContactSettings {
+const normalize = (data: unknown): ContactSettings => {
   const parsed = contactSettingsSchema.safeParse(data);
   return parsed.success ? parsed.data : DEFAULT_CONTACT_SETTINGS;
-}
+};
 
 @Injectable()
 export class CmsContactSettingsService {

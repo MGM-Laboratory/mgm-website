@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type IconType = typeof Mail;
 
-function InfoRow({
+export function InfoRow({
   icon: Icon,
   label,
   children,
@@ -35,7 +35,7 @@ type PopoverAction =
   | { icon: IconType; label: string; onClick: () => void }
   | { icon: IconType; label: string; href: string; external?: boolean };
 
-async function copyToClipboard(label: string, value: string) {
+export async function copyToClipboard(label: string, value: string) {
   try {
     await navigator.clipboard.writeText(value);
     toast.success(`${label} copied`);
@@ -49,7 +49,7 @@ async function copyToClipboard(label: string, value: string) {
 // Clicking the value reveals a small action menu instead of always-visible
 // buttons — same interaction as the nav menu's email trigger
 // (components/nav/email-reveal.tsx), reused here for both email and address.
-function RevealPopover({
+export function RevealPopover({
   trigger,
   triggerClassName,
   align = "center",
@@ -110,23 +110,42 @@ function RevealPopover({
               </a>
             ) : (
               <button
-                key={action.label}
-                type="button"
-                role="menuitem"
-                className={itemClass}
-                onClick={() => {
-                  action.onClick();
-                  setOpen(false);
-                }}
-              >
-                <Icon className="size-4" strokeWidth={2.25} />
-                {action.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
+function ContactInfoItem({ children, className }: { children: React.ReactNode; className: string }) {
+  return <div className={className}>{children}</div>;
+}
+
+function EmailContact({ email }: { email: string }) {
+  return (
+    <ContactInfoItem className="pb-4">
+      <InfoRow icon={Mail} label="Email">
+        <RevealPopover
+          trigger={email}
+          triggerClassName="font-display text-base font-semibold text-foreground"
+          actions={[
+            { icon: Send, label: "Send email", href: `mailto:${email}` },
+            { icon: Copy, label: "Copy email", onClick: () => copyToClipboard("Email", email) }
+          ]}
+        />
+      </InfoRow>
+    </ContactInfoItem>
+  );
+}
+
+function BasedInContact({ addressLines, directionsUrl }: { addressLines: string[]; directionsUrl: string }) {
+  return (
+    <ContactInfoItem className="py-4">
+      <InfoRow icon={MapPin} label="Based in">
+        <RevealPopover
+          trigger={addressLines.map((line, index) => (
+            <span key={index} className="block">
+              {line}
+            </span>
+          ))}
+          triggerClassName="font-display text-base font-semibold text-foreground"
+          actions={[{ icon: MapPin, label: "Open in Google Maps", href: directionsUrl }]}
+        />
+      </InfoRow>
+    </ContactInfoItem>
   );
 }
 
@@ -141,26 +160,12 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
       </p>
 
       <div className="mt-4 flex flex-col divide-y divide-[var(--line)]">
-        <div className="pb-4">
-          <InfoRow icon={Mail} label="Email">
-            <RevealPopover
-              trigger={settings.email}
-              triggerClassName="font-display text-base font-semibold text-foreground"
-              actions={[
-                { icon: Send, label: "Send email", href: `mailto:${settings.email}` },
-                {
-                  icon: Copy,
-                  label: "Copy email",
-                  onClick: () => copyToClipboard("Email", settings.email),
-                },
-              ]}
-            />
-          </InfoRow>
-        </div>
-
-        <div className="py-4">
-          <InfoRow icon={MapPin} label="Based in">
-            <RevealPopover
+        <EmailContact email={settings.email} />
+        <BasedInContact addressLines={addressLines} directionsUrl={directionsUrl} />
+      </div>
+    </div>
+  );
+}
               align="start"
               trigger={
                 <span className="text-sm text-foreground/70 transition-colors group-hover:text-brand-blue">

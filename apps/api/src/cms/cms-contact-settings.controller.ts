@@ -9,11 +9,11 @@ import type { Env } from "../config/env.validation.js";
 import { MailService } from "../mail/mail.service.js";
 import { CmsContactSettingsService } from "./cms-contact-settings.service.js";
 
-function safeEqual(left: string, right: string) {
+const safeEqual = (left: string, right: string) => {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
-}
+};
 
 @ApiTags("cms-contact-settings")
 @Controller("cms/contact-settings")

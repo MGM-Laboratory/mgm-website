@@ -30,32 +30,45 @@ export async function PUT(request: Request) {
     "mailProviderLimits",
   ] as const;
   const touchesRouting = routingFields.some((field) => body[field] !== undefined);
-  let payload = body;
-  if (gate.session.role !== "superadmin") {
-    if (touchesRouting) {
-      const current = await cmsApi("/cms/contact-settings");
-      const { record } = (await current.json()) as { record?: ContactSettings };
-      const changed =
-        !record ||
-        routingFields.some(
-          (field) =>
-            body[field] !== undefined &&
-            JSON.stringify(body[field]) !== JSON.stringify(record[field]),
-        );
-      if (changed) {
-        return NextResponse.json(
-          { error: "Only the superadmin can change mail routing settings." },
-          { status: 403 },
-        );
-      }
-    }
 
-    payload = Object.fromEntries(
-      Object.entries(body).filter(
-        ([key]) => !routingFields.includes(key as (typeof routingFields)[number]),
-      ),
-    ) as Partial<ContactSettings>;
+  const handlers = {
+    superadmin: {
+      allowRouting: true,
+      filter: (b: Partial<ContactSettings>) => b,
+    },
+    default: {
+      allowRouting: false,
+      filter: (b: Partial<ContactSettings>) =>
+        Object.fromEntries(
+          Object.entries(b).filter(
+            ([key]) =>
+              !routingFields.includes(key as (typeof routingFields)[number]),
+          ),
+        ) as Partial<ContactSettings>,
+    },
+  };
+  const roleKey = gate.session.role === "superadmin" ? "superadmin" : "default";
+  const { allowRouting, filter } = handlers[roleKey];
+
+  if (!allowRouting && touchesRouting) {
+    const current = await cmsApi("/cms/contact-settings");
+    const { record } = (await current.json()) as { record?: ContactSettings };
+    const changed =
+      !record ||
+      routingFields.some(
+        (field) =>
+          body[field] !== undefined &&
+          JSON.stringify(body[field]) !== JSON.stringify(record[field]),
+      );
+    if (changed) {
+      return NextResponse.json(
+        { error: "Only the superadmin can change mail routing settings." },
+        { status: 403 },
+      );
+    }
   }
+
+  const payload = filter(body);
 
   return proxyJson("/cms/contact-settings", { body: JSON.stringify(payload), method: "PUT" });
 }

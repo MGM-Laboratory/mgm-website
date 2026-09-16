@@ -22,11 +22,11 @@ export function MapLibreFallback({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) return null;
     let map: import("maplibre-gl").Map | undefined;
     let cancelled = false;
     import("maplibre-gl").then(({ Map: MapLibreMap, Marker, NavigationControl, Popup }) => {
-      if (cancelled || !containerRef.current) return;
+      if (cancelled || !containerRef.current) return null;
       map = new MapLibreMap({
         center: [lng, lat],
         container: containerRef.current,

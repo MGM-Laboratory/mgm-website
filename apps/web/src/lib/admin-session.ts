@@ -127,8 +127,11 @@ export async function requireAdminPermission(
   if (session.role === "superadmin") {
     return { status: 200, session };
   }
-  if (page === "contact-inquiries" && action !== "read") return { status: 403 };
-  if (session.permissions[page]?.includes(action)) return { status: 200, session };
+  const allowedActionsByPage: Record<AdminPageId, AdminAction[]> = {
+    "contact-inquiries": ["read"],
+  };
+  const allowedActions = allowedActionsByPage[page] ?? session.permissions[page] ?? [];
+  if (allowedActions.includes(action)) return { status: 200, session };
   return { status: 403 };
 }
 

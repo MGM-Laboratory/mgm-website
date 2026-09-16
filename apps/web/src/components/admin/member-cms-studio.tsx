@@ -146,31 +146,23 @@ const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
   events: "events",
 };
 
-function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size?: number }) {
-  switch (section) {
-    case "articles":
-      return <Newspaper size={size} weight="duotone" />;
-    case "projects":
-      return <Briefcase size={size} weight="duotone" />;
-    case "publications":
-      return <Books size={size} weight="duotone" />;
-    case "research":
-      return <Flask size={size} weight="duotone" />;
-    case "members":
-      return <UsersThree size={size} weight="duotone" />;
-    case "careers":
-      return <GraduationCap size={size} weight="duotone" />;
-    case "contact":
-      return <Envelope size={size} weight="duotone" />;
-    case "contact-inquiries":
-      return <EnvelopeOpen size={size} weight="duotone" />;
-    case "events":
-      return <CalendarBlank size={size} weight="duotone" />;
-    case "administration":
-      return <ShieldCheck size={size} weight="duotone" />;
-    default:
-      return <House size={size} weight="duotone" />;
-  }
+export function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size?: number }) {
+  const iconMap = {
+    articles: Newspaper,
+    projects: Briefcase,
+    publications: Books,
+    research: Flask,
+    members: UsersThree,
+    careers: GraduationCap,
+    contact: Envelope,
+    'contact-inquiries': EnvelopeOpen,
+    events: CalendarBlank,
+    administration: ShieldCheck,
+  } as const;
+
+  const IconComponent = iconMap[section] || House;
+
+  return <IconComponent size={size} weight="duotone" />;
 }
 
 const emptyProfile = (): CmsMemberProfile => ({

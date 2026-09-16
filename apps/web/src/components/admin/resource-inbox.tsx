@@ -105,13 +105,15 @@ export function useResourceInbox<TRecord extends InboxRecord>({
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     // skipcq: JS-W1041 -- guard clauses read clearer here than one large boolean expression.
+    const stateFilters = {
+      archived: state => state.status === "archived",
+      inbox: state => state.status === "inbox",
+      unread: state => state.status === "inbox" && !state.read,
+    };
     return records.filter((record) => {
       const state = getState(record);
-      if (filterState === "archived" && state.status !== "archived") return false;
-      if (filterState !== "archived" && state.status !== "inbox") return false;
-      if (filterState === "unread" && state.read) return false;
-      if (needle && !matchesQuery(record, needle)) return false;
-      return true;
+      const predicate = stateFilters[filterState] || (state => state.status === "inbox");
+      return predicate(state) && (!needle || matchesQuery(record, needle));
     });
   }, [filterState, query, records, getState, matchesQuery]);
 
@@ -172,15 +174,39 @@ export function useResourceInbox<TRecord extends InboxRecord>({
         method: "POST",
       });
       if (!response.ok) throw new Error(`The API answered ${response.status}.`);
-      if (action === "delete") {
-        setRecords((current) => current.filter((record) => !idSet.has(record.slug)));
-        setSelectedSlug((current) => (current && idSet.has(current) ? undefined : current));
-        toast.success(`${ids.length} ${itemLabel}(s) deleted.`);
-      } else {
-        const patch: Partial<InboxItemState> =
-          action === "archive" ? { status: "archived" } : { read: false, readAt: null };
-        setRecords((current) =>
-          current.map((record) => (idSet.has(record.slug) ? withState(record, patch) : record)),
+
+      const actionHandlers: Record<string, () => void> = {
+        delete: () => {
+          setRecords((current) => current.filter((record) => !idSet.has(record.slug)));
+          setSelectedSlug((current) => (current && idSet.has(current) ? undefined : current));
+          toast.success(`${ids.length} ${itemLabel}(s) deleted.`);
+        },
+        archive: () => {
+          setRecords((current) =>
+            current.map((record) =>
+              idSet.has(record.slug) ? withState(record, { status: "archived" }) : record
+            )
+          );
+          toast.success(`${ids.length} ${itemLabel}(s) archived.`);
+        },
+        default: () => {
+          setRecords((current) =>
+            current.map((record) =>
+              idSet.has(record.slug) ? withState(record, { read: false, readAt: null }) : record
+            )
+          );
+          toast.success(`${ids.length} ${itemLabel}(s) marked unread.`);
+        },
+      };
+
+      (actionHandlers[action] || actionHandlers.default)();
+    } catch (error) {
+      setRecords(previous);
+      toast.error(`Could not perform bulk ${action} on ${itemLabel}(s).`, {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
         );
         toast.success(action === "archive" ? "Archived." : "Marked unread.");
       }
@@ -205,18 +231,24 @@ export function useResourceInbox<TRecord extends InboxRecord>({
     if (!slug) return;
     setSelectedIds((current) => {
       const next = new Set(current);
-      if (shiftKey && lastClickedIndex.current >= 0) {
-        const from = Math.min(lastClickedIndex.current, index);
-        const to = Math.max(lastClickedIndex.current, index);
-        for (let cursor = from; cursor <= to; cursor += 1) {
-          const rangeSlug = filtered[cursor]?.slug;
-          if (rangeSlug) next.add(rangeSlug);
-        }
-      } else if (checked) {
-        next.add(slug);
-      } else {
-        next.delete(slug);
-      }
+      const actionMap = {
+        rangeSelect: (set) => {
+          const from = Math.min(lastClickedIndex.current, index);
+          const to = Math.max(lastClickedIndex.current, index);
+          for (let cursor = from; cursor <= to; cursor += 1) {
+            const rangeSlug = filtered[cursor]?.slug;
+            if (rangeSlug) set.add(rangeSlug);
+          }
+        },
+        add: (set) => set.add(slug),
+        remove: (set) => set.delete(slug),
+      };
+      const key = shiftKey && lastClickedIndex.current >= 0
+        ? 'rangeSelect'
+        : checked
+          ? 'add'
+          : 'remove';
+      actionMap[key](next);
       return next;
     });
     lastClickedIndex.current = index;
