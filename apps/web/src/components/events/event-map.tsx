@@ -56,9 +56,9 @@ function MapLibreFallback({ lat, lng, label }: { lat: number; lng: number; label
     if (!containerRef.current) return;
     let map: import("maplibre-gl").Map | undefined;
     let cancelled = false;
-    import("maplibre-gl").then(({ Map, Marker, NavigationControl, Popup }) => {
+    import("maplibre-gl").then(({ Map: MapLibreMap, Marker, NavigationControl, Popup }) => {
       if (cancelled || !containerRef.current) return;
-      map = new Map({
+      map = new MapLibreMap({
         center: [lng, lat],
         container: containerRef.current,
         style: "https://tiles.openfreemap.org/styles/liberty",
