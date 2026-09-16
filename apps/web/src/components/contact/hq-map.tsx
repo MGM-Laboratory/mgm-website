@@ -1,20 +1,67 @@
-// OpenStreetMap's embed needs no API key/billing — Google Maps' equivalent
-// does, and this site has no Maps API key configured anywhere. Its zoom
-// controls and attribution strip are baked into the iframe and can't be
-// restyled, so this stays a single plain frame rather than another bordered
-// box wrapping a box — one visual "window", not a widget.
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+import { env } from "@/lib/env";
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
+
+// OpenFreeMap's Liberty style needs no API key/billing, so it's the fallback
+// whenever Google Maps has no key configured or fails to load.
+const OPENFREEMAP_LIBERTY_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+
+/**
+ * Google Maps when a browser API key is configured and loads successfully;
+ * otherwise (or on failure) a keyless MapLibre GL JS map styled with
+ * OpenFreeMap's Liberty tiles — never a broken or empty box.
+ */
 export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
-  const delta = 0.004;
-  const bbox = [lng - delta, lat - delta, lng + delta, lat + delta].join("%2C");
-  const embedSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+  const apiKey = env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [useFallback, setUseFallback] = useState(!apiKey);
+
+  useEffect(() => {
+    if (useFallback || !apiKey || !containerRef.current) return;
+    let cancelled = false;
+    loadGoogleMaps(apiKey)
+      .then(() => {
+        if (cancelled || !containerRef.current) return;
+        const position = { lat, lng };
+        const map = new google.maps.Map(containerRef.current, {
+          center: position,
+          zoom: 16,
+          disableDefaultUI: true,
+          zoomControl: true,
+        });
+        new google.maps.Marker({ map, position, title: "MGM Laboratory" });
+      })
+      .catch(() => {
+        if (!cancelled) setUseFallback(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [useFallback, apiKey, lat, lng]);
+
+  useEffect(() => {
+    if (!useFallback || !containerRef.current) return;
+    const map = new MapLibreMap({
+      container: containerRef.current,
+      style: OPENFREEMAP_LIBERTY_STYLE,
+      center: [lng, lat],
+      zoom: 15,
+      attributionControl: { compact: true },
+    });
+    map.addControl(new NavigationControl(), "top-right");
+    new Marker().setLngLat([lng, lat]).addTo(map);
+    return () => map.remove();
+  }, [useFallback, lat, lng]);
 
   return (
-    <iframe
-      title="MGM Laboratory location"
-      src={embedSrc}
-      loading="lazy"
-      referrerPolicy="no-referrer-when-downgrade"
-      className="h-40 w-full rounded-xl border border-[var(--line)] dark:brightness-[0.85] dark:contrast-[1.15] dark:saturate-[0.8]"
+    <div
+      ref={containerRef}
+      className="h-40 w-full overflow-hidden rounded-xl border border-[var(--line)] [&_.maplibregl-ctrl-attrib]:text-[10px] dark:brightness-[0.85] dark:contrast-[1.15] dark:saturate-[0.8]"
     />
   );
 }

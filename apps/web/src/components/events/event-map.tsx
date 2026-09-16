@@ -4,30 +4,7 @@ import { ArrowSquareOut, MapPin } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import { env } from "@/lib/env";
-
-declare global {
-  interface Window {
-    google?: { maps: typeof google.maps };
-  }
-}
-
-let scriptPromise: Promise<void> | undefined;
-
-/** Loads the Maps JS API exactly once, however many maps end up on a page. */
-function loadGoogleMaps(apiKey: string): Promise<void> {
-  if (window.google?.maps) return Promise.resolve();
-  if (!scriptPromise) {
-    scriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}`;
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Could not load Google Maps."));
-      document.head.appendChild(script);
-    });
-  }
-  return scriptPromise;
-}
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
 
 function openInMapsUrl({ lat, lng, mapsUrl, address }: EventMapProps) {
   if (mapsUrl) return mapsUrl;
