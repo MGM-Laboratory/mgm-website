@@ -38,6 +38,7 @@ export function EventMap(props: EventMapProps) {
   useEffect(() => {
     if (!apiKey || !hasCoords || !containerRef.current) return;
     let cancelled = false;
+    let marker: google.maps.Marker | undefined;
     loadGoogleMaps(apiKey)
       .then(() => {
         if (cancelled || !containerRef.current) return;
@@ -48,13 +49,14 @@ export function EventMap(props: EventMapProps) {
           zoom: 16,
           zoomControl: true,
         });
-        new google.maps.Marker({ map, position, title: label });
+        marker = new google.maps.Marker({ map, position, title: label });
       })
       .catch(() => {
         if (!cancelled) setGoogleFailed(true);
       });
     return () => {
       cancelled = true;
+      marker?.setMap(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey, hasCoords, lat, lng]);
