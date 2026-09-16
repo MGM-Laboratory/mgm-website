@@ -24,6 +24,7 @@ export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
   useEffect(() => {
     if (useFallback || !apiKey || !containerRef.current) return;
     let cancelled = false;
+    let marker: google.maps.Marker | undefined;
     loadGoogleMaps(apiKey)
       .then(() => {
         if (cancelled || !containerRef.current) return;
@@ -34,13 +35,14 @@ export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
           disableDefaultUI: true,
           zoomControl: true,
         });
-        new google.maps.Marker({ map, position, title: "MGM Laboratory" });
+        marker = new google.maps.Marker({ map, position, title: "MGM Laboratory" });
       })
       .catch(() => {
         if (!cancelled) setUseFallback(true);
       });
     return () => {
       cancelled = true;
+      marker?.setMap(null);
     };
   }, [useFallback, apiKey, lat, lng]);
 
