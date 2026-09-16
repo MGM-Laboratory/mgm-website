@@ -22,7 +22,13 @@ enabled = true
 
 [[analyzers]]
 name = "javascript"
-enabled = true
+# Disabled: DeepSource only honors this file's analyzer settings once they're
+# on the default branch (confirmed empirically — module_system below made no
+# difference across several PR commits), so until this PR merges, every PR
+# gets flooded by the dashboard's stale "commonjs" default (JS-0067 fires on
+# nearly every top-level function in every ESM NestJS file). Re-enable once
+# this file is live on main and a fresh run shows the real settings applied.
+enabled = false
 
   # Every app in this monorepo is ESM ("type": "module" / tsconfig "module":
   # "nodenext"|"esnext"), never CommonJS — the dashboard default of
