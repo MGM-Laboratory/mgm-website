@@ -1,71 +1,10 @@
 "use client";
 
-import "maplibre-gl/dist/maplibre-gl.css";
-
 import { useEffect, useRef, useState } from "react";
 
+import { MapLibreFallback } from "@/components/maps/maplibre-fallback";
 import { env } from "@/lib/env";
-
-declare global {
-  interface Window {
-    google?: { maps: typeof google.maps };
-    gm_authFailure?: () => void;
-  }
-}
-
-let scriptPromise: Promise<void> | undefined;
-
-/**
- * Loads the Maps JS API exactly once. `gm_authFailure` is Google's own hook
- * for a missing/invalid/quota-exceeded key — the script itself still loads
- * successfully in that case, so `onerror` alone would miss it.
- */
-function loadGoogleMaps(apiKey: string): Promise<void> {
-  if (window.google?.maps) return Promise.resolve();
-  if (!scriptPromise) {
-    scriptPromise = new Promise((resolve, reject) => {
-      window.gm_authFailure = () => reject(new Error("Google Maps authentication failed."));
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}`;
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Could not load Google Maps."));
-      document.head.appendChild(script);
-    });
-  }
-  return scriptPromise;
-}
-
-/**
- * The keyless fallback: MapLibre GL rendering OpenFreeMap's "Liberty" vector
- * style — no API key, no usage quota, used whenever Google isn't available.
- */
-function MapLibreFallback({ lat, lng }: { lat: number; lng: number }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    let map: import("maplibre-gl").Map | undefined;
-    let cancelled = false;
-    import("maplibre-gl").then(({ Map: MapLibreMap, Marker, NavigationControl, Popup }) => {
-      if (cancelled || !containerRef.current) return;
-      map = new MapLibreMap({
-        center: [lng, lat],
-        container: containerRef.current,
-        style: "https://tiles.openfreemap.org/styles/liberty",
-        zoom: 15,
-      });
-      map.addControl(new NavigationControl(), "top-right");
-      new Marker().setLngLat([lng, lat]).setPopup(new Popup().setText("MGM Laboratory")).addTo(map);
-    });
-    return () => {
-      cancelled = true;
-      map?.remove();
-    };
-  }, [lat, lng]);
-
-  return <div className="h-40 w-full" ref={containerRef} />;
-}
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
 
 /**
  * Google Maps is tried first whenever a browser API key is configured; any
@@ -105,7 +44,7 @@ export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
   return (
     <div className="h-40 w-full overflow-hidden rounded-xl border border-[var(--line)] [&_.maplibregl-ctrl-attrib]:text-[10px] dark:brightness-[0.85] dark:contrast-[1.15] dark:saturate-[0.8]">
       {googleFailed ? (
-        <MapLibreFallback lat={lat} lng={lng} />
+        <MapLibreFallback lat={lat} lng={lng} label="MGM Laboratory" className="h-40 w-full" />
       ) : (
         <div className="h-40 w-full" ref={containerRef} />
       )}

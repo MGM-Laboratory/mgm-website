@@ -1,41 +1,11 @@
 "use client";
 
-import "maplibre-gl/dist/maplibre-gl.css";
-
 import { ArrowSquareOut, MapPin } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
+import { MapLibreFallback } from "@/components/maps/maplibre-fallback";
 import { env } from "@/lib/env";
-
-declare global {
-  interface Window {
-    google?: { maps: typeof google.maps };
-    gm_authFailure?: () => void;
-  }
-}
-
-let scriptPromise: Promise<void> | undefined;
-
-/**
- * Loads the Maps JS API exactly once. `gm_authFailure` is Google's own hook
- * for a missing/invalid/quota-exceeded key — the script itself still loads
- * successfully in that case, so `onerror` alone would miss it.
- */
-function loadGoogleMaps(apiKey: string): Promise<void> {
-  if (window.google?.maps) return Promise.resolve();
-  if (!scriptPromise) {
-    scriptPromise = new Promise((resolve, reject) => {
-      window.gm_authFailure = () => reject(new Error("Google Maps authentication failed."));
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}`;
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Could not load Google Maps."));
-      document.head.appendChild(script);
-    });
-  }
-  return scriptPromise;
-}
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
 
 function openInMapsUrl({ lat, lng, mapsUrl, address }: EventMapProps) {
   if (mapsUrl) return mapsUrl;
@@ -43,37 +13,6 @@ function openInMapsUrl({ lat, lng, mapsUrl, address }: EventMapProps) {
     return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address ?? "")}`;
-}
-
-/**
- * The keyless fallback: MapLibre GL rendering OpenFreeMap's "Liberty" vector
- * style — no API key, no usage quota, used whenever Google isn't available.
- */
-function MapLibreFallback({ lat, lng, label }: { lat: number; lng: number; label: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    let map: import("maplibre-gl").Map | undefined;
-    let cancelled = false;
-    import("maplibre-gl").then(({ Map: MapLibreMap, Marker, NavigationControl, Popup }) => {
-      if (cancelled || !containerRef.current) return;
-      map = new MapLibreMap({
-        center: [lng, lat],
-        container: containerRef.current,
-        style: "https://tiles.openfreemap.org/styles/liberty",
-        zoom: 15,
-      });
-      map.addControl(new NavigationControl(), "top-right");
-      new Marker().setLngLat([lng, lat]).setPopup(new Popup().setText(label)).addTo(map);
-    });
-    return () => {
-      cancelled = true;
-      map?.remove();
-    };
-  }, [lat, lng, label]);
-
-  return <div className="h-72 w-full sm:h-96" ref={containerRef} />;
 }
 
 type EventMapProps = {
@@ -141,7 +80,7 @@ export function EventMap(props: EventMapProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--line)]">
       {googleFailed ? (
-        <MapLibreFallback label={label} lat={lat!} lng={lng!} />
+        <MapLibreFallback label={label} lat={lat!} lng={lng!} className="h-72 w-full sm:h-96" />
       ) : (
         <div className="h-72 w-full sm:h-96" ref={containerRef} />
       )}
