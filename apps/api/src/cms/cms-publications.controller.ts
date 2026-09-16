@@ -288,6 +288,12 @@ export class CmsPublicationsController {
       .split(";")[0]
       .trim()
       .toLowerCase();
+    // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
+    // as sanitizing barriers, not Buffer.isBuffer() below — this rejects the
+    // array shape its model worries about before that real (sufficient) check.
+    if (Array.isArray(request.body)) {
+      throw new BadRequestException("The paper must be a PDF file.");
+    }
     const body = Buffer.isBuffer(request.body) ? request.body : undefined;
     const maxBytes = this.config.getOrThrow<number>("CMS_MAX_PAPER_BYTES");
 

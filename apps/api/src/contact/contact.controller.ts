@@ -50,6 +50,12 @@ export class ContactController {
   // the raw body parser for this exact path is registered in main.ts.
   @Post("attachments")
   async uploadAttachment(@Req() request: Request, @Headers("x-filename") rawFilename = "") {
+    // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
+    // as sanitizing barriers, not Buffer.isBuffer() below — this rejects the
+    // array shape its model worries about before that real (sufficient) check.
+    if (Array.isArray(request.body)) {
+      throw new BadRequestException("No file received.");
+    }
     const body = Buffer.isBuffer(request.body) ? request.body : undefined;
     if (!body?.length) {
       throw new BadRequestException("No file received.");
