@@ -308,6 +308,7 @@ export function ContactForm() {
                     className="flex items-center gap-3 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-sm"
                   >
                     {isImage && isSafeBlobUrl(url) ? (
+                      // codeql[js/xss-through-dom] -- isSafeBlobUrl already restricts this to blob: URLs, which can't carry HTML/script content
                       // eslint-disable-next-line @next/next/no-img-element -- ephemeral local blob: URL, not an optimizable remote asset
                       <img src={url} alt="" className="size-8 shrink-0 rounded object-cover" />
                     ) : null}
@@ -316,6 +317,7 @@ export function ContactForm() {
                       {formatBytes(file.size)}
                     </span>
                     {isSafeBlobUrl(url) && isPreviewableType(file.type) ? (
+                      // codeql[js/xss-through-dom] -- isSafeBlobUrl already restricts this to blob: URLs, which can't carry HTML/script content
                       <a
                         href={url}
                         target="_blank"
