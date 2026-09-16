@@ -1,0 +1,56 @@
+version = 1
+
+test_patterns = [
+  "**/apps/api/**/*.spec.ts",
+  "**/apps/api/**/*.e2e-spec.ts",
+  "**/web/e2e/**/*.spec.ts",
+]
+
+exclude_patterns = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/.next/**",
+  "**/coverage/**",
+  "**/out/**",
+  "**/.pytest_cache/**",
+]
+
+[[analyzers]]
+name = "docker"
+enabled = true
+
+[[analyzers]]
+name = "javascript"
+enabled = true
+
+  # Every app in this monorepo is ESM ("type": "module" / tsconfig "module":
+  # "nodenext"|"esnext"), never CommonJS — the dashboard default of
+  # module_system = "commonjs" made the analyzer treat every top-level
+  # helper function as a script-global needing an IIFE wrapper (JS-0067),
+  # which fired on nearly every NestJS controller/service in the repo.
+  # cyclomatic_complexity_threshold is bumped from the "low" default since
+  # "medium"-risk NestJS handlers routinely sit in the 10-15 range without
+  # being genuinely hard to follow.
+  [analyzers.meta]
+  dialect = "typescript"
+  module_system = "es-modules"
+  style_guide = "airbnb"
+  cyclomatic_complexity_threshold = "high"
+
+[[analyzers]]
+name = "sql"
+enabled = true
+
+  [analyzers.meta]
+  comma_style = "trailing"
+  indent_unit = "space"
+  allow_scalar = true
+  tab_space_size = 4
+  max_line_length = 80
+  capitalisation_policy = "consistent"
+  single_table_references = "consistent"
+
+[[analyzers]]
+name = "secrets"
+enabled = true

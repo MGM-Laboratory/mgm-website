@@ -11,4 +11,4 @@ import { CmsContactSettingsService } from "./cms-contact-settings.service.js";
   providers: [CmsContactSettingsService],
   exports: [CmsContactSettingsService],
 })
-export class CmsContactSettingsModule {}
+export class CmsContactSettingsModule {} // skipcq: JS-0327

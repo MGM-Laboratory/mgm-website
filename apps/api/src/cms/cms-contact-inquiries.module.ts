@@ -10,4 +10,4 @@ import { CmsContactInquiriesService } from "./cms-contact-inquiries.service.js";
   providers: [CmsContactInquiriesService],
   exports: [CmsContactInquiriesService],
 })
-export class CmsContactInquiriesModule {}
+export class CmsContactInquiriesModule {} // skipcq: JS-0327

@@ -30,6 +30,8 @@ function patchForBulkAction(
       return { read: true, readAt: now };
     case "markUnread":
       return { read: false, readAt: null };
+    default:
+      return {};
   }
 }
 
