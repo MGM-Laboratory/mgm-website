@@ -27,6 +27,15 @@ const envSchema = z.object({
   // Largest accepted project demo video upload, in bytes (500 MB by default).
   CMS_MAX_VIDEO_BYTES: z.coerce.number().int().positive().max(1_073_741_824).default(524_288_000),
   SES_FROM_EMAIL: optionalString(z.email()),
+  RESEND_API_KEY: optionalString(),
+  SMTP_HOST: optionalString(),
+  SMTP_PORT: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z.coerce.number().int().positive().optional(),
+  ),
+  SMTP_USER: optionalString(),
+  SMTP_PASSWORD: optionalString(),
+  SMTP_SECURE: z.preprocess((value: unknown) => value === "true", z.boolean()).default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;
