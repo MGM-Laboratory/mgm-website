@@ -42,7 +42,7 @@ export function formatSubmittedDate(value?: string) {
   });
 }
 
-type InboxRecord = { slug: string; createdAt: string };
+type InboxRecord = { slug: string; createdAt?: string };
 
 export type UseResourceInboxOptions<TRecord extends InboxRecord> = {
   records: TRecord[];
@@ -52,6 +52,8 @@ export type UseResourceInboxOptions<TRecord extends InboxRecord> = {
   matchesQuery: (record: TRecord, needle: string) => boolean;
   apiBase: string;
   itemLabel: string;
+  /** Appended to the bulk-delete confirm prompt, e.g. a note about side effects. */
+  deleteConfirmSuffix?: string;
   onMutated?: () => void;
 };
 
@@ -63,6 +65,7 @@ export function useResourceInbox<TRecord extends InboxRecord>({
   matchesQuery,
   apiBase,
   itemLabel,
+  deleteConfirmSuffix,
   onMutated,
 }: UseResourceInboxOptions<TRecord>) {
   const [filterState, setFilterState] = useState<InboxFilter>("all");
@@ -146,7 +149,8 @@ export function useResourceInbox<TRecord extends InboxRecord>({
 
   const performBulk = async (ids: string[], action: BulkAction) => {
     if (!ids.length) return;
-    if (action === "delete" && !window.confirm(`Delete ${ids.length} ${itemLabel}(s)?`)) {
+    const confirmMessage = `Delete ${ids.length} ${itemLabel}(s)?${deleteConfirmSuffix ? ` ${deleteConfirmSuffix}` : ""}`;
+    if (action === "delete" && !window.confirm(confirmMessage)) {
       return;
     }
     const idSet = new Set(ids);
