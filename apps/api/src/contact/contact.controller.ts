@@ -28,8 +28,8 @@ function slugifyFilename(filename: string) {
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "")
+    .replace(/^-{1,64}/, "")
+    .replace(/-{1,64}$/, "")
     .slice(0, 60);
 }
 
