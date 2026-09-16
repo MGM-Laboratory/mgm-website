@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowSquareOut, DownloadSimple, FileText } from "@phosphor-icons/react";
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { toast } from "sonner";
 
 import type { CmsJobApplicationRecord } from "@/lib/career-cms";
@@ -60,27 +60,36 @@ function CvDownload({
     };
   }, [slug]);
 
+  let action: ReactNode;
+  if (state.busy) {
+    action = (
+      <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold text-[#8490a5] dark:border-white/10">
+        Loading CV link…
+      </span>
+    );
+  } else if (state.url) {
+    action = (
+      <a
+        className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#171b25] px-4 text-sm font-semibold text-white transition hover:bg-brand-blue"
+        download
+        href={state.url}
+      >
+        <DownloadSimple size={16} weight="bold" />
+        Download CV
+      </a>
+    );
+  } else {
+    action = (
+      <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold text-[#8490a5] dark:border-white/10">
+        <FileText size={16} weight="bold" />
+        CV unavailable
+      </span>
+    );
+  }
+
   return (
     <div className="mt-6 flex flex-wrap items-center gap-2">
-      {state.busy ? (
-        <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold text-[#8490a5] dark:border-white/10">
-          Loading CV link…
-        </span>
-      ) : state.url ? (
-        <a
-          className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#171b25] px-4 text-sm font-semibold text-white transition hover:bg-brand-blue"
-          download
-          href={state.url}
-        >
-          <DownloadSimple size={16} weight="bold" />
-          Download CV
-        </a>
-      ) : (
-        <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold text-[#8490a5] dark:border-white/10">
-          <FileText size={16} weight="bold" />
-          CV unavailable
-        </span>
-      )}
+      {action}
       <span className="text-xs text-[#9ba4b5]">
         {cvFilename}
         {cvContentType ? ` · ${cvContentType.replace("application/", "")}` : ""}

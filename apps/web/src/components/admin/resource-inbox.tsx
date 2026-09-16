@@ -149,7 +149,8 @@ export function useResourceInbox<TRecord extends InboxRecord>({
 
   const performBulk = async (ids: string[], action: BulkAction) => {
     if (!ids.length) return;
-    const confirmMessage = `Delete ${ids.length} ${itemLabel}(s)?${deleteConfirmSuffix ? ` ${deleteConfirmSuffix}` : ""}`;
+    const suffix = deleteConfirmSuffix ? ` ${deleteConfirmSuffix}` : "";
+    const confirmMessage = `Delete ${ids.length} ${itemLabel}(s)?${suffix}`;
     if (action === "delete" && !window.confirm(confirmMessage)) {
       return;
     }
