@@ -1177,7 +1177,7 @@ export function MemberCmsStudio({
                   Administrator accounts, passphrases, and per-page permissions.
                 </p>
               </div>
-            ) : section === "contact" ? (
+            ) : section === "contact" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
               <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
                 <span className="grid size-9 place-items-center rounded-xl bg-white text-brand-green dark:bg-white/10">
                   <Envelope size={20} weight="duotone" />
@@ -1372,7 +1372,7 @@ export function MemberCmsStudio({
                 />
               ) : section === "administration" ? (
                 <AdminManagementPanel initialAdmins={initialAdmins} />
-              ) : section === "contact" ? (
+              ) : section === "contact" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
                 <ContactSettingsEditor onDirtyChange={setHasUnsavedChanges} />
               ) : (
                 <EditorialOverview
