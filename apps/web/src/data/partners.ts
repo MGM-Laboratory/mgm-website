@@ -33,6 +33,14 @@ export type Partner = {
    * only touching the specific fill(s) known to belong to text paths.
    */
   logoDark?: string;
+  /**
+   * Per-logo size multiplier applied on top of the shared row height (1 =
+   * unchanged). Marks that read visually small or large at the same
+   * physical height as everything else — a wordmark with lots of internal
+   * whitespace, a very dense crest — get a manual correction here rather
+   * than everything sharing one literal pixel height.
+   */
+  logoScale?: number;
 };
 
 // Every logo here is a straight-from-the-source brand mark with its
@@ -75,6 +83,7 @@ export const PARTNERS: Partner[] = [
     logo: "/partners/tokopedia.webp",
     logoWidth: 400,
     logoHeight: 120,
+    logoScale: 1.3,
     blurb:
       "Tokopedia's UX designer opened Lab MGM's 2022 Interaction Design guest-lecture series, sharing how product design works inside the company.",
     articleSlug: "tokopedia-interaction-design",
@@ -112,6 +121,7 @@ export const PARTNERS: Partner[] = [
     logoDark: "/partners/binus-dark.svg",
     logoWidth: 400,
     logoHeight: 240,
+    logoScale: 1.3,
     blurb:
       "BINUS School of Computer Science researchers joined Herman Tolle and ITS researchers on MGM-linked human-computer interaction research.",
     articleSlug: "binus-university",
@@ -123,6 +133,7 @@ export const PARTNERS: Partner[] = [
     logo: "/partners/blibli.webp",
     logoWidth: 400,
     logoHeight: 225,
+    logoScale: 1.3,
     blurb:
       "Blibli sent two speakers into Lab MGM's 2022 Interaction Design series: a product manager in session two and a UI designer in session three.",
     articleSlug: "blibli-interaction-design",
@@ -135,6 +146,7 @@ export const PARTNERS: Partner[] = [
     logoDark: "/partners/tiket-com-dark.webp",
     logoWidth: 400,
     logoHeight: 87,
+    logoScale: 0.85,
     blurb:
       "tiket.com's product designer joined Lab MGM's first 2022 Interaction Design session alongside Tokopedia, discussing the product designer's path.",
     articleSlug: "tiket-com-interaction-design",
@@ -147,6 +159,7 @@ export const PARTNERS: Partner[] = [
     logoDark: "/partners/mekari-dark.svg",
     logoWidth: 695,
     logoHeight: 135,
+    logoScale: 0.75,
     blurb:
       "Mekari's UX researcher spoke in the second session of Lab MGM's 2022 Interaction Design webinar series.",
     articleSlug: "mekari-interaction-design",
@@ -160,6 +173,7 @@ export const PARTNERS: Partner[] = [
     logoDark: "/partners/nanyang-technological-university-dark.svg",
     logoWidth: 515,
     logoHeight: 213,
+    logoScale: 1.6,
     blurb:
       "Lab MGM's leadership visited NTU's Centre for Augmented and Virtual Reality in 2022 to initiate cooperation on interactive media research, following an earlier NTU visit to Brawijaya in 2019.",
     articleSlug: "nanyang-technological-university-cavr",
@@ -208,6 +222,7 @@ export const PARTNERS: Partner[] = [
     logoDark: "/partners/kyutech-dark.webp",
     logoWidth: 400,
     logoHeight: 88,
+    logoScale: 0.85,
     blurb:
       "A 2018 guest lecture on assistive technology brought Kyutech's Chikamune Wada to FILKOM alongside the MGM Research Group, part of an ongoing faculty-level Kyutech partnership.",
     articleSlug: "kyushu-institute-of-technology",
