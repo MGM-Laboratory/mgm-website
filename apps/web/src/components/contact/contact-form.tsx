@@ -42,6 +42,13 @@ function isPreviewableType(type: string) {
   );
 }
 
+// previewUrls only ever holds URL.createObjectURL() results, so this is
+// always true - the explicit scheme check rules out these ever being
+// rendered as a src/href if that ever stopped being the case.
+function isSafeBlobUrl(url: string | undefined): url is string {
+  return typeof url === "string" && url.startsWith("blob:");
+}
+
 async function uploadAttachment(file: File): Promise<string> {
   const response = await fetch(`${env.NEXT_PUBLIC_API_URL}/contact/attachments`, {
     method: "POST",
@@ -300,7 +307,7 @@ export function ContactForm() {
                     key={`${file.name}-${index}`}
                     className="flex items-center gap-3 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-sm"
                   >
-                    {isImage && url ? (
+                    {isImage && isSafeBlobUrl(url) ? (
                       // eslint-disable-next-line @next/next/no-img-element -- ephemeral local blob: URL, not an optimizable remote asset
                       <img src={url} alt="" className="size-8 shrink-0 rounded object-cover" />
                     ) : null}
@@ -308,7 +315,7 @@ export function ContactForm() {
                     <span className="shrink-0 text-xs text-foreground/45">
                       {formatBytes(file.size)}
                     </span>
-                    {url && isPreviewableType(file.type) ? (
+                    {isSafeBlobUrl(url) && isPreviewableType(file.type) ? (
                       <a
                         href={url}
                         target="_blank"
