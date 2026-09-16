@@ -41,5 +41,4 @@ yarn-error.log*
 .vercel/
 .env*.local
 apps/api/src/generated/
-apps/api/uploads/
-uploads/
+backups/
