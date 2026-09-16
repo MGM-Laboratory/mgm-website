@@ -51,7 +51,11 @@ const permissionsSchema = z
   .record(z.enum(PAGES), permissionListSchema.optional())
   .transform((record) => {
     const result = {} as Record<(typeof PAGES)[number], ("read" | "write" | "delete")[]>;
-    for (const page of PAGES) result[page] = record[page] ?? [];
+    for (const page of PAGES) {
+      const actions = record[page] ?? [];
+      result[page] =
+        page === "contact-inquiries" ? actions.filter((action) => action === "read") : actions;
+    }
     return result;
   });
 

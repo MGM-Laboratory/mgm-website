@@ -872,7 +872,11 @@ export function MemberCmsStudio({
             Every /contact form submission, saved the moment it arrives — independent of whether the
             reply email actually sends.
           </p>
-          <ContactInquiriesInbox records={contactInquiries} setRecords={setContactInquiries} />
+          <ContactInquiriesInbox
+            readOnly={viewer.role !== "superadmin"}
+            records={contactInquiries}
+            setRecords={setContactInquiries}
+          />
         </div>
       ) : (
         <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">

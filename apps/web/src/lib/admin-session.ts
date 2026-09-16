@@ -7,7 +7,6 @@ import {
   ALL_PERMISSIONS,
   type AdminAction,
   type AdminPageId,
-  type AdminPermissions,
   type AdminViewer,
   type CmsAdminRecord,
 } from "@/lib/admin-permissions";
@@ -125,9 +124,11 @@ export async function requireAdminPermission(
 ): Promise<PermissionGate> {
   const session = await getAdminSession();
   if (!session) return { status: 401 };
-  if (session.role === "superadmin" || session.permissions[page]?.includes(action)) {
+  if (session.role === "superadmin") {
     return { status: 200, session };
   }
+  if (page === "contact-inquiries" && action !== "read") return { status: 403 };
+  if (session.permissions[page]?.includes(action)) return { status: 200, session };
   return { status: 403 };
 }
 

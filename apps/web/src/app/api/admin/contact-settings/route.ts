@@ -30,18 +30,26 @@ export async function PUT(request: Request) {
     "mailProviderLimits",
   ] as const;
   const touchesRouting = routingFields.some((field) => body[field] !== undefined);
-  if (touchesRouting && gate.session.role !== "superadmin") {
-    const current = await cmsApi("/cms/contact-settings");
-    const { record } = (await current.json()) as { record?: ContactSettings };
-    const changed =
-      !record ||
-      routingFields.some((field) => JSON.stringify(body[field]) !== JSON.stringify(record[field]));
-    if (changed) {
-      return NextResponse.json(
-        { error: "Only the superadmin can change mail routing settings." },
-        { status: 403 },
-      );
+  if (gate.session.role !== "superadmin") {
+    if (touchesRouting) {
+      const current = await cmsApi("/cms/contact-settings");
+      const { record } = (await current.json()) as { record?: ContactSettings };
+      const changed =
+        !record ||
+        routingFields.some(
+          (field) =>
+            body[field] !== undefined &&
+            JSON.stringify(body[field]) !== JSON.stringify(record[field]),
+        );
+      if (changed) {
+        return NextResponse.json(
+          { error: "Only the superadmin can change mail routing settings." },
+          { status: 403 },
+        );
+      }
     }
+
+    for (const field of routingFields) delete body[field];
   }
 
   return proxyJson("/cms/contact-settings", { body: JSON.stringify(body), method: "PUT" });

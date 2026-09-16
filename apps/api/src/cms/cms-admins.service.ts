@@ -26,6 +26,7 @@ const PAGES = [
   "research",
   "careers",
   "contact",
+  "contact-inquiries",
   "events",
 ] as const;
 
@@ -77,6 +78,14 @@ function emptyPermissions(): AdminPermissions {
   return Object.fromEntries(PAGES.map((page) => [page, []])) as unknown as AdminPermissions;
 }
 
+function normalizePermissions(permissions: Partial<AdminPermissions> = {}): AdminPermissions {
+  const normalized = { ...emptyPermissions(), ...permissions };
+  normalized["contact-inquiries"] = normalized["contact-inquiries"].includes("read")
+    ? ["read"]
+    : [];
+  return normalized;
+}
+
 function isActive(data: AdminData, now = Date.now()) {
   return data.active && (!data.expiresAt || Date.parse(data.expiresAt) > now);
 }
@@ -99,6 +108,7 @@ export class CmsAdminsService {
     return {
       slug: record.slug,
       ...safe,
+      permissions: normalizePermissions(safe.permissions),
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     };
@@ -155,7 +165,7 @@ export class CmsAdminsService {
       expiresAt: input.expiresAt ?? null,
       sessionVersion: 1,
       passphrase: await hashPassphrase(plain),
-      permissions: { ...emptyPermissions(), ...input.permissions },
+      permissions: normalizePermissions(input.permissions),
       lastLoginAt: null,
     };
     const record = await this.prisma.cmsAdmin.create({
@@ -175,6 +185,7 @@ export class CmsAdminsService {
     const record = await this.prisma.cmsAdmin.findUnique({ where: { slug } });
     if (!record) throw new NotFoundException("Admin account not found");
     const data = record.data as AdminData;
+    const currentPermissions = normalizePermissions(data.permissions);
 
     let generated: string | undefined;
     let passphrase = data.passphrase;
@@ -192,9 +203,9 @@ export class CmsAdminsService {
       expiresAt: input.expiresAt !== undefined ? input.expiresAt : data.expiresAt,
       sessionVersion: data.sessionVersion + 1,
       // Pages omitted from a partial update keep their stored permissions.
-      permissions: input.permissions
-        ? { ...data.permissions, ...input.permissions }
-        : data.permissions,
+      permissions: normalizePermissions(
+        input.permissions ? { ...currentPermissions, ...input.permissions } : currentPermissions,
+      ),
       passphrase,
     };
     const updated = await this.prisma.cmsAdmin.update({

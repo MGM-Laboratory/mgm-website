@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SendEmailCommand, SESClient } from "@aws-sdk/client-ses";
 import nodemailer, { type Transporter } from "nodemailer";
@@ -33,6 +33,15 @@ export type MailProviderStatus = {
   >;
 };
 
+type QuotaReservation =
+  | { mode: "unlimited" }
+  | { mode: "rolling"; sendLogId: string }
+  | {
+      mode: "calendar";
+      dailyResetAt: Date | null;
+      longResetAt: Date | null;
+    };
+
 function nextUtcMidnight(): Date {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
@@ -50,6 +59,7 @@ function nextLongReset(period: MailLongPeriod | undefined): Date {
 
 @Injectable()
 export class MailService {
+  private readonly logger = new Logger(MailService.name);
   private readonly client: SESClient;
   private readonly resend?: Resend;
   private readonly smtpTransport?: Transporter;
@@ -174,7 +184,7 @@ export class MailService {
     const weights = params.weights ?? {};
     const limits = params.limits ?? {};
 
-    const candidates = await this.resolveCandidates(strategy, order, weights, limits);
+    const candidates = await this.resolveCandidates(strategy, order, weights);
     if (!candidates.length) {
       throw new Error(
         "No mail provider is available (none configured, or all have reached their configured send limit).",
@@ -183,13 +193,40 @@ export class MailService {
 
     const errors: string[] = [];
     for (const providerId of candidates) {
+      const reservation =
+        strategy === "loadBalanceLimit"
+          ? await this.reserveQuota(providerId, limits[providerId])
+          : undefined;
+      if (strategy === "loadBalanceLimit" && !reservation) {
+        errors.push(`${providerId}: configured send limit reached`);
+        continue;
+      }
+
       try {
         await this.sendVia(providerId, from, params);
-        await this.recordUsage(providerId, limits[providerId]);
-        return;
       } catch (error) {
+        if (reservation) {
+          try {
+            await this.releaseQuota(providerId, limits[providerId], reservation);
+          } catch (releaseError) {
+            this.logAccountingError(providerId, "release quota reservation", releaseError);
+          }
+        }
         errors.push(`${providerId}: ${error instanceof Error ? error.message : String(error)}`);
+        continue;
       }
+
+      // A successful quota reservation is already the usage record. Other
+      // strategies account after delivery, but accounting must never cause a
+      // duplicate send through the next provider.
+      if (!reservation) {
+        try {
+          await this.recordUsage(providerId, limits[providerId]);
+        } catch (accountingError) {
+          this.logAccountingError(providerId, "record delivered message", accountingError);
+        }
+      }
+      return;
     }
     throw new Error(`All mail providers failed: ${errors.join("; ")}`);
   }
@@ -202,7 +239,6 @@ export class MailService {
     strategy: MailStrategy,
     order: MailProviderId[],
     weights: MailProviderWeights,
-    limits: MailProviderLimits,
   ): Promise<MailProviderId[]> {
     if (strategy === "resend" || strategy === "smtp" || strategy === "ses") {
       return this.isConfigured(strategy) ? [strategy] : [];
@@ -215,13 +251,10 @@ export class MailService {
     if (strategy === "loadBalanceEqual") return this.rotate(configured);
     if (strategy === "loadBalanceWeighted") return this.weightedOrder(configured, weights);
 
-    // loadBalanceLimit: only providers currently under their configured
-    // quota are candidates at all — a limit is a hard cap, not a hint.
-    const eligible: MailProviderId[] = [];
-    for (const id of configured) {
-      if (await this.hasQuota(id, limits[id])) eligible.push(id);
-    }
-    return eligible;
+    // loadBalanceLimit reserves quota immediately before each delivery
+    // attempt. Candidate selection stays side-effect free so unused providers
+    // never consume capacity.
+    return configured;
   }
 
   private isConfigured(id: MailProviderId): boolean {
@@ -260,21 +293,100 @@ export class MailService {
     return [picked, ...list.filter((id) => id !== picked)];
   }
 
-  private async hasQuota(id: MailProviderId, config?: MailProviderLimitConfig): Promise<boolean> {
-    if (!config || (!config.dailyLimit && !config.longLimit)) return true;
-    if (config.windowMode === "rolling") {
-      if (config.dailyLimit && (await this.rollingRemaining(id, 1, config.dailyLimit)) <= 0) {
-        return false;
-      }
-      if (config.longLimit && (await this.rollingRemaining(id, 30, config.longLimit)) <= 0) {
-        return false;
-      }
-      return true;
-    }
+  private async reserveQuota(
+    id: MailProviderId,
+    config?: MailProviderLimitConfig,
+  ): Promise<QuotaReservation | null> {
+    if (!config || (!config.dailyLimit && !config.longLimit)) return { mode: "unlimited" };
+    if (config.windowMode === "rolling") return this.reserveRollingQuota(id, config);
+
     const usage = await this.getOrInitUsage(id, config);
-    if (config.dailyLimit && (usage.dailyRemaining ?? 0) <= 0) return false;
-    if (config.longLimit && (usage.longRemaining ?? 0) <= 0) return false;
-    return true;
+    const constraints: Prisma.MailProviderUsageWhereInput[] = [];
+    const patch: Prisma.MailProviderUsageUpdateManyMutationInput = {};
+    if (config.dailyLimit) {
+      constraints.push({ dailyRemaining: { gt: 0 } });
+      patch.dailyRemaining = { decrement: 1 };
+    }
+    if (config.longLimit) {
+      constraints.push({ longRemaining: { gt: 0 } });
+      patch.longRemaining = { decrement: 1 };
+    }
+    const reserved = await this.prisma.mailProviderUsage.updateMany({
+      data: patch,
+      where: { AND: constraints, provider: id },
+    });
+    if (reserved.count !== 1) return null;
+    return {
+      dailyResetAt: usage.dailyResetAt,
+      longResetAt: usage.longResetAt,
+      mode: "calendar",
+    };
+  }
+
+  /** Serializes rolling-window count-and-create operations per provider. */
+  private async reserveRollingQuota(
+    id: MailProviderId,
+    config: MailProviderLimitConfig,
+  ): Promise<QuotaReservation | null> {
+    return this.prisma.$transaction(async (transaction) => {
+      // PostgreSQL advisory locks make the quota check and reservation one
+      // critical section without locking unrelated providers.
+      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`mail-quota:${id}`}))`;
+      if (config.dailyLimit) {
+        const remaining = await this.rollingRemaining(id, 1, config.dailyLimit, transaction);
+        if (remaining <= 0) return null;
+      }
+      if (config.longLimit) {
+        const remaining = await this.rollingRemaining(id, 30, config.longLimit, transaction);
+        if (remaining <= 0) return null;
+      }
+      const log = await transaction.mailSendLog.create({
+        data: { provider: id },
+        select: { id: true },
+      });
+      return { mode: "rolling", sendLogId: log.id };
+    });
+  }
+
+  private async releaseQuota(
+    id: MailProviderId,
+    config: MailProviderLimitConfig | undefined,
+    reservation: QuotaReservation,
+  ): Promise<void> {
+    if (reservation.mode === "unlimited") return;
+    if (reservation.mode === "rolling") {
+      await this.prisma.mailSendLog.delete({ where: { id: reservation.sendLogId } });
+      return;
+    }
+    if (!config) return;
+
+    // Match the reset boundary observed by the reservation so a delivery
+    // failure spanning a reset cannot restore capacity into the new window.
+    if (config.dailyLimit && reservation.dailyResetAt) {
+      await this.prisma.mailProviderUsage.updateMany({
+        data: { dailyRemaining: { increment: 1 } },
+        where: {
+          dailyRemaining: { lt: config.dailyLimit },
+          dailyResetAt: reservation.dailyResetAt,
+          provider: id,
+        },
+      });
+    }
+    if (config.longLimit && reservation.longResetAt) {
+      await this.prisma.mailProviderUsage.updateMany({
+        data: { longRemaining: { increment: 1 } },
+        where: {
+          longRemaining: { lt: config.longLimit },
+          longResetAt: reservation.longResetAt,
+          provider: id,
+        },
+      });
+    }
+  }
+
+  private logAccountingError(id: MailProviderId, operation: string, error: unknown) {
+    const detail = error instanceof Error ? error.stack : String(error);
+    this.logger.error(`Mail provider ${id} could not ${operation}`, detail);
   }
 
   private async recordUsage(id: MailProviderId, config?: MailProviderLimitConfig): Promise<void> {
@@ -309,9 +421,10 @@ export class MailService {
     id: MailProviderId,
     windowDays: number,
     limit: number,
+    prisma: Pick<PrismaService, "mailSendLog"> = this.prisma,
   ): Promise<number> {
     const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
-    const count = await this.prisma.mailSendLog.count({
+    const count = await prisma.mailSendLog.count({
       where: { provider: id, sentAt: { gte: since } },
     });
     return Math.max(0, limit - count);
@@ -322,33 +435,40 @@ export class MailService {
    * when absent and restoring full limits after elapsed reset boundaries.
    */
   private async getOrInitUsage(id: MailProviderId, config: MailProviderLimitConfig) {
-    let row = await this.prisma.mailProviderUsage.findUnique({ where: { provider: id } });
-    if (!row) {
-      row = await this.prisma.mailProviderUsage.create({
-        data: {
-          dailyRemaining: config.dailyLimit ? (config.dailyRemaining ?? config.dailyLimit) : null,
-          dailyResetAt: config.dailyLimit ? nextUtcMidnight() : null,
-          longRemaining: config.longLimit ? (config.longRemaining ?? config.longLimit) : null,
-          longResetAt: config.longLimit ? nextLongReset(config.longPeriod) : null,
+    await this.prisma.mailProviderUsage.upsert({
+      create: {
+        dailyRemaining: config.dailyLimit ? (config.dailyRemaining ?? config.dailyLimit) : null,
+        dailyResetAt: config.dailyLimit ? nextUtcMidnight() : null,
+        longRemaining: config.longLimit ? (config.longRemaining ?? config.longLimit) : null,
+        longResetAt: config.longLimit ? nextLongReset(config.longPeriod) : null,
+        provider: id,
+      },
+      update: {},
+      where: { provider: id },
+    });
+    const now = new Date();
+    if (config.dailyLimit) {
+      await this.prisma.mailProviderUsage.updateMany({
+        data: { dailyRemaining: config.dailyLimit, dailyResetAt: nextUtcMidnight() },
+        where: {
+          OR: [{ dailyRemaining: null }, { dailyResetAt: null }, { dailyResetAt: { lte: now } }],
           provider: id,
         },
       });
     }
-
-    const now = new Date();
-    const patch: Prisma.MailProviderUsageUpdateInput = {};
-    if (config.dailyLimit && row.dailyResetAt && now >= row.dailyResetAt) {
-      patch.dailyRemaining = config.dailyLimit;
-      patch.dailyResetAt = nextUtcMidnight();
+    if (config.longLimit) {
+      await this.prisma.mailProviderUsage.updateMany({
+        data: {
+          longRemaining: config.longLimit,
+          longResetAt: nextLongReset(config.longPeriod),
+        },
+        where: {
+          OR: [{ longRemaining: null }, { longResetAt: null }, { longResetAt: { lte: now } }],
+          provider: id,
+        },
+      });
     }
-    if (config.longLimit && row.longResetAt && now >= row.longResetAt) {
-      patch.longRemaining = config.longLimit;
-      patch.longResetAt = nextLongReset(config.longPeriod);
-    }
-    if (Object.keys(patch).length) {
-      row = await this.prisma.mailProviderUsage.update({ data: patch, where: { provider: id } });
-    }
-    return row;
+    return this.prisma.mailProviderUsage.findUniqueOrThrow({ where: { provider: id } });
   }
 
   private async sendVia(
