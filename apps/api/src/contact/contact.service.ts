@@ -7,11 +7,11 @@ import { StorageService } from "../storage/storage.service.js";
 
 function escapeHtml(value: string) {
   return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 @Injectable()
@@ -40,7 +40,7 @@ export class ContactService {
       <p><strong>Email:</strong> ${escapeHtml(payload.email)}</p>
       ${payload.company ? `<p><strong>Company:</strong> ${escapeHtml(payload.company)}</p>` : ""}
       <p><strong>Message:</strong></p>
-      <p>${escapeHtml(payload.message).replace(/\n/g, "<br />")}</p>
+      <p>${escapeHtml(payload.message).replaceAll("\n", "<br />")}</p>
       ${attachmentLines.length ? `<p><strong>Attachments:</strong></p><ul>${attachmentLines.join("")}</ul>` : ""}
     `;
 

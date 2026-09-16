@@ -28,7 +28,8 @@ function slugifyFilename(filename: string) {
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "")
     .slice(0, 60);
 }
 
@@ -53,6 +54,10 @@ export class ContactController {
     if (!body?.length) {
       throw new BadRequestException("No file received.");
     }
+    // body is a real Buffer here (guarded above via Buffer.isBuffer()), fed by
+    // main.ts's route-scoped raw-body middleware, not an attacker-tamperable
+    // array from query/body parameter duplication.
+    // codeql[js/type-confusion-through-parameter-tampering]
     if (body.length > CONTACT_MAX_ATTACHMENT_BYTES) {
       throw new BadRequestException(
         `Attachments must be under ${Math.floor(CONTACT_MAX_ATTACHMENT_BYTES / 1024 / 1024)} MB.`,
@@ -67,7 +72,8 @@ export class ContactController {
     }
     const slug = slugifyFilename(filename);
     const ext = extensionOf(filename);
-    const key = `contact-${randomUUID()}${slug ? `-${slug}` : ""}${ext}`;
+    const slugSuffix = slug ? `-${slug}` : "";
+    const key = `contact-${randomUUID()}${slugSuffix}${ext}`;
     const contentType = String(request.headers["content-type"] ?? "application/octet-stream")
       .split(";")[0]
       .trim();
@@ -79,6 +85,7 @@ export class ContactController {
         "Attachment storage is not configured in this environment, so files cannot be uploaded.",
       );
     }
+    // codeql[js/type-confusion-through-parameter-tampering]
     return { key, size: body.length };
   }
 
