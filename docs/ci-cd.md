@@ -22,7 +22,9 @@ Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, sec
 
 Renovate (not Dependabot — see the commit that swapped them) handles npm/Docker/GitHub Actions version updates; GitHub's native Dependabot security alerts stay on regardless.
 
-**Action pinning convention:** every `uses:` in every workflow file is pinned to a full commit SHA, not a mutable version tag (`@v4` etc.), with a `# vX.Y.Z` comment noting the human-readable version — e.g. `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`. When adding a new workflow or a new step, pin it the same way rather than using a bare tag; Renovate's `github-actions` manager understands this format and bumps both the SHA and the comment together on updates.
+**Action pinning convention:** every `uses:` in every workflow file is pinned to the latest available release, as a full commit SHA rather than a mutable version tag (`@v4` etc.), with a `# vX.Y.Z` comment noting the human-readable version — e.g. `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`. When adding a new workflow or a new step, pin it the same way rather than using a bare tag, and prefer whatever the action's actual latest release is over an older major you happen to be used to; Renovate's `github-actions` manager understands this format and bumps both the SHA and the comment together on updates.
+
+**Naming convention:** every workflow's top-level `name:` is a proper Title Case display name (`CI`, `Publish Docker Image API`), never lowercase or kebab-case (`ci`, `publish-docker-image-api`) — the file's own kebab-case name is enough of an identifier on disk. Every `jobs.<id>` also has its own explicit `name:` rather than relying on the bare job id showing up in the Actions UI.
 
 ### Docker image workflows
 
