@@ -22,6 +22,8 @@ Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, sec
 
 Renovate (not Dependabot — see the commit that swapped them) handles npm/Docker/GitHub Actions version updates; GitHub's native Dependabot security alerts stay on regardless.
 
+**Action pinning convention:** every `uses:` in every workflow file is pinned to a full commit SHA, not a mutable version tag (`@v4` etc.), with a `# vX.Y.Z` comment noting the human-readable version — e.g. `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`. When adding a new workflow or a new step, pin it the same way rather than using a bare tag; Renovate's `github-actions` manager understands this format and bumps both the SHA and the comment together on updates.
+
 ### Docker image workflows
 
 Split into per-image reusable workflows plus thin caller workflows, mirroring the pattern in `rensa` — one file per image, invoked with a `tag` input rather than duplicating build logic per trigger:
