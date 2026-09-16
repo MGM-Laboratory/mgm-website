@@ -1,4 +1,4 @@
-name: publish-docker-image-web
+name: Publish Docker Image Web
 
 on:
   workflow_call:

@@ -1,4 +1,4 @@
-name: ci-staging
+name: Publish Docker Images (staging)
 
 on:
   pull_request:
