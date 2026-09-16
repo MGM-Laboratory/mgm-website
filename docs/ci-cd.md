@@ -1,6 +1,6 @@
 # CI/CD
 
-Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud and a status comment. `main` is protected: PRs need every required check green to merge; repo admins can bypass for direct pushes.
+Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud, pre-commit.ci, and a status comment. `main` is protected: PRs need every required check green to merge; repo admins can bypass for direct pushes.
 
 ## GitHub Actions workflows
 
@@ -21,6 +21,10 @@ Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, sec
 | `stale.yml`            | daily, dispatch                         | Labels/closes inactive issues and PRs after 30/37 days                                                                                                                                                                                                    |
 
 Renovate (not Dependabot — see the commit that swapped them) handles npm/Docker/GitHub Actions version updates; GitHub's native Dependabot security alerts stay on regardless.
+
+## pre-commit.ci
+
+The pre-commit.ci GitHub App runs `.pre-commit-config.yaml` on every pull-request commit. The configuration covers repository hygiene (valid structured files, merge-conflict markers, private keys, line endings, whitespace, and large additions) and runs the repo's pinned Prettier version over supported source and documentation files. Safe formatting fixes are committed back to same-repository pull requests automatically; dependency revisions in the configuration are updated weekly.
 
 ### Fork-PR safety model
 
