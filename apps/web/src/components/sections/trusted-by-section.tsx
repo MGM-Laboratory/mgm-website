@@ -423,14 +423,18 @@ export function TrustedBySection() {
         </p>
       </div>
 
-      {/* Padded, not edge-to-edge: the strip sits inside the section's own
-          gutters and fades out at its own left/right edges (a masked
-          gradient on the overflow wrapper below) instead of hard-clipping,
-          so logos appear to drift in and out of a "portal" rather than
-          being cut off. This wrapper (not the overflow-hidden track below)
-          is what the tooltip anchors to, so it's never clipped by the
-          track's own horizontal overflow mask. */}
-      <div ref={anchorRef} className="reveal-card relative mt-14 opacity-0">
+      {/* Padded, not edge-to-edge: the strip sits well inside the section's
+          own gutters (extra side margin on top of the section's padding,
+          narrowing the scrollable range) and fades out at its own left/right
+          edges (a masked gradient on the overflow wrapper below) instead of
+          hard-clipping, so logos appear to drift in and out of a "portal"
+          rather than being cut off. This wrapper (not the overflow-hidden
+          track below) is what the tooltip anchors to, so it's never clipped
+          by the track's own horizontal overflow mask. */}
+      <div
+        ref={anchorRef}
+        className="reveal-card relative mt-14 mr-8 ml-8 opacity-0 sm:mr-16 sm:ml-16 lg:mr-24 lg:ml-24"
+      >
         <div
           className={cn(
             // Horizontal-only clipping: the marquee track must stay clipped
