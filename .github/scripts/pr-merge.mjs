@@ -29,11 +29,21 @@ const PASS_STATES = new Set(["success", "skipped", "neutral"]);
 const PENDING_STATES = new Set(["pending", "in_progress", "queued"]);
 
 const gh = (path, opts) => ghRequest(token, path, opts);
-const reply = (body) =>
-  ghRequest(botToken, `/repos/${repo}/issues/${prNumber}/comments`, {
-    method: "POST",
-    body: JSON.stringify({ body }),
-  });
+// Posting the status comment is a courtesy, not the point of /merge — a
+// transient failure here (e.g. the bot app's token rejected mid-run) must
+// never abort readiness checks or the merge itself, so this swallows its
+// own errors instead of throwing.
+const reply = async (body) => {
+  try {
+    return await ghRequest(botToken, `/repos/${repo}/issues/${prNumber}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    });
+  } catch (err) {
+    console.warn(`Could not post PR comment: ${err.message}`);
+    return null;
+  }
+};
 
 let pr = await gh(`/repos/${repo}/pulls/${prNumber}`);
 
