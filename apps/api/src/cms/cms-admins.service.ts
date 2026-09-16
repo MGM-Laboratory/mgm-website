@@ -26,6 +26,7 @@ const PAGES = [
   "research",
   "careers",
   "contact",
+  "events",
 ] as const;
 
 type AdminPageId = (typeof PAGES)[number];

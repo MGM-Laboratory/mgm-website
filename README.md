@@ -5,7 +5,7 @@ Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/we
 [![CI](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml)
 [![Security](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml)
 [![E2E](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/e2e.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/e2e.yaml)
-[![Docker](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker-publish.yml)
+[![Docker](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/publish-docker-image-latest.yml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/publish-docker-image-latest.yml)
 [![codecov](https://codecov.io/gh/MGM-Laboratory/mgm-website/branch/main/graph/badge.svg)](https://codecov.io/gh/MGM-Laboratory/mgm-website)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=MGM-Laboratory_mgm-website2&metric=alert_status)](https://sonarcloud.io/dashboard?id=MGM-Laboratory_mgm-website2)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MGM-Laboratory/mgm-website/badge)](https://securityscorecards.dev/viewer/?uri=github.com/MGM-Laboratory/mgm-website)

@@ -2,23 +2,39 @@
 // with sanitized, published production content, then mints a superadmin and
 // comments the preview links + credentials on the PR.
 //
+// This reads production over plain HTTPS, not its database — apps/api's own
+// public /api/cms/* endpoints already return exactly the published,
+// non-draft, PII-free subset (drafts are filtered server-side; CmsMember has
+// no phone field in its schema at all). That was discovered the hard way:
+// the original version of this script ran pg_dump/psql against
+// postgres.railway.internal, which is Railway's private-network hostname —
+// unreachable from a GitHub Actions runner outside Railway's network, so
+// every attempt failed with P1001 before this file even got a chance to be
+// wrong about anything else. Reading the public API instead means this
+// script never needs a database credential for production OR preview, and
+// the /bootstrap endpoints it POSTs to are the same idempotent, empty-table-
+// only seed path apps/api already exposes (see cms-*.service.ts#bootstrap) —
+// so a preview environment's Postgres schema doesn't need `prisma migrate
+// deploy` either: PrismaService.onModuleInit() creates every CMS table with
+// CREATE TABLE IF NOT EXISTS on boot.
+//
 // Safety invariants:
-//  - Only ever SELECTs from the production database — every write goes to
-//    the preview database.
+//  - Only ever reads production's public, unauthenticated CMS endpoints —
+//    never its database, never an admin-only endpoint.
 //  - CmsAdmin (password hashes) and CmsJobApplication (applicant PII/CVs)
-//    are never touched at all.
+//    have no public endpoint at all and are never touched.
 //  - The generated superadmin passphrase is never logged — it only ever
 //    reaches the PR comment, which is the disclosure channel that was asked
 //    for.
-import { execFileSync } from "node:child_process";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import {
-  railway,
-  PRODUCTION_ENVIRONMENT_ID,
   API_SERVICE_ID,
-  WEB_SERVICE_ID,
+  PRODUCTION_ENVIRONMENT_ID,
+  getVariables,
+  listServiceInstances,
 } from "./railway-api.mjs";
 import { ghRequest } from "./gh-api.mjs";
+import { factTable, footer, heading } from "./format.mjs";
 
 const railwayToken = process.env.RAILWAY_TOKEN;
 const botToken = process.env.BOT_TOKEN;
@@ -28,82 +44,55 @@ const environmentId = process.env.ENVIRONMENT_ID;
 const apiDomain = process.env.API_DOMAIN;
 const webDomain = process.env.WEB_DOMAIN;
 
-const WHITELISTED_TABLES = [
-  "CmsArticle",
-  "CmsPublication",
-  "CmsProject",
-  "CmsResearchInitiative",
-  "CmsMember",
+// Every resource's public GET returns the same shape its own /bootstrap
+// endpoint accepts as input — { records: [...] } — so this table is the
+// entire integration.
+const RESOURCES = [
+  { key: "articles", label: "Articles", path: "/api/cms/articles" },
+  { key: "publications", label: "Publications", path: "/api/cms/publications" },
+  { key: "members", label: "Members", path: "/api/cms/members" },
+  { key: "projects", label: "Projects", path: "/api/cms/projects" },
+  { key: "research", label: "Research initiatives", path: "/api/cms/research" },
 ];
 
-async function serviceVars(environmentId, serviceId) {
-  const data = await railway(
-    railwayToken,
-    `query($projectId: String!, $environmentId: String!, $serviceId: String) {
-      variables(projectId: $projectId, environmentId: $environmentId, serviceId: $serviceId)
-    }`,
-    { projectId: "810d3a40-d9d2-410c-b117-289d2aff095f", environmentId, serviceId },
-  );
-  return data.variables;
+async function json(url, opts) {
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    throw new Error(`${opts?.method ?? "GET"} ${url} -> ${res.status}: ${await res.text()}`);
+  }
+  return res.json();
 }
+
+console.log("Looking up production's api domain...");
+const prodInstances = await listServiceInstances(railwayToken, PRODUCTION_ENVIRONMENT_ID);
+const prodApiDomain = prodInstances.find((i) => i.serviceId === API_SERVICE_ID)?.domains
+  ?.serviceDomains?.[0]?.domain;
+if (!prodApiDomain) throw new Error("Production api has no public domain to read from");
+
+console.log("Waiting for the preview api to report healthy...");
+const apiHealthUrl = `https://${apiDomain}/api/health`;
+const healthDeadline = Date.now() + 5 * 60 * 1000;
+let healthy = false;
+while (Date.now() < healthDeadline) {
+  try {
+    const res = await fetch(apiHealthUrl);
+    if (res.ok) {
+      healthy = true;
+      break;
+    }
+  } catch {
+    // not up yet
+  }
+  await new Promise((r) => setTimeout(r, 5000));
+}
+if (!healthy) throw new Error(`api never became healthy at ${apiHealthUrl}`);
 
 const [prodVars, previewVars] = await Promise.all([
-  serviceVars(PRODUCTION_ENVIRONMENT_ID, API_SERVICE_ID),
-  serviceVars(environmentId, API_SERVICE_ID),
+  getVariables(railwayToken, PRODUCTION_ENVIRONMENT_ID, API_SERVICE_ID),
+  getVariables(railwayToken, environmentId, API_SERVICE_ID),
 ]);
 
-const prodDb = prodVars.DATABASE_URL;
-const previewDb = previewVars.DATABASE_URL;
-
-function run(cmd, args, opts = {}) {
-  return execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 1024 * 1024 * 256, ...opts });
-}
-
-console.log("Running migrations against the preview database...");
-run("pnpm", ["--filter", "api", "exec", "prisma", "migrate", "deploy"], {
-  cwd: new URL("../..", import.meta.url).pathname,
-  env: { ...process.env, DATABASE_URL: previewDb },
-});
-
-console.log(`Copying ${WHITELISTED_TABLES.join(", ")} from production (read-only)...`);
-// execFile passes argv entries verbatim (no shell), so table names must NOT
-// be quoted here — pg_dump does its own identifier handling. An earlier
-// version wrapped these in literal double quotes, which pg_dump would have
-// treated as part of the table name and silently matched nothing.
-const tableArgs = WHITELISTED_TABLES.flatMap((t) => ["--table", t]);
-const dump = run(
-  "pg_dump",
-  [prodDb, "--data-only", "--no-owner", "--no-privileges", "--column-inserts", ...tableArgs],
-  { maxBuffer: 1024 * 1024 * 512 },
-);
-run("psql", [previewDb, "-v", "ON_ERROR_STOP=1"], { input: dump });
-
-console.log("Stripping member phone numbers...");
-run("psql", [previewDb, "-c", `UPDATE "CmsMember" SET data = data - 'phone'`]);
-
-console.log("Removing draft/unpublished records (never servable in prod, must not leak here)...");
-// Each table nests its own draft flag under a different key
-// (data.article.draft, data.project.draft, ...) — see isDraft() in each
-// apps/api/src/cms/cms-*.service.ts.
-const DRAFT_PATHS = {
-  CmsArticle: "article",
-  CmsPublication: "publication",
-  CmsProject: "project",
-  CmsResearchInitiative: "research",
-};
-for (const [table, key] of Object.entries(DRAFT_PATHS)) {
-  run("psql", [
-    previewDb,
-    "-c",
-    `DELETE FROM "${table}" WHERE (data->'${key}'->>'draft')::boolean IS TRUE`,
-  ]);
-}
-
-console.log("Finding referenced storage objects...");
-const selectAll = WHITELISTED_TABLES.map((t) => `SELECT data::text FROM "${t}"`).join(
-  " UNION ALL ",
-);
-const rowsText = run("psql", [previewDb, "-t", "-A", "-c", selectAll]);
+console.log("Fetching published content from production's public API...");
 const storageKeys = new Set();
 function collectKeys(value) {
   if (Array.isArray(value)) {
@@ -115,14 +104,37 @@ function collectKeys(value) {
     }
   }
 }
-for (const line of rowsText.split("\n")) {
-  const trimmed = line.trim();
-  if (!trimmed) continue;
-  try {
-    collectKeys(JSON.parse(trimmed));
-  } catch {
-    // not a JSON line (psql formatting noise) — skip
+
+// Defensive only: CmsMember's public schema has no phone field and none of
+// production's current records carry one, but a profile is a free-form
+// z.record — strip it if it's ever present rather than assume it stays absent.
+function sanitize(resourceKey, record) {
+  if (resourceKey === "members" && record.profile && typeof record.profile === "object") {
+    delete record.profile.phone;
   }
+  return record;
+}
+
+const seedCounts = {};
+for (const resource of RESOURCES) {
+  const { records } = await json(`https://${prodApiDomain}${resource.path}`);
+  const sanitized = records.map((r) => sanitize(resource.key, r));
+  collectKeys(sanitized);
+  seedCounts[resource.key] = sanitized.length;
+
+  if (!sanitized.length) continue;
+  console.log(`Seeding ${sanitized.length} ${resource.label.toLowerCase()}...`);
+  // bootstrap() is a one-time seed (no-ops once the table already has rows —
+  // see cms-*.service.ts), so re-running /preview on an existing environment
+  // safely skips re-seeding instead of erroring or duplicating.
+  await json(`https://${apiDomain}${resource.path}/bootstrap`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-cms-passphrase": previewVars.ADMIN_PASSPHRASE,
+    },
+    body: JSON.stringify({ records: sanitized }),
+  }).catch((err) => console.warn(`Bootstrap for ${resource.key} skipped/failed: ${err.message}`));
 }
 console.log(`Found ${storageKeys.size} referenced storage object(s).`);
 
@@ -145,12 +157,37 @@ const previewS3 = new S3Client({
   },
 });
 
-for (const key of storageKeys) {
+// A single hanging GetObject/PutObject used to stall the whole job forever —
+// confirmed live: a run sat silent for 6+ minutes on the very first object
+// with zero AWS SDK error, because S3Client has no request timeout by
+// default. Every call now races against an AbortController, and objects
+// copy with bounded concurrency instead of one at a time so 278 objects
+// doesn't mean 278 sequential round trips.
+const PER_REQUEST_TIMEOUT_MS = 20_000;
+const CONCURRENCY = 8;
+
+function withTimeout(ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error(`timed out after ${ms}ms`)),
+    ms,
+  ).unref();
+  return { signal: controller.signal, clear: () => clearTimeout(timer) };
+}
+
+async function copyObject(key) {
+  const get = withTimeout(PER_REQUEST_TIMEOUT_MS);
+  let obj;
   try {
-    const obj = await prodS3.send(
-      new GetObjectCommand({ Bucket: prodVars.AWS_S3_BUCKET, Key: key }),
-    );
-    const bytes = await obj.Body.transformToByteArray();
+    obj = await prodS3.send(new GetObjectCommand({ Bucket: prodVars.AWS_S3_BUCKET, Key: key }), {
+      abortSignal: get.signal,
+    });
+  } finally {
+    get.clear();
+  }
+  const bytes = await obj.Body.transformToByteArray();
+  const put = withTimeout(PER_REQUEST_TIMEOUT_MS);
+  try {
     await previewS3.send(
       new PutObjectCommand({
         Bucket: previewVars.AWS_S3_BUCKET,
@@ -158,62 +195,74 @@ for (const key of storageKeys) {
         Body: bytes,
         ContentType: obj.ContentType,
       }),
+      { abortSignal: put.signal },
     );
-  } catch (err) {
-    console.warn(`Skipping object ${key}: ${err.message}`);
+  } finally {
+    put.clear();
   }
 }
 
-console.log("Waiting for the preview api to report healthy...");
-const apiHealthUrl = `https://${apiDomain}/api/health`;
-const deadline = Date.now() + 5 * 60 * 1000;
-let healthy = false;
-while (Date.now() < deadline) {
-  try {
-    const res = await fetch(apiHealthUrl);
-    if (res.ok) {
-      healthy = true;
-      break;
+let copied = 0;
+let skipped = 0;
+const keys = [...storageKeys];
+let cursor = 0;
+async function worker() {
+  while (cursor < keys.length) {
+    const key = keys[cursor++];
+    try {
+      await copyObject(key);
+      copied++;
+    } catch (err) {
+      skipped++;
+      console.warn(`Skipping object ${key}: ${err.message}`);
     }
-  } catch {
-    // not up yet
+    if ((copied + skipped) % 25 === 0) {
+      console.log(`Storage copy progress: ${copied + skipped}/${keys.length}`);
+    }
   }
-  await new Promise((r) => setTimeout(r, 5000));
 }
-if (!healthy) throw new Error(`api never became healthy at ${apiHealthUrl}`);
+await Promise.all(Array.from({ length: Math.min(CONCURRENCY, keys.length) }, worker));
 
 console.log("Minting a fresh superadmin...");
 const ALL_PAGES = ["articles", "publications", "members", "projects", "research", "careers"];
-const adminRes = await fetch(`https://${apiDomain}/api/cms/admins`, {
+const adminBody = await json(`https://${apiDomain}/api/cms/admins`, {
   method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "x-cms-passphrase": previewVars.ADMIN_PASSPHRASE,
-  },
+  headers: { "Content-Type": "application/json", "x-cms-passphrase": previewVars.ADMIN_PASSPHRASE },
   body: JSON.stringify({
     name: `PR #${prNumber} preview`,
     passphrase: "generate",
     permissions: Object.fromEntries(ALL_PAGES.map((p) => [p, ["read", "write", "delete"]])),
   }),
 });
-if (!adminRes.ok) {
-  throw new Error(
-    `Failed to create preview superadmin: ${adminRes.status} ${await adminRes.text()}`,
-  );
-}
-const adminBody = await adminRes.json();
 const generatedPassphrase = adminBody.generatedPassphrase;
 
+const seededTable = RESOURCES.map((r) => `| ${r.label} | ${seedCounts[r.key] ?? 0} |`).join("\n");
+
 const commentBody = [
-  `**ren-automation** — preview for PR #${prNumber} is up:`,
+  heading(`✅ Preview environment ready — PR #${prNumber}`),
   "",
-  `- Site: https://${webDomain}`,
-  `- API: https://${apiDomain}/api`,
+  factTable([
+    ["🌐 Site", `https://${webDomain}`],
+    ["🔌 API", `https://${apiDomain}/api`],
+    ["🗄️ Environment", `\`preview-pr-${prNumber}\``],
+    ["🕒 Deployed", new Date().toISOString()],
+  ]),
   "",
-  "Superadmin login (this preview only, seeded from sanitized public production content):",
-  `- Passphrase: \`${generatedPassphrase}\``,
+  heading("Seeded content", 3),
+  "_A sanitized copy of published production content — drafts and admin-only records are never included._",
   "",
-  "Torn down automatically when this PR closes.",
+  "| Resource | Records |",
+  "|---|---|",
+  seededTable,
+  "",
+  `Storage objects copied: **${copied}**${skipped ? ` (${skipped} skipped — see run logs)` : ""}.`,
+  "",
+  heading("🔑 Superadmin login (this preview only)", 3),
+  factTable([["Passphrase", `\`${generatedPassphrase}\``]]),
+  "",
+  "> Generated fresh for this preview — not a production credential, and not stored anywhere else. Torn down automatically when this PR closes (or when a maintainer runs `/merge`).",
+  "",
+  footer(),
 ].join("\n");
 
 await ghRequest(botToken, `/repos/${repo}/issues/${prNumber}/comments`, {

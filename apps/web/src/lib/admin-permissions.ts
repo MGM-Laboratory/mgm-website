@@ -11,6 +11,7 @@ export const ADMIN_PAGE_IDS = [
   "research",
   "careers",
   "contact",
+  "events",
 ] as const;
 
 export type AdminPageId = (typeof ADMIN_PAGE_IDS)[number];

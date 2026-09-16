@@ -21,6 +21,11 @@ export const PROJECT_ID = "810d3a40-d9d2-410c-b117-289d2aff095f";
 export const PRODUCTION_ENVIRONMENT_ID = "42acf786-e8f4-41f8-8d4f-715bee1655f8";
 export const API_SERVICE_ID = "b401b859-90cb-44cf-9787-054cc14290fd";
 export const WEB_SERVICE_ID = "4969778e-0bff-4200-9472-6b5a13f037da";
+// Same logical services (and same ids) in every environment forked from
+// production, same as API_SERVICE_ID/WEB_SERVICE_ID — only the per-
+// environment instance differs.
+export const POSTGRES_SERVICE_ID = "702df22d-7432-4a04-a52d-53fab670e59c";
+export const REDIS_SERVICE_ID = "ea85a601-8ce9-4e3b-965b-1fb83c4accb9";
 
 export function previewEnvironmentName(prNumber) {
   return `preview-pr-${prNumber}`;
@@ -83,13 +88,57 @@ export async function deleteEnvironment(token, environmentId) {
   });
 }
 
+// Shared by /merge, /close, and the pull_request_target teardown workflow so
+// there's exactly one place that knows how to safely find-and-delete a PR's
+// preview environment — in particular the production-id assertion, which a
+// naming coincidence should never be able to bypass regardless of which
+// caller triggered the teardown.
+export async function tearDownPreviewEnvironment(token, prNumber) {
+  const name = previewEnvironmentName(prNumber);
+  const environment = await findEnvironmentByName(token, name);
+  if (!environment) {
+    return {
+      deleted: false,
+      name,
+      note: `No preview environment was running for PR #${prNumber}.`,
+    };
+  }
+  if (environment.id === PRODUCTION_ENVIRONMENT_ID) {
+    throw new Error("refusing to delete: environment resolved to production");
+  }
+  await deleteEnvironment(token, environment.id);
+  return { deleted: true, name, note: `Deleted preview environment \`${name}\`.` };
+}
+
+export async function listVolumeInstances(token, environmentId) {
+  const data = await railway(
+    token,
+    `query($id: String!) {
+      environment(id: $id) {
+        volumeInstances { edges { node { serviceId } } }
+      }
+    }`,
+    { id: environmentId },
+  );
+  return data.environment.volumeInstances.edges.map((e) => e.node);
+}
+
 export async function listServiceInstances(token, environmentId) {
   const data = await railway(
     token,
     `query($id: String!) {
       environment(id: $id) {
         serviceInstances {
-          edges { node { serviceId serviceName domains { serviceDomains { domain } } } }
+          edges {
+            node {
+              serviceId
+              serviceName
+              domains { serviceDomains { domain } }
+              hasEverDeployed
+              latestDeployment { id status }
+              source { image repo }
+            }
+          }
         }
       }
     }`,
@@ -117,6 +166,21 @@ export async function deployServiceInstance(token, serviceId, environmentId) {
     { serviceId, environmentId },
   );
   return data.serviceInstanceDeployV2;
+}
+
+export async function deploymentLogs(token, deploymentId, limit = 30) {
+  const data = await railway(
+    token,
+    `query($deploymentId: String!, $limit: Int) {
+      deploymentLogs(deploymentId: $deploymentId, limit: $limit) {
+        timestamp
+        severity
+        message
+      }
+    }`,
+    { deploymentId, limit },
+  );
+  return data.deploymentLogs;
 }
 
 export async function generateServiceDomain(token, serviceId, environmentId, targetPort) {
@@ -149,17 +213,29 @@ export async function setVariables(token, environmentId, serviceId, variables, s
   );
 }
 
-export async function findBucketByName(token, name) {
+// Unlike buckets, volumeCreate's environmentId is genuinely implemented —
+// verified live: creating one with serviceId + mountPath attaches it and
+// triggers a redeploy in one step, no separate patch-commit needed.
+export async function createVolume(token, environmentId, serviceId, mountPath) {
   const data = await railway(
     token,
-    `query($projectId: String!) {
-      project(id: $projectId) {
-        buckets { edges { node { id name } } }
-      }
+    `mutation($input: VolumeCreateInput!) {
+      volumeCreate(input: $input) { id name }
     }`,
-    { projectId: PROJECT_ID },
+    { input: { projectId: PROJECT_ID, environmentId, serviceId, mountPath } },
   );
-  return data.project.buckets.edges.map((e) => e.node).find((n) => n.name === name) ?? null;
+  return data.volumeCreate;
+}
+
+export async function getVariables(token, environmentId, serviceId) {
+  const data = await railway(
+    token,
+    `query($projectId: String!, $environmentId: String!, $serviceId: String) {
+      variables(projectId: $projectId, environmentId: $environmentId, serviceId: $serviceId)
+    }`,
+    { projectId: PROJECT_ID, environmentId, serviceId },
+  );
+  return data.variables;
 }
 
 // BucketCreateInput.environmentId is documented "[unimplemented]" and really

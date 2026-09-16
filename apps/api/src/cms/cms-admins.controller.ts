@@ -25,6 +25,7 @@ const PAGES = [
   "research",
   "careers",
   "contact",
+  "events",
 ] as const;
 
 const ACTION_RANK: Record<string, number> = { read: 1, write: 2, delete: 3 };

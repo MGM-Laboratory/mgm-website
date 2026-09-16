@@ -47,6 +47,7 @@ export const NAV_ITEMS: (NavItem & { accent: PatternTone })[] = [
   },
   { kind: "link", label: "Member", href: "/member", accent: "blue" },
   { kind: "link", label: "Articles", href: "/articles", accent: "red" },
+  { kind: "link", label: "Events", href: "/events", accent: "green" },
   { kind: "link", label: "Careers", href: "/careers", accent: "yellow" },
   { kind: "link", label: "Contact", href: "/contact", accent: "green" },
 ];

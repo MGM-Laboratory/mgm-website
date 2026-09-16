@@ -1,4 +1,5 @@
 import { ghRequest } from "./gh-api.mjs";
+import { codeowners } from "./codeowners.mjs";
 
 const actionsToken = process.env.GITHUB_TOKEN; // default token — actions:write only
 const botToken = process.env.BOT_TOKEN; // ren-automation installation token — comments only
@@ -9,6 +10,8 @@ const association = process.env.COMMENT_ASSOCIATION;
 const body = (process.env.COMMENT_BODY ?? "").trim();
 
 const PRIVILEGED = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
+const isPrivileged = (login, assoc) =>
+  PRIVILEGED.has(assoc) || codeowners().some((h) => h.toLowerCase() === login.toLowerCase());
 
 const reply = (text) =>
   ghRequest(botToken, `/repos/${repo}/issues/${prNumber}/comments`, {
@@ -18,22 +21,21 @@ const reply = (text) =>
 
 const normalized = body.toLowerCase();
 
+// Bare "lgtm" is deliberately harmless — it's the single most common
+// throwaway phrase in code review, so it only ever posts a GIF. The actual
+// merge-and-ship action lives behind the explicit /merge command below so a
+// casual "lgtm" left in conversation can never ship anything to production.
 if (normalized === "lgtm") {
   await reply("![lgtm](https://media.giphy.com/media/bXUbgRzNwKSg3iJYrJ/giphy.gif)");
   process.exit(0);
 }
 
-if (normalized === "ptal") {
-  await reply("![ptal](https://media.giphy.com/media/wszFBsXrP2pFk6zVG4/giphy.gif)");
-  process.exit(0);
-}
-
-if (normalized !== "/check" && normalized !== "/preview") {
+if (!["/check", "/preview", "/merge", "/close"].includes(normalized)) {
   process.exit(0); // not a command we handle
 }
 
-if (!PRIVILEGED.has(association)) {
-  await reply(`@${author} only maintainers can run \`${normalized}\`.`);
+if (!isPrivileged(author, association)) {
+  await reply(`@${author} only maintainers or CODEOWNERS can run \`${normalized}\`.`);
   process.exit(0);
 }
 
@@ -72,4 +74,20 @@ if (normalized === "/preview") {
   await reply(
     "Starting a preview deploy — takes a few minutes, I'll drop the link here when it's up.",
   );
+}
+
+if (normalized === "/merge") {
+  await ghRequest(actionsToken, `/repos/${repo}/actions/workflows/merge.yml/dispatches`, {
+    method: "POST",
+    body: JSON.stringify({ ref: "main", inputs: { pr_number: String(prNumber) } }),
+  });
+  await reply("Checking that everything's ready to ship...");
+}
+
+if (normalized === "/close") {
+  await ghRequest(actionsToken, `/repos/${repo}/actions/workflows/close.yml/dispatches`, {
+    method: "POST",
+    body: JSON.stringify({ ref: "main", inputs: { pr_number: String(prNumber) } }),
+  });
+  await reply("Closing this PR without merging, and sweeping its preview environment...");
 }

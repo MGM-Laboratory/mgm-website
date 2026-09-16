@@ -162,12 +162,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Generate a bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
       - name: Point services at the new images and deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          BOT_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
           ENVIRONMENT_ID: ${{ needs.provision.outputs.environment_id }}
           API_IMAGE: ${{ steps.images.outputs.api_image }}
           WEB_IMAGE: ${{ steps.images.outputs.web_image }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: node .github/scripts/preview-point-images.mjs
 
   # Job D — secrets again: seeds sanitized data into the now-running preview,
@@ -190,18 +201,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Install postgresql-client 18 (matches the Railway Postgres image)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends wget ca-certificates gnupg
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo wget -q -O /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
-            https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
-            | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client-18
 
       - name: Generate a bot token
         id: app-token

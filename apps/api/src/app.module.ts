@@ -10,6 +10,7 @@ import { CacheModule } from "./cache/cache.module.js";
 import { CmsAdminsModule } from "./cms/cms-admins.module.js";
 import { CmsArticlesModule } from "./cms/cms-articles.module.js";
 import { CmsContactSettingsModule } from "./cms/cms-contact-settings.module.js";
+import { CmsEventsModule } from "./cms/cms-events.module.js";
 import { CmsJobsModule } from "./cms/cms-jobs.module.js";
 import { CmsMembersModule } from "./cms/cms-members.module.js";
 import { CmsProjectsModule } from "./cms/cms-projects.module.js";
@@ -53,6 +54,7 @@ import { StorageModule } from "./storage/storage.module.js";
     CmsJobsModule,
     CmsResearchModule,
     CmsProjectsModule,
+    CmsEventsModule,
     CmsAdminsModule,
     HealthModule,
     StorageModule,
