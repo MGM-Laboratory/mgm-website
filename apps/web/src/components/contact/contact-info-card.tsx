@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Clock, Copy, Mail, MapPin, Navigation, Send } from "lucide-react";
+import { Check, Copy, Mail, MapPin, Navigation, Send } from "lucide-react";
 import type { ContactSettings } from "@repo/shared";
 
 import { HqMap } from "@/components/contact/hq-map";
@@ -29,7 +29,7 @@ function InfoRow({
 }
 
 const actionClass =
-  "inline-flex items-center gap-1.5 rounded-md border border-[var(--line)] px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-brand-blue hover:text-brand-blue";
+  "inline-flex items-center gap-1.5 text-sm font-medium text-brand-blue transition-colors hover:text-brand-green";
 
 function ActionButton({
   icon: Icon,
@@ -95,10 +95,10 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
       </p>
 
       <div className="mt-4 flex flex-col divide-y divide-[var(--line)]">
-        <div className="pb-5">
+        <div className="pb-4">
           <InfoRow icon={Mail} label="Email">
             <p className="font-display text-base font-semibold text-foreground">{settings.email}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
               <ActionButton
                 icon={emailCopy.copied ? Check : Copy}
                 onClick={() => emailCopy.copy(settings.email)}
@@ -112,7 +112,7 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
           </InfoRow>
         </div>
 
-        <div className="py-5">
+        <div className="py-4">
           <InfoRow icon={MapPin} label="Based in">
             <p className="text-sm text-foreground/70">
               {addressLines.map((line, i) => (
@@ -125,7 +125,7 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
             <div className="mt-3">
               <HqMap lat={settings.lat} lng={settings.lng} />
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               <ActionButton
                 icon={addressCopy.copied ? Check : Copy}
                 onClick={() => addressCopy.copy(settings.address)}
@@ -136,14 +136,6 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
                 Open in Maps
               </ActionLink>
             </div>
-          </InfoRow>
-        </div>
-
-        <div className="pt-5">
-          <InfoRow icon={Clock} label="Response time">
-            <p className="text-sm text-foreground/70">
-              We read every message and reply as soon as we can, usually within a few business days.
-            </p>
           </InfoRow>
         </div>
       </div>
