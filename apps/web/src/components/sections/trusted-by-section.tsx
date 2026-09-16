@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 
@@ -22,6 +22,16 @@ const CLOSE_DELAY_MS = 120;
 // interactive and decorative copies), factored out so the hover-lift
 // treatment and light/dark asset swap stay in exactly one place.
 const LOGO_IMG_CLASS = "h-full w-auto object-contain transition-transform duration-300 ease-out";
+
+// Every mark's wrapper shares this row height, scaled per logo via the
+// `--logo-scale` custom property (partners.ts `logoScale`, defaults to 1) —
+// some marks read visually small or large at an identical literal pixel
+// height, so the correction is per-logo rather than one shared number.
+const MARK_SIZE_CLASS = "h-[calc(2.25rem*var(--logo-scale))] sm:h-[calc(3rem*var(--logo-scale))]";
+
+function markSizeStyle(partner: Partner): CSSProperties {
+  return { "--logo-scale": partner.logoScale ?? 1 } as CSSProperties;
+}
 
 function LogoImage({
   partner,
@@ -99,7 +109,11 @@ function PartnerMark({
       onTouchStart={onCancelClose}
       aria-label={`${partner.name}, read the story`}
       ref={markRef}
-      className="trusted-mark group flex h-9 shrink-0 items-center justify-center outline-none sm:h-12"
+      style={markSizeStyle(partner)}
+      className={cn(
+        "trusted-mark group flex shrink-0 items-center justify-center outline-none",
+        MARK_SIZE_CLASS,
+      )}
     >
       <LogoImage
         partner={partner}
@@ -116,7 +130,10 @@ function PartnerMark({
 // have.
 function PartnerMarkStatic({ partner }: { partner: Partner }) {
   return (
-    <div className="flex h-9 shrink-0 items-center justify-center sm:h-12">
+    <div
+      style={markSizeStyle(partner)}
+      className={cn("flex shrink-0 items-center justify-center", MARK_SIZE_CLASS)}
+    >
       <LogoImage partner={partner} interactive={false} />
     </div>
   );
@@ -129,7 +146,10 @@ function PartnerMarkStatic({ partner }: { partner: Partner }) {
 // invisible-to-them tab stops (axe: aria-hidden-focus).
 function PartnerMarkDecorative({ partner }: { partner: Partner }) {
   return (
-    <div className="flex h-9 shrink-0 items-center justify-center sm:h-12">
+    <div
+      style={markSizeStyle(partner)}
+      className={cn("flex shrink-0 items-center justify-center", MARK_SIZE_CLASS)}
+    >
       <LogoImage partner={partner} interactive={false} />
     </div>
   );
@@ -156,6 +176,11 @@ function PartnerTooltip() {
 // when the hovered mark sits near either edge of the strip.
 const POPUP_WIDTH_PX = 210;
 const POPUP_MARGIN_PX = 16;
+
+// Constant px/sec instead of a flat duration, so the loop feels equally
+// fast regardless of the track's actual measured width (which changes
+// across breakpoints as the inter-logo gap changes).
+const MARQUEE_SPEED_PX_PER_SEC = 150;
 
 export function TrustedBySection() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -207,23 +232,10 @@ export function TrustedBySection() {
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
-    const wasOpen = displayed !== null;
     activeSlugRef.current = slug;
     setActive(slug);
     setDisplayed(slug);
     if (followRafId.current === null) followRafId.current = requestAnimationFrame(followActiveMark);
-    if (!wasOpen) {
-      requestAnimationFrame(() => {
-        const el = panelRef.current;
-        if (!el) return;
-        gsap.killTweensOf(el);
-        gsap.fromTo(
-          el,
-          { opacity: 0, y: -8, scale: 0.92 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: "back.out(1.7)" },
-        );
-      });
-    }
   }
 
   // Runs from a timer callback, not a React effect body, so animating out
@@ -258,6 +270,33 @@ export function TrustedBySection() {
     }
   }
 
+  // Plays the entrance pop only on a fresh open (closed -> open), not when
+  // sliding from one already-open mark to the next. A `useLayoutEffect` keyed
+  // on `displayed` is what makes this reliable: it only runs after React has
+  // actually committed the panel into the DOM, so `panelRef.current` is
+  // guaranteed to exist. The previous version tried to defer this with a
+  // `requestAnimationFrame` inside the event handler instead, racing React's
+  // own commit — the rAF sometimes fired before the ref was attached, which
+  // silently skipped the animation and left the tooltip stuck at its base
+  // `opacity-0`, i.e. the "tooltip only shows up sometimes" bug.
+  const wasDisplayedRef = useRef(false);
+  useLayoutEffect(() => {
+    const el = panelRef.current;
+    if (!el) {
+      wasDisplayedRef.current = false;
+      return;
+    }
+    if (!wasDisplayedRef.current) {
+      gsap.killTweensOf(el);
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: -8, scale: 0.92 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: "back.out(1.7)" },
+      );
+    }
+    wasDisplayedRef.current = true;
+  }, [displayed]);
+
   useLayoutEffect(
     () => () => {
       if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -269,9 +308,16 @@ export function TrustedBySection() {
   // Entrance reveal, then the marquee's infinite loop only starts once that
   // finishes — matches MosaicMarquee's convention (keeps the track
   // motionless, and its transform deterministic, until actually visible).
-  // The track renders two back-to-back copies of the full logo set, and the
-  // loop slides by exactly one copy-width (xPercent: -50) on a plain linear
-  // repeat, so it always lands back on a seam with no reset/jump.
+  // The track renders two back-to-back copies of the full logo set; sliding
+  // by exactly the second copy's own start offset (in pixels, not a
+  // hardcoded -50%) is what actually lands back on a seam with no jump.
+  // MosaicMarquee can get away with a flat xPercent: -50 because its two
+  // copies sit directly adjacent with zero gap between them, so 50% of the
+  // whole track is exactly one copy-width; this track has a real visual gap
+  // between every logo, including the one between the two copies, so 50% of
+  // the *track's* width overshoots the seam by half that gap every cycle —
+  // a small but real recurring hitch. Measuring the second copy's actual
+  // rendered offset sidesteps the arithmetic entirely.
   useLayoutEffect(() => {
     const root = rootRef.current;
     const track = trackRef.current;
@@ -282,17 +328,46 @@ export function TrustedBySection() {
       return () => tween?.scrollTrigger?.kill();
     }
 
+    function startMarquee() {
+      if (!track) return;
+      const secondCopy = track.children[1] as HTMLElement | undefined;
+      const shiftPx = secondCopy ? secondCopy.offsetLeft : track.scrollWidth / 2;
+      tweenRef.current?.kill();
+      tweenRef.current = gsap.to(track, {
+        x: -shiftPx,
+        duration: shiftPx / MARQUEE_SPEED_PX_PER_SEC,
+        ease: "none",
+        repeat: -1,
+      });
+    }
+
+    // The gap between logos changes across breakpoints (gap-10 vs
+    // sm:gap-14), which changes the exact pixel seam offset — recreate the
+    // tween with a freshly measured offset when the *viewport* actually
+    // resizes. Listening on `window` (not a ResizeObserver on the track
+    // itself) deliberately ignores the track's own transient reflows from
+    // async image loads early on, which would otherwise restart the tween
+    // mid-flight for no real layout change.
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    const onResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (tweenRef.current) startMarquee();
+      }, 200);
+    };
+    window.addEventListener("resize", onResize);
+
     const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 85%", once: true } });
     tl.fromTo(
       gsap.utils.toArray<HTMLElement>(".reveal-card", root),
       { opacity: 0, y: 24 },
       { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.1 },
     );
-    tl.eventCallback("onComplete", () => {
-      tweenRef.current = gsap.to(track, { xPercent: -50, duration: 30, ease: "none", repeat: -1 });
-    });
+    tl.eventCallback("onComplete", startMarquee);
 
     return () => {
+      window.removeEventListener("resize", onResize);
+      if (resizeTimer) clearTimeout(resizeTimer);
       tl.kill();
       tweenRef.current?.kill();
       tweenRef.current = null;
@@ -358,13 +433,24 @@ export function TrustedBySection() {
       <div ref={anchorRef} className="reveal-card relative mt-14 opacity-0">
         <div
           className={cn(
-            "overflow-hidden motion-reduce:overflow-x-auto",
+            // Horizontal-only clipping: the marquee track must stay clipped
+            // on the x-axis, but clipping the y-axis too (plain
+            // `overflow-hidden`) cut off every logo's hover lift and any
+            // mark whose scaled height exceeds the row's base height — the
+            // "cut off by a rectangle" bug. Vertical overflow is left alone.
+            "overflow-x-hidden py-3 motion-reduce:overflow-x-auto",
             "[mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]",
             "[-webkit-mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]",
             "motion-reduce:[-webkit-mask-image:none] motion-reduce:[mask-image:none]",
           )}
         >
-          <div ref={trackRef} className="flex w-fit gap-10 sm:gap-14">
+          {/* w-max (not w-fit): fit-content sizing clamps to the *available*
+              width once an ancestor clips overflow, so the track quietly
+              measured far narrower than its real two-copy content. GSAP's
+              xPercent: -50 is a percentage of that measured width, so the
+              loop was resetting partway through the first copy instead of
+              exactly at the seam between copies — the visible "teleport". */}
+          <div ref={trackRef} className="flex w-max gap-10 sm:gap-14">
             <div className="flex shrink-0 items-center gap-10 sm:gap-14">
               {PARTNERS.map((partner) => renderMark(partner, `a-${partner.slug}`))}
             </div>
