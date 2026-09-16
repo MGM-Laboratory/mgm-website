@@ -722,7 +722,7 @@ export function ContactSettingsEditor({
     let cancelled = false;
     (async () => {
       setReady(false);
-      setLoadError(undefined);
+      setLoadError(undefined); // skipcq: JS-W1042 -- required: the Dispatch<SetStateAction> setter has no optional parameter
       try {
         const response = await fetch("/api/admin/contact-settings");
         if (!response.ok) {
@@ -810,7 +810,7 @@ export function ContactSettingsEditor({
     const lat = Number(form.lat);
     const lng = Number(form.lng);
     setStatus("saving");
-    setError(undefined);
+    setError(undefined); // skipcq: JS-W1042 -- required: the Dispatch<SetStateAction> setter has no optional parameter
     try {
       const response = await fetch("/api/admin/contact-settings", {
         body: JSON.stringify({

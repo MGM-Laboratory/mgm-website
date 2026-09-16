@@ -12,4 +12,4 @@ import { ContactService } from "./contact.service.js";
   controllers: [ContactController],
   providers: [ContactService],
 })
-export class ContactModule {}
+export class ContactModule {} // skipcq: JS-0327

@@ -235,6 +235,9 @@ export class MailService {
    * Resolves a routing strategy to the ordered, configured candidates that
    * sendEmail should attempt, excluding over-quota providers when applicable.
    */
+  // skipcq: JS-0116 -- must stay async: some branches return a plain array,
+  // others return this.rotate(...)'s promise; the async modifier is what
+  // lets both satisfy the declared Promise<MailProviderId[]> return type.
   private async resolveCandidates(
     strategy: MailStrategy,
     order: MailProviderId[],
@@ -249,7 +252,7 @@ export class MailService {
 
     if (strategy === "failover") return configured;
     if (strategy === "loadBalanceEqual") return this.rotate(configured);
-    if (strategy === "loadBalanceWeighted") return this.weightedOrder(configured, weights);
+    if (strategy === "loadBalanceWeighted") return MailService.weightedOrder(configured, weights);
 
     // loadBalanceLimit reserves quota immediately before each delivery
     // attempt. Candidate selection stays side-effect free so unused providers
@@ -274,7 +277,10 @@ export class MailService {
     return [...list.slice(index), ...list.slice(0, index)];
   }
 
-  private weightedOrder(list: MailProviderId[], weights: MailProviderWeights): MailProviderId[] {
+  private static weightedOrder(
+    list: MailProviderId[],
+    weights: MailProviderWeights,
+  ): MailProviderId[] {
     if (list.length <= 1) return list;
     const withWeight = list.map((id) => ({ id, weight: Math.max(0, weights[id] ?? 1) }));
     const total = withWeight.reduce((sum, entry) => sum + entry.weight, 0);
@@ -282,7 +288,7 @@ export class MailService {
     // Not security-sensitive: picks which mail provider handles this send,
     // not an auth token, session id, or anything cryptographic.
     let roll = Math.random() * total; // NOSONAR
-    let picked = withWeight[0]!.id;
+    let picked = withWeight[0].id;
     for (const entry of withWeight) {
       if (roll < entry.weight) {
         picked = entry.id;
@@ -324,7 +330,7 @@ export class MailService {
   }
 
   /** Serializes rolling-window count-and-create operations per provider. */
-  private async reserveRollingQuota(
+  private reserveRollingQuota(
     id: MailProviderId,
     config: MailProviderLimitConfig,
   ): Promise<QuotaReservation | null> {

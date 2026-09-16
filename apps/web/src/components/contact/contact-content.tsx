@@ -16,10 +16,11 @@ export function ContactContent({ settings }: Readonly<{ settings: ContactSetting
     const root = rootRef.current;
     if (!root) return;
     const tween = fadeUpOnScroll(root, ".reveal-card", { stagger: 0.1 });
-    return () => tween?.scrollTrigger?.kill();
+    return () => tween?.scrollTrigger?.kill(); // skipcq: JS-0045 -- standard useLayoutEffect cleanup return
   }, []);
 
   return (
+    // skipcq: JS-0415 -- ordinary page-band layout depth, not a code smell
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">
       <main className="flex flex-1 flex-col">
         <section className="relative overflow-hidden bg-[var(--surface-muted)] px-6 py-20 sm:px-10 sm:py-28 lg:px-16">

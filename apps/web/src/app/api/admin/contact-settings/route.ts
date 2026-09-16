@@ -30,6 +30,7 @@ export async function PUT(request: Request) {
     "mailProviderLimits",
   ] as const;
   const touchesRouting = routingFields.some((field) => body[field] !== undefined);
+  let payload = body;
   if (gate.session.role !== "superadmin") {
     if (touchesRouting) {
       const current = await cmsApi("/cms/contact-settings");
@@ -49,8 +50,12 @@ export async function PUT(request: Request) {
       }
     }
 
-    for (const field of routingFields) delete body[field];
+    payload = Object.fromEntries(
+      Object.entries(body).filter(
+        ([key]) => !routingFields.includes(key as (typeof routingFields)[number]),
+      ),
+    ) as Partial<ContactSettings>;
   }
 
-  return proxyJson("/cms/contact-settings", { body: JSON.stringify(body), method: "PUT" });
+  return proxyJson("/cms/contact-settings", { body: JSON.stringify(payload), method: "PUT" });
 }

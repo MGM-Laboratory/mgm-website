@@ -104,6 +104,7 @@ export function useResourceInbox<TRecord extends InboxRecord>({
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
+    // skipcq: JS-W1041 -- guard clauses read clearer here than one large boolean expression.
     return records.filter((record) => {
       const state = getState(record);
       if (filterState === "archived" && state.status !== "archived") return false;
@@ -151,13 +152,14 @@ export function useResourceInbox<TRecord extends InboxRecord>({
     const record = records.find((item) => item.slug === slug);
     if (!record) return;
     const state = getState(record);
-    if (!readOnly && !state.read && state.status === "inbox") void patchState(slug, { read: true });
+    if (!readOnly && !state.read && state.status === "inbox") patchState(slug, { read: true });
   };
 
   const performBulk = async (ids: string[], action: BulkAction) => {
     if (readOnly || !ids.length) return;
     const suffix = deleteConfirmSuffix ? ` ${deleteConfirmSuffix}` : "";
     const confirmMessage = `Delete ${ids.length} ${itemLabel}(s)?${suffix}`;
+    // skipcq: JS-0052 -- a native confirm is the intentional, minimal UX here; no modal system exists in this admin panel yet.
     if (action === "delete" && !window.confirm(confirmMessage)) {
       return;
     }
@@ -195,7 +197,7 @@ export function useResourceInbox<TRecord extends InboxRecord>({
   const bulk = (action: BulkAction) => performBulk([...selectedIds], action);
 
   const deleteOne = (slug: string) => {
-    void performBulk([slug], "delete");
+    performBulk([slug], "delete");
   };
 
   const toggleRow = (index: number, checked: boolean, shiftKey: boolean) => {
@@ -346,7 +348,9 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                 </span>
                 <button
                   className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-                  onClick={() => void bulk("archive")}
+                  onClick={() => {
+                    bulk("archive");
+                  }}
                   title="Archive"
                   type="button"
                 >
@@ -354,7 +358,9 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                 </button>
                 <button
                   className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-                  onClick={() => void bulk("markUnread")}
+                  onClick={() => {
+                    bulk("markUnread");
+                  }}
                   title="Mark unread"
                   type="button"
                 >
@@ -362,7 +368,9 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                 </button>
                 <button
                   className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-red/40 hover:text-brand-red dark:border-white/10 dark:text-white/55"
-                  onClick={() => void bulk("delete")}
+                  onClick={() => {
+                    bulk("delete");
+                  }}
                   title="Delete"
                   type="button"
                 >
@@ -433,7 +441,9 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
               {!readOnly && getState(selected).status === "archived" ? (
                 <button
                   className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-                  onClick={() => void patchState(selected.slug, { status: "inbox" })}
+                  onClick={() => {
+                    patchState(selected.slug, { status: "inbox" });
+                  }}
                   type="button"
                 >
                   <Envelope size={15} weight="bold" />
@@ -442,7 +452,9 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
               ) : !readOnly ? (
                 <button
                   className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-                  onClick={() => void patchState(selected.slug, { status: "archived" })}
+                  onClick={() => {
+                    patchState(selected.slug, { status: "archived" });
+                  }}
                   type="button"
                 >
                   <Archive size={15} weight="bold" />
@@ -453,9 +465,9 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                 <>
                   <button
                     className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-                    onClick={() =>
-                      void patchState(selected.slug, { read: !getState(selected).read })
-                    }
+                    onClick={() => {
+                      patchState(selected.slug, { read: !getState(selected).read });
+                    }}
                     type="button"
                   >
                     {getState(selected).read ? (
