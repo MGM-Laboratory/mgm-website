@@ -51,4 +51,4 @@ Maintainers, or anyone listed in `CODEOWNERS`, can also run:
 
 ## Commit messages
 
-Plain prose describing what changed and why — no AI-attribution trailers of any kind, please.
+Plain prose describing what changed and why, no AI-attribution trailers of any kind, please. Use a hyphen or a colon instead of an em dash - never use an em dash (—) in a commit message or PR title/body.
