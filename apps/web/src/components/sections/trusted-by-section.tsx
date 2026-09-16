@@ -41,7 +41,7 @@ function PartnerPlate({
       onBlur={onLeave}
       onClick={onToggle}
       aria-pressed={active}
-      aria-label={`${partner.name} — read the story`}
+      aria-label={`${partner.name}, read the story`}
       className="trusted-plate group flex h-16 w-32 shrink-0 items-center justify-center rounded-xl border border-black/5 bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.08)] outline-none transition-shadow duration-300 focus-visible:ring-2 focus-visible:ring-brand-blue sm:h-20 sm:w-40"
       style={{ boxShadow: active ? "0 4px 18px rgba(0,0,0,0.16)" : undefined }}
     >
@@ -56,6 +56,28 @@ function PartnerPlate({
         style={{ filter: active ? "none" : "grayscale(1)" }}
       />
     </button>
+  );
+}
+
+// The second copy of the strip only exists so the GSAP loop can slide by
+// exactly one copy-width and land back on a seam with no visible jump. It's
+// permanently `aria-hidden` and must carry zero focusable/interactive
+// elements — a real <button> in there would give keyboard users 29 extra,
+// invisible-to-them tab stops (axe: aria-hidden-focus).
+function PartnerPlateDecorative({ partner }: { partner: Partner }) {
+  return (
+    <div className="flex h-16 w-32 shrink-0 items-center justify-center rounded-xl border border-black/5 bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.08)] sm:h-20 sm:w-40">
+      <img
+        src={partner.logo}
+        alt=""
+        width={partner.logoWidth}
+        height={partner.logoHeight}
+        loading="lazy"
+        draggable={false}
+        className="max-h-full max-w-full object-contain"
+        style={{ filter: "grayscale(1)" }}
+      />
+    </div>
   );
 }
 
@@ -148,7 +170,7 @@ export function TrustedBySection() {
           Trusted By
         </h2>
         <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
-          Universities, labs, and companies Lab MGM has researched, built, and taught alongside —
+          Universities, labs, and companies Lab MGM has researched, built, and taught alongside,
           past and present.
         </p>
       </div>
@@ -161,7 +183,9 @@ export function TrustedBySection() {
             {PARTNERS.map((partner) => renderPlate(partner, `a-${partner.slug}`))}
           </div>
           <div className="flex shrink-0 gap-4 motion-reduce:hidden" aria-hidden="true">
-            {PARTNERS.map((partner) => renderPlate(partner, `b-${partner.slug}`))}
+            {PARTNERS.map((partner) => (
+              <PartnerPlateDecorative key={`b-${partner.slug}`} partner={partner} />
+            ))}
           </div>
         </div>
       </div>
