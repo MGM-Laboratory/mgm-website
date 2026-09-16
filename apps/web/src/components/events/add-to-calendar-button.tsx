@@ -56,7 +56,7 @@ export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
       </button>
       {open ? (
         <div
-          className="absolute left-0 top-[calc(100%+0.5rem)] z-30 w-64 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-3)] dark:border-white/10 dark:bg-[#12151c]"
+          className="absolute left-0 top-[calc(100%+0.5rem)] z-30 w-64 rounded-2xl border border-[var(--line)] bg-white p-1.5 shadow-2xl dark:border-white/10 dark:bg-[#12151c]"
           role="menu"
         >
           <a

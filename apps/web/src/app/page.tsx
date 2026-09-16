@@ -1,6 +1,7 @@
 import { Hero } from "@/components/hero/hero";
 import { ProcessSection } from "@/components/process/process-section";
 import { CoreCompetenciesSection } from "@/components/sections/core-competencies";
+import { TrustedBySection } from "@/components/sections/trusted-by-section";
 import { ShowcaseSection } from "@/components/sections/showcase-section";
 import { ArticlesSection } from "@/components/sections/articles-section";
 import { CtaFooter } from "@/components/sections/cta-footer";
@@ -35,6 +36,7 @@ export default async function Home() {
         <Hero />
         <ProcessSection />
         <CoreCompetenciesSection />
+        <TrustedBySection />
         <ShowcaseSection
           id="projects"
           title="Projects"

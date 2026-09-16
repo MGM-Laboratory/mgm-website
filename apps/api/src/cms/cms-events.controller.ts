@@ -76,7 +76,7 @@ const blockSchema = z
 
 const speakerSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  title: z.string().trim().max(160).optional(),
+  institution: z.string().trim().max(160).optional(),
   photoKey: z.string().optional(),
 });
 
@@ -96,6 +96,12 @@ const eventSchema = z
     startAt: z.string().regex(DATETIME_PATTERN, "Use an ISO UTC datetime."),
     endAt: z.string().regex(DATETIME_PATTERN, "Use an ISO UTC datetime."),
     allDay: z.boolean(),
+    // GMT offset in hours (e.g. 7 for WIB/Jakarta). Whole hours only, kept
+    // simple deliberately — Indonesia's own three zones (WIB/WITA/WIT) are
+    // all whole-hour offsets, and Intl's `timeZone` names don't accept an
+    // arbitrary numeric offset, so display/conversion math is done by hand
+    // against this number instead (see events-cms.ts).
+    timezoneOffset: z.number().int().min(-12).max(14).default(7),
     location: z.string().trim().max(200).optional(),
     meetingLink: z
       .string()
