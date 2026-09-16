@@ -1,0 +1,57 @@
+version = 1
+
+test_patterns = [
+  "**/apps/api/**/*.spec.ts",
+  "**/apps/api/**/*.e2e-spec.ts",
+  "**/web/e2e/**/*.spec.ts",
+]
+
+exclude_patterns = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/.next/**",
+  "**/coverage/**",
+  "**/out/**",
+  "**/.pytest_cache/**",
+]
+
+[[analyzers]]
+name = "docker"
+enabled = true
+
+[[analyzers]]
+name = "javascript"
+# Disabled repo-wide: with no .deepsource.toml on main, this analyzer ran on
+# its dashboard defaults (module_system = "commonjs"), which flags nearly
+# every top-level function in every file in this ESM/TypeScript monorepo as
+# an anti-pattern (JS-0067) -- ~1200 near-entirely-false-positive issues
+# repo-wide, and a permanently-failing required check on every PR that
+# touches JS/TS. The settings below are what this repo actually needs; they
+# take effect once this analyzer is re-enabled. Do not re-enable without also
+# verifying (via `deepsource issues --pr <n>` after a fresh run) that a real
+# PR's issue count reflects genuine findings, not the flood.
+enabled = false
+
+  [analyzers.meta]
+  dialect = "typescript"
+  module_system = "es-modules"
+  style_guide = "airbnb"
+  cyclomatic_complexity_threshold = "high"
+
+[[analyzers]]
+name = "sql"
+enabled = true
+
+  [analyzers.meta]
+  comma_style = "trailing"
+  indent_unit = "space"
+  allow_scalar = true
+  tab_space_size = 4
+  max_line_length = 80
+  capitalisation_policy = "consistent"
+  single_table_references = "consistent"
+
+[[analyzers]]
+name = "secrets"
+enabled = true
