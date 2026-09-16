@@ -17,10 +17,10 @@ type PublicInquiryRecord = Record<string, unknown> & {
   updatedAt: string;
 };
 
-const patchForBulkAction = (
+function patchForBulkAction(
   action: Exclude<InquiryBulkAction, "delete">,
   now: string,
-): InquiryStatePatch => {
+): InquiryStatePatch {
   switch (action) {
     case "archive":
       return { status: "archived" };
@@ -33,7 +33,7 @@ const patchForBulkAction = (
     default:
       return {};
   }
-};
+}
 
 @Injectable()
 export class CmsContactInquiriesService {

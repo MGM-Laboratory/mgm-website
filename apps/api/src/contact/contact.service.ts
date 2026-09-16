@@ -7,12 +7,12 @@ import { CmsContactSettingsService } from "../cms/cms-contact-settings.service.j
 import { MailService } from "../mail/mail.service.js";
 import { StorageService } from "../storage/storage.service.js";
 
-export function escapeHtml(value: string) {
+function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
+    .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 }
 

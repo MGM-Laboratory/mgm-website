@@ -21,7 +21,7 @@ import type { Request, Response } from "express";
 import { StorageConfigurationError, StorageService } from "../storage/storage.service.js";
 import { ContactService } from "./contact.service.js";
 
-const slugifyFilename = (filename: string) => {
+function slugifyFilename(filename: string) {
   const base = filename.replace(/\.[^./]+$/, "");
   return base
     .normalize("NFKD")
@@ -31,12 +31,12 @@ const slugifyFilename = (filename: string) => {
     .replace(/^-{1,64}/, "")
     .replace(/-{1,64}$/, "")
     .slice(0, 60);
-};
+}
 
-const extensionOf = (filename: string): string => {
-  const match = \.([a-z0-9]{1,10})$/i.exec(filename);
+function extensionOf(filename: string) {
+  const match = /\.([a-z0-9]{1,10})$/i.exec(filename);
   return match ? `.${match[1].toLowerCase()}` : "";
-};
+}
 
 @ApiTags("contact")
 @Controller("contact")
@@ -55,8 +55,11 @@ export class ContactController {
     // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
     // as sanitizing barriers, not Buffer.isBuffer() below — this rejects the
     // array shape its model worries about before that real (sufficient) check.
+    if (Array.isArray(request.body)) {
+      throw new BadRequestException("No file received.");
+    }
     const body = Buffer.isBuffer(request.body) ? request.body : undefined;
-    if (Array.isArray(request.body) || !body?.length) {
+    if (!body?.length) {
       throw new BadRequestException("No file received.");
     }
     // body is a real Buffer here (guarded above via Buffer.isBuffer()), fed by

@@ -17,12 +17,12 @@ export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
   const [googleFailed, setGoogleFailed] = useState(!apiKey);
 
   useEffect(() => {
-    if (!apiKey || !containerRef.current) return null;
+    if (!apiKey || !containerRef.current) return;
     let cancelled = false;
     let marker: google.maps.Marker | undefined;
     loadGoogleMaps(apiKey)
       .then(() => {
-        if (cancelled || !containerRef.current) return null;
+        if (cancelled || !containerRef.current) return;
         const position = { lat, lng };
         const map = new google.maps.Map(containerRef.current, {
           center: position,
@@ -31,11 +31,9 @@ export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
           zoomControl: true,
         });
         marker = new google.maps.Marker({ map, position, title: "MGM Laboratory" });
-        return null;
       })
       .catch(() => {
         if (!cancelled) setGoogleFailed(true);
-        return null;
       });
     return () => {
       cancelled = true;

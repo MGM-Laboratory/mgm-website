@@ -78,7 +78,7 @@ function emptyPermissions(): AdminPermissions {
   return Object.fromEntries(PAGES.map((page) => [page, []])) as unknown as AdminPermissions;
 }
 
-export function normalizePermissions(permissions: Partial<AdminPermissions> = {}): AdminPermissions {
+function normalizePermissions(permissions: Partial<AdminPermissions> = {}): AdminPermissions {
   const normalized = { ...emptyPermissions(), ...permissions };
   normalized["contact-inquiries"] = normalized["contact-inquiries"].includes("read")
     ? ["read"]

@@ -41,22 +41,17 @@ function CvDownload({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let result: { url: string | null; errorMsg?: string };
       try {
         const response = await fetch(`/api/admin/applications/${encodeURIComponent(slug)}`);
         if (!response.ok) throw new Error(`The API answered ${response.status}.`);
         const payload = (await response.json()) as { cvUrl?: string | null };
-        result = { url: payload.cvUrl ?? null };
+        if (!cancelled) setState({ busy: false, url: payload.cvUrl ?? null });
       } catch (error) {
-        result = { url: null, errorMsg: error instanceof Error ? error.message : undefined };
-      } finally {
         if (!cancelled) {
-          setState({ busy: false, url: result.url });
-          if (result.errorMsg) {
-            toast.error("Could not load the CV link.", {
-              description: result.errorMsg,
-            });
-          }
+          setState({ busy: false, url: null });
+          toast.error("Could not load the CV link.", {
+            description: error instanceof Error ? error.message : undefined,
+          });
         }
       }
     })();

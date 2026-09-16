@@ -177,7 +177,7 @@ function safeEqual(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-const isValidVideo = (buffer: Buffer, contentType: string) => {
+function isValidVideo(buffer: Buffer, contentType: string) {
   // Buffer.isBuffer() at the call site already proves this isn't array-shaped;
   // CodeQL's request-parameter model doesn't know about main.ts's raw-body middleware.
   if (contentType === "video/mp4") {
@@ -195,7 +195,7 @@ const isValidVideo = (buffer: Buffer, contentType: string) => {
     );
   }
   return false;
-};
+}
 
 @ApiTags("cms-projects")
 @Controller("cms/projects")
@@ -389,21 +389,21 @@ export class CmsProjectsController {
       .split(";")[0]
       .trim()
       .toLowerCase();
-    const body = Buffer.isBuffer(request.body) ? request.body : undefined;
-    const maxBytes = this.config.getOrThrow<number>("CMS_MAX_VIDEO_BYTES");
-
     // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
     // as sanitizing barriers, not Buffer.isBuffer() below — this rejects the
     // array shape its model worries about before that real (sufficient) check.
-    const extensionMap: Record<string, string> = {
-      "video/mp4": "mp4",
-      "video/webm": "webm",
-    };
-    const extension = extensionMap[contentType];
-    if (Array.isArray(request.body) || !body?.length || !extension) {
+    if (Array.isArray(request.body)) {
       throw new BadRequestException("The demo video must be an MP4 or WebM file.");
     }
+    const body = Buffer.isBuffer(request.body) ? request.body : undefined;
+    const maxBytes = this.config.getOrThrow<number>("CMS_MAX_VIDEO_BYTES");
 
+    if ((contentType !== "video/mp4" && contentType !== "video/webm") || !body?.length) {
+      throw new BadRequestException("The demo video must be an MP4 or WebM file.");
+    }
+    // body is a real Buffer here (guarded above), not an attacker-tamperable
+    // array; see the isValidVideo() note.
+    // codeql[js/type-confusion-through-parameter-tampering]
     if (body.length > maxBytes) {
       throw new BadRequestException(
         `The video must be under ${Math.floor(maxBytes / 1024 / 1024)} MB.`,
@@ -413,6 +413,7 @@ export class CmsProjectsController {
       throw new BadRequestException("That file is not a valid video.");
     }
 
+    const extension = contentType === "video/mp4" ? "mp4" : "webm";
     const key = `demo-${slug}-${randomUUID()}.${extension}`;
     try {
       await this.storage.uploadFile({ body, contentType, key });

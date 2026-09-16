@@ -77,16 +77,16 @@ export function PermissionMatrix({
               );
             }
             const enabled = (value[page.id] ?? []).includes(action);
-            const statusKey = page.soon ? "soon" : enabled ? "on" : "off";
-            const classMap = {
-              soon: "cursor-not-allowed bg-[#f5f7fb] text-[#c3c9d5] dark:bg-white/[0.03] dark:text-white/20",
-              on: "bg-brand-blue text-white shadow-[0_6px_14px_-8px_rgba(58,109,197,0.9)]",
-              off: "bg-[#eef1f7] text-[#768096] hover:bg-[#e2e8f3] dark:bg-white/[0.06] dark:text-white/40 dark:hover:bg-white/10"
-            };
             return (
               <button
                 aria-pressed={enabled}
-                className={`justify-self-center rounded-lg px-3 py-1.5 font-mono text-[10px] font-bold tracking-[0.1em] uppercase transition ${classMap[statusKey]}`}
+                className={`justify-self-center rounded-lg px-3 py-1.5 font-mono text-[10px] font-bold tracking-[0.1em] uppercase transition ${
+                  page.soon
+                    ? "cursor-not-allowed bg-[#f5f7fb] text-[#c3c9d5] dark:bg-white/[0.03] dark:text-white/20"
+                    : enabled
+                      ? "bg-brand-blue text-white shadow-[0_6px_14px_-8px_rgba(58,109,197,0.9)]"
+                      : "bg-[#eef1f7] text-[#768096] hover:bg-[#e2e8f3] dark:bg-white/[0.06] dark:text-white/40 dark:hover:bg-white/10"
+                }`}
                 data-action={action}
                 disabled={page.soon}
                 key={action}

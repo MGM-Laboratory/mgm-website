@@ -31,7 +31,7 @@ const FIELD_NAMES = new Set(Object.keys(formSchema.shape));
 const DRAFT_STORAGE_KEY = "mgm-contact-form-draft";
 type DraftValues = Pick<FormValues, "name" | "email" | "company" | "message">;
 
-const loadDraft = (): Partial<DraftValues> | null => {
+function loadDraft(): Partial<DraftValues> | null {
   try {
     const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
     if (!raw) return null;
@@ -41,37 +41,35 @@ const loadDraft = (): Partial<DraftValues> | null => {
   } catch {
     return null;
   }
-};
+}
 
-const draftActions: { [key: string]: (values: DraftValues) => void } = {
-  empty: () => window.localStorage.removeItem(DRAFT_STORAGE_KEY),
-  filled: (v) => window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(v)),
-};
-
-window.saveDraft = function(values: DraftValues) {
+function saveDraft(values: DraftValues) {
   try {
-    const key = (!values.name && !values.email && !values.company && !values.message) ? 'empty' : 'filled';
-    draftActions[key](values);
+    if (!values.name && !values.email && !values.company && !values.message) {
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(values));
   } catch {
     // Storage unavailable (private browsing, quota) — the form still works.
   }
-};
+}
 
-const clearDraft = () => {
+function clearDraft() {
   try {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
   } catch {
     // Storage unavailable — nothing to clear.
   }
-};
+}
 
-const formatBytes = (bytes: number) => {
+function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
+}
 
 // Types a browser can render inline in a new tab rather than just downloading.
-const isPreviewableType = (type: string) => {
+function isPreviewableType(type: string) {
   return (
     type === "application/pdf" ||
     type.startsWith("image/") ||
@@ -79,19 +77,17 @@ const isPreviewableType = (type: string) => {
     type.startsWith("audio/") ||
     type.startsWith("text/")
   );
-};
+}
 
 // previewUrls only ever holds URL.createObjectURL() results, so this is
 // always true - the explicit scheme check rules out these ever being
 // rendered as a src/href if that ever stopped being the case.
-(function() {
-  function isSafeBlobUrl(url: string | undefined): url is string {
-    return typeof url === "string" && url.startsWith("blob:");
-  }
-})();
+function isSafeBlobUrl(url: string | undefined): url is string {
+  return typeof url === "string" && url.startsWith("blob:");
+}
 
 /** Uploads one selected file and returns its storage key, using the API error when available. */
-const uploadAttachment = async (file: File): Promise<string> => {
+async function uploadAttachment(file: File): Promise<string> {
   const response = await fetch(`${env.NEXT_PUBLIC_API_URL}/contact/attachments`, {
     method: "POST",
     body: file,
@@ -106,28 +102,27 @@ const uploadAttachment = async (file: File): Promise<string> => {
   }
   const { key } = (await response.json()) as { key: string };
   return key;
-};
+}
 
 /** Applies field-level API errors to the form and reports whether any were present. */
-const applyFieldErrors = (
+function applyFieldErrors(
   body: { errors?: Record<string, string[]> } | null,
   setError: UseFormSetError<FormValues>,
-): boolean => {
-  if (!body?.errors || typeof body.errors !== "object") return false;
-  const handlers: Record<string, (message: string) => void> = {
-    name: (msg) => setError('name', { message: msg }),
-    email: (msg) => setError('email', { message: msg }),
-    message: (msg) => setError('message', { message: msg }),
-    attachments: (msg) => setError('attachments', { message: msg }),
-  };
-  for (const [field, messages] of Object.entries(body.errors)) {
-    const msg = messages?.[0];
-    const handler = handlers[field];
-    if (handler && msg) handler(msg);
+): boolean {
+  const fieldErrors = body?.errors;
+  if (!fieldErrors || typeof fieldErrors !== "object") return false;
+  for (const [field, messages] of Object.entries(fieldErrors)) {
+    if (FIELD_NAMES.has(field) && messages?.[0]) {
+      setError(field as keyof FormValues, { message: messages[0] });
+    }
   }
   return true;
-};
+}
 
+/**
+ * Renders the contact form, persists text fields as a local draft, uploads
+ * attachments before submission, and clears the draft after a successful send.
+ */
 export function ContactForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -229,6 +224,17 @@ export function ContactForm() {
           company: values.company || undefined,
           message: values.message,
           attachmentKeys: attachmentKeys.length ? attachmentKeys : undefined,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        if (applyFieldErrors(body, setError)) {
+          toast.error("Please fix the highlighted fields.");
+          return;
+        }
+        throw new Error(body?.message ?? "Something went wrong sending your message.");
+      }
+
       toast.success("Message sent", {
         description: "Thanks for reaching out — we'll get back to you soon.",
       });
@@ -242,50 +248,33 @@ export function ContactForm() {
     }
   }
 
-  const FormField = ({ id, label, required, register, errorMessage, type = "text", autoComplete, placeholder }) => (
-    <div>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label} {required && <span className="text-brand-red">*</span>}
-      </label>
-      <input
-        id={id}
-        type={type}
-        autoComplete={autoComplete}
-        placeholder={placeholder}
-        className="mt-1.5 w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-foreground/35 focus:border-brand-blue"
-        {...register}
-      />
-      {errorMessage ? (
-        <p className="mt-1 text-sm font-medium text-brand-red">{errorMessage}</p>
-      ) : null}
-    </div>
-  );
-
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 sm:p-8"
     >
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <FormField
-          id="contact-name"
-          label="Name"
-          required
-          register={register("name")}
-          errorMessage={errors.name?.message}
-          autoComplete="name"
-          placeholder="Your name"
-        />
-        <FormField
-          id="contact-email"
-          label="Email"
-          required
-          register={register("email")}
-          errorMessage={errors.email?.message}
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-        />
+        <div>
+          <label htmlFor="contact-name" className="text-sm font-medium text-foreground">
+            Name <span className="text-brand-red">*</span>
+          </label>
+          <input
+            id="contact-name"
+            type="text"
+            autoComplete="name"
+            placeholder="Your name"
+            className="mt-1.5 w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-foreground/35 focus:border-brand-blue"
+            {...register("name")}
+          />
+          {showError("name") ? (
+            <p className="mt-1 text-sm font-medium text-brand-red">{errors.name?.message}</p>
+          ) : null}
+        </div>
+
+        <div>
+          <label htmlFor="contact-email" className="text-sm font-medium text-foreground">
+            Email <span className="text-brand-red">*</span>
+          </label>
           <input
             id="contact-email"
             type="email"
@@ -383,7 +372,7 @@ export function ContactForm() {
                 const isImage = file.type.startsWith("image/");
                 return (
                   <li
-                    key={`${file.name}-${file.lastModified}`}
+                    key={`${file.name}-${index}`}
                     className="flex items-center gap-3 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-sm"
                   >
                     {isImage && isSafeBlobUrl(url) ? (

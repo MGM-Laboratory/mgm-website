@@ -18,11 +18,11 @@ import { z } from "zod";
 import type { Env } from "../config/env.validation.js";
 import { CmsContactInquiriesService } from "./cms-contact-inquiries.service.js";
 
-const safeEqual = (left: string, right: string) => {
+function safeEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
-};
+}
 
 const stateSchema = z
   .object({
@@ -37,13 +37,13 @@ const bulkSchema = z.object({
 });
 
 /** Returns a validated request body or reports the first Zod issue as a 400 response. */
-const parseSafe = <T>(schema: z.ZodType<T>, body: unknown): T => {
+function parseSafe<T>(schema: z.ZodType<T>, body: unknown): T {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     throw new BadRequestException(parsed.error.issues[0]?.message ?? "Invalid request");
   }
   return parsed.data;
-};
+}
 
 @ApiTags("cms-contact-inquiries")
 @Controller("cms/contact-inquiries")

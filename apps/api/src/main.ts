@@ -10,7 +10,7 @@ import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module.js";
 import type { Env } from "./config/env.validation.js";
 
-const bootstrap = async () => {
+async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true, bodyParser: false });
 
   app.use(json({ limit: "8mb" }));
