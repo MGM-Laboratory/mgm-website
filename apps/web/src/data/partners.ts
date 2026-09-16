@@ -78,16 +78,17 @@ export const PARTNERS: Partner[] = [
     // pageview rank, alongside NTU swapping into its slot below.
   },
   {
-    slug: "tokopedia",
-    name: "Tokopedia",
-    logo: "/partners/tokopedia.webp",
-    logoWidth: 400,
-    logoHeight: 120,
-    logoScale: 1.3,
+    slug: "pens",
+    name: "PENS",
+    logo: "/partners/pens.webp",
+    logoDark: "/partners/pens-dark.webp",
+    logoWidth: 391,
+    logoHeight: 372,
     blurb:
-      "Tokopedia's UX designer opened Lab MGM's 2022 Interaction Design guest-lecture series, sharing how product design works inside the company.",
-    articleSlug: "tokopedia-interaction-design",
-    // Wikipedia pageviews (12mo): 49,656
+      "A PENS researcher, Sritrusta Sukaridhoto, coauthored the MGM-registered 2023 ARCore outdoor-navigation study.",
+    articleSlug: "pens",
+    // Wikipedia pageviews (12mo): 8,222 — manually swapped into Tokopedia's
+    // slot, and vice versa below.
   },
   {
     slug: "ritsumeikan-university",
@@ -173,7 +174,7 @@ export const PARTNERS: Partner[] = [
     logoDark: "/partners/nanyang-technological-university-dark.svg",
     logoWidth: 515,
     logoHeight: 213,
-    logoScale: 1.6,
+    logoScale: 1.9,
     blurb:
       "Lab MGM's leadership visited NTU's Centre for Augmented and Virtual Reality in 2022 to initiate cooperation on interactive media research, following an earlier NTU visit to Brawijaya in 2019.",
     articleSlug: "nanyang-technological-university-cavr",
@@ -181,16 +182,17 @@ export const PARTNERS: Partner[] = [
     // slot rather than leading the strip by pageview rank.
   },
   {
-    slug: "pens",
-    name: "PENS",
-    logo: "/partners/pens.webp",
-    logoDark: "/partners/pens-dark.webp",
-    logoWidth: 391,
-    logoHeight: 372,
+    slug: "tokopedia",
+    name: "Tokopedia",
+    logo: "/partners/tokopedia.webp",
+    logoWidth: 400,
+    logoHeight: 120,
+    logoScale: 1.3,
     blurb:
-      "A PENS researcher, Sritrusta Sukaridhoto, coauthored the MGM-registered 2023 ARCore outdoor-navigation study.",
-    articleSlug: "pens",
-    // Wikipedia pageviews (12mo): 8,222
+      "Tokopedia's UX designer opened Lab MGM's 2022 Interaction Design guest-lecture series, sharing how product design works inside the company.",
+    articleSlug: "tokopedia-interaction-design",
+    // Wikipedia pageviews (12mo): 49,656 — manually swapped into PENS's slot,
+    // and vice versa above.
   },
   {
     slug: "universitas-brawijaya",
@@ -241,17 +243,6 @@ export const PARTNERS: Partner[] = [
     // Wikipedia pageviews (12mo): 2,743
   },
   {
-    slug: "universitas-narotama-surabaya",
-    name: "Universitas Narotama Surabaya",
-    logo: "/partners/universitas-narotama-surabaya.webp",
-    logoWidth: 320,
-    logoHeight: 320,
-    blurb:
-      "A 37-person Narotama delegation toured Lab MGM in 2026, exploring its research and outputs as part of inter-university networking with FILKOM.",
-    articleSlug: "universitas-narotama-surabaya-visit",
-    // Wikipedia pageviews (12mo): 2,670
-  },
-  {
     slug: "eon-reality",
     name: "EON Reality",
     logo: "/partners/eon-reality.webp",
@@ -269,12 +260,13 @@ export const PARTNERS: Partner[] = [
     logo: "/partners/mister-aladin.webp",
     logoWidth: 400,
     logoHeight: 267,
+    logoScale: 1.3,
     blurb:
       "Mister Aladin's lead UI/UX developer spoke in the third session of Lab MGM's 2022 Interaction Design webinar series.",
     articleSlug: "mister-aladin-interaction-design",
     // Wikipedia pageviews (12mo): 459
   },
-  // No verified Wikipedia presence for the remaining seven — ordered
+  // No verified Wikipedia presence for the remaining three — ordered
   // alphabetically rather than guessed at a finer grain.
   {
     slug: "biznet-gio",
@@ -283,18 +275,8 @@ export const PARTNERS: Partner[] = [
     logoDark: "/partners/biznet-gio-dark.webp",
     logoWidth: 400,
     logoHeight: 180,
+    logoScale: 1.3,
     // No dedicated article yet — mark isn't a link, just shown in the strip.
-  },
-  {
-    slug: "bkpsdm-kabupaten-malang",
-    name: "BKPSDM Kab. Malang",
-    logo: "/partners/bkpsdm.webp",
-    logoWidth: 400,
-    logoHeight: 182,
-    blurb:
-      "MGM-linked community-service work developed and deployed a CAT exam system for BKPSDM Kabupaten Malang's own testing laboratory.",
-    articleSlug: "bkpsdm-kabupaten-malang-cat",
-    invertInDark: true,
   },
   {
     slug: "fxmedia",
@@ -302,30 +284,10 @@ export const PARTNERS: Partner[] = [
     logo: "/partners/fxmedia.webp",
     logoWidth: 400,
     logoHeight: 225,
+    logoScale: 1.3,
     blurb:
       "Lab MGM's leadership visited this Singapore media company in 2022 to explore collaborative research in AR, VR, and the metaverse.",
     articleSlug: "fxmedia-singapore",
-  },
-  {
-    slug: "indogetjob",
-    name: "PT Indogetjob",
-    logo: "/partners/indogetjob.webp",
-    logoWidth: 400,
-    logoHeight: 334,
-    blurb:
-      "Lab MGM built the Sarjana Sakti mobile job-fair platform, with soft-skills assessment, together with PT Indogetjob International Solution.",
-    articleSlug: "indogetjob-sarjana-sakti",
-    invertInDark: true,
-  },
-  {
-    slug: "instiki",
-    name: "INSTIKI",
-    logo: "/partners/instiki.webp",
-    logoWidth: 400,
-    logoHeight: 142,
-    blurb:
-      "Researchers affiliated with INSTIKI Bali coauthored the 2025 SEMAR IoT research alongside MGM member Komang Candra Brata and Okayama University collaborators.",
-    articleSlug: "instiki",
   },
   {
     slug: "mirai-education",
@@ -333,18 +295,9 @@ export const PARTNERS: Partner[] = [
     logo: "/partners/mirai.webp",
     logoWidth: 384,
     logoHeight: 107,
+    logoScale: 0.85,
     blurb:
       "The educational game Jagoan Indonesia, launched from the MGM room in 2016, was produced through FILKOM's cooperation with this Japan-based education company and developed under its guidance.",
     articleSlug: "mirai-education-jagoan-indonesia",
-  },
-  {
-    slug: "rumah-sakit-semen-gresik",
-    name: "RS Semen Gresik",
-    logo: "/partners/rumah-sakit-semen-gresik.webp",
-    logoWidth: 400,
-    logoHeight: 400,
-    blurb:
-      "This Gresik hospital was the study site and interview partner behind MGM's mobile HomeCare user-experience research.",
-    articleSlug: "rumah-sakit-semen-gresik",
   },
 ];
