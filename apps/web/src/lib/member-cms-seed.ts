@@ -64,7 +64,7 @@ function linksFrom(contacts: LegacyContacts = {}): CmsLink[] {
   return entries.flatMap(([label, href]) => (href ? [{ label, url: href }] : []));
 }
 
-async function sourceRecord(member: Member): Promise<CmsMemberRecord> {
+const sourceRecord = async (member: Member): Promise<CmsMemberRecord> => {
   const legacy = await legacyProfile(member.slug);
   const profile = importPublicMemberProfile(member, legacy.raw ?? "");
   const photoKey = MEMBER_PORTRAIT_KEYS[member.slug];
@@ -77,7 +77,7 @@ async function sourceRecord(member: Member): Promise<CmsMemberRecord> {
     },
     slug: member.slug,
   };
-}
+};
 
 async function requestRecords() {
   const response = await cmsApi("/cms/members");
