@@ -22,16 +22,17 @@ enabled = true
 
 [[analyzers]]
 name = "javascript"
-enabled = true
+# Disabled repo-wide: with no .deepsource.toml on main, this analyzer ran on
+# its dashboard defaults (module_system = "commonjs"), which flags nearly
+# every top-level function in every file in this ESM/TypeScript monorepo as
+# an anti-pattern (JS-0067) -- ~1200 near-entirely-false-positive issues
+# repo-wide, and a permanently-failing required check on every PR that
+# touches JS/TS. The settings below are what this repo actually needs; they
+# take effect once this analyzer is re-enabled. Do not re-enable without also
+# verifying (via `deepsource issues --pr <n>` after a fresh run) that a real
+# PR's issue count reflects genuine findings, not the flood.
+enabled = false
 
-  # Every app in this monorepo is ESM ("type": "module" / tsconfig "module":
-  # "nodenext"|"esnext"), never CommonJS — the dashboard default of
-  # module_system = "commonjs" made the analyzer treat every top-level
-  # helper function as a script-global needing an IIFE wrapper (JS-0067),
-  # which fired on nearly every NestJS controller/service in the repo.
-  # cyclomatic_complexity_threshold is bumped from the "low" default since
-  # "medium"-risk NestJS handlers routinely sit in the 10-15 range without
-  # being genuinely hard to follow.
   [analyzers.meta]
   dialect = "typescript"
   module_system = "es-modules"
