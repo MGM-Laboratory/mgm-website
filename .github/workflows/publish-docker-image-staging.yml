@@ -1,0 +1,14 @@
+name: Publish Docker Images (staging)
+
+on:
+  pull_request:
+    branches: ["*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/publish-docker-image.yml
+    with:
+      # workflow_dispatch has no PR number, so fall back to the run number.
+      tag: pr-${{ github.event.pull_request.number || github.run_number }}
+    secrets: inherit

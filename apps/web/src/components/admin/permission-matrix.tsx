@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ASSIGNABLE_ACTIONS,
   togglePermission,
   type AdminAction,
   type AdminPageId,
@@ -15,6 +16,8 @@ export const MATRIX_PAGES: { id: AdminPageId; label: string; soon: boolean }[] =
   { id: "projects", label: "Projects", soon: true },
   { id: "research", label: "Research", soon: false },
   { id: "careers", label: "Careers", soon: false },
+  { id: "contact", label: "Contact Settings", soon: false },
+  { id: "contact-inquiries", label: "Contact Inquiries", soon: false },
   { id: "events", label: "Events", soon: false },
 ];
 
@@ -62,6 +65,17 @@ export function PermissionMatrix({
             ) : null}
           </span>
           {ACTIONS.map((action) => {
+            if (!ASSIGNABLE_ACTIONS[page.id].includes(action)) {
+              return (
+                <span
+                  aria-label={`${action} access is unavailable for ${page.label}`}
+                  className="justify-self-center text-[#c3c9d5] dark:text-white/20"
+                  key={action}
+                >
+                  —
+                </span>
+              );
+            }
             const enabled = (value[page.id] ?? []).includes(action);
             return (
               <button

@@ -16,9 +16,9 @@ permissions:
   pull-requests: write
   checks: read
   statuses: read
-  # write, not read: dispatching ci.yaml/docker-publish.yml against the
-  # merge commit (POST .../dispatches) needs actions:write — read-only
-  # 403s on that call.
+  # write, not read: dispatching ci.yaml/publish-docker-image-latest.yml
+  # against the merge commit (POST .../dispatches) needs actions:write —
+  # read-only 403s on that call.
   actions: write
 
 jobs:
@@ -26,6 +26,7 @@ jobs:
   # so this is safe even against a fork PR with write-scoped secrets in
   # scope.
   merge:
+    name: Check readiness and merge PR
     runs-on: ubuntu-latest
     steps:
       - name: Validate pr_number
@@ -36,14 +37,15 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate a bot token
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          permission-issues: write
 
       - name: Check readiness, merge, clean up, verify production
         env:

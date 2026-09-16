@@ -7,8 +7,9 @@ import {
   GoogleLogo,
   MicrosoftOutlookLogo,
 } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
+import { useDismissableOpen } from "@/hooks/use-dismissable-open";
 import { buildGoogleCalendarUrl, buildOutlookUrl } from "@/lib/calendar-links";
 import { env } from "@/lib/env";
 import type { CmsEventRecord } from "@/lib/events-cms";
@@ -22,23 +23,7 @@ import type { CmsEventRecord } from "@/lib/events-cms";
 export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (target: EventTarget | null) => {
-      if (target instanceof Node && !ref.current?.contains(target)) setOpen(false);
-    };
-    const onClick = (event: MouseEvent) => close(event.target);
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  useDismissableOpen(ref, open, setOpen);
 
   const icsUrl = `${env.NEXT_PUBLIC_API_URL}/cms/events/${encodeURIComponent(event.slug)}/calendar.ics`;
 

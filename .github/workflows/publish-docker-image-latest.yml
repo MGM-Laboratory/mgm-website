@@ -1,0 +1,13 @@
+name: Publish Docker Images (latest)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/publish-docker-image.yml
+    with:
+      tag: latest
+    secrets: inherit

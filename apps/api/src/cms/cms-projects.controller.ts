@@ -178,11 +178,15 @@ function safeEqual(left: string, right: string) {
 }
 
 function isValidVideo(buffer: Buffer, contentType: string) {
+  // Buffer.isBuffer() at the call site already proves this isn't array-shaped;
+  // CodeQL's request-parameter model doesn't know about main.ts's raw-body middleware.
   if (contentType === "video/mp4") {
+    // codeql[js/type-confusion-through-parameter-tampering]
     return buffer.length >= 12 && buffer.subarray(4, 8).toString("ascii") === "ftyp";
   }
   if (contentType === "video/webm") {
     return (
+      // codeql[js/type-confusion-through-parameter-tampering]
       buffer.length >= 4 &&
       buffer[0] === 0x1a &&
       buffer[1] === 0x45 &&
@@ -385,12 +389,21 @@ export class CmsProjectsController {
       .split(";")[0]
       .trim()
       .toLowerCase();
+    // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
+    // as sanitizing barriers, not Buffer.isBuffer() below — this rejects the
+    // array shape its model worries about before that real (sufficient) check.
+    if (Array.isArray(request.body)) {
+      throw new BadRequestException("The demo video must be an MP4 or WebM file.");
+    }
     const body = Buffer.isBuffer(request.body) ? request.body : undefined;
     const maxBytes = this.config.getOrThrow<number>("CMS_MAX_VIDEO_BYTES");
 
     if ((contentType !== "video/mp4" && contentType !== "video/webm") || !body?.length) {
       throw new BadRequestException("The demo video must be an MP4 or WebM file.");
     }
+    // body is a real Buffer here (guarded above), not an attacker-tamperable
+    // array; see the isValidVideo() note.
+    // codeql[js/type-confusion-through-parameter-tampering]
     if (body.length > maxBytes) {
       throw new BadRequestException(
         `The video must be under ${Math.floor(maxBytes / 1024 / 1024)} MB.`,
@@ -409,6 +422,7 @@ export class CmsProjectsController {
         "Video storage is not configured in this environment, so demos cannot be uploaded.",
       );
     }
+    // codeql[js/type-confusion-through-parameter-tampering]
     return { key, size: body.length };
   }
 

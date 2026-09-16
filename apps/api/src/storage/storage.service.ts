@@ -15,6 +15,13 @@ import type { Env } from "../config/env.validation.js";
 
 const IMMUTABLE_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
+export class StorageConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StorageConfigurationError";
+  }
+}
+
 @Injectable()
 export class StorageService {
   private readonly client: S3Client;
@@ -40,7 +47,7 @@ export class StorageService {
 
   private requireBucket(): string {
     if (!this.bucket) {
-      throw new Error("AWS_S3_BUCKET is not configured");
+      throw new StorageConfigurationError("AWS_S3_BUCKET is not configured");
     }
     return this.bucket;
   }

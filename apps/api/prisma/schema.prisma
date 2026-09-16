@@ -56,6 +56,16 @@ model CmsResearchInitiative {
   updatedAt DateTime @updatedAt
 }
 
+// Singleton record — always read/written at slug "contact". Reuses the same
+// slug + data Json shape as the other collections purely for consistency;
+// there is only ever one row.
+model CmsContactSettings {
+  slug      String   @id
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model CmsProject {
   slug      String   @id
   data      Json
@@ -75,4 +85,42 @@ model CmsEventRegistration {
   data      Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CmsContactInquiry {
+  slug      String   @id
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Live counters for "calendar" window mail-provider limits — one row per
+// provider id ("resend" | "smtp" | "ses"). Separate from CmsContactSettings
+// because these need atomic increment/decrement under concurrent contact
+// form submissions, which a JSON settings blob can't give safely.
+model MailProviderUsage {
+  provider       String    @id
+  dailyRemaining Int?
+  dailyResetAt   DateTime?
+  longRemaining  Int?
+  longResetAt    DateTime?
+  updatedAt      DateTime  @updatedAt
+}
+
+// One row per send, for "rolling" window mail-provider limits — remaining
+// quota is derived by counting rows in the trailing window at check time,
+// rather than a stored counter, so it reflects only what this app actually
+// sent. Pruned opportunistically past the longest configured rolling window.
+model MailSendLog {
+  id       String   @id @default(uuid())
+  provider String
+  sentAt   DateTime @default(now())
+
+  @@index([provider, sentAt])
+}
+
+// Single-row cursor for the loadBalanceEqual strategy's round-robin pointer.
+model MailRoutingState {
+  key   String @id
+  value Int    @default(0)
 }

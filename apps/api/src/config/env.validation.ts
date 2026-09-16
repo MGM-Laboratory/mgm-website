@@ -28,6 +28,15 @@ const envSchema = z.object({
   // Largest accepted job application CV upload, in bytes (100 MB by default).
   CMS_MAX_CV_BYTES: z.coerce.number().int().positive().max(1_073_741_824).default(104_857_600),
   SES_FROM_EMAIL: optionalString(z.email()),
+  RESEND_API_KEY: optionalString(),
+  SMTP_HOST: optionalString(),
+  SMTP_PORT: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z.coerce.number().int().positive().max(65535).optional(),
+  ),
+  SMTP_USER: optionalString(),
+  SMTP_PASSWORD: optionalString(),
+  SMTP_SECURE: z.preprocess((value: unknown) => value === "true", z.boolean()).default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;

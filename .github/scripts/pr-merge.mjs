@@ -183,7 +183,7 @@ await reply(
 console.log("Dispatching CI and Docker publish against the merge commit...");
 const DISPATCHED_WORKFLOWS = [
   { file: "ci.yaml", label: "CI" },
-  { file: "docker-publish.yml", label: "Build and Push Docker Images" },
+  { file: "publish-docker-image-latest.yml", label: "Publish Docker Images (latest)" },
 ];
 const dispatched = await Promise.all(
   DISPATCHED_WORKFLOWS.map(async (wf) => {

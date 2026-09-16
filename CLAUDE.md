@@ -19,12 +19,13 @@ This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). AP
 
 ## Hard rules (user-enforced — do not bend)
 
-1. **Git identity & attribution.** Every commit must be authored AND committed as `shirasakaren <ren@shirasaka.ren>` (already set in repo-local git config — never override). **Never mention Claude, ChatGPT, or any AI agent anywhere in a commit message, trailer, PR description, or code comment — no `Co-Authored-By`, no "generated with", nothing.** The user once rewrote the entire 109-commit history over this. Details: `docs/repo-history.md`.
+1. **Git identity & attribution.** Commit as whatever identity `git config user.name`/`user.email` resolves to in this working copy — no repo-local override, and never impersonate another contributor's identity. **Never mention Claude, ChatGPT, or any AI agent anywhere in a commit message, trailer, PR description, or code comment — no `Co-Authored-By`, no "generated with", nothing.** The user once rewrote the entire 109-commit history over this. Details: `docs/repo-history.md`.
 2. **Granular commits.** One discrete working change per commit; `git push origin main` immediately after each commit — don't batch unrelated fixes.
 3. **Keep the dev server running** at `http://localhost:3000` at all times (`pnpm dev:web`). Check it responds before and after changes (`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000`).
 4. **Verify before declaring done.** Interact with the result in a real browser (Playwright screenshots + interaction scripts; see `docs/testing-verification.md`), then `open http://localhost:3000`. Fixing a bug = reproducing it first, then re-testing the fix under the same conditions.
 5. **Design discipline.** Use the `DESIGN_SYSTEM.md` tokens, not ad-hoc colors. Everything must be theme-aware (light/dark via `.dark` class) and reduced-motion safe (`prefers-reduced-motion`).
 6. **Never let a static CSS class set `transform`/`translate-*`/`rotate-*`/`scale-*` on an element GSAP also animates** — GSAP stacks onto it instead of replacing it. This bug has shipped twice. See `docs/animation-system.md` §Gotchas.
+7. **Never merge a PR unless the user explicitly asks for it in that moment** — and even then, double-check that's really what they want before acting; a merge ships to production within ~30s (see "CI/CD at a glance"). This repo merges by commenting `/merge` on the PR (see `docs/ci-cd.md` § Merging), never GitHub's own merge button or the API's merge endpoint directly — `/merge` re-checks readiness, uses a merge commit (not squash), deletes the branch safely, tears down the preview environment, and verifies the post-merge deploy; going around it skips all of that.
 
 ## Commands
 
@@ -54,7 +55,7 @@ apps/web/            Next.js 16 marketing site (the focus of most work)
   public/            logo.svg, patterns/*.svg (pattern tiles), logo/*.svg (dept logos, untracked)
 apps/api/            NestJS + Prisma API (health, mail, storage modules; port 4000)
 packages/@repo/shared  shared workspace package (workspace:*)
-.github/workflows/   ci.yaml (lint/typecheck/test/build), docker-publish.yml (Docker Hub)
+.github/workflows/   ci.yaml (lint/typecheck/test/build), publish-docker-image-*.yml (Docker Hub)
 DESIGN_SYSTEM.md     brand/design source of truth
 docs/                deep-dive documentation (read them)
 ```
@@ -65,6 +66,6 @@ docs/                deep-dive documentation (read them)
 
 ## CI/CD at a glance
 
-- **GitHub Actions**: `ci.yaml` runs on push to `main` + PRs + manual dispatch; `docker-publish.yml` builds & pushes `website-web`/`website-api` images to Docker Hub on push to `main` and `v*.*.*` tags (Docker Hub creds live at org level).
+- **GitHub Actions**: `ci.yaml` runs on push to `main` + PRs + manual dispatch; `publish-docker-image-latest.yml` (push to `main`) and `publish-docker-image-staging.yml` (any PR) call the reusable `publish-docker-image.yml` workflow (matrixed over api/web) to build & push `website-api`/`website-web` images to Docker Hub (Docker Hub creds live at org level).
 - **Railway**: project `mgm-company-profile` (`810d3a40-d9d2-410c-b117-289d2aff095f`), production env `42acf786-e8f4-41f8-8d4f-715bee1655f8`. Services `web` + `api` source from this repo's `main` and **auto-deploy on every push** (~30s). Postgres + `mgm-storage` bucket attached.
 - Every push to `main` therefore triggers: GitHub Actions CI → Docker images → Railway deploys. Full details + verification commands: `docs/ci-cd.md`.

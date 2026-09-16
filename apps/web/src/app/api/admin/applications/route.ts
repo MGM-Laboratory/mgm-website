@@ -1,34 +1,10 @@
-import { NextResponse } from "next/server";
-
-import { requireAdminPermission } from "@/lib/admin-session";
-import { cmsApi } from "@/lib/cms-api";
+import { gateAdminRequest, proxyJson } from "@/lib/admin-proxy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const gate = await requireAdminPermission("careers", "read");
-  if (gate.status !== 200) {
-    return NextResponse.json(
-      { error: gate.status === 401 ? "Unauthorized" : "Forbidden" },
-      { status: gate.status },
-    );
-  }
-  const response = await cmsApi("/cms/jobs/applications");
-  return NextResponse.json(await response.json(), { status: response.status });
-}
-
-export async function POST(request: Request) {
-  const gate = await requireAdminPermission("careers", "write");
-  if (gate.status !== 200) {
-    return NextResponse.json(
-      { error: gate.status === 401 ? "Unauthorized" : "Forbidden" },
-      { status: gate.status },
-    );
-  }
-  const response = await cmsApi("/cms/jobs/applications/bulk", {
-    body: JSON.stringify(await request.json()),
-    method: "POST",
-  });
-  return NextResponse.json(await response.json(), { status: response.status });
+  const gate = await gateAdminRequest("careers", "read");
+  if (!gate.ok) return gate.response;
+  return proxyJson("/cms/jobs/applications");
 }

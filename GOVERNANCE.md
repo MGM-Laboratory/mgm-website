@@ -1,6 +1,6 @@
 # Governance
 
-MGM Laboratory's website is currently maintained by a single maintainer, **@shirasakaren**, who has final say on architecture, design-system, and release decisions, and is the default reviewer for every pull request (see `CODEOWNERS`).
+MGM Laboratory's website is currently maintained by a single maintainer, who has final say on architecture, design-system, and release decisions, and is the default reviewer for every pull request (see `CODEOWNERS`).
 
 ## Decision-making
 

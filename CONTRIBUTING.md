@@ -22,6 +22,8 @@ Every PR runs:
 - **SonarCloud Code Analysis** — posted automatically by SonarCloud's own GitHub App; no local setup needed.
 - **pre-commit.ci** — runs repository hygiene checks and Prettier on every pull-request commit; formatting fixes are committed back to same-repository PRs automatically.
 
+All of these need to actually succeed, not just avoid failing outright — a lint warning, a deprecation notice, or any other non-blocking annotation in a check's output is still something to fix before the PR is done, even if it doesn't turn the check red.
+
 Run the fast ones locally before pushing: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format:check`.
 
 To run the same focused checks before committing, install [pre-commit](https://pre-commit.com/) and run `pre-commit install` once, then use `pre-commit run --all-files` when needed. The existing Husky hook continues to format staged files.
@@ -52,4 +54,4 @@ Maintainers, or anyone listed in `CODEOWNERS`, can also run:
 
 ## Commit messages
 
-Plain prose describing what changed and why — no AI-attribution trailers of any kind, please.
+Plain prose describing what changed and why, no AI-attribution trailers of any kind, please. Use a hyphen or a colon instead of an em dash - never use an em dash (—) in a commit message or PR title/body.

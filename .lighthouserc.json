@@ -6,7 +6,7 @@
         "http://localhost:3000/about",
         "http://localhost:3000/contact"
       ],
-      "numberOfRuns": 2,
+      "numberOfRuns": 3,
       "startServerCommand": "pnpm --filter web start",
       "startServerReadyPattern": "Ready in",
       "startServerReadyTimeout": 30000

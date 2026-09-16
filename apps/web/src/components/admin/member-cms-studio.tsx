@@ -8,6 +8,8 @@ import {
   Camera,
   CaretUpDown,
   Check,
+  Envelope,
+  EnvelopeOpen,
   FloppyDisk,
   Flask,
   GraduationCap,
@@ -38,6 +40,7 @@ import {
 } from "@/lib/admin-permissions";
 import { AdminManagementPanel } from "@/components/admin/admin-management-panel";
 import { ArticleEditor } from "@/components/admin/article-cms-editor";
+import { ContactSettingsEditor } from "@/components/admin/contact-settings-editor";
 import { ProjectEditor } from "@/components/admin/project-cms-editor";
 import { PublicationEditor } from "@/components/admin/publication-cms-editor";
 import { ResearchEditor } from "@/components/admin/research-cms-editor";
@@ -60,10 +63,12 @@ import { useProjectRecords } from "@/hooks/use-project-records";
 import { usePublicationRecords } from "@/hooks/use-publication-records";
 import { useResearchRecords } from "@/hooks/use-research-records";
 import { CareersCmsStudio } from "@/components/admin/careers-cms-studio";
+import { ContactInquiriesInbox } from "@/components/admin/contact-inquiries-inbox";
 import { EventsCmsStudio } from "@/components/admin/events-cms-studio";
 import type { CmsArticleRecord } from "@/lib/article-cms";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import type { CmsPublicationRecord } from "@/lib/publication-cms";
+import type { CmsContactInquiryRecord } from "@/lib/contact-inquiries-cms";
 import type { CmsJobApplicationRecord, CmsJobRecord } from "@/lib/career-cms";
 import type { CmsResearchRecord } from "@/lib/research-cms";
 import type { CmsEventRecord, CmsEventRegistrationRecord } from "@/lib/events-cms";
@@ -77,6 +82,8 @@ type EditorialSection =
   | "research"
   | "members"
   | "careers"
+  | "contact"
+  | "contact-inquiries"
   | "events"
   | "administration";
 type DateValue = { month: number; year: number };
@@ -95,6 +102,8 @@ const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: st
   { id: "research", label: "Research" },
   { id: "members", label: "Member" },
   { id: "careers", label: "Careers" },
+  { id: "contact", label: "Contact Settings" },
+  { id: "contact-inquiries", label: "Contact Inquiries" },
   { id: "events", label: "Events" },
 ];
 
@@ -106,6 +115,8 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "research", label: "Research", tone: "text-brand-blue" },
   { id: "members", label: "Member", tone: "text-brand-red" },
   { id: "careers", label: "Careers", tone: "text-brand-yellow" },
+  { id: "contact", label: "Contact Settings", tone: "text-brand-green" },
+  { id: "contact-inquiries", label: "Contact Inquiries", tone: "text-brand-green" },
   { id: "events", label: "Events", tone: "text-brand-green" },
   { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
@@ -116,6 +127,8 @@ const LIVE_WORKSPACES = new Set<EditorialSection>([
   "publications",
   "careers",
   "research",
+  "contact",
+  "contact-inquiries",
   "projects",
   "events",
 ]);
@@ -128,6 +141,8 @@ const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
   projects: "projects",
   research: "research",
   careers: "careers",
+  contact: "contact",
+  "contact-inquiries": "contact-inquiries",
   events: "events",
 };
 
@@ -145,6 +160,10 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
       return <UsersThree size={size} weight="duotone" />;
     case "careers":
       return <GraduationCap size={size} weight="duotone" />;
+    case "contact":
+      return <Envelope size={size} weight="duotone" />;
+    case "contact-inquiries":
+      return <EnvelopeOpen size={size} weight="duotone" />;
     case "events":
       return <CalendarBlank size={size} weight="duotone" />;
     case "administration":
@@ -433,6 +452,7 @@ export function MemberCmsStudio({
   initialProjects = [],
   initialEvents = [],
   initialEventRegistrations = [],
+  initialContactInquiries = [],
   paperLimitBytes = 209_715_200,
   videoLimitBytes = 524_288_000,
   session,
@@ -446,6 +466,7 @@ export function MemberCmsStudio({
   initialProjects?: CmsProjectRecord[];
   initialEvents?: CmsEventRecord[];
   initialEventRegistrations?: CmsEventRegistrationRecord[];
+  initialContactInquiries?: CmsContactInquiryRecord[];
   paperLimitBytes?: number;
   videoLimitBytes?: number;
   session: AdminViewer;
@@ -471,6 +492,8 @@ export function MemberCmsStudio({
     records: projectRecords,
     setRecords: setProjectRecords,
   } = useProjectRecords(initialProjects);
+  const [contactInquiries, setContactInquiries] =
+    useState<CmsContactInquiryRecord[]>(initialContactInquiries);
   const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");
@@ -835,6 +858,26 @@ export function MemberCmsStudio({
           initialEvents={initialEvents}
           initialRegistrations={initialEventRegistrations}
         />
+      ) : section === "contact-inquiries" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+        // Full-bleed, no-aside-rail: the inbox is the whole workspace, same
+        // shape as careers/events' registrations panes.
+        <div className="mx-auto max-w-[1680px] p-5 sm:p-8 lg:p-10">
+          <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-green uppercase">
+            Contact Inquiries
+          </p>
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
+            Contact Inquiries
+          </h1>
+          <p className="mt-2 text-sm text-[#69748a] dark:text-white/50">
+            Every /contact form submission, saved the moment it arrives — independent of whether the
+            reply email actually sends.
+          </p>
+          <ContactInquiriesInbox
+            readOnly={viewer.role !== "superadmin"}
+            records={contactInquiries}
+            setRecords={setContactInquiries}
+          />
+        </div>
       ) : (
         <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
           <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
@@ -1168,6 +1211,19 @@ export function MemberCmsStudio({
                   Administrator accounts, passphrases, and per-page permissions.
                 </p>
               </div>
+            ) : section === "contact" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+              <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+                <span className="grid size-9 place-items-center rounded-xl bg-white text-brand-green dark:bg-white/10">
+                  <Envelope size={20} weight="duotone" />
+                </span>
+                <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">
+                  Contact Settings
+                </p>
+                <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
+                  A single record — the recipient inbox, HQ address, and map coordinates shown on
+                  the public contact page.
+                </p>
+              </div>
             ) : (
               <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
                 <span
@@ -1350,6 +1406,11 @@ export function MemberCmsStudio({
                 />
               ) : section === "administration" ? (
                 <AdminManagementPanel initialAdmins={initialAdmins} />
+              ) : section === "contact" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+                <ContactSettingsEditor
+                  isSuperadmin={viewer.role === "superadmin"}
+                  onDirtyChange={setHasUnsavedChanges}
+                />
               ) : (
                 <EditorialOverview
                   canAccess={canAccess}
@@ -1414,7 +1475,7 @@ function EditorialOverview({
       {section === "members" ? null : (
         <p className="mt-5 max-w-xl text-base leading-7 text-[#6b768b] dark:text-white/55">
           {section === "overview"
-            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, Publications, Research, and Careers are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
+            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, Publications, Research, Careers, and Contact Settings are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
             : `${label} is reserved for its own editorial workflow. It will be added here without changing the member, article, or publication workspaces.`}
         </p>
       )}
