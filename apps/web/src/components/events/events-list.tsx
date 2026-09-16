@@ -36,7 +36,7 @@ export function EventsList({ records }: { records: readonly CmsEventRecord[] }) 
         />
         <input
           aria-label="Search events"
-          className="h-11 w-full rounded-full border border-[var(--line)] bg-[var(--surface)] pl-10 pr-4 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-3)] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:bg-white/[0.04] dark:text-white"
+          className="h-11 w-full rounded-full border border-[var(--line)] bg-white pl-10 pr-4 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-3)] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:bg-white/[0.04] dark:text-white"
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search events"
           type="search"

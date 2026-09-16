@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import { EventsList } from "@/components/events/events-list";
-import { FlairShape } from "@/components/process/pattern-tile";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { fetchEventsFeed } from "@/lib/events-cms-server";
 import type { CmsEventRecord } from "@/lib/events-cms";
@@ -31,16 +30,6 @@ export default async function EventsPage() {
       <main className="flex-1">
         <section className="relative overflow-hidden">
           <div className="relative mx-auto flex min-h-[45vh] w-full max-w-[1200px] flex-col justify-center px-6 py-20 sm:px-10 lg:px-14">
-            <FlairShape
-              className="pointer-events-none absolute -top-6 -right-8 size-56 opacity-20 sm:size-80 sm:opacity-25 dark:opacity-35"
-              kind="fans"
-              tone="red"
-            />
-            <FlairShape
-              className="pointer-events-none absolute right-24 bottom-10 size-16 opacity-15 sm:size-24 dark:opacity-30"
-              kind="circle"
-              tone="red"
-            />
             <div className="relative max-w-2xl">
               <p className="text-sm font-bold tracking-[0.12em] text-brand-red uppercase">Events</p>
               <h1 className="mt-5 font-display text-[clamp(2.5rem,6vw+1rem,4.5rem)] leading-[1.02] font-semibold tracking-[-0.03em] text-[#0e1116] dark:text-white">
