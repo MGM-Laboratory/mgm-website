@@ -277,8 +277,8 @@ export class MailService {
       await this.prisma.mailSendLog.create({ data: { provider: id } });
       // Opportunistic cleanup — avoids an unbounded log without a cron job.
       // Not security-sensitive: just a sampling rate for a housekeeping query.
-      if (Math.random() < 0.05) {
-        // NOSONAR
+      const shouldCleanup = Math.random() < 0.05; // NOSONAR
+      if (shouldCleanup) {
         const cutoff = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
         await this.prisma.mailSendLog.deleteMany({
           where: { provider: id, sentAt: { lt: cutoff } },

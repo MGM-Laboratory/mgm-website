@@ -65,7 +65,7 @@ export function useResourceInbox<TRecord extends InboxRecord>({
   itemLabel,
   onMutated,
 }: UseResourceInboxOptions<TRecord>) {
-  const [filter, setFilterState] = useState<InboxFilter>("all");
+  const [filterState, setFilterState] = useState<InboxFilter>("all");
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState<string>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -96,13 +96,13 @@ export function useResourceInbox<TRecord extends InboxRecord>({
     const needle = query.trim().toLocaleLowerCase();
     return records.filter((record) => {
       const state = getState(record);
-      if (filter === "archived" && state.status !== "archived") return false;
-      if (filter !== "archived" && state.status !== "inbox") return false;
-      if (filter === "unread" && state.read) return false;
+      if (filterState === "archived" && state.status !== "archived") return false;
+      if (filterState !== "archived" && state.status !== "inbox") return false;
+      if (filterState === "unread" && state.read) return false;
       if (needle && !matchesQuery(record, needle)) return false;
       return true;
     });
-  }, [filter, query, records, getState, matchesQuery]);
+  }, [filterState, query, records, getState, matchesQuery]);
 
   const selected = records.find((record) => record.slug === selectedSlug);
 
@@ -144,12 +144,12 @@ export function useResourceInbox<TRecord extends InboxRecord>({
     if (!state.read && state.status === "inbox") void patchState(slug, { read: true });
   };
 
-  const bulk = async (action: BulkAction) => {
-    if (!selectedIds.size) return;
-    if (action === "delete" && !window.confirm(`Delete ${selectedIds.size} ${itemLabel}(s)?`)) {
+  const performBulk = async (ids: string[], action: BulkAction) => {
+    if (!ids.length) return;
+    if (action === "delete" && !window.confirm(`Delete ${ids.length} ${itemLabel}(s)?`)) {
       return;
     }
-    const ids = [...selectedIds];
+    const idSet = new Set(ids);
     const previous = records;
     try {
       const response = await fetch(`${apiBase}/bulk`, {
@@ -159,19 +159,14 @@ export function useResourceInbox<TRecord extends InboxRecord>({
       });
       if (!response.ok) throw new Error(`The API answered ${response.status}.`);
       if (action === "delete") {
-        setRecords((current) => current.filter((record) => !selectedIds.has(record.slug)));
-        setSelectedSlug((current) => (current && selectedIds.has(current) ? undefined : current));
+        setRecords((current) => current.filter((record) => !idSet.has(record.slug)));
+        setSelectedSlug((current) => (current && idSet.has(current) ? undefined : current));
         toast.success(`${ids.length} ${itemLabel}(s) deleted.`);
       } else {
+        const patch: Partial<InboxItemState> =
+          action === "archive" ? { status: "archived" } : { read: false, readAt: null };
         setRecords((current) =>
-          current.map((record) =>
-            selectedIds.has(record.slug)
-              ? withState(
-                  record,
-                  action === "archive" ? { status: "archived" } : { read: false, readAt: null },
-                )
-              : record,
-          ),
+          current.map((record) => (idSet.has(record.slug) ? withState(record, patch) : record)),
         );
         toast.success(action === "archive" ? "Archived." : "Marked unread.");
       }
@@ -185,9 +180,10 @@ export function useResourceInbox<TRecord extends InboxRecord>({
     }
   };
 
+  const bulk = (action: BulkAction) => performBulk([...selectedIds], action);
+
   const deleteOne = (slug: string) => {
-    setSelectedIds(new Set([slug]));
-    void bulk("delete");
+    void performBulk([slug], "delete");
   };
 
   const toggleRow = (index: number, checked: boolean, shiftKey: boolean) => {
@@ -220,7 +216,7 @@ export function useResourceInbox<TRecord extends InboxRecord>({
     bulk,
     counts,
     deleteOne,
-    filter,
+    filter: filterState,
     filtered,
     getState,
     open,

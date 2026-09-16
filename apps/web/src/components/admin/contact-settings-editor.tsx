@@ -500,6 +500,213 @@ function ProviderLimitEditor({
   );
 }
 
+function MailRoutingFields({
+  form,
+  routingDisabled,
+  isSuperadmin,
+  showProviderOrder,
+  providerStatus,
+  onStrategyChange,
+  onReorder,
+  onWeightChange,
+  onLimitChange,
+}: Readonly<{
+  form: FormState;
+  routingDisabled: boolean;
+  isSuperadmin: boolean;
+  showProviderOrder: boolean;
+  providerStatus: MailProviderStatus | undefined;
+  onStrategyChange: (value: MailStrategy) => void;
+  onReorder: (from: number, to: number) => void;
+  onWeightChange: (id: MailProviderId, value: string) => void;
+  onLimitChange: (id: MailProviderId, patch: Partial<MailProviderLimitConfig>) => void;
+}>) {
+  return (
+    <div className="mt-10 border-t border-[#dee4ef] pt-7 dark:border-white/10">
+      <h2 className="font-display text-xl font-semibold tracking-[-0.03em]">Mail routing</h2>
+      <p className="mt-1 text-sm text-[#69748a] dark:text-white/50">
+        {isSuperadmin
+          ? "Choose how outgoing contact-form emails are routed across Resend, SMTP, and Amazon SES. Every multi-provider strategy fails over to the next configured provider automatically."
+          : "Only the superadmin can change mail routing settings."}
+      </p>
+
+      <div className="mt-5 grid gap-5">
+        <Field label="Delivery strategy">
+          <Listbox
+            disabled={routingDisabled}
+            groups={[
+              {
+                label: "Single provider",
+                options: SINGLE_STRATEGIES.map((strategy) => ({
+                  label: MAIL_STRATEGY_LABELS[strategy],
+                  value: strategy,
+                })),
+              },
+              {
+                label: "Multi-provider (automatic failover)",
+                options: MAIL_STRATEGIES.filter(isMultiProviderStrategy).map((strategy) => ({
+                  label: MAIL_STRATEGY_LABELS[strategy],
+                  value: strategy,
+                })),
+              },
+            ]}
+            onChange={onStrategyChange}
+            value={form.mailStrategy}
+          />
+        </Field>
+
+        {showProviderOrder ? (
+          <div>
+            <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+              Provider order
+            </span>
+            <ProviderOrderList
+              disabled={routingDisabled}
+              onReorder={onReorder}
+              order={form.mailProviderOrder}
+            />
+            <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
+              Determines failover priority, rotation start, and which eligible provider is tried
+              first.
+            </p>
+          </div>
+        ) : null}
+
+        {form.mailStrategy === "loadBalanceWeighted" ? (
+          <div>
+            <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+              Provider weights
+            </span>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {form.mailProviderOrder.map((id) => (
+                <Field key={id} label={MAIL_PROVIDER_LABELS[id]}>
+                  <input
+                    className={inputClass}
+                    disabled={routingDisabled}
+                    inputMode="decimal"
+                    min={0}
+                    onChange={(event) => onWeightChange(id, event.target.value)}
+                    placeholder="1"
+                    type="number"
+                    value={form.mailProviderWeights[id] ?? ""}
+                  />
+                </Field>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
+              Higher weight means a provider is picked more often. Unset defaults to 1.
+            </p>
+          </div>
+        ) : null}
+
+        {form.mailStrategy === "loadBalanceLimit" ? (
+          <div>
+            <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+              Provider limits
+            </span>
+            <div className="grid gap-3">
+              {form.mailProviderOrder.map((id) => (
+                <ProviderLimitEditor
+                  config={form.mailProviderLimits[id] ?? { windowMode: "calendar" }}
+                  disabled={routingDisabled}
+                  id={id}
+                  key={id}
+                  onChange={(patch) => onLimitChange(id, patch)}
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
+              A provider with no limit set is treated as unlimited. A provider that has hit its
+              limit is skipped automatically.
+            </p>
+          </div>
+        ) : null}
+
+        {providerStatus ? (
+          <div className="grid gap-4">
+            <div>
+              <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+                Sender address
+              </span>
+              <StatusBadge
+                entry={{ configured: providerStatus.fromEmailConfigured }}
+                label={providerStatus.fromEmailConfigured ? "Configured" : "Not configured"}
+              />
+            </div>
+            <div>
+              <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+                Provider status
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {MAIL_PROVIDER_IDS.map((id) => (
+                  <StatusBadge
+                    entry={providerStatus.providers[id]}
+                    key={id}
+                    label={MAIL_PROVIDER_LABELS[id]}
+                  />
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
+                Hover a badge for configuration and quota details.
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SaveBar({
+  isDirty,
+  status,
+  saveLabel,
+  error,
+  ready,
+  onSave,
+}: Readonly<{
+  isDirty: boolean;
+  status: "idle" | "saved" | "saving" | "error";
+  saveLabel: string;
+  error: string | undefined;
+  ready: boolean;
+  onSave: () => void;
+}>) {
+  return (
+    <>
+      <div className="pointer-events-none sticky top-[7.5rem] z-30 mt-5 flex justify-end">
+        <div className="pointer-events-auto flex flex-col items-end gap-2">
+          {isDirty ? (
+            <span className="rounded-full bg-[#171b25]/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+              Unsaved changes
+            </span>
+          ) : null}
+          <button
+            aria-label="Save contact settings"
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white shadow-[0_18px_35px_-16px_rgba(20,32,58,0.55)] transition hover:bg-brand-blue active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+            disabled={status === "saving" || !ready}
+            onClick={onSave}
+            type="button"
+          >
+            {status === "saved" && !isDirty ? (
+              <Check size={18} weight="bold" />
+            ) : (
+              <FloppyDisk size={18} weight="bold" />
+            )}
+            {saveLabel}
+          </button>
+        </div>
+      </div>
+
+      {status === "error" ? (
+        <p className="mt-4 rounded-xl bg-brand-red-50 px-4 py-3 text-sm text-brand-red dark:bg-brand-red/15 dark:text-brand-red-100">
+          {error ?? "The changes could not be saved."}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function ContactSettingsEditor({
   onDirtyChange,
   isSuperadmin,
@@ -703,170 +910,28 @@ export function ContactSettingsEditor({
         </Field>
       </div>
 
-      <div className="mt-10 border-t border-[#dee4ef] pt-7 dark:border-white/10">
-        <h2 className="font-display text-xl font-semibold tracking-[-0.03em]">Mail routing</h2>
-        <p className="mt-1 text-sm text-[#69748a] dark:text-white/50">
-          {isSuperadmin
-            ? "Choose how outgoing contact-form emails are routed across Resend, SMTP, and Amazon SES. Every multi-provider strategy fails over to the next configured provider automatically."
-            : "Only the superadmin can change mail routing settings."}
-        </p>
-
-        <div className="mt-5 grid gap-5">
-          <Field label="Delivery strategy">
-            <Listbox
-              disabled={routingDisabled}
-              groups={[
-                {
-                  label: "Single provider",
-                  options: SINGLE_STRATEGIES.map((strategy) => ({
-                    label: MAIL_STRATEGY_LABELS[strategy],
-                    value: strategy,
-                  })),
-                },
-                {
-                  label: "Multi-provider (automatic failover)",
-                  options: MAIL_STRATEGIES.filter(isMultiProviderStrategy).map((strategy) => ({
-                    label: MAIL_STRATEGY_LABELS[strategy],
-                    value: strategy,
-                  })),
-                },
-              ]}
-              onChange={(value) => update({ mailStrategy: value })}
-              value={form.mailStrategy}
-            />
-          </Field>
-
-          {showProviderOrder ? (
-            <div>
-              <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-                Provider order
-              </span>
-              <ProviderOrderList
-                disabled={routingDisabled}
-                onReorder={moveProvider}
-                order={form.mailProviderOrder}
-              />
-              <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
-                Determines failover priority, rotation start, and which eligible provider is tried
-                first.
-              </p>
-            </div>
-          ) : null}
-
-          {form.mailStrategy === "loadBalanceWeighted" ? (
-            <div>
-              <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-                Provider weights
-              </span>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {form.mailProviderOrder.map((id) => (
-                  <Field key={id} label={MAIL_PROVIDER_LABELS[id]}>
-                    <input
-                      className={inputClass}
-                      disabled={routingDisabled}
-                      inputMode="decimal"
-                      min={0}
-                      onChange={(event) => updateWeight(id, event.target.value)}
-                      placeholder="1"
-                      type="number"
-                      value={form.mailProviderWeights[id] ?? ""}
-                    />
-                  </Field>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
-                Higher weight means a provider is picked more often. Unset defaults to 1.
-              </p>
-            </div>
-          ) : null}
-
-          {form.mailStrategy === "loadBalanceLimit" ? (
-            <div>
-              <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-                Provider limits
-              </span>
-              <div className="grid gap-3">
-                {form.mailProviderOrder.map((id) => (
-                  <ProviderLimitEditor
-                    config={form.mailProviderLimits[id] ?? { windowMode: "calendar" }}
-                    disabled={routingDisabled}
-                    id={id}
-                    key={id}
-                    onChange={(patch) => updateLimit(id, patch)}
-                  />
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
-                A provider with no limit set is treated as unlimited. A provider that has hit its
-                limit is skipped automatically.
-              </p>
-            </div>
-          ) : null}
-
-          {providerStatus ? (
-            <div className="grid gap-4">
-              <div>
-                <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-                  Sender address
-                </span>
-                <StatusBadge
-                  entry={{ configured: providerStatus.fromEmailConfigured }}
-                  label={providerStatus.fromEmailConfigured ? "Configured" : "Not configured"}
-                />
-              </div>
-              <div>
-                <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-                  Provider status
-                </span>
-                <div className="flex flex-wrap items-center gap-2">
-                  {MAIL_PROVIDER_IDS.map((id) => (
-                    <StatusBadge
-                      entry={providerStatus.providers[id]}
-                      key={id}
-                      label={MAIL_PROVIDER_LABELS[id]}
-                    />
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
-                  Hover a badge for configuration and quota details.
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
+      <MailRoutingFields
+        form={form}
+        isSuperadmin={isSuperadmin}
+        onLimitChange={updateLimit}
+        onReorder={moveProvider}
+        onStrategyChange={(value) => update({ mailStrategy: value })}
+        onWeightChange={updateWeight}
+        providerStatus={providerStatus}
+        routingDisabled={routingDisabled}
+        showProviderOrder={showProviderOrder}
+      />
 
       <div className="h-24" aria-hidden />
 
-      <div className="pointer-events-none sticky top-[7.5rem] z-30 mt-5 flex justify-end">
-        <div className="pointer-events-auto flex flex-col items-end gap-2">
-          {isDirty ? (
-            <span className="rounded-full bg-[#171b25]/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
-              Unsaved changes
-            </span>
-          ) : null}
-          <button
-            aria-label="Save contact settings"
-            className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white shadow-[0_18px_35px_-16px_rgba(20,32,58,0.55)] transition hover:bg-brand-blue active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
-            disabled={status === "saving" || !ready}
-            onClick={save}
-            type="button"
-          >
-            {status === "saved" && !isDirty ? (
-              <Check size={18} weight="bold" />
-            ) : (
-              <FloppyDisk size={18} weight="bold" />
-            )}
-            {saveLabel}
-          </button>
-        </div>
-      </div>
-
-      {status === "error" ? (
-        <p className="mt-4 rounded-xl bg-brand-red-50 px-4 py-3 text-sm text-brand-red dark:bg-brand-red/15 dark:text-brand-red-100">
-          {error ?? "The changes could not be saved."}
-        </p>
-      ) : null}
+      <SaveBar
+        error={error}
+        isDirty={isDirty}
+        onSave={save}
+        ready={ready}
+        saveLabel={saveLabel}
+        status={status}
+      />
     </div>
   );
 }
