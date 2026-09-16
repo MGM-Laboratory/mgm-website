@@ -36,6 +36,7 @@ export function MapLibreFallback({
       map.addControl(new NavigationControl(), "top-right");
       new Marker().setLngLat([lng, lat]).setPopup(new Popup().setText(label)).addTo(map);
     });
+    // skipcq: JS-0045 -- standard useEffect cleanup return
     return () => {
       cancelled = true;
       map?.remove();

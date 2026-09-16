@@ -35,6 +35,7 @@ export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
       .catch(() => {
         if (!cancelled) setGoogleFailed(true);
       });
+    // skipcq: JS-0045 -- standard useEffect cleanup return
     return () => {
       cancelled = true;
       marker?.setMap(null);

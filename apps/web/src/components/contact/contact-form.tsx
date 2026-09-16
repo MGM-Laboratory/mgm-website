@@ -249,6 +249,7 @@ export function ContactForm() {
   }
 
   return (
+    // skipcq: JS-0415 -- ordinary form layout depth, not a code smell
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 sm:p-8"
@@ -372,7 +373,7 @@ export function ContactForm() {
                 const isImage = file.type.startsWith("image/");
                 return (
                   <li
-                    key={`${file.name}-${index}`}
+                    key={`${file.name}-${file.lastModified}-${file.size}`}
                     className="flex items-center gap-3 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-sm"
                   >
                     {isImage && isSafeBlobUrl(url) ? (

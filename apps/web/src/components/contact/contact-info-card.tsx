@@ -135,6 +135,7 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${settings.lat}%2C${settings.lng}`;
 
   return (
+    // skipcq: JS-0415 -- ordinary card layout depth, not a code smell
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)] p-6 sm:p-8">
       <p className="text-xs font-semibold tracking-wide text-foreground/45 uppercase">
         Reach us directly

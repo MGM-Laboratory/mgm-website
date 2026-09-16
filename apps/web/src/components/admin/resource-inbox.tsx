@@ -104,12 +104,12 @@ export function useResourceInbox<TRecord extends InboxRecord>({
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
-    // skipcq: JS-W1041 -- guard clauses read clearer here than one large boolean expression.
     return records.filter((record) => {
       const state = getState(record);
       if (filterState === "archived" && state.status !== "archived") return false;
       if (filterState !== "archived" && state.status !== "inbox") return false;
       if (filterState === "unread" && state.read) return false;
+      // skipcq: JS-W1041 -- guard clauses read clearer here than one large boolean expression.
       if (needle && !matchesQuery(record, needle)) return false;
       return true;
     });
