@@ -1,28 +1,84 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { env } from "@/lib/env";
-import { loadGoogleMaps } from "@/lib/google-maps-loader";
+import { useEffect, useRef, useState } from "react";
 
-// OpenFreeMap's Liberty style needs no API key/billing, so it's the fallback
-// whenever Google Maps has no key configured or fails to load.
-const OPENFREEMAP_LIBERTY_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+import { env } from "@/lib/env";
+
+declare global {
+  interface Window {
+    google?: { maps: typeof google.maps };
+    gm_authFailure?: () => void;
+  }
+}
+
+let scriptPromise: Promise<void> | undefined;
 
 /**
- * Google Maps when a browser API key is configured and loads successfully;
- * otherwise (or on failure) a keyless MapLibre GL JS map styled with
- * OpenFreeMap's Liberty tiles — never a broken or empty box.
+ * Loads the Maps JS API exactly once. `gm_authFailure` is Google's own hook
+ * for a missing/invalid/quota-exceeded key — the script itself still loads
+ * successfully in that case, so `onerror` alone would miss it.
+ */
+function loadGoogleMaps(apiKey: string): Promise<void> {
+  if (window.google?.maps) return Promise.resolve();
+  if (!scriptPromise) {
+    scriptPromise = new Promise((resolve, reject) => {
+      window.gm_authFailure = () => reject(new Error("Google Maps authentication failed."));
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}`;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Could not load Google Maps."));
+      document.head.appendChild(script);
+    });
+  }
+  return scriptPromise;
+}
+
+/**
+ * The keyless fallback: MapLibre GL rendering OpenFreeMap's "Liberty" vector
+ * style — no API key, no usage quota, used whenever Google isn't available.
+ */
+function MapLibreFallback({ lat, lng }: { lat: number; lng: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let map: import("maplibre-gl").Map | undefined;
+    let cancelled = false;
+    import("maplibre-gl").then(({ Map: MapLibreMap, Marker, NavigationControl, Popup }) => {
+      if (cancelled || !containerRef.current) return;
+      map = new MapLibreMap({
+        center: [lng, lat],
+        container: containerRef.current,
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        zoom: 15,
+      });
+      map.addControl(new NavigationControl(), "top-right");
+      new Marker().setLngLat([lng, lat]).setPopup(new Popup().setText("MGM Laboratory")).addTo(map);
+    });
+    return () => {
+      cancelled = true;
+      map?.remove();
+    };
+  }, [lat, lng]);
+
+  return <div className="h-40 w-full" ref={containerRef} />;
+}
+
+/**
+ * Google Maps is tried first whenever a browser API key is configured; any
+ * failure to load or authenticate (or no key at all) falls back to the
+ * MapLibre/OpenFreeMap renderer instead of a broken or empty box.
  */
 export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
   const apiKey = env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const containerRef = useRef<HTMLDivElement>(null);
-  const [useFallback, setUseFallback] = useState(!apiKey);
+  const [googleFailed, setGoogleFailed] = useState(!apiKey);
 
   useEffect(() => {
-    if (useFallback || !apiKey || !containerRef.current) return;
+    if (!apiKey || !containerRef.current) return;
     let cancelled = false;
     let marker: google.maps.Marker | undefined;
     loadGoogleMaps(apiKey)
@@ -31,39 +87,28 @@ export function HqMap({ lat, lng }: Readonly<{ lat: number; lng: number }>) {
         const position = { lat, lng };
         const map = new google.maps.Map(containerRef.current, {
           center: position,
-          zoom: 16,
           disableDefaultUI: true,
+          zoom: 16,
           zoomControl: true,
         });
         marker = new google.maps.Marker({ map, position, title: "MGM Laboratory" });
       })
       .catch(() => {
-        if (!cancelled) setUseFallback(true);
+        if (!cancelled) setGoogleFailed(true);
       });
     return () => {
       cancelled = true;
       marker?.setMap(null);
     };
-  }, [useFallback, apiKey, lat, lng]);
-
-  useEffect(() => {
-    if (!useFallback || !containerRef.current) return;
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: OPENFREEMAP_LIBERTY_STYLE,
-      center: [lng, lat],
-      zoom: 15,
-      attributionControl: { compact: true },
-    });
-    map.addControl(new NavigationControl(), "top-right");
-    new Marker().setLngLat([lng, lat]).addTo(map);
-    return () => map.remove();
-  }, [useFallback, lat, lng]);
+  }, [apiKey, lat, lng]);
 
   return (
-    <div
-      ref={containerRef}
-      className="h-40 w-full overflow-hidden rounded-xl border border-[var(--line)] [&_.maplibregl-ctrl-attrib]:text-[10px] dark:brightness-[0.85] dark:contrast-[1.15] dark:saturate-[0.8]"
-    />
+    <div className="h-40 w-full overflow-hidden rounded-xl border border-[var(--line)] [&_.maplibregl-ctrl-attrib]:text-[10px] dark:brightness-[0.85] dark:contrast-[1.15] dark:saturate-[0.8]">
+      {googleFailed ? (
+        <MapLibreFallback lat={lat} lng={lng} />
+      ) : (
+        <div className="h-40 w-full" ref={containerRef} />
+      )}
+    </div>
   );
 }
