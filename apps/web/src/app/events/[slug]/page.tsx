@@ -1,11 +1,4 @@
-import {
-  CalendarBlank,
-  Clock,
-  MapPin,
-  Microphone,
-  UsersThree,
-  VideoCamera,
-} from "@phosphor-icons/react/dist/ssr";
+import { Clock, MapPin, Microphone, UsersThree, VideoCamera } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,10 +6,12 @@ import { notFound } from "next/navigation";
 import { AddToCalendarButton } from "@/components/events/add-to-calendar-button";
 import { EventBody } from "@/components/events/event-body";
 import { EventCard } from "@/components/events/event-card";
+import { EventCoverLightbox } from "@/components/events/event-cover-lightbox";
+import { EventDateTime } from "@/components/events/event-date-time";
 import { EventMap } from "@/components/events/event-map";
-import { EventRegistrationForm } from "@/components/events/event-registration-form";
+import { EventRegisterButton } from "@/components/events/event-register-button";
 import { CtaFooter } from "@/components/sections/cta-footer";
-import { formatEventDateRange, sortEventsByStart, type CmsEventRecord } from "@/lib/events-cms";
+import { sortEventsByStart, type CmsEventRecord } from "@/lib/events-cms";
 import { fetchEventBySlug, fetchEventsFeed } from "@/lib/events-cms-server";
 
 type EventPageProps = { params: Promise<{ slug: string }> };
@@ -73,6 +68,8 @@ export default async function EventPage({ params }: EventPageProps) {
 
   const cover = mediaUrl(event.thumbnailKey);
   const others = sortEventsByStart(feed.filter((item) => item.slug !== slug)).slice(0, 3);
+  const isOnlineLocation = event.location?.trim().toLocaleLowerCase() === "online";
+  const locationLinkable = Boolean(event.mapsUrl) && !isOnlineLocation;
 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
@@ -85,10 +82,8 @@ export default async function EventPage({ params }: EventPageProps) {
             ← All events
           </Link>
 
-          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className="font-mono text-xs tracking-[0.04em] text-[var(--ink-3)] tnum">
-              {formatEventDateRange(event)}
-            </span>
+          <div className="mt-6">
+            <EventDateTime event={event} />
           </div>
 
           <h1 className="mt-4 font-display text-[clamp(2rem,4vw,3rem)] leading-[1.05] font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
@@ -100,27 +95,42 @@ export default async function EventPage({ params }: EventPageProps) {
             </p>
           ) : null}
 
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <AddToCalendarButton event={event} />
+            {event.registrationEnabled ? (
+              <EventRegisterButton
+                eventSlug={event.slug}
+                registrationCapacity={event.registrationCapacity}
+              />
+            ) : null}
           </div>
 
           {cover ? (
-            <div className="mt-10 overflow-hidden rounded-3xl">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img alt="" className="block aspect-[16/9] w-full object-cover" src={cover} />
+            <div className="mt-10">
+              <EventCoverLightbox alt={event.title} src={cover} />
             </div>
           ) : null}
 
           <div className="mt-10 grid gap-4 rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)]/60 p-5 sm:grid-cols-2">
             <InfoRow label="Date & time">
-              <span className="flex items-center gap-2">
-                <CalendarBlank size={15} weight="bold" /> {formatEventDateRange(event)}
-              </span>
+              <EventDateTime event={event} />
             </InfoRow>
             {event.location ? (
               <InfoRow label="Location">
                 <span className="flex items-center gap-2">
-                  <MapPin size={15} weight="bold" /> {event.location}
+                  <MapPin size={15} weight="bold" />
+                  {locationLinkable ? (
+                    <a
+                      className="text-brand-blue hover:underline"
+                      href={event.mapsUrl}
+                      rel="noreferrer noopener"
+                      target="_blank"
+                    >
+                      {event.location}
+                    </a>
+                  ) : (
+                    event.location
+                  )}
                 </span>
               </InfoRow>
             ) : null}
@@ -148,7 +158,7 @@ export default async function EventPage({ params }: EventPageProps) {
               <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-[var(--ink)] dark:text-white">
                 <Microphone size={19} weight="bold" /> Speakers
               </h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 space-y-3">
                 {event.speakers.map((speaker, index) => (
                   <div
                     className="flex items-center gap-3 rounded-2xl border border-[var(--line)] p-4"
@@ -167,11 +177,11 @@ export default async function EventPage({ params }: EventPageProps) {
                       </div>
                     )}
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-[var(--ink)] dark:text-white">
+                      <p className="font-semibold whitespace-nowrap text-[var(--ink)] dark:text-white">
                         {speaker.name}
                       </p>
-                      {speaker.title ? (
-                        <p className="truncate text-sm text-[var(--ink-3)]">{speaker.title}</p>
+                      {speaker.institution ? (
+                        <p className="text-sm text-[var(--ink-3)]">{speaker.institution}</p>
                       ) : null}
                     </div>
                   </div>
@@ -220,15 +230,6 @@ export default async function EventPage({ params }: EventPageProps) {
                   mapsUrl={event.mapsUrl}
                 />
               </div>
-            </div>
-          ) : null}
-
-          {event.registrationEnabled ? (
-            <div className="mt-10">
-              <EventRegistrationForm
-                eventSlug={event.slug}
-                registrationCapacity={event.registrationCapacity}
-              />
             </div>
           ) : null}
         </article>
