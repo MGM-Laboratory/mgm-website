@@ -20,8 +20,11 @@ Every PR runs:
 - **Security** — CodeQL, dependency review, secret scanning (gitleaks), Trivy filesystem scan.
 - **E2E** — Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
 - **SonarCloud Code Analysis** — posted automatically by SonarCloud's own GitHub App; no local setup needed.
+- **pre-commit.ci** — runs repository hygiene checks and Prettier on every pull-request commit; formatting fixes are committed back to same-repository PRs automatically.
 
 Run the fast ones locally before pushing: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format:check`.
+
+To run the same focused checks before committing, install [pre-commit](https://pre-commit.com/) and run `pre-commit install` once, then use `pre-commit run --all-files` when needed. The existing Husky hook continues to format staged files.
 
 ## Local setup
 
