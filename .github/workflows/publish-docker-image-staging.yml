@@ -7,12 +7,12 @@ on:
 
 jobs:
   build:
-    # Local "uses: ./..." references are broken specifically under the
-    # pull_request trigger (works fine on push, per long-standing GitHub
-    # Actions reports) - the full remote-style syntax pinned to a static
-    # ref sidesteps that bug. `uses:` can't take an expression, so this
-    # always resolves against main rather than the PR's own branch.
-    uses: MGM-Laboratory/mgm-website/.github/workflows/publish-docker-image.yml@main
+    # A reusable workflow that has never been merged to the default branch
+    # can't be resolved by a pull_request-triggered run yet, regardless of
+    # local vs. remote-pinned syntax - this fails until this PR's first
+    # merge, then works normally (including picking up future in-PR edits
+    # to publish-docker-image.yml, which a "@main" pin never would).
+    uses: ./.github/workflows/publish-docker-image.yml
     with:
       # workflow_dispatch has no PR number, so fall back to the run number.
       tag: pr-${{ github.event.pull_request.number || github.run_number }}
