@@ -89,7 +89,7 @@ Note: `preview-teardown.yml`'s `pull_request_target: closed` backstop (row in th
 
 ## Railway
 
-- **Project:** `mgm-company-profile` — id `810d3a40-d9d2-410c-b117-289d2aff095f` (workspace "Shirasaka Ren")
+- **Project:** `mgm-company-profile` — id `810d3a40-d9d2-410c-b117-289d2aff095f`
 - **Environment:** `production` — id `42acf786-e8f4-41f8-8d4f-715bee1655f8`
 - **Services:**
   - `web` (id `4969778e-0bff-4200-9472-6b5a13f037da`) — source: `MGM-Laboratory/mgm-website`, branch `main`, deploy on push; public domain `web-production-589d3f.up.railway.app` (port 3000)

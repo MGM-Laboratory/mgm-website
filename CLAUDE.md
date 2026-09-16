@@ -19,7 +19,7 @@ This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). AP
 
 ## Hard rules (user-enforced — do not bend)
 
-1. **Git identity & attribution.** Commit as whatever identity `git config user.name`/`user.email` resolves to in this working copy (no repo-local override — `shirasakaren` was a coworker's identity, not something to impersonate here). **Never mention Claude, ChatGPT, or any AI agent anywhere in a commit message, trailer, PR description, or code comment — no `Co-Authored-By`, no "generated with", nothing.** The user once rewrote the entire 109-commit history over this. Details: `docs/repo-history.md`.
+1. **Git identity & attribution.** Commit as whatever identity `git config user.name`/`user.email` resolves to in this working copy — no repo-local override, and never impersonate another contributor's identity. **Never mention Claude, ChatGPT, or any AI agent anywhere in a commit message, trailer, PR description, or code comment — no `Co-Authored-By`, no "generated with", nothing.** The user once rewrote the entire 109-commit history over this. Details: `docs/repo-history.md`.
 2. **Granular commits.** One discrete working change per commit; `git push origin main` immediately after each commit — don't batch unrelated fixes.
 3. **Keep the dev server running** at `http://localhost:3000` at all times (`pnpm dev:web`). Check it responds before and after changes (`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000`).
 4. **Verify before declaring done.** Interact with the result in a real browser (Playwright screenshots + interaction scripts; see `docs/testing-verification.md`), then `open http://localhost:3000`. Fixing a bug = reproducing it first, then re-testing the fix under the same conditions.
