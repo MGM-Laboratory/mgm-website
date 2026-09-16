@@ -19,9 +19,11 @@ import { isArticleSlug, slugify, type ArticleBlock } from "@/lib/article-cms";
 import {
   dateOnlyToUtcMidnightIso,
   emptyEventDraft,
+  localToUtcIso,
+  timezoneLabel,
+  TIMEZONE_OFFSETS,
   utcIsoToDateOnly,
-  utcIsoToWibLocal,
-  wibLocalToUtcIso,
+  utcIsoToLocal,
   type CmsEventRecord,
   type EventDraft,
   type EventRundownItem,
@@ -232,6 +234,7 @@ export function EventEditor({
           startAt: initialRecord.startAt,
           endAt: initialRecord.endAt,
           allDay: initialRecord.allDay,
+          timezoneOffset: initialRecord.timezoneOffset,
           location: initialRecord.location ?? "",
           meetingLink: initialRecord.meetingLink ?? "",
           draft: initialRecord.draft,
@@ -664,7 +667,24 @@ export function EventEditor({
           />
           All-day event
         </label>
-        <Field label="Starts (WIB)">
+        <Field label="Timezone">
+          <select
+            className={inputClass}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, timezoneOffset: Number(event.target.value) }))
+            }
+            value={draft.timezoneOffset}
+          >
+            {TIMEZONE_OFFSETS.map((offset) => (
+              <option key={offset} value={offset}>
+                {timezoneLabel(offset)}
+                {offset === 7 ? " (Jakarta / WIB — default)" : ""}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div aria-hidden="true" className="hidden sm:block" />
+        <Field label={`Starts (${timezoneLabel(draft.timezoneOffset)})`}>
           {draft.allDay ? (
             <input
               className={inputClass}
@@ -683,15 +703,17 @@ export function EventEditor({
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
-                  startAt: event.target.value ? wibLocalToUtcIso(event.target.value) : "",
+                  startAt: event.target.value
+                    ? localToUtcIso(event.target.value, current.timezoneOffset)
+                    : "",
                 }))
               }
               type="datetime-local"
-              value={draft.startAt ? utcIsoToWibLocal(draft.startAt) : ""}
+              value={draft.startAt ? utcIsoToLocal(draft.startAt, draft.timezoneOffset) : ""}
             />
           )}
         </Field>
-        <Field label="Ends (WIB)">
+        <Field label={`Ends (${timezoneLabel(draft.timezoneOffset)})`}>
           {draft.allDay ? (
             <input
               className={inputClass}
@@ -710,11 +732,13 @@ export function EventEditor({
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
-                  endAt: event.target.value ? wibLocalToUtcIso(event.target.value) : "",
+                  endAt: event.target.value
+                    ? localToUtcIso(event.target.value, current.timezoneOffset)
+                    : "",
                 }))
               }
               type="datetime-local"
-              value={draft.endAt ? utcIsoToWibLocal(draft.endAt) : ""}
+              value={draft.endAt ? utcIsoToLocal(draft.endAt, draft.timezoneOffset) : ""}
             />
           )}
         </Field>
@@ -890,10 +914,10 @@ export function EventEditor({
               />
               <input
                 className={`${inputClass} w-40 flex-1`}
-                onChange={(event) => updateSpeaker(index, { title: event.target.value })}
-                placeholder="Title (optional)"
+                onChange={(event) => updateSpeaker(index, { institution: event.target.value })}
+                placeholder="Organization / institution (optional)"
                 type="text"
-                value={speaker.title ?? ""}
+                value={speaker.institution ?? ""}
               />
               <button
                 aria-label="Remove speaker"
