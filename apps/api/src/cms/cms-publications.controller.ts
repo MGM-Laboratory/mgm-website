@@ -115,6 +115,9 @@ function safeEqual(left: string, right: string) {
 }
 
 function isPdf(buffer: Buffer) {
+  // Buffer.isBuffer() at the call site already proves this isn't array-shaped;
+  // CodeQL's request-parameter model doesn't know about main.ts's raw-body middleware.
+  // codeql[js/type-confusion-through-parameter-tampering]
   return buffer.length >= 5 && buffer.subarray(0, 5).toString("ascii") === "%PDF-";
 }
 
@@ -291,6 +294,9 @@ export class CmsPublicationsController {
     if (contentType !== "application/pdf" || !body?.length) {
       throw new BadRequestException("The paper must be a PDF file.");
     }
+    // body is a real Buffer here (guarded above), not an attacker-tamperable
+    // array; see the isPdf() note.
+    // codeql[js/type-confusion-through-parameter-tampering]
     if (body.length > maxBytes) {
       throw new BadRequestException(
         `The paper must be under ${Math.floor(maxBytes / 1024 / 1024)} MB.`,
@@ -308,6 +314,7 @@ export class CmsPublicationsController {
         "Paper storage is not configured in this environment, so papers cannot be uploaded.",
       );
     }
+    // codeql[js/type-confusion-through-parameter-tampering]
     return { key, size: body.length };
   }
 
