@@ -9,7 +9,7 @@ import {
 } from "@repo/shared";
 import { Loader2, Paperclip, Send, X } from "lucide-react";
 import Link from "next/link";
-import { useForm, type UseFormSetError } from "react-hook-form";
+import { useForm, useWatch, type UseFormSetError } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -25,6 +25,43 @@ const formSchema = contactFormSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 const FIELD_NAMES = new Set(Object.keys(formSchema.shape));
+
+// Attachments (File/blob objects) can't survive JSON serialization, so only
+// the text fields are persisted — the user re-selects files after a reload.
+const DRAFT_STORAGE_KEY = "mgm-contact-form-draft";
+type DraftValues = Pick<FormValues, "name" | "email" | "company" | "message">;
+
+function loadDraft(): Partial<DraftValues> | null {
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed as Partial<DraftValues>;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(values: DraftValues) {
+  try {
+    if (!values.name && !values.email && !values.company && !values.message) {
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(values));
+  } catch {
+    // Storage unavailable (private browsing, quota) — the form still works.
+  }
+}
+
+function clearDraft() {
+  try {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // Storage unavailable — nothing to clear.
+  }
+}
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
@@ -106,12 +143,38 @@ export function ContactForm() {
     handleSubmit,
     reset,
     setError,
+    control,
     formState: { errors, touchedFields, isSubmitted, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: "onTouched",
     defaultValues: { name: "", email: "", company: "", message: "", agree: false },
   });
+
+  // Restore a saved draft once on mount — attachments are excluded, see
+  // loadDraft/saveDraft above.
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      reset((current) => ({ ...current, ...draft }), { keepDefaultValues: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount
+  }, []);
+
+  // Keep saving as the user types, so closing the tab and coming back (or
+  // opening a new one) picks up where they left off.
+  const watchedDraft = useWatch({ control });
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      saveDraft({
+        name: watchedDraft.name ?? "",
+        email: watchedDraft.email ?? "",
+        company: watchedDraft.company ?? "",
+        message: watchedDraft.message ?? "",
+      });
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [watchedDraft.name, watchedDraft.email, watchedDraft.company, watchedDraft.message]);
 
   // zodResolver validates the whole form on every run, so blurring one field
   // also populates errors for fields the user hasn't touched yet — only
@@ -173,6 +236,7 @@ export function ContactForm() {
       });
       reset();
       setFiles([]);
+      clearDraft();
     } catch (error) {
       toast.error("Message was not sent", {
         description: error instanceof Error ? error.message : "Please try again.",
