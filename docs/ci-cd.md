@@ -55,6 +55,13 @@ cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer https
 
 Wired via SonarCloud's own GitHub App (Automatic Analysis), project `MGM-Laboratory_mgm-website2` — posts its own "SonarCloud Code Analysis" check on every push/PR with no workflow file needed.
 
+## Security-scanner suppressions
+
+Known false positives get suppressed at the source (an inline comment next to the flagged code), never by clicking "dismiss" through a scanner's own web UI/API — that way the reasoning ships with the diff and survives independently of any alert database.
+
+- **CodeQL** — `js/type-confusion-through-parameter-tampering` fires on `body.length`/`buffer.length` in `cms-publications.controller.ts` and `cms-projects.controller.ts`. The query treats any read off `request.body` as possibly array-shaped (from duplicate query/body parameters), but these routes get a real `Buffer` from `main.ts`'s route-scoped `express.raw()` middleware, already guarded with `Buffer.isBuffer()` — the query has no visibility into that route-specific middleware wiring. Suppressed with GitHub's supported inline syntax, `// codeql[js/type-confusion-through-parameter-tampering]` on the line directly above each flagged line.
+- **SonarCloud** — `githubactions:S7631` ("Forked repository code should not be checked out in privileged workflow contexts") fires on `preview-teardown.yml`'s checkout step. The rule is a blanket flag on any checkout inside a `pull_request_target` job; it can't see that the ref is hardcoded to `main` and never the fork's head, which is GitHub's own documented safe pattern for that trigger (see "Fork-PR safety model" above). Suppressed with a trailing `NOSONAR` comment on the checkout line. Because this project uses SonarCloud's Automatic Analysis, `sonar.issue.ignore.multicriteria` in a properties file is a no-op here, so `NOSONAR` is the only in-repo suppression available; if a given scanner version doesn't honor it, the fallback is SonarCloud's own "Resolve as → False Positive" transition on sonarcloud.io — still not GitHub's UI.
+
 ## Preview environments (`/preview`)
 
 Commenting `/preview` on a PR (maintainers/collaborators only) deploys a throwaway copy of the full stack:
