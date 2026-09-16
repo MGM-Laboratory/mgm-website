@@ -11,7 +11,9 @@ The repository was migrated from `github.com/MGM-Laboratory/mgm-website-legacy` 
 
 How: `git filter-branch --env-filter` (unify identity) + `--msg-filter` (delete Claude/Anthropic lines) over the local branches, with a pre-rewrite backup at **`~/lab/website-migration-backup/`** (full git bundle of all refs + rsync of the working tree) on the owner's machine. Commit trees are byte-identical to before — only identities and message lines changed. The `dev` branch's history happened to already be fully clean and came out unchanged.
 
-**Local remotes** (in this working copy): `origin` → `git@ren:MGM-Laboratory/mgm-website.git` (the live repo; `ren` is an SSH alias for github.com), `legacy` → the backup repo. The repo-local git config sets `user.name=shirasakaren` / `user.email=ren@shirasaka.ren`.
+**Local remotes** (in this working copy): `origin` → `git@ren:MGM-Laboratory/mgm-website.git` (the live repo; `ren` is an SSH alias for github.com), `legacy` → the backup repo.
+
+`shirasakaren <ren@shirasaka.ren>` was the single identity this migration unified history to at the time — a coworker's identity, not the repo owner's. There is no repo-local git identity override; commits use whatever `user.name`/`user.email` the working copy's own git config resolves to.
 
 ## Why the git rules are strict
 
