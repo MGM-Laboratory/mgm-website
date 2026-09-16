@@ -6,16 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-api:
-    name: API
-    uses: ./.github/workflows/publish-docker-image-api.yml
-    with:
-      tag: latest
-    secrets: inherit
-
-  build-web:
-    name: Web
-    uses: ./.github/workflows/publish-docker-image-web.yml
+  build:
+    uses: ./.github/workflows/publish-docker-image.yml
     with:
       tag: latest
     secrets: inherit

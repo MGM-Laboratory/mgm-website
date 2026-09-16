@@ -6,21 +6,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-api:
-    name: API
+  build:
     # Local "uses: ./..." references are broken specifically under the
     # pull_request trigger (works fine on push, per long-standing GitHub
     # Actions reports) - the full remote-style syntax pinned to a static
     # ref sidesteps that bug. `uses:` can't take an expression, so this
     # always resolves against main rather than the PR's own branch.
-    uses: MGM-Laboratory/mgm-website/.github/workflows/publish-docker-image-api.yml@main
-    with:
-      tag: staging
-    secrets: inherit
-
-  build-web:
-    name: Web
-    uses: MGM-Laboratory/mgm-website/.github/workflows/publish-docker-image-web.yml@main
+    uses: MGM-Laboratory/mgm-website/.github/workflows/publish-docker-image.yml@main
     with:
       tag: staging
     secrets: inherit
