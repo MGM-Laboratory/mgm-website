@@ -1,6 +1,6 @@
 import type { ArticleBlock } from "@/lib/article-cms";
 
-export type EventSpeaker = { name: string; title?: string; photoKey?: string };
+export type EventSpeaker = { name: string; institution?: string; photoKey?: string };
 export type EventRundownItem = { time: string; item: string };
 
 export type CmsEventRecord = {
@@ -10,6 +10,7 @@ export type CmsEventRecord = {
   startAt: string;
   endAt: string;
   allDay: boolean;
+  timezoneOffset: number;
   location?: string;
   meetingLink?: string;
   draft: boolean;
@@ -31,6 +32,12 @@ export type CmsEventRecord = {
 /** The editable fields, split from `content` the same way the Jobs editor splits `job`/`content`. */
 export type EventDraft = Omit<CmsEventRecord, "content" | "updatedAt">;
 
+/** GMT+7 — Jakarta/WIB — the lab's home timezone and every event's default. */
+export const DEFAULT_TIMEZONE_OFFSET = 7;
+
+/** Whole-hour GMT offsets for the admin timezone picker. */
+export const TIMEZONE_OFFSETS = Array.from({ length: 27 }, (_, i) => i - 12);
+
 export function emptyEventDraft(): EventDraft {
   return {
     slug: "",
@@ -39,6 +46,7 @@ export function emptyEventDraft(): EventDraft {
     startAt: "",
     endAt: "",
     allDay: false,
+    timezoneOffset: DEFAULT_TIMEZONE_OFFSET,
     location: "",
     meetingLink: "",
     draft: true,
@@ -72,21 +80,31 @@ export type CmsEventRegistrationRecord = {
   updatedAt: string;
 };
 
-const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+/** "GMT+7", "GMT-5" — Intl's `timeZone` option won't take an arbitrary numeric offset, so display is hand-built from this instead of an IANA zone name. */
+export function timezoneLabel(offsetHours: number): string {
+  const sign = offsetHours >= 0 ? "+" : "-";
+  return `GMT${sign}${Math.abs(offsetHours)}`;
+}
 
-/** A `datetime-local` input value, always interpreted as WIB wall-clock time. */
-export function wibLocalToUtcIso(value: string): string {
-  return new Date(`${value}:00+07:00`).toISOString();
+function shiftByOffset(iso: string, offsetHours: number) {
+  return new Date(new Date(iso).getTime() + offsetHours * 60 * 60 * 1000);
+}
+
+/** A `datetime-local` input value, interpreted as wall-clock time at the given GMT offset. */
+export function localToUtcIso(value: string, offsetHours: number): string {
+  const sign = offsetHours >= 0 ? "+" : "-";
+  const offsetStr = `${sign}${String(Math.abs(offsetHours)).padStart(2, "0")}:00`;
+  return new Date(`${value}:00${offsetStr}`).toISOString();
 }
 
 /** The inverse, for populating a `datetime-local` input when editing. */
-export function utcIsoToWibLocal(iso: string): string {
-  const shifted = new Date(new Date(iso).getTime() + WIB_OFFSET_MS);
+export function utcIsoToLocal(iso: string, offsetHours: number): string {
+  const shifted = shiftByOffset(iso, offsetHours);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}`;
 }
 
-/** An all-day event's date, stored as UTC midnight (see `calendarDateParts` below). */
+/** An all-day event's date, stored as UTC midnight — independent of any timezone offset. */
 export function dateOnlyToUtcMidnightIso(value: string): string {
   return new Date(`${value}T00:00:00.000Z`).toISOString();
 }
@@ -109,33 +127,33 @@ export function partitionEvents(records: readonly CmsEventRecord[], now = new Da
   return { past, upcoming };
 }
 
-const TIME_ZONE = "Asia/Jakarta";
-
-function formatDay(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
+function formatDayAtOffset(iso: string, offsetHours: number) {
+  return shiftByOffset(iso, offsetHours).toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
-    timeZone: TIME_ZONE,
+    timeZone: "UTC",
     year: "numeric",
   });
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", {
+function formatTimeAtOffset(iso: string, offsetHours: number) {
+  return shiftByOffset(iso, offsetHours).toLocaleTimeString("en-US", {
     hour: "numeric",
     hour12: true,
     minute: "2-digit",
-    timeZone: TIME_ZONE,
+    timeZone: "UTC",
   });
 }
 
-/** A short, human date/time range for list rows and detail text. */
-export function formatEventDateRange(record: CmsEventRecord) {
-  const startDay = formatDay(record.startAt);
-  const endDay = formatDay(record.endAt);
-  if (record.allDay) {
-    return startDay === endDay ? startDay : `${startDay} – ${endDay}`;
-  }
-  const time = `${formatTime(record.startAt)} – ${formatTime(record.endAt)} WIB`;
-  return startDay === endDay ? `${startDay} · ${time}` : `${startDay} – ${endDay} · ${time}`;
+export type EventDateTimeParts = { date: string; time?: string };
+
+/** The date and time rendered as separate parts, so the UI can give them a clear visual boundary instead of gluing them into one string. */
+export function formatEventDateTimeParts(record: CmsEventRecord): EventDateTimeParts {
+  const offset = record.timezoneOffset ?? DEFAULT_TIMEZONE_OFFSET;
+  const startDay = formatDayAtOffset(record.startAt, offset);
+  const endDay = formatDayAtOffset(record.endAt, offset);
+  const date = startDay === endDay ? startDay : `${startDay} – ${endDay}`;
+  if (record.allDay) return { date };
+  const time = `${formatTimeAtOffset(record.startAt, offset)} – ${formatTimeAtOffset(record.endAt, offset)} ${timezoneLabel(offset)}`;
+  return { date, time };
 }

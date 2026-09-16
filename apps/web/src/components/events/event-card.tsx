@@ -1,7 +1,8 @@
 import { CalendarBlank, MapPin, Microphone, Ticket } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
-import { formatEventDateRange, type CmsEventRecord } from "@/lib/events-cms";
+import { EventDateTime } from "@/components/events/event-date-time";
+import type { CmsEventRecord } from "@/lib/events-cms";
 
 function mediaUrl(key?: string) {
   return key ? `/api/events-cms/media/${encodeURIComponent(key)}` : undefined;
@@ -34,11 +35,7 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          <span className="font-mono text-xs tracking-[0.04em] text-[var(--ink-3)] tnum">
-            {formatEventDateRange(event)}
-          </span>
-        </div>
+        <EventDateTime event={event} />
 
         <h3 className="mt-2 font-display text-lg font-semibold tracking-[-0.01em] text-[var(--ink)] sm:text-xl dark:text-white">
           <Link className="after:absolute after:inset-0" href={`/events/${event.slug}`}>
@@ -69,7 +66,7 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
       {event.registrationEnabled ? (
         <Link
           className="relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full bg-brand-blue px-3.5 text-xs font-semibold text-white transition hover:bg-brand-blue/90"
-          href={`/events/${event.slug}#register`}
+          href={`/events/${event.slug}`}
         >
           <Ticket size={14} weight="bold" />
           Register
