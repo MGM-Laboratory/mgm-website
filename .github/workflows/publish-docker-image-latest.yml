@@ -7,12 +7,14 @@ on:
 
 jobs:
   build-api:
+    name: API
     uses: ./.github/workflows/publish-docker-image-api.yml
     with:
       tag: latest
     secrets: inherit
 
   build-web:
+    name: Web
     uses: ./.github/workflows/publish-docker-image-web.yml
     with:
       tag: latest

@@ -20,14 +20,15 @@ jobs:
     # which PR/fork triggered the upstream run, so this job never runs
     # untrusted workflow code.
     if: contains(fromJSON('["pull_request", "pull_request_target"]'), github.event.workflow_run.event)
+    name: Post check-run status comment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Find associated pull request
         id: pr
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
@@ -41,7 +42,7 @@ jobs:
       - name: Generate a bot token
         if: steps.pr.outputs.number != ''
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
