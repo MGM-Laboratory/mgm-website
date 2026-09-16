@@ -120,22 +120,30 @@ export function TrustedBySection() {
 
   useLayoutEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
-    const tween = fadeUpOnScroll(root, ".reveal-card", { stagger: 0.1 });
-    return () => tween?.scrollTrigger?.kill();
-  }, []);
-
-  useLayoutEffect(() => {
-    if (reducedMotion()) return;
     const track = trackRef.current;
-    if (!track) return;
-    tweenRef.current = gsap.to(track, {
-      xPercent: -50,
-      duration: 60,
-      ease: "none",
-      repeat: -1,
+    if (!root || !track) return;
+
+    if (reducedMotion()) {
+      const tween = fadeUpOnScroll(root, ".reveal-card", { stagger: 0.1 });
+      return () => tween?.scrollTrigger?.kill();
+    }
+
+    // The infinite loop only starts once the section's own entrance
+    // animation finishes, matching MosaicMarquee's convention: it keeps the
+    // track motionless (and its transform deterministic) until the section
+    // is actually visible, instead of burning rAF on an off-screen loop.
+    const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 85%", once: true } });
+    tl.fromTo(
+      gsap.utils.toArray<HTMLElement>(".reveal-card", root),
+      { opacity: 0, y: 24 },
+      { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.1 },
+    );
+    tl.eventCallback("onComplete", () => {
+      tweenRef.current = gsap.to(track, { xPercent: -50, duration: 60, ease: "none", repeat: -1 });
     });
+
     return () => {
+      tl.kill();
       tweenRef.current?.kill();
       tweenRef.current = null;
     };
