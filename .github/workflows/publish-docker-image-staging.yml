@@ -14,5 +14,6 @@ jobs:
     # always resolves against main rather than the PR's own branch.
     uses: MGM-Laboratory/mgm-website/.github/workflows/publish-docker-image.yml@main
     with:
-      tag: staging
+      # workflow_dispatch has no PR number, so fall back to the run number.
+      tag: pr-${{ github.event.pull_request.number || github.run_number }}
     secrets: inherit
