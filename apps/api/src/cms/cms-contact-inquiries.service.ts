@@ -17,6 +17,22 @@ type PublicInquiryRecord = Record<string, unknown> & {
   updatedAt: string;
 };
 
+function patchForBulkAction(
+  action: Exclude<InquiryBulkAction, "delete">,
+  now: string,
+): InquiryStatePatch {
+  switch (action) {
+    case "archive":
+      return { status: "archived" };
+    case "unarchive":
+      return { status: "inbox" };
+    case "markRead":
+      return { read: true, readAt: now };
+    case "markUnread":
+      return { read: false, readAt: null };
+  }
+}
+
 @Injectable()
 export class CmsContactInquiriesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -81,15 +97,7 @@ export class CmsContactInquiriesService {
       return { deletedCount: count };
     }
 
-    const now = new Date().toISOString();
-    const patch: InquiryStatePatch =
-      action === "archive"
-        ? { status: "archived" }
-        : action === "unarchive"
-          ? { status: "inbox" }
-          : action === "markRead"
-            ? { read: true, readAt: now }
-            : { read: false, readAt: null };
+    const patch = patchForBulkAction(action, new Date().toISOString());
 
     return this.prisma.$transaction(async (transaction) => {
       const existing = await transaction.cmsContactInquiry.findMany({

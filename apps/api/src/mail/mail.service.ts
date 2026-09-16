@@ -90,43 +90,61 @@ export class MailService {
   async getStatus(limits: MailProviderLimits): Promise<MailProviderStatus> {
     const providers = {} as MailProviderStatus["providers"];
     for (const id of MAIL_PROVIDER_IDS) {
-      const config = limits[id];
-      const entry: MailProviderStatus["providers"][MailProviderId] = {
-        configured:
-          id === "resend"
-            ? Boolean(this.resend)
-            : id === "smtp"
-              ? Boolean(this.smtpTransport)
-              : this.sesCredentialsConfigured,
-      };
-      if (config && (config.dailyLimit ?? config.longLimit)) {
-        entry.windowMode = config.windowMode;
-        if (config.windowMode === "rolling") {
-          if (config.dailyLimit) {
-            entry.dailyLimit = config.dailyLimit;
-            entry.dailyRemaining = await this.rollingRemaining(id, 1, config.dailyLimit);
-          }
-          if (config.longLimit) {
-            entry.longLimit = config.longLimit;
-            entry.longPeriod = config.longPeriod;
-            entry.longRemaining = await this.rollingRemaining(id, 30, config.longLimit);
-          }
-        } else {
-          const usage = await this.getOrInitUsage(id, config);
-          if (config.dailyLimit) {
-            entry.dailyLimit = config.dailyLimit;
-            entry.dailyRemaining = usage.dailyRemaining ?? config.dailyLimit;
-          }
-          if (config.longLimit) {
-            entry.longLimit = config.longLimit;
-            entry.longPeriod = config.longPeriod;
-            entry.longRemaining = usage.longRemaining ?? config.longLimit;
-          }
-        }
-      }
-      providers[id] = entry;
+      providers[id] = await this.buildProviderStatusEntry(id, limits[id]);
     }
     return { fromEmailConfigured: Boolean(this.fromEmail), providers };
+  }
+
+  private getConfiguredFlag(id: MailProviderId): boolean {
+    if (id === "resend") return Boolean(this.resend);
+    if (id === "smtp") return Boolean(this.smtpTransport);
+    return this.sesCredentialsConfigured;
+  }
+
+  private async buildProviderStatusEntry(
+    id: MailProviderId,
+    config: MailProviderLimitConfig | undefined,
+  ): Promise<MailProviderStatus["providers"][MailProviderId]> {
+    const entry: MailProviderStatus["providers"][MailProviderId] = {
+      configured: this.getConfiguredFlag(id),
+    };
+    if (!config || !(config.dailyLimit ?? config.longLimit)) return entry;
+
+    entry.windowMode = config.windowMode;
+    const quota =
+      config.windowMode === "rolling"
+        ? await this.buildRollingStatus(id, config)
+        : await this.buildCalendarStatus(id, config);
+    return { ...entry, ...quota };
+  }
+
+  private async buildRollingStatus(id: MailProviderId, config: MailProviderLimitConfig) {
+    const quota: Partial<MailProviderStatus["providers"][MailProviderId]> = {};
+    if (config.dailyLimit) {
+      quota.dailyLimit = config.dailyLimit;
+      quota.dailyRemaining = await this.rollingRemaining(id, 1, config.dailyLimit);
+    }
+    if (config.longLimit) {
+      quota.longLimit = config.longLimit;
+      quota.longPeriod = config.longPeriod;
+      quota.longRemaining = await this.rollingRemaining(id, 30, config.longLimit);
+    }
+    return quota;
+  }
+
+  private async buildCalendarStatus(id: MailProviderId, config: MailProviderLimitConfig) {
+    const usage = await this.getOrInitUsage(id, config);
+    const quota: Partial<MailProviderStatus["providers"][MailProviderId]> = {};
+    if (config.dailyLimit) {
+      quota.dailyLimit = config.dailyLimit;
+      quota.dailyRemaining = usage.dailyRemaining ?? config.dailyLimit;
+    }
+    if (config.longLimit) {
+      quota.longLimit = config.longLimit;
+      quota.longPeriod = config.longPeriod;
+      quota.longRemaining = usage.longRemaining ?? config.longLimit;
+    }
+    return quota;
   }
 
   async sendEmail(params: {
@@ -221,7 +239,9 @@ export class MailService {
     const withWeight = list.map((id) => ({ id, weight: Math.max(0, weights[id] ?? 1) }));
     const total = withWeight.reduce((sum, entry) => sum + entry.weight, 0);
     if (total <= 0) return list;
-    let roll = Math.random() * total;
+    // Not security-sensitive: picks which mail provider handles this send,
+    // not an auth token, session id, or anything cryptographic.
+    let roll = Math.random() * total; // NOSONAR
     let picked = withWeight[0]!.id;
     for (const entry of withWeight) {
       if (roll < entry.weight) {
@@ -256,7 +276,9 @@ export class MailService {
     if (config.windowMode === "rolling") {
       await this.prisma.mailSendLog.create({ data: { provider: id } });
       // Opportunistic cleanup — avoids an unbounded log without a cron job.
+      // Not security-sensitive: just a sampling rate for a housekeeping query.
       if (Math.random() < 0.05) {
+        // NOSONAR
         const cutoff = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
         await this.prisma.mailSendLog.deleteMany({
           where: { provider: id, sentAt: { lt: cutoff } },

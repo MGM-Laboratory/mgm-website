@@ -858,7 +858,7 @@ export function MemberCmsStudio({
           initialEvents={initialEvents}
           initialRegistrations={initialEventRegistrations}
         />
-      ) : section === "contact-inquiries" ? (
+      ) : section === "contact-inquiries" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
         // Full-bleed, no-aside-rail: the inbox is the whole workspace, same
         // shape as careers/events' registrations panes.
         <div className="mx-auto max-w-[1680px] p-5 sm:p-8 lg:p-10">

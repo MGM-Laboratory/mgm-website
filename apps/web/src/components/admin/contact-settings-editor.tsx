@@ -225,7 +225,8 @@ function StatusBadge({
 }: Readonly<{ label: string; entry: ProviderStatusEntry | undefined }>) {
   const configured = entry?.configured ?? false;
   const remaining = formatRemaining(entry);
-  const detail = `${label}: ${configured ? "configured" : "not configured"}${remaining ? ` — ${remaining}` : ""}`;
+  const remainingSuffix = remaining ? ` — ${remaining}` : "";
+  const detail = `${label}: ${configured ? "configured" : "not configured"}${remainingSuffix}`;
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -277,6 +278,20 @@ function numOrUndefined(value: string): number | undefined {
   if (value.trim() === "") return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function validateContactSettingsForm(form: FormState): string | null {
+  if (!form.email.trim()) return "Email is required.";
+  if (!form.address.trim()) return "Address is required.";
+  const lat = Number(form.lat);
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    return "Latitude must be a number between -90 and 90.";
+  }
+  const lng = Number(form.lng);
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+    return "Longitude must be a number between -180 and 180.";
+  }
+  return null;
 }
 
 function ProviderOrderList({
@@ -580,24 +595,13 @@ export function ContactSettingsEditor({
   else if (status === "saved" && !isDirty) saveLabel = "Saved";
 
   const save = async () => {
+    const validationError = validateContactSettingsForm(form);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
     const lat = Number(form.lat);
     const lng = Number(form.lng);
-    if (!form.email.trim()) {
-      toast.error("Email is required.");
-      return;
-    }
-    if (!form.address.trim()) {
-      toast.error("Address is required.");
-      return;
-    }
-    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
-      toast.error("Latitude must be a number between -90 and 90.");
-      return;
-    }
-    if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
-      toast.error("Longitude must be a number between -180 and 180.");
-      return;
-    }
     setStatus("saving");
     setError(undefined);
     try {
