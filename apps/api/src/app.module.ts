@@ -9,6 +9,7 @@ import { AppService } from "./app.service.js";
 import { CacheModule } from "./cache/cache.module.js";
 import { CmsAdminsModule } from "./cms/cms-admins.module.js";
 import { CmsArticlesModule } from "./cms/cms-articles.module.js";
+import { CmsContactInquiriesModule } from "./cms/cms-contact-inquiries.module.js";
 import { CmsContactSettingsModule } from "./cms/cms-contact-settings.module.js";
 import { CmsEventsModule } from "./cms/cms-events.module.js";
 import { CmsJobsModule } from "./cms/cms-jobs.module.js";
@@ -50,6 +51,7 @@ import { StorageModule } from "./storage/storage.module.js";
     CmsArticlesModule,
     CmsPublicationsModule,
     CmsContactSettingsModule,
+    CmsContactInquiriesModule,
     ContactModule,
     CmsJobsModule,
     CmsResearchModule,

@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import type { ContactFormPayload } from "@repo/shared";
+import type { Prisma } from "../generated/prisma/client.js";
 
+import { CmsContactInquiriesService } from "../cms/cms-contact-inquiries.service.js";
 import { CmsContactSettingsService } from "../cms/cms-contact-settings.service.js";
 import { MailService } from "../mail/mail.service.js";
 import { StorageService } from "../storage/storage.service.js";
@@ -20,10 +22,28 @@ export class ContactService {
     private readonly mail: MailService,
     private readonly storage: StorageService,
     private readonly settings: CmsContactSettingsService,
+    private readonly inquiries: CmsContactInquiriesService,
   ) {}
 
   async send(payload: ContactFormPayload): Promise<void> {
     const attachmentKeys = payload.attachmentKeys ?? [];
+
+    // Persisted unconditionally, before the email is even attempted — the
+    // inquiry must never be lost to an email provider outage, since this is
+    // the only guaranteed record of the submission.
+    await this.inquiries.create({
+      inquiry: {
+        name: payload.name,
+        email: payload.email,
+        company: payload.company ?? null,
+        message: payload.message,
+        attachmentKeys,
+        read: false,
+        readAt: null,
+        status: "inbox",
+      },
+    } as unknown as Prisma.InputJsonValue);
+
     const attachmentLines = await Promise.all(
       attachmentKeys.map(async (key) => {
         try {

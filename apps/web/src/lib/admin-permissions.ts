@@ -11,6 +11,7 @@ export const ADMIN_PAGE_IDS = [
   "research",
   "careers",
   "contact",
+  "contact-inquiries",
   "events",
 ] as const;
 

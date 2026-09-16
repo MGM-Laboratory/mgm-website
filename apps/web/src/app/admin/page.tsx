@@ -11,6 +11,7 @@ import { fetchProjectAdminList } from "@/lib/project-cms-server";
 import { ensurePublicationCmsSeeded } from "@/lib/publication-cms-seed";
 import { ensureResearchCmsSeeded } from "@/lib/research-cms-server";
 import { fetchEventAdminList, fetchEventRegistrations } from "@/lib/events-cms-server";
+import { fetchContactInquiries } from "@/lib/contact-inquiries-cms-server";
 
 // The auth check reads the session cookie, so this page must never be
 // statically prerendered: at build time there is no cookie and the
@@ -34,6 +35,7 @@ export default async function AdminPage() {
     projects,
     events,
     eventRegistrations,
+    contactInquiries,
   ] = await Promise.all([
     can(session.permissions, "articles", "read")
       ? ensureArticleCmsSeeded().catch(() => undefined)
@@ -61,12 +63,16 @@ export default async function AdminPage() {
     can(session.permissions, "events", "read")
       ? fetchEventRegistrations().catch(() => [])
       : Promise.resolve([]),
+    can(session.permissions, "contact-inquiries", "read")
+      ? fetchContactInquiries().catch(() => [])
+      : Promise.resolve([]),
   ]);
   return (
     <MemberCmsStudio
       initialAdmins={admins}
       initialApplications={applications ?? []}
       initialArticles={articles ?? []}
+      initialContactInquiries={contactInquiries ?? []}
       initialEventRegistrations={eventRegistrations ?? []}
       initialEvents={events ?? []}
       initialJobs={jobs ?? []}

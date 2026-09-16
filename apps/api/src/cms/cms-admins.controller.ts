@@ -25,6 +25,7 @@ const PAGES = [
   "research",
   "careers",
   "contact",
+  "contact-inquiries",
   "events",
 ] as const;
 

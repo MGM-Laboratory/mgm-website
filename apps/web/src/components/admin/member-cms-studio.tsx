@@ -9,6 +9,7 @@ import {
   CaretUpDown,
   Check,
   Envelope,
+  EnvelopeOpen,
   FloppyDisk,
   Flask,
   GraduationCap,
@@ -62,10 +63,12 @@ import { useProjectRecords } from "@/hooks/use-project-records";
 import { usePublicationRecords } from "@/hooks/use-publication-records";
 import { useResearchRecords } from "@/hooks/use-research-records";
 import { CareersCmsStudio } from "@/components/admin/careers-cms-studio";
+import { ContactInquiriesInbox } from "@/components/admin/contact-inquiries-inbox";
 import { EventsCmsStudio } from "@/components/admin/events-cms-studio";
 import type { CmsArticleRecord } from "@/lib/article-cms";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import type { CmsPublicationRecord } from "@/lib/publication-cms";
+import type { CmsContactInquiryRecord } from "@/lib/contact-inquiries-cms";
 import type { CmsJobApplicationRecord, CmsJobRecord } from "@/lib/career-cms";
 import type { CmsResearchRecord } from "@/lib/research-cms";
 import type { CmsEventRecord, CmsEventRegistrationRecord } from "@/lib/events-cms";
@@ -80,6 +83,7 @@ type EditorialSection =
   | "members"
   | "careers"
   | "contact"
+  | "contact-inquiries"
   | "events"
   | "administration";
 type DateValue = { month: number; year: number };
@@ -99,6 +103,7 @@ const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: st
   { id: "members", label: "Member" },
   { id: "careers", label: "Careers" },
   { id: "contact", label: "Contact Settings" },
+  { id: "contact-inquiries", label: "Contact Inquiries" },
   { id: "events", label: "Events" },
 ];
 
@@ -111,6 +116,7 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "members", label: "Member", tone: "text-brand-red" },
   { id: "careers", label: "Careers", tone: "text-brand-yellow" },
   { id: "contact", label: "Contact Settings", tone: "text-brand-green" },
+  { id: "contact-inquiries", label: "Contact Inquiries", tone: "text-brand-green" },
   { id: "events", label: "Events", tone: "text-brand-green" },
   { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
@@ -122,6 +128,7 @@ const LIVE_WORKSPACES = new Set<EditorialSection>([
   "careers",
   "research",
   "contact",
+  "contact-inquiries",
   "projects",
   "events",
 ]);
@@ -135,6 +142,7 @@ const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
   research: "research",
   careers: "careers",
   contact: "contact",
+  "contact-inquiries": "contact-inquiries",
   events: "events",
 };
 
@@ -154,6 +162,8 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
       return <GraduationCap size={size} weight="duotone" />;
     case "contact":
       return <Envelope size={size} weight="duotone" />;
+    case "contact-inquiries":
+      return <EnvelopeOpen size={size} weight="duotone" />;
     case "events":
       return <CalendarBlank size={size} weight="duotone" />;
     case "administration":
@@ -442,6 +452,7 @@ export function MemberCmsStudio({
   initialProjects = [],
   initialEvents = [],
   initialEventRegistrations = [],
+  initialContactInquiries = [],
   paperLimitBytes = 209_715_200,
   videoLimitBytes = 524_288_000,
   session,
@@ -455,6 +466,7 @@ export function MemberCmsStudio({
   initialProjects?: CmsProjectRecord[];
   initialEvents?: CmsEventRecord[];
   initialEventRegistrations?: CmsEventRegistrationRecord[];
+  initialContactInquiries?: CmsContactInquiryRecord[];
   paperLimitBytes?: number;
   videoLimitBytes?: number;
   session: AdminViewer;
@@ -480,6 +492,8 @@ export function MemberCmsStudio({
     records: projectRecords,
     setRecords: setProjectRecords,
   } = useProjectRecords(initialProjects);
+  const [contactInquiries, setContactInquiries] =
+    useState<CmsContactInquiryRecord[]>(initialContactInquiries);
   const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");
@@ -844,6 +858,22 @@ export function MemberCmsStudio({
           initialEvents={initialEvents}
           initialRegistrations={initialEventRegistrations}
         />
+      ) : section === "contact-inquiries" ? (
+        // Full-bleed, no-aside-rail: the inbox is the whole workspace, same
+        // shape as careers/events' registrations panes.
+        <div className="mx-auto max-w-[1680px] p-5 sm:p-8 lg:p-10">
+          <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-green uppercase">
+            Contact Inquiries
+          </p>
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
+            Contact Inquiries
+          </h1>
+          <p className="mt-2 text-sm text-[#69748a] dark:text-white/50">
+            Every /contact form submission, saved the moment it arrives — independent of whether the
+            reply email actually sends.
+          </p>
+          <ContactInquiriesInbox records={contactInquiries} setRecords={setContactInquiries} />
+        </div>
       ) : (
         <div className="mx-auto grid max-w-[1680px] lg:grid-cols-[19rem_minmax(0,1fr)]">
           <aside className="border-b border-[#dee4ef] p-4 dark:border-white/10 lg:sticky lg:top-[69px] lg:h-[calc(100dvh-69px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
