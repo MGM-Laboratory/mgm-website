@@ -31,7 +31,7 @@ const envSchema = z.object({
   SMTP_HOST: optionalString(),
   SMTP_PORT: z.preprocess(
     (value) => (value === "" || value === undefined ? undefined : value),
-    z.coerce.number().int().positive().optional(),
+    z.coerce.number().int().positive().max(65535).optional(),
   ),
   SMTP_USER: optionalString(),
   SMTP_PASSWORD: optionalString(),

@@ -23,6 +23,10 @@ export const ACTION_RANK: Record<AdminAction, number> = { read: 1, write: 2, del
 
 const ADMIN_ACTIONS: AdminAction[] = ["read", "write", "delete"];
 
+export const ASSIGNABLE_ACTIONS: Record<AdminPageId, readonly AdminAction[]> = Object.fromEntries(
+  ADMIN_PAGE_IDS.map((page) => [page, page === "contact-inquiries" ? ["read"] : ADMIN_ACTIONS]),
+) as unknown as Record<AdminPageId, readonly AdminAction[]>;
+
 export const ALL_PERMISSIONS: AdminPermissions = Object.fromEntries(
   ADMIN_PAGE_IDS.map((page) => [page, ["read", "write", "delete"] as AdminAction[]]),
 ) as AdminPermissions;
@@ -41,6 +45,7 @@ export function togglePermission(
   page: AdminPageId,
   action: AdminAction,
 ): AdminPermissions {
+  if (!ASSIGNABLE_ACTIONS[page].includes(action)) return permissions;
   const current = permissions[page] ?? [];
   const enabled = current.includes(action);
   const rank = ACTION_RANK[action];

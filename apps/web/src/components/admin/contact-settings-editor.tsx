@@ -714,24 +714,38 @@ export function ContactSettingsEditor({
   const [baseline, setBaseline] = useState("");
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const [error, setError] = useState<string>();
+  const [loadError, setLoadError] = useState<string>();
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [providerStatus, setProviderStatus] = useState<MailProviderStatus>();
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const response = await fetch("/api/admin/contact-settings");
-      if (!response.ok || cancelled) return;
-      const data = (await response.json()) as { record?: ContactSettings };
-      if (!data.record || cancelled) return;
-      const next = toForm(data.record);
-      setForm(next);
-      setBaseline(JSON.stringify(next));
-      setReady(true);
+      setReady(false);
+      setLoadError(undefined);
+      try {
+        const response = await fetch("/api/admin/contact-settings");
+        if (!response.ok) {
+          throw new Error(await responseError(response, "The settings request failed."));
+        }
+        const data = (await response.json()) as { record?: ContactSettings };
+        if (!data.record) throw new Error("The settings response did not include a record.");
+        if (cancelled) return;
+        const next = toForm(data.record);
+        setForm(next);
+        setBaseline(JSON.stringify(next));
+        setReady(true);
+      } catch (loadFailure) {
+        if (cancelled) return;
+        const detail =
+          loadFailure instanceof Error ? loadFailure.message : "The settings request failed.";
+        setLoadError(`Contact settings could not be loaded. ${detail}`);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     let cancelled = false;
@@ -852,6 +866,22 @@ export function ContactSettingsEditor({
           </p>
         </div>
       </div>
+
+      {loadError ? (
+        <div
+          className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-red-50 px-4 py-3 text-sm text-brand-red dark:bg-brand-red/15 dark:text-brand-red-100"
+          role="alert"
+        >
+          <span>{loadError}</span>
+          <button
+            className="rounded-lg border border-current px-3 py-1.5 font-semibold transition hover:bg-white/50 dark:hover:bg-white/10"
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            type="button"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">

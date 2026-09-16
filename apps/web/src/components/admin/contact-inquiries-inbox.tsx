@@ -24,9 +24,11 @@ const EMPTY_MESSAGES = {
  * provider outage.
  */
 export function ContactInquiriesInbox({
+  readOnly,
   records,
   setRecords,
 }: Readonly<{
+  readOnly: boolean;
   records: CmsContactInquiryRecord[];
   setRecords: Dispatch<SetStateAction<CmsContactInquiryRecord[]>>;
 }>) {
@@ -38,6 +40,7 @@ export function ContactInquiriesInbox({
       `${record.inquiry.name} ${record.inquiry.email} ${record.inquiry.company ?? ""}`
         .toLocaleLowerCase()
         .includes(needle),
+    readOnly,
     records,
     setRecords,
     withState: (record, patch) => ({ ...record, inquiry: { ...record.inquiry, ...patch } }),

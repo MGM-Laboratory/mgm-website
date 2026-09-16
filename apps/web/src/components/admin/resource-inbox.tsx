@@ -52,6 +52,7 @@ export type UseResourceInboxOptions<TRecord extends InboxRecord> = {
   matchesQuery: (record: TRecord, needle: string) => boolean;
   apiBase: string;
   itemLabel: string;
+  readOnly?: boolean;
   /** Appended to the bulk-delete confirm prompt, e.g. a note about side effects. */
   deleteConfirmSuffix?: string;
   onMutated?: () => void;
@@ -70,6 +71,7 @@ export function useResourceInbox<TRecord extends InboxRecord>({
   matchesQuery,
   apiBase,
   itemLabel,
+  readOnly = false,
   deleteConfirmSuffix,
   onMutated,
 }: UseResourceInboxOptions<TRecord>) {
@@ -149,11 +151,11 @@ export function useResourceInbox<TRecord extends InboxRecord>({
     const record = records.find((item) => item.slug === slug);
     if (!record) return;
     const state = getState(record);
-    if (!state.read && state.status === "inbox") void patchState(slug, { read: true });
+    if (!readOnly && !state.read && state.status === "inbox") void patchState(slug, { read: true });
   };
 
   const performBulk = async (ids: string[], action: BulkAction) => {
-    if (!ids.length) return;
+    if (readOnly || !ids.length) return;
     const suffix = deleteConfirmSuffix ? ` ${deleteConfirmSuffix}` : "";
     const confirmMessage = `Delete ${ids.length} ${itemLabel}(s)?${suffix}`;
     if (action === "delete" && !window.confirm(confirmMessage)) {
@@ -232,6 +234,7 @@ export function useResourceInbox<TRecord extends InboxRecord>({
     open,
     patchState,
     query,
+    readOnly,
     selected,
     selectedIds,
     setFilter,
@@ -281,6 +284,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
     open,
     patchState,
     query,
+    readOnly,
     selected,
     selectedIds,
     setFilter,
@@ -320,54 +324,56 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 border-y border-[#dee4ef] px-4 py-2 dark:border-white/10">
-          <input
-            aria-label="Select all visible items"
-            checked={allVisibleSelected}
-            className="size-4 accent-brand-blue"
-            onChange={(event) => {
-              if (event.target.checked) {
-                setSelectedIds(new Set(filtered.map((record) => record.slug)));
-              } else {
-                setSelectedIds(new Set());
-              }
-            }}
-            type="checkbox"
-          />
-          {selectedIds.size > 0 ? (
-            <div className="flex items-center gap-1.5">
-              <span className="mr-1 text-xs font-semibold text-[#5d687d] dark:text-white/55">
-                {selectedIds.size} selected
-              </span>
-              <button
-                className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-                onClick={() => void bulk("archive")}
-                title="Archive"
-                type="button"
-              >
-                <Archive size={14} weight="bold" />
-              </button>
-              <button
-                className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-                onClick={() => void bulk("markUnread")}
-                title="Mark unread"
-                type="button"
-              >
-                <Envelope size={14} weight="bold" />
-              </button>
-              <button
-                className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-red/40 hover:text-brand-red dark:border-white/10 dark:text-white/55"
-                onClick={() => void bulk("delete")}
-                title="Delete"
-                type="button"
-              >
-                <Trash size={14} weight="bold" />
-              </button>
-            </div>
-          ) : (
-            <span className="text-xs font-semibold text-[#9ba4b5]">Select</span>
-          )}
-        </div>
+        {!readOnly ? (
+          <div className="flex items-center gap-3 border-y border-[#dee4ef] px-4 py-2 dark:border-white/10">
+            <input
+              aria-label="Select all visible items"
+              checked={allVisibleSelected}
+              className="size-4 accent-brand-blue"
+              onChange={(event) => {
+                if (event.target.checked) {
+                  setSelectedIds(new Set(filtered.map((record) => record.slug)));
+                } else {
+                  setSelectedIds(new Set());
+                }
+              }}
+              type="checkbox"
+            />
+            {selectedIds.size > 0 ? (
+              <div className="flex items-center gap-1.5">
+                <span className="mr-1 text-xs font-semibold text-[#5d687d] dark:text-white/55">
+                  {selectedIds.size} selected
+                </span>
+                <button
+                  className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
+                  onClick={() => void bulk("archive")}
+                  title="Archive"
+                  type="button"
+                >
+                  <Archive size={14} weight="bold" />
+                </button>
+                <button
+                  className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
+                  onClick={() => void bulk("markUnread")}
+                  title="Mark unread"
+                  type="button"
+                >
+                  <Envelope size={14} weight="bold" />
+                </button>
+                <button
+                  className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-red/40 hover:text-brand-red dark:border-white/10 dark:text-white/55"
+                  onClick={() => void bulk("delete")}
+                  title="Delete"
+                  type="button"
+                >
+                  <Trash size={14} weight="bold" />
+                </button>
+              </div>
+            ) : (
+              <span className="text-xs font-semibold text-[#9ba4b5]">Select</span>
+            )}
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {filtered.map((record, index) => {
@@ -381,20 +387,22 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                 onClick={() => open(record.slug)}
                 type="button"
               >
-                <input
-                  aria-label={getRowAriaLabel(record)}
-                  checked={selectedIds.has(record.slug)}
-                  className="size-4 shrink-0 accent-brand-blue"
-                  onClick={(event) => event.stopPropagation()}
-                  onChange={(event) =>
-                    toggleRow(
-                      index,
-                      event.target.checked,
-                      (event.nativeEvent as MouseEvent).shiftKey,
-                    )
-                  }
-                  type="checkbox"
-                />
+                {!readOnly ? (
+                  <input
+                    aria-label={getRowAriaLabel(record)}
+                    checked={selectedIds.has(record.slug)}
+                    className="size-4 shrink-0 accent-brand-blue"
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) =>
+                      toggleRow(
+                        index,
+                        event.target.checked,
+                        (event.nativeEvent as MouseEvent).shiftKey,
+                      )
+                    }
+                    type="checkbox"
+                  />
+                ) : null}
                 {renderRow(record, { unread })}
                 {state.status === "archived" ? (
                   <span className="shrink-0 rounded-full bg-[#e8ecf4] px-2 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em] text-[#667187] uppercase">
@@ -422,7 +430,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
             {renderDetail(selected)}
 
             <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-[#dee4ef] pt-5 dark:border-white/10">
-              {getState(selected).status === "archived" ? (
+              {!readOnly && getState(selected).status === "archived" ? (
                 <button
                   className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
                   onClick={() => void patchState(selected.slug, { status: "inbox" })}
@@ -431,7 +439,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                   <Envelope size={15} weight="bold" />
                   Move to inbox
                 </button>
-              ) : (
+              ) : !readOnly ? (
                 <button
                   className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
                   onClick={() => void patchState(selected.slug, { status: "archived" })}
@@ -440,32 +448,38 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                   <Archive size={15} weight="bold" />
                   Archive
                 </button>
-              )}
-              <button
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-                onClick={() => void patchState(selected.slug, { read: !getState(selected).read })}
-                type="button"
-              >
-                {getState(selected).read ? (
-                  <>
-                    <Envelope size={15} weight="bold" />
-                    Mark unread
-                  </>
-                ) : (
-                  <>
-                    <EnvelopeOpen size={15} weight="bold" />
-                    Mark read
-                  </>
-                )}
-              </button>
-              <button
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-red/40 hover:text-brand-red dark:border-white/10 dark:text-white/55"
-                onClick={() => deleteOne(selected.slug)}
-                type="button"
-              >
-                <Trash size={15} weight="bold" />
-                Delete
-              </button>
+              ) : null}
+              {!readOnly ? (
+                <>
+                  <button
+                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
+                    onClick={() =>
+                      void patchState(selected.slug, { read: !getState(selected).read })
+                    }
+                    type="button"
+                  >
+                    {getState(selected).read ? (
+                      <>
+                        <Envelope size={15} weight="bold" />
+                        Mark unread
+                      </>
+                    ) : (
+                      <>
+                        <EnvelopeOpen size={15} weight="bold" />
+                        Mark read
+                      </>
+                    )}
+                  </button>
+                  <button
+                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d9dfeb] px-3.5 text-sm font-semibold text-[#5d687d] transition hover:border-brand-red/40 hover:text-brand-red dark:border-white/10 dark:text-white/55"
+                    onClick={() => deleteOne(selected.slug)}
+                    type="button"
+                  >
+                    <Trash size={15} weight="bold" />
+                    Delete
+                  </button>
+                </>
+              ) : null}
               {renderPrimaryAction(selected)}
             </div>
           </div>

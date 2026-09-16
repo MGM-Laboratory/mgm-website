@@ -18,7 +18,7 @@ import {
 } from "@repo/shared";
 import type { Request, Response } from "express";
 
-import { StorageService } from "../storage/storage.service.js";
+import { StorageConfigurationError, StorageService } from "../storage/storage.service.js";
 import { ContactService } from "./contact.service.js";
 
 function slugifyFilename(filename: string) {
@@ -88,10 +88,13 @@ export class ContactController {
 
     try {
       await this.storage.uploadFile({ body, contentType, key });
-    } catch {
-      throw new BadRequestException(
-        "Attachment storage is not configured in this environment, so files cannot be uploaded.",
-      );
+    } catch (error) {
+      if (error instanceof StorageConfigurationError) {
+        throw new BadRequestException(
+          "Attachment storage is not configured in this environment, so files cannot be uploaded.",
+        );
+      }
+      throw error;
     }
     // codeql[js/type-confusion-through-parameter-tampering]
     return { key, size: body.length };
