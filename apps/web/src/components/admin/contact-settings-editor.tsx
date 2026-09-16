@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useDismissableOpen } from "@/hooks/use-dismissable-open";
 import { cn } from "@/lib/utils";
 import {
   MAIL_PROVIDER_IDS,
@@ -79,22 +80,7 @@ function Listbox<T extends string>({
     setPlacement({ maxHeight: Math.max(160, Math.min(448, available)), openUpward });
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const close = (target: EventTarget | null) => {
-      if (target instanceof Node && !ref.current?.contains(target)) setOpen(false);
-    };
-    const onClick = (event: MouseEvent) => close(event.target);
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  useDismissableOpen(ref, open, setOpen);
 
   return (
     <div className="relative" ref={ref}>

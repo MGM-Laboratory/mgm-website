@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Copy, Mail, MapPin, Navigation, Plus, Send } from "lucide-react";
 import type { ContactSettings } from "@repo/shared";
 import { toast } from "sonner";
 
 import { HqMap } from "@/components/contact/hq-map";
+import { useDismissableOpen } from "@/hooks/use-dismissable-open";
 import { cn } from "@/lib/utils";
 
 type IconType = typeof Mail;
@@ -61,23 +62,7 @@ function RevealPopover({
 }>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (target: EventTarget | null) => {
-      if (target instanceof Node && !ref.current?.contains(target)) setOpen(false);
-    };
-    const onClick = (event: MouseEvent) => close(event.target);
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  useDismissableOpen(ref, open, setOpen);
 
   return (
     <div className="relative inline-block" ref={ref}>
