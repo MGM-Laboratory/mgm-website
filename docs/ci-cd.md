@@ -1,6 +1,6 @@
 # CI/CD
 
-Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud and a status comment. `main` is protected: PRs need every required check green to merge; repo admins can bypass for direct pushes.
+Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud, pre-commit.ci, and a status comment. `main` is protected: PRs need every required check green to merge; repo admins can bypass for direct pushes.
 
 ## GitHub Actions workflows
 
@@ -37,6 +37,10 @@ One reusable workflow matrixed over both images, plus thin caller workflows, inv
 Version-tag-triggered releases (pushing `v*.*.*`) aren't wired up here — the original single-file workflow supported it, this one doesn't yet. Add a third caller workflow if that's needed again.
 
 **Docker Hub credentials live at the GitHub org level** (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` variables/secrets) — nothing is stored per-repo, so new repos in the org inherit them automatically.
+
+## pre-commit.ci
+
+The pre-commit.ci GitHub App runs `.pre-commit-config.yaml` on every pull-request commit. The configuration covers repository hygiene (valid structured files, merge-conflict markers, private keys, line endings, whitespace, and large additions) and runs the repo's pinned Prettier version over supported source and documentation files. Safe formatting fixes are committed back to same-repository pull requests automatically; dependency revisions in the configuration are updated weekly.
 
 ### Fork-PR safety model
 
