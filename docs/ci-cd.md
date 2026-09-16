@@ -104,6 +104,34 @@ The Railway MCP tools are also available in agent sessions (`list-projects`, `de
 
 `main` requires a PR + every required status check to merge; repo admins can bypass (Settings → Rules → Rulesets). External contributors go through the full PR flow described in `CONTRIBUTING.md`; the owner/agent workflow of committing and pushing directly to `main` for routine work is unaffected.
 
+### Known issue: the ruleset's required-check names keep getting reset
+
+The `main-protection` ruleset (id `23450743`) requires ~18 status checks by exact `context` name. Recurring symptom: a PR with every real check green still shows `mergeStateStatus: BLOCKED`, and `gh pr merge`/the `/merge` bot both fail with `N of 18 required status checks are expected`.
+
+**Root cause (confirmed 2026-09-16):** GitHub user `SyafaHadyan` (id `107655102`) has repeatedly re-saved the ruleset — `gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743/history` showed 20+ edits from this account in a single day — each time reverting the required-check `context` values back to stale/renamed names that don't match this repo's actual job names:
+
+| Required (stale)                    | Actual job name         |
+| ----------------------------------- | ----------------------- |
+| `Playwright (<os>, <browser>)` (×7) | `e2e (<os>, <browser>)` |
+| `Lint, typecheck, test & build`     | `ci`                    |
+| `Lighthouse CI budget`              | `lighthouse`            |
+
+This is almost certainly the GitHub Settings → Rules web UI re-submitting the whole form (including untouched, pre-filled stale check names) on every save, not an automation or workflow file — no committed config drives this ruleset. It is **not** the repo's own `/merge`/`/check` automation (that's a separate GitHub App, `ren-automation`, confirmed by a different, much-less-frequent actor id in the history).
+
+**Fix, every time it recurs:**
+
+```bash
+# 1. Compare required names against the real ones:
+gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743 | jq '.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context'
+gh pr checks <n>   # the real job names
+
+# 2. PUT back the same ruleset with only the context values corrected
+# (full payload + one-liner: see the ruleset-reversion memory)
+gh api --method PUT repos/MGM-Laboratory/mgm-website/rulesets/23450743 --input corrected-ruleset.json
+```
+
+Fetch the _current_ ruleset first and edit only the `context` fields — don't reuse an old saved payload verbatim, since other settings may have changed too. This has now recurred at least 3 times (2026-09-15 twice, 2026-09-16 once); re-fixing via API is a workaround, not a durable solution — the actual fix is either restricting who can edit rulesets (repo Settings → Rulesets → bypass/edit permissions) or getting `SyafaHadyan` to stop re-saving the branch protection page without updating the check names first.
+
 ## Local
 
 `docker compose up` runs Postgres 17 + api (4000) + web (3000) with vars from `.env` / `.env.example`. `DOCKERHUB_NAMESPACE` in `.env.example` is the compose image namespace — CI uses repo-level GitHub vars instead.
