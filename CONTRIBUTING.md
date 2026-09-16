@@ -21,6 +21,8 @@ Every PR runs:
 - **E2E** — Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
 - **SonarCloud Code Analysis** — posted automatically by SonarCloud's own GitHub App; no local setup needed.
 
+All of these need to actually succeed, not just avoid failing outright — a lint warning, a deprecation notice, or any other non-blocking annotation in a check's output is still something to fix before the PR is done, even if it doesn't turn the check red.
+
 Run the fast ones locally before pushing: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format:check`.
 
 ## Local setup
