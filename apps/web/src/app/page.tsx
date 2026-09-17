@@ -6,9 +6,11 @@ import { ShowcaseSection, ShowcaseCard } from "@/components/sections/showcase-se
 import { ArticlesSection } from "@/components/sections/articles-section";
 import { PublicationsPreviewSection } from "@/components/sections/publications-preview-section";
 import { CtaFooter } from "@/components/sections/cta-footer";
+import { HomeVideoSection } from "@/components/sections/home-video-section";
 import { ProjectPreviewCard } from "@/components/projects/project-preview-card";
 import { publishedArticles } from "@/lib/article-cms";
 import { ensureArticleFeed } from "@/lib/article-cms-seed";
+import { fetchHomeContent } from "@/lib/home-cms-server";
 import { publishedProjects, type CmsProjectRecord } from "@/lib/project-cms";
 import { fetchProjectFeed } from "@/lib/project-cms-server";
 import { publishedPublications, type CmsPublicationRecord } from "@/lib/publication-cms";
@@ -34,7 +36,7 @@ const ACHIEVEMENTS = [
 export default async function Home() {
   // Only the newest ten records of each kind render on the homepage, so the
   // server fetches the light feed and trims it before it reaches the client.
-  const [initialArticles, projects, publications] = await Promise.all([
+  const [initialArticles, projects, publications, homeContent] = await Promise.all([
     ensureArticleFeed()
       .then((records) => publishedArticles(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
       .catch(() => [] as Awaited<ReturnType<typeof ensureArticleFeed>>),
@@ -44,6 +46,7 @@ export default async function Home() {
     ensurePublicationFeed()
       .then((records) => publishedPublications(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
       .catch(() => [] as CmsPublicationRecord[]),
+    fetchHomeContent(),
   ]);
 
   return (
@@ -53,6 +56,7 @@ export default async function Home() {
         <ProcessSection />
         <CoreCompetenciesSection />
         <TrustedBySection />
+        <HomeVideoSection content={homeContent} />
         <ShowcaseSection
           id="projects"
           title="Projects"
