@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 
 import type { AdminAction, AdminPageId } from "@/lib/admin-permissions";
-import { requireAdminPermission, type AdminSession } from "@/lib/admin-session";
+import { requireAdminPermission, requireSuperadmin, type AdminSession } from "@/lib/admin-session";
 import { cmsApi } from "@/lib/cms-api";
 
 export type AdminGate = { ok: true; session: AdminSession } | { ok: false; response: NextResponse };
+
+function toGate(status: 200 | 401 | 403, session?: AdminSession): AdminGate {
+  if (status !== 200) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: status === 401 ? "Unauthorized" : "Forbidden" },
+        { status },
+      ),
+    };
+  }
+  return { ok: true, session: session! };
+}
 
 /**
  * Runs the RBAC check every /api/admin/** route handler needs and returns
@@ -14,16 +27,13 @@ export type AdminGate = { ok: true; session: AdminSession } | { ok: false; respo
  */
 export async function gateAdminRequest(page: AdminPageId, action: AdminAction): Promise<AdminGate> {
   const gate = await requireAdminPermission(page, action);
-  if (gate.status !== 200) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: gate.status === 401 ? "Unauthorized" : "Forbidden" },
-        { status: gate.status },
-      ),
-    };
-  }
-  return { ok: true, session: gate.session };
+  return toGate(gate.status, gate.status === 200 ? gate.session : undefined);
+}
+
+/** Same as gateAdminRequest, but for routes only the superadmin may use. */
+export async function gateSuperadminRequest(): Promise<AdminGate> {
+  const gate = await requireSuperadmin();
+  return toGate(gate.status, gate.status === 200 ? gate.session : undefined);
 }
 
 /** Forwards a CMS API response as-is: same status, same JSON body. */
