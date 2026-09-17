@@ -11,6 +11,7 @@ Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, sec
 | `e2e.yaml`                                         | push/PR to `main`, dispatch                          | Playwright: chromium/firefox/webkit/mobile-chrome/mobile-safari on ubuntu, plus one Windows and one macOS job. Visual-regression baselines only on the primary ubuntu+chromium project                                                                    |
 | `lighthouse.yaml`                                  | PR to `main`, dispatch                               | Lighthouse CI performance/accessibility/SEO/best-practices budget on `/`, `/about`, `/contact`                                                                                                                                                            |
 | `publish-docker-image-latest.yml` / `-staging.yml` | push to `main` (latest) / any PR (staging), dispatch | Thin callers that invoke the `publish-docker-image.yml` reusable workflow (matrix over api/web) — build, push, Trivy scan, SBOM + attestation, keyless cosign signing. See "Docker image workflows" below                                                 |
+| `detect-changes.yml`                               | `workflow_call` only                                 | Reusable: reports whether a push/PR touched anything outside docs/license paths. See "Skipping CI on docs-only changes" below                                                                                                                             |
 | `pr-bot.yml`                                       | `workflow_run` (CI/Security/E2E)                     | Upserts one PR comment (as "ren-automation") summarizing every check-run + commit status for that SHA                                                                                                                                                     |
 | `pr-commands.yml`                                  | PR comment created                                   | `LGTM` → GIF, for anyone, no side effects. `/check`, `/preview`, `/merge`, `/close` — gated to OWNER/MEMBER/COLLABORATOR or anyone listed in `CODEOWNERS`                                                                                                 |
 | `preview.yml`                                      | `workflow_dispatch` (from `/preview`)                | See "Preview environments" below                                                                                                                                                                                                                          |
@@ -25,6 +26,21 @@ Renovate (not Dependabot — see the commit that swapped them) handles npm/Docke
 **Action pinning convention:** every `uses:` in every workflow file is pinned to the latest available release, as a full commit SHA rather than a mutable version tag (`@v4` etc.), with a `# vX.Y.Z` comment noting the human-readable version — e.g. `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`. When adding a new workflow or a new step, pin it the same way rather than using a bare tag, and prefer whatever the action's actual latest release is over an older major you happen to be used to; Renovate's `github-actions` manager understands this format and bumps both the SHA and the comment together on updates.
 
 **Naming convention:** every workflow's top-level `name:` is a proper Title Case display name (`CI`, `Publish Docker Image`), never lowercase or kebab-case (`ci`, `publish-docker-image`) — the file's own kebab-case name is enough of an identifier on disk. Every `jobs.<id>` also has its own explicit `name:` rather than relying on the bare job id showing up in the Actions UI.
+
+### Skipping CI on docs-only changes
+
+`ci.yaml`, `e2e.yaml`, `lighthouse.yaml`, `security.yaml` (the `codeql`, `dependency-review`, and `trivy-fs` jobs only), and both `publish-docker-image-*.yml` callers all start with a `changes` job that calls the reusable `detect-changes.yml` (`dorny/paths-filter`, `predicate-quantifier: some-with-excludes` against `["**", "!**/*.md", "!docs/**", "!LICENSE"]`), then gate their real job on `needs.changes.outputs.code == 'true'`. A PR or push that only touches markdown/docs/LICENSE skips the expensive work entirely.
+
+Two jobs are deliberately **not** gated:
+
+- **`secret-scan` (gitleaks)** — a secret can be pasted into a markdown file as easily as into source, so it has to scan doc-only diffs too.
+- **`scorecard`** — already restricted to non-PR events (see the table above); it scores the whole repo's posture, not a diff, so a docs change doesn't affect its result either way.
+
+Safety notes:
+
+- `detect-changes.yml` only attempts the actual diff on `push`/`pull_request` — every other trigger (`workflow_dispatch`, the weekly `schedule` on `security.yaml`) reports `code=true` unconditionally, so a manual re-run or the `/merge` post-merge verification dispatch (see below) is never silently skipped.
+- A job skipped via `if:` reports conclusion `skipped`, and GitHub's required-status-checks treat a skipped required check as passing — this is why gating with `if:` on the downstream job is safe, whereas putting `paths-ignore` on the workflow's own `on:` trigger would **not** be (the check would never run at all, and a required check that never runs blocks the PR forever). Don't swap this for `paths-ignore` without changing that.
+- CodeRabbit and SonarCloud are separate GitHub Apps, not workflow files in this repo, so they're unaffected by this and keep reviewing every PR (including docs-only ones) as before.
 
 ### Docker image workflows
 
