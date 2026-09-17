@@ -1,4 +1,4 @@
-name: PR status comment
+name: PR Status Comment
 
 on:
   workflow_run:
