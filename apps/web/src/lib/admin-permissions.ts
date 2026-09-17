@@ -13,6 +13,8 @@ export const ADMIN_PAGE_IDS = [
   "contact",
   "contact-inquiries",
   "events",
+  "home",
+  "other",
 ] as const;
 
 export type AdminPageId = (typeof ADMIN_PAGE_IDS)[number];
