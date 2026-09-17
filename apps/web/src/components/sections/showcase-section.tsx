@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight, ImageIcon } from "lucide-react";
+import Link from "next/link";
 
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { PatternTile } from "@/components/process/pattern-tile";
@@ -17,17 +18,56 @@ const CARD_ICONS = [
   { kind: "x", fg: "yellow" },
 ] as const;
 
+/** The plain title/description/icon-dots card Achievements has always used. */
+export function ShowcaseCard({ title, description }: Readonly<ShowcaseItem>) {
+  return (
+    <>
+      <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-[var(--surface-muted)]">
+        <ImageIcon className="size-10 text-foreground/25" strokeWidth={1.5} />
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <h3 className="font-display font-semibold text-foreground">{title}</h3>
+        <div className="flex items-center gap-1.5">
+          {CARD_ICONS.map(({ kind, fg }, i) => (
+            <PatternTile key={i} kind={kind} bg="canvas" fg={fg} className="size-5" />
+          ))}
+        </div>
+      </div>
+      <p className="mt-2 line-clamp-2 text-sm text-foreground/60">{description}</p>
+    </>
+  );
+}
+
+/**
+ * A "Netflix row": header (title/intro/see-more/arrows) plus a
+ * horizontally-scrolling track of cards. Cards are passed as `children`
+ * rather than rendered from an `items`+render-prop pair — Server Components
+ * (this section is used directly from page.tsx for some content) can pass
+ * pre-rendered JSX as children to a Client Component, but not a function, so
+ * this shape is what lets callers own their own card markup regardless of
+ * whether that caller is a server or client component. `count` (not
+ * `children.length`, which doesn't exist on React.ReactNode) drives the
+ * empty-state check.
+ */
 export function ShowcaseSection({
   id,
   title,
   intro,
-  items,
-}: {
+  count,
+  children,
+  seeMoreHref,
+  seeMoreLabel = "See more",
+  emptyMessage,
+}: Readonly<{
   id: string;
   title: string;
   intro: string;
-  items: ShowcaseItem[];
-}) {
+  count: number;
+  children: React.ReactNode;
+  seeMoreHref?: string;
+  seeMoreLabel?: string;
+  emptyMessage?: string;
+}>) {
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -56,47 +96,51 @@ export function ShowcaseSection({
             </h2>
             <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">{intro}</p>
           </div>
-          <div className="reveal-card hidden shrink-0 gap-2 opacity-0 sm:flex">
-            <button
-              type="button"
-              aria-label={`Scroll ${title} left`}
-              onClick={() => scrollTrack(-1)}
-              className="flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="size-4" strokeWidth={2.25} />
-            </button>
-            <button
-              type="button"
-              aria-label={`Scroll ${title} right`}
-              onClick={() => scrollTrack(1)}
-              className="flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-colors hover:text-foreground"
-            >
-              <ArrowRight className="size-4" strokeWidth={2.25} />
-            </button>
+          <div className="reveal-card flex shrink-0 items-center gap-4 opacity-0">
+            {seeMoreHref ? (
+              <Link
+                href={seeMoreHref}
+                className="text-sm font-medium text-foreground/60 whitespace-nowrap transition-colors hover:text-brand-blue"
+              >
+                {seeMoreLabel} →
+              </Link>
+            ) : null}
+            {count ? (
+              <div className="hidden gap-2 sm:flex">
+                <button
+                  type="button"
+                  aria-label={`Scroll ${title} left`}
+                  onClick={() => scrollTrack(-1)}
+                  className="flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-colors hover:text-foreground"
+                >
+                  <ArrowLeft className="size-4" strokeWidth={2.25} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Scroll ${title} right`}
+                  onClick={() => scrollTrack(1)}
+                  className="flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-colors hover:text-foreground"
+                >
+                  <ArrowRight className="size-4" strokeWidth={2.25} />
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <div
-          ref={trackRef}
-          className="mt-10 flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none]"
-        >
-          {items.map((item) => (
-            <article key={item.title} className="reveal-card w-[320px] shrink-0 opacity-0">
-              <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-[var(--surface-muted)]">
-                <ImageIcon className="size-10 text-foreground/25" strokeWidth={1.5} />
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-3">
-                <h3 className="font-display font-semibold text-foreground">{item.title}</h3>
-                <div className="flex items-center gap-1.5">
-                  {CARD_ICONS.map(({ kind, fg }, i) => (
-                    <PatternTile key={i} kind={kind} bg="canvas" fg={fg} className="size-5" />
-                  ))}
-                </div>
-              </div>
-              <p className="mt-2 line-clamp-2 text-sm text-foreground/60">{item.description}</p>
-            </article>
-          ))}
-        </div>
+        {count > 0 && (
+          <div
+            ref={trackRef}
+            className="mt-10 flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none]"
+          >
+            {children}
+          </div>
+        )}
+        {count === 0 && emptyMessage && (
+          <div className="reveal-card mt-10 rounded-2xl border border-[var(--line)] px-8 py-16 text-center opacity-0">
+            <p className="text-foreground/60">{emptyMessage}</p>
+          </div>
+        )}
       </div>
     </section>
   );

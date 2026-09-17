@@ -6,7 +6,6 @@ import { notFound } from "next/navigation";
 import { AddToCalendarButton } from "@/components/events/add-to-calendar-button";
 import { EventBody } from "@/components/events/event-body";
 import { EventCard } from "@/components/events/event-card";
-import { EventCoverLightbox } from "@/components/events/event-cover-lightbox";
 import { EventDateTime } from "@/components/events/event-date-time";
 import { EventMap } from "@/components/events/event-map";
 import { EventRegisterButton } from "@/components/events/event-register-button";
@@ -107,7 +106,12 @@ export default async function EventPage({ params }: EventPageProps) {
 
           {cover ? (
             <div className="mt-10">
-              <EventCoverLightbox alt={event.title} src={cover} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt={event.title}
+                className="block aspect-[16/9] w-full rounded-3xl object-cover"
+                src={cover}
+              />
             </div>
           ) : null}
 

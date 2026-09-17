@@ -10,6 +10,7 @@ import {
   Check,
   Envelope,
   EnvelopeOpen,
+  DotsThreeOutline,
   FloppyDisk,
   Flask,
   GraduationCap,
@@ -17,6 +18,7 @@ import {
   ImageSquare,
   Lock,
   MagnifyingGlass,
+  MonitorPlay,
   Newspaper,
   Plus,
   ShieldCheck,
@@ -41,6 +43,7 @@ import {
 import { AdminManagementPanel } from "@/components/admin/admin-management-panel";
 import { ArticleEditor } from "@/components/admin/article-cms-editor";
 import { ContactSettingsEditor } from "@/components/admin/contact-settings-editor";
+import { HomeSettingsEditor } from "@/components/admin/home-settings-editor";
 import { ProjectEditor } from "@/components/admin/project-cms-editor";
 import { PublicationEditor } from "@/components/admin/publication-cms-editor";
 import { ResearchEditor } from "@/components/admin/research-cms-editor";
@@ -85,6 +88,8 @@ type EditorialSection =
   | "contact"
   | "contact-inquiries"
   | "events"
+  | "home"
+  | "other"
   | "administration";
 type DateValue = { month: number; year: number };
 
@@ -96,6 +101,7 @@ const TABS: { id: EditorTab; label: string }[] = [
 ];
 
 const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: string }[] = [
+  { id: "home", label: "Home" },
   { id: "articles", label: "Articles" },
   { id: "projects", label: "Projects" },
   { id: "publications", label: "Publications" },
@@ -105,10 +111,12 @@ const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: st
   { id: "contact", label: "Contact Settings" },
   { id: "contact-inquiries", label: "Contact Inquiries" },
   { id: "events", label: "Events" },
+  { id: "other", label: "Other" },
 ];
 
 const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "overview", label: "Overview", tone: "text-brand-blue" },
+  { id: "home", label: "Home", tone: "text-brand-blue" },
   { id: "articles", label: "Articles", tone: "text-brand-yellow" },
   { id: "projects", label: "Projects", tone: "text-brand-red" },
   { id: "publications", label: "Publications", tone: "text-brand-green" },
@@ -118,6 +126,7 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "contact", label: "Contact Settings", tone: "text-brand-green" },
   { id: "contact-inquiries", label: "Contact Inquiries", tone: "text-brand-green" },
   { id: "events", label: "Events", tone: "text-brand-green" },
+  { id: "other", label: "Other", tone: "text-brand-yellow" },
   { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
 
@@ -131,6 +140,7 @@ const LIVE_WORKSPACES = new Set<EditorialSection>([
   "contact-inquiries",
   "projects",
   "events",
+  "home",
 ]);
 
 /** Each editorial workspace maps to the permission page that gates it. */
@@ -144,6 +154,8 @@ const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
   contact: "contact",
   "contact-inquiries": "contact-inquiries",
   events: "events",
+  home: "home",
+  other: "other",
 };
 
 function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size?: number }) {
@@ -166,6 +178,10 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
       return <EnvelopeOpen size={size} weight="duotone" />;
     case "events":
       return <CalendarBlank size={size} weight="duotone" />;
+    case "home":
+      return <MonitorPlay size={size} weight="duotone" />;
+    case "other":
+      return <DotsThreeOutline size={size} weight="duotone" />;
     case "administration":
       return <ShieldCheck size={size} weight="duotone" />;
     default:
@@ -1224,6 +1240,17 @@ export function MemberCmsStudio({
                   the public contact page.
                 </p>
               </div>
+            ) : section === "home" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+              <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+                <span className="grid size-9 place-items-center rounded-xl bg-white text-brand-blue dark:bg-white/10">
+                  <MonitorPlay size={20} weight="duotone" />
+                </span>
+                <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">Home</p>
+                <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
+                  A single record — the homepage&apos;s video block: its title, short description,
+                  and source.
+                </p>
+              </div>
             ) : (
               <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
                 <span
@@ -1411,6 +1438,8 @@ export function MemberCmsStudio({
                   isSuperadmin={viewer.role === "superadmin"}
                   onDirtyChange={setHasUnsavedChanges}
                 />
+              ) : section === "home" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+                <HomeSettingsEditor onDirtyChange={setHasUnsavedChanges} />
               ) : (
                 <EditorialOverview
                   canAccess={canAccess}

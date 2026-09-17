@@ -22,10 +22,6 @@ export function SiteHeader() {
       <LogoMark />
 
       <div className="flex items-center gap-2 sm:gap-4">
-        <div className="hidden items-center gap-1.5 text-sm sm:flex">
-          <span className="text-foreground/40">ID</span>
-          <span className="font-semibold text-brand-blue">EN</span>
-        </div>
         <ThemeToggle className="size-8" />
         <NavMenu />
       </div>

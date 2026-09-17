@@ -25,6 +25,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsProjectsService } from "./cms-projects.service.js";
+import { parseVideoUploadBody, redirectToSignedVideoUrl } from "./video-validation.util.js";
 
 /**
  * Zod failures become readable 400s instead of opaque 500s: the editor
@@ -177,26 +178,6 @@ function safeEqual(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-function isValidVideo(buffer: Buffer, contentType: string) {
-  // Buffer.isBuffer() at the call site already proves this isn't array-shaped;
-  // CodeQL's request-parameter model doesn't know about main.ts's raw-body middleware.
-  if (contentType === "video/mp4") {
-    // codeql[js/type-confusion-through-parameter-tampering]
-    return buffer.length >= 12 && buffer.subarray(4, 8).toString("ascii") === "ftyp";
-  }
-  if (contentType === "video/webm") {
-    return (
-      // codeql[js/type-confusion-through-parameter-tampering]
-      buffer.length >= 4 &&
-      buffer[0] === 0x1a &&
-      buffer[1] === 0x45 &&
-      buffer[2] === 0xdf &&
-      buffer[3] === 0xa3
-    );
-  }
-  return false;
-}
-
 @ApiTags("cms-projects")
 @Controller("cms/projects")
 export class CmsProjectsController {
@@ -307,13 +288,7 @@ export class CmsProjectsController {
     if (!(await this.projects.videoIsPublished(key))) {
       throw new BadRequestException("Project record not found");
     }
-    let url: string;
-    try {
-      url = await this.storage.getSignedDownloadUrl(key, 60 * 60);
-    } catch {
-      throw new BadRequestException("Media storage is not configured in this environment.");
-    }
-    return response.redirect(url);
+    await redirectToSignedVideoUrl(response, this.storage, key);
   }
 
   @Put(":slug")
@@ -385,35 +360,9 @@ export class CmsProjectsController {
   ) {
     this.assertAdmin(passphrase);
     if (!SLUG_PATTERN.test(slug)) throw new BadRequestException("Invalid project slug");
-    const contentType = String(request.headers["content-type"] ?? "")
-      .split(";")[0]
-      .trim()
-      .toLowerCase();
-    // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
-    // as sanitizing barriers, not Buffer.isBuffer() below — this rejects the
-    // array shape its model worries about before that real (sufficient) check.
-    if (Array.isArray(request.body)) {
-      throw new BadRequestException("The demo video must be an MP4 or WebM file.");
-    }
-    const body = Buffer.isBuffer(request.body) ? request.body : undefined;
     const maxBytes = this.config.getOrThrow<number>("CMS_MAX_VIDEO_BYTES");
+    const { body, contentType, extension } = parseVideoUploadBody(request, maxBytes, "demo video");
 
-    if ((contentType !== "video/mp4" && contentType !== "video/webm") || !body?.length) {
-      throw new BadRequestException("The demo video must be an MP4 or WebM file.");
-    }
-    // body is a real Buffer here (guarded above), not an attacker-tamperable
-    // array; see the isValidVideo() note.
-    // codeql[js/type-confusion-through-parameter-tampering]
-    if (body.length > maxBytes) {
-      throw new BadRequestException(
-        `The video must be under ${Math.floor(maxBytes / 1024 / 1024)} MB.`,
-      );
-    }
-    if (!isValidVideo(body, contentType)) {
-      throw new BadRequestException("That file is not a valid video.");
-    }
-
-    const extension = contentType === "video/mp4" ? "mp4" : "webm";
     const key = `demo-${slug}-${randomUUID()}.${extension}`;
     try {
       await this.storage.uploadFile({ body, contentType, key });
@@ -422,7 +371,6 @@ export class CmsProjectsController {
         "Video storage is not configured in this environment, so demos cannot be uploaded.",
       );
     }
-    // codeql[js/type-confusion-through-parameter-tampering]
     return { key, size: body.length };
   }
 

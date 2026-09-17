@@ -134,7 +134,6 @@ export function NavMenu() {
   const openTlRef = useRef<gsap.core.Timeline | null>(null);
   const closeTlRef = useRef<gsap.core.Timeline | null>(null);
   const logoTlRef = useRef<gsap.core.Timeline | null>(null);
-  const busyRef = useRef(false);
   const expandedRef = useRef<number | null>(null);
 
   // The panel/layers render `invisible` by default (see the comment above
@@ -281,16 +280,8 @@ export function NavMenu() {
   }, []);
 
   const playOpen = useCallback(() => {
-    if (busyRef.current) return;
-    busyRef.current = true;
     const tl = buildOpenTimeline();
-    if (!tl) {
-      busyRef.current = false;
-      return;
-    }
-    tl.eventCallback("onComplete", () => {
-      busyRef.current = false;
-    });
+    if (!tl) return;
     tl.play(0);
     requestAnimationFrame(() => firstLinkRef.current?.focus());
   }, [buildOpenTimeline]);
@@ -302,16 +293,12 @@ export function NavMenu() {
 
     const panel = panelRef.current;
     const overlay = overlayRef.current;
-    if (!panel || !overlay) {
-      busyRef.current = false;
-      return;
-    }
+    if (!panel || !overlay) return;
     const layers = layerRefs.current.filter((el): el is HTMLDivElement => !!el);
 
     const tl = gsap.timeline({
       onComplete: () => {
         resetAccordions();
-        busyRef.current = false;
       },
     });
     tl.to([...layers, panel], { xPercent: 100, duration: 0.32, ease: "power3.in" }, 0).to(

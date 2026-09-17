@@ -35,6 +35,46 @@ test.describe("nav menu", () => {
     );
   });
 
+  test("surviving an open→close→open interruption still shows the panel", async ({ page }) => {
+    await page.goto("/");
+
+    const toggle = page.getByRole("button", { name: "Open menu" });
+    await toggle.click();
+    // Interrupt the open animation almost immediately with a close, then
+    // immediately open again — this used to leave `busyRef` stuck true
+    // forever (playClose killed the open timeline before its onComplete
+    // could clear it), so the next playOpen() silently no-op'd: aria state
+    // said "open" but the panel never actually animated in.
+    // No observable condition to synchronize on here by design: the point is
+    // to interrupt the animation at an arbitrary moment while it's still in
+    // flight, not to wait for it to reach some state.
+    await page.waitForTimeout(60); // NOSONAR: deliberate mid-animation interrupt, see comment above
+    await page.getByRole("button", { name: "Close menu" }).click();
+    await page.waitForTimeout(60); // NOSONAR: deliberate mid-animation interrupt, see comment above
+    await page.getByRole("button", { name: "Open menu" }).click();
+
+    const panel = page.locator("#site-nav-panel");
+    await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(page.getByRole("button", { name: "Close menu" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    // The real symptom: the panel must actually slide fully on-screen, not
+    // just report itself open in aria/icon state while sitting translated
+    // off the right edge. The panel's own tween doesn't start until partway
+    // through the timeline (after the layer stagger), so poll rather than
+    // sampling immediately.
+    const viewport = page.viewportSize();
+    await expect
+      .poll(async () => (await panel.boundingBox())?.x, { timeout: 3000 })
+      .toBeLessThan(viewport!.width);
+
+    // And the menu must still be fully interactive afterward — clicking a
+    // real nav item should navigate, not require an extra "unstick" click.
+    const firstLink = panel.getByRole("link").first();
+    await expect(firstLink).toBeVisible();
+  });
+
   test("menu text stays visible in dark mode", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/");
