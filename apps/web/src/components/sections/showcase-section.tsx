@@ -38,7 +38,8 @@ export function ShowcaseSection({
   seeMoreLabel?: string;
   emptyMessage?: string;
   /** Tighter vertical padding for pages that stack this directly between
-   * other sections (e.g. About) — the homepage default is untouched. */
+   * other sections — used on About, and on the homepage's own tightened row
+   * stack (Core Competencies/Trusted By/Projects/Publications/Articles). */
   compact?: boolean;
 }>) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -52,7 +53,7 @@ export function ShowcaseSection({
   }, []);
 
   function scrollTrack(dir: 1 | -1) {
-    trackRef.current?.scrollBy({ left: dir * 340, behavior: "smooth" });
+    trackRef.current?.scrollBy({ left: dir * 332, behavior: "smooth" });
   }
 
   return (
@@ -111,7 +112,7 @@ export function ShowcaseSection({
         {count > 0 && (
           <div
             ref={trackRef}
-            className="mt-10 flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none]"
+            className="mt-10 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]"
           >
             {children}
           </div>

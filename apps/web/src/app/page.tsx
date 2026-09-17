@@ -40,9 +40,10 @@ export default async function Home() {
         <Hero />
         <ProcessSection />
         <CoreCompetenciesSection />
-        <TrustedBySection />
+        <TrustedBySection compact />
         <HomeVideoSection content={homeContent} />
         <ShowcaseSection
+          compact
           id="projects"
           title="Projects"
           intro="A selection of research-driven products the lab has built end to end."

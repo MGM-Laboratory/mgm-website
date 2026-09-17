@@ -41,7 +41,7 @@ export function PublicationsPreviewSection({
     <section
       id="publications"
       ref={rootRef}
-      className="bg-background px-6 py-20 sm:px-10 sm:py-28 lg:px-16"
+      className="bg-background px-6 py-10 sm:px-10 sm:py-14 lg:px-16"
     >
       <noscript>
         <style>{".reveal-card{opacity:1 !important}"}</style>
