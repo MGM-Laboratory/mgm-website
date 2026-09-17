@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight, ImageIcon } from "lucide-react";
 import Link from "next/link";
 
+import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { PatternTile } from "@/components/process/pattern-tile";
 
@@ -58,6 +59,7 @@ export function ShowcaseSection({
   seeMoreHref,
   seeMoreLabel = "See more",
   emptyMessage,
+  compact = false,
 }: Readonly<{
   id: string;
   title: string;
@@ -67,6 +69,9 @@ export function ShowcaseSection({
   seeMoreHref?: string;
   seeMoreLabel?: string;
   emptyMessage?: string;
+  /** Tighter vertical padding for pages that stack this directly between
+   * other sections (e.g. About) — the homepage default is untouched. */
+  compact?: boolean;
 }>) {
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -83,7 +88,14 @@ export function ShowcaseSection({
   }
 
   return (
-    <section id={id} ref={rootRef} className="bg-background px-6 py-20 sm:px-10 sm:py-28 lg:px-16">
+    <section
+      id={id}
+      ref={rootRef}
+      className={cn(
+        "bg-background px-6 sm:px-10 lg:px-16",
+        compact ? "py-10 sm:py-14" : "py-20 sm:py-28",
+      )}
+    >
       <noscript>
         <style>{".reveal-card{opacity:1 !important}"}</style>
       </noscript>

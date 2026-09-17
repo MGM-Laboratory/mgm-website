@@ -51,6 +51,7 @@ export default async function AboutPage() {
           seeMoreHref="/projects"
           emptyMessage="Our first projects are on their way."
           count={projects.length}
+          compact
         >
           {projects.map((record) => (
             <article key={record.slug} className="reveal-card w-[320px] shrink-0 opacity-0">
@@ -59,7 +60,7 @@ export default async function AboutPage() {
           ))}
         </ShowcaseSection>
 
-        <TrustedBySection />
+        <TrustedBySection compact />
         <FaqSection />
       </main>
       <CtaFooter />

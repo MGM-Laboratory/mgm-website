@@ -182,7 +182,13 @@ const POPUP_MARGIN_PX = 16;
 // across breakpoints as the inter-logo gap changes).
 const MARQUEE_SPEED_PX_PER_SEC = 150;
 
-export function TrustedBySection() {
+export function TrustedBySection({
+  compact = false,
+}: {
+  /** Tighter vertical padding for pages that stack this directly between
+   * other sections (e.g. About) — the homepage default is untouched. */
+  compact?: boolean;
+} = {}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -408,7 +414,13 @@ export function TrustedBySection() {
   }
 
   return (
-    <section ref={rootRef} className="bg-background px-6 py-20 sm:px-10 sm:py-28 lg:px-16">
+    <section
+      ref={rootRef}
+      className={cn(
+        "bg-background px-6 sm:px-10 lg:px-16",
+        compact ? "py-10 sm:py-14" : "py-20 sm:py-28",
+      )}
+    >
       <noscript>
         <style>{".reveal-card{opacity:1 !important}"}</style>
       </noscript>
