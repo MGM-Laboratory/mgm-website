@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { setupParallax } from "@/lib/parallax";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
+import { HeroLanyard } from "@/components/hero/lanyard/hero-lanyard";
 
 import {
   ArrowConnector,
@@ -43,14 +44,18 @@ const REVEAL_FAILSAFE_MS = 12000;
 // timeline is wired up before first paint.
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+// The lg: overrides only kick in once the lanyard occupies the hero's right
+// side — the composition scales down as a whole (text and shapes together,
+// same ratio) so the now-left-anchored block comfortably fits its narrower
+// column instead of running into the lanyard.
 const headlineType =
-  "font-display font-medium leading-[0.95] tracking-tight text-foreground text-[clamp(2.75rem,6.5vw,5rem)]";
+  "font-display font-medium leading-[0.95] tracking-tight text-foreground text-[clamp(2.75rem,6.5vw,5rem)] lg:text-[clamp(1.8rem,3.4vw,3.25rem)]";
 const headline = cn("reveal-hidden opacity-0", headlineType);
 
 // Shapes read a little larger and taller than the headline type, like the
 // reference composition.
-const shapeBoxClass = "w-[clamp(4rem,8vw,6.5rem)]";
-const shapeHeightClass = "h-[clamp(4rem,8vw,6.5rem)]";
+const shapeBoxClass = "w-[clamp(4rem,8vw,6.5rem)] lg:w-[clamp(2.6rem,4.2vw,4.25rem)]";
+const shapeHeightClass = "h-[clamp(4rem,8vw,6.5rem)] lg:h-[clamp(2.6rem,4.2vw,4.25rem)]";
 
 const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
 
@@ -582,12 +587,15 @@ export function Hero() {
       ref={rootRef}
       className="hero relative flex flex-1 flex-col justify-center bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
     >
-      {/* Ambient background motifs — pure whitespace flourish, idle-floating */}
+      {/* Ambient background motifs — pure whitespace flourish, idle-floating.
+          Right-side ones are dropped at lg: where the lanyard now lives, to
+          give it clear room instead of fighting it for the same space; all
+          five still render below lg, where there's no lanyard to clash with. */}
       <Dot className="bg-motif reveal-hidden opacity-0 absolute top-[10%] left-[5%] size-3 text-brand-yellow sm:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden opacity-0 absolute top-[16%] right-[8%] size-4 text-brand-blue sm:size-5" />
+      <PlusMotif className="bg-motif reveal-hidden opacity-0 absolute top-[16%] right-[8%] size-4 text-brand-blue sm:size-5 lg:hidden" />
       <RingMotif className="bg-motif reveal-hidden opacity-0 absolute bottom-[22%] left-[4%] size-4 text-brand-red sm:size-5" />
-      <Dot className="bg-motif reveal-hidden opacity-0 absolute top-[46%] right-[5%] size-3 text-brand-green sm:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden opacity-0 absolute bottom-[10%] right-[22%] size-3 text-brand-red sm:size-4" />
+      <Dot className="bg-motif reveal-hidden opacity-0 absolute top-[46%] right-[5%] size-3 text-brand-green sm:size-4 lg:hidden" />
+      <PlusMotif className="bg-motif reveal-hidden opacity-0 absolute bottom-[10%] right-[22%] size-3 text-brand-red sm:size-4 lg:hidden" />
 
       {/* Progressive enhancement: without JS the reveal timeline never runs,
           so don't leave the hero blank. */}
@@ -597,7 +605,10 @@ export function Hero() {
 
       <h1 className="sr-only">Media, Game &amp; Mobile Laboratory</h1>
 
-      <div className="mx-auto flex w-fit max-w-full flex-col gap-3 sm:gap-4" aria-hidden="true">
+      <div
+        className="mx-auto flex w-fit max-w-full flex-col gap-3 sm:gap-4 lg:mx-0"
+        aria-hidden="true"
+      >
         {/* Row 1 — Media, */}
         <div ref={row1Ref} className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
           <span className={cn("line-media [perspective:500px]", headline)}>Media,</span>
@@ -625,7 +636,7 @@ export function Hero() {
               </div>
             </div>
             <div className="parallax-el" data-depth="1">
-              <div className="shape-x reveal-hidden opacity-0 w-[clamp(2.25rem,4.5vw,3.5rem)] text-foreground">
+              <div className="shape-x reveal-hidden opacity-0 w-[clamp(2.25rem,4.5vw,3.5rem)] text-foreground lg:w-[clamp(1.5rem,2.9vw,2.25rem)]">
                 <XMark className="w-full" />
               </div>
             </div>
@@ -688,8 +699,31 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center lg:justify-start">
         <SeeWorkButton />
+      </div>
+
+      {/* Interactive 3D lanyard — desktop only (a WASM physics stack isn't
+          worth the weight or the drag-interaction cost on a touch/mobile
+          viewport that has no room for it beside the title anyway). The
+          canvas box itself reaches up behind the fixed header (-top-16,
+          matching SITE_HEADER_HEIGHT) so the rope's anchor point is
+          genuinely tucked out of sight up there at rest — a <canvas> can't
+          paint outside its own box no matter the z-index, so this has to be
+          real DOM overlap, not just a z-index trick. Kept under the header's
+          z-50 (site-header.tsx) at rest so the header still wins that
+          overlapping strip; lifted above it only while the card is being
+          actively dragged, in HeroLanyard — safe regardless of what's
+          visually on top, since the drag already holds pointer capture. */}
+      <div className="absolute -top-16 right-0 bottom-10 hidden w-[38%] lg:block">
+        <HeroLanyard
+          className="h-full w-full"
+          position={[0, 0, 20]}
+          gravity={[0, -40, 0]}
+          frontImage="/lanyard/front.png"
+          backImage="/lanyard/back.png"
+          lanyardImage="/lanyard/tali.png"
+        />
       </div>
 
       <div className="corner-pattern reveal-hidden opacity-0 pointer-events-none absolute -right-6 -bottom-6 z-10 dark:hidden">

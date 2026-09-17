@@ -58,6 +58,10 @@ export type LanyardProps = {
   imageFit?: "cover" | "contain";
   lanyardImage?: string | null;
   lanyardWidth?: number;
+  // Fires when the card is picked up/released, so a page-level wrapper can
+  // lift this canvas above fixed UI (e.g. the site header) only while the
+  // user is actively swinging it — see hero-lanyard.tsx.
+  onDragChange?: (dragging: boolean) => void;
 };
 
 export default function Lanyard({
@@ -70,6 +74,7 @@ export default function Lanyard({
   imageFit = "cover",
   lanyardImage = null,
   lanyardWidth = 1,
+  onDragChange,
 }: LanyardProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -101,6 +106,7 @@ export default function Lanyard({
             imageFit={imageFit}
             lanyardImage={lanyardImage}
             lanyardWidth={lanyardWidth}
+            onDragChange={onDragChange}
           />
         </Physics>
       </Suspense>
@@ -147,6 +153,7 @@ function Band({
   imageFit = "cover",
   lanyardImage = null,
   lanyardWidth = 1,
+  onDragChange,
 }: {
   maxSpeed?: number;
   minSpeed?: number;
@@ -156,6 +163,7 @@ function Band({
   imageFit?: "cover" | "contain";
   lanyardImage?: string | null;
   lanyardWidth?: number;
+  onDragChange?: (dragging: boolean) => void;
 }) {
   const band = useRef<THREE.Mesh>(null);
   // useRopeJoint/useSphericalJoint type their ref params as RefObject<RapierRigidBody>
@@ -311,20 +319,25 @@ function Band({
   // eslint-disable-next-line react-hooks/immutability
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
-  const onCardPointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
-    (e.target as Element).releasePointerCapture(e.pointerId);
-    drag(false);
-  }, []);
+  const onCardPointerUp = useCallback(
+    (e: ThreeEvent<PointerEvent>) => {
+      (e.target as Element).releasePointerCapture(e.pointerId);
+      drag(false);
+      onDragChange?.(false);
+    },
+    [onDragChange],
+  );
   const onCardPointerDown = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
       (e.target as Element).setPointerCapture(e.pointerId);
+      onDragChange?.(true);
       drag(
         new THREE.Vector3()
           .copy(e.point)
           .sub(vec.copy(card.current!.translation() as unknown as THREE.Vector3)),
       );
     },
-    [vec],
+    [vec, onDragChange],
   );
 
   return (
