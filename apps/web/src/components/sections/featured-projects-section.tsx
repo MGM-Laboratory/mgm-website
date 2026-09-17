@@ -1,60 +1,71 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
-import { ImageIcon } from "lucide-react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, ImageIcon } from "lucide-react";
+import gsap from "gsap";
 import Link from "next/link";
 
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { PROJECT_CATEGORY_LABELS, projectMediaUrl, type CmsProjectRecord } from "@/lib/project-cms";
-import { Card, CardSwap } from "@/components/projects/card-swap";
 
-// CardSwap clones its direct children to inject the ref/size it positions
-// each card with, so the content below must be the <Card>'s children, not a
-// wrapping component — a wrapping component here would absorb that ref/size
-// itself and never forward it to the actual .card element underneath.
-function FeaturedProjectCardContent({ record }: Readonly<{ record: CmsProjectRecord }>) {
+const AUTO_ADVANCE_MS = 6000;
+
+function reducedMotion() {
+  return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
+}
+
+function FeaturedProjectSlide({ record }: Readonly<{ record: CmsProjectRecord }>) {
   const { project } = record;
   const cover = projectMediaUrl(project.coverKey);
 
   return (
-    <Link className="group absolute inset-0 block" href={`/projects/${record.slug}`}>
+    <div className="grid gap-8 sm:gap-10 lg:grid-cols-2 lg:items-center lg:gap-14">
       {cover ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt=""
-          className="absolute inset-0 size-full object-cover transition duration-300 group-hover:scale-105"
-          src={cover}
-        />
+        <img alt="" className="aspect-[4/3] w-full rounded-2xl object-cover" src={cover} />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-[var(--surface-muted)]">
-          <ImageIcon className="size-10 text-foreground/25" strokeWidth={1.5} />
+        <div className="flex aspect-[4/3] w-full items-center justify-center rounded-2xl bg-[var(--surface-muted)]">
+          <ImageIcon className="size-12 text-foreground/25" strokeWidth={1.5} />
         </div>
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 p-5">
+
+      <div>
         {project.categories[0] ? (
-          <p className="text-xs font-semibold tracking-wide text-white/70 uppercase">
+          <p className="text-xs font-semibold tracking-wide text-brand-blue uppercase">
             {PROJECT_CATEGORY_LABELS[project.categories[0]]}
           </p>
         ) : null}
-        <h3 className="mt-1 font-display text-lg font-semibold text-white">{project.title}</h3>
-        <p className="mt-1 line-clamp-2 text-sm text-white/75">{project.summary}</p>
+        <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          {project.title}
+        </h3>
+        <p className="mt-4 text-foreground/65">{project.summary}</p>
+        <Link
+          href={`/projects/${record.slug}`}
+          className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90"
+        >
+          View project
+          <ArrowRight className="size-4" />
+        </Link>
       </div>
-    </Link>
+    </div>
   );
 }
 
 /**
- * The homepage's Projects preview: a React Bits CardSwap stack showing only
- * the projects an admin has flagged "Featured" (see project-cms-editor.tsx),
- * each card a real link to its project page. Renders nothing if no project
- * is currently featured, same empty-state convention as the other homepage
- * preview rows.
+ * The homepage's Projects preview: a single-slide carousel that cycles
+ * through the projects an admin has flagged "Featured" (see
+ * project-cms-editor.tsx) — each slide pairs the project's cover with its
+ * title, description, and a "View project" CTA rather than a bare card.
+ * Renders nothing if no project is currently featured, same empty-state
+ * convention as the other homepage preview rows.
  */
 export function FeaturedProjectsSection({
   records,
 }: Readonly<{ records: readonly CmsProjectRecord[] }>) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const slideRef = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  const count = records.length;
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -62,6 +73,36 @@ export function FeaturedProjectsSection({
     const tween = fadeUpOnScroll(root, ".reveal-card", { stagger: 0.1 });
     return () => tween?.scrollTrigger?.kill();
   }, []);
+
+  // Every slide change (auto-advance, arrows, or dots) re-enters through
+  // this same effect, so the fade-in plays consistently regardless of what
+  // triggered it — and collapses to an instant swap under reduced motion,
+  // matching the rest of the site's decorative-loop rule.
+  useLayoutEffect(() => {
+    const slide = slideRef.current;
+    if (!slide) return;
+    const reduced = reducedMotion();
+    gsap.fromTo(
+      slide,
+      { opacity: reduced ? 1 : 0, y: reduced ? 0 : 14 },
+      { opacity: 1, y: 0, duration: reduced ? 0 : 0.5, ease: "power2.out" },
+    );
+  }, [index]);
+
+  const [paused, setPaused] = useState(false);
+  useLayoutEffect(() => {
+    if (count < 2 || paused || reducedMotion()) return;
+    const id = window.setInterval(() => {
+      setIndex((current) => (current + 1) % count);
+    }, AUTO_ADVANCE_MS);
+    return () => window.clearInterval(id);
+  }, [count, paused]);
+
+  const active = useMemo(() => records[index % Math.max(count, 1)], [records, index, count]);
+
+  function go(delta: 1 | -1) {
+    setIndex((current) => (current + delta + count) % count);
+  }
 
   return (
     <section
@@ -91,15 +132,52 @@ export function FeaturedProjectsSection({
           </Link>
         </div>
 
-        {records.length ? (
-          <div className="reveal-card mt-14 flex h-[26rem] items-center justify-center opacity-0 sm:h-[28rem]">
-            <CardSwap cardDistance={50} height={340} pauseOnHover verticalDistance={44} width={280}>
-              {records.map((record) => (
-                <Card key={record.slug}>
-                  <FeaturedProjectCardContent record={record} />
-                </Card>
-              ))}
-            </CardSwap>
+        {active ? (
+          <div
+            className="reveal-card mt-14 opacity-0"
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+          >
+            <div ref={slideRef}>
+              <FeaturedProjectSlide key={active.slug} record={active} />
+            </div>
+
+            {count > 1 ? (
+              <div className="mt-8 flex items-center justify-between gap-4">
+                <div className="flex gap-2">
+                  {records.map((record, i) => (
+                    <button
+                      aria-current={i === index}
+                      aria-label={`Show ${record.project.title}`}
+                      className={`size-2 rounded-full transition-colors ${
+                        i === index ? "bg-brand-blue" : "bg-[var(--line)] hover:bg-foreground/30"
+                      }`}
+                      key={record.slug}
+                      onClick={() => setIndex(i)}
+                      type="button"
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    aria-label="Previous project"
+                    className="flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-colors hover:text-foreground"
+                    onClick={() => go(-1)}
+                    type="button"
+                  >
+                    <ArrowLeft className="size-4" strokeWidth={2.25} />
+                  </button>
+                  <button
+                    aria-label="Next project"
+                    className="flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-colors hover:text-foreground"
+                    onClick={() => go(1)}
+                    type="button"
+                  >
+                    <ArrowRight className="size-4" strokeWidth={2.25} />
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="reveal-card mt-10 rounded-2xl border border-[var(--line)] px-8 py-16 text-center opacity-0">
