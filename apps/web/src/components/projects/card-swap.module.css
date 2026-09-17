@@ -1,0 +1,38 @@
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 900px;
+}
+
+@media (max-width: 640px) {
+  .container {
+    transform: scale(0.72);
+    transform-origin: top center;
+  }
+}
+
+.card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+  box-shadow:
+    0 24px 48px -20px rgba(0, 0, 0, 0.35),
+    0 4px 12px -4px rgba(0, 0, 0, 0.15);
+
+  /* GSAP owns every transform on this element from mount (card-swap.tsx
+     calls gsap.set before anything paints) — this stylesheet must never
+     set transform/translate/scale here, or GSAP would stack onto it
+     instead of replacing it (see docs/animation-system.md gotcha #1). */
+  transform-style: preserve-3d;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
