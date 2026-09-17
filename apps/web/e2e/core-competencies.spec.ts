@@ -44,8 +44,10 @@ test.describe("core competencies cards", () => {
     await expect(exploreLink).toBeHidden();
 
     await card.hover();
-    await page.waitForTimeout(900);
-    await expect(exploreLink).toBeVisible();
+    // Generous timeout: this hover-driven GSAP entrance can be slow to
+    // settle on a loaded CI runner (e.g. the visual-regression suite's
+    // full-page screenshots competing for the same worker's CPU).
+    await expect(exploreLink).toBeVisible({ timeout: 10_000 });
     await expect(card.getByRole("link", { name: "Member" })).toBeVisible();
     await expect(card.getByRole("link", { name: "Projects" })).toBeVisible();
     await expect(card.getByRole("link", { name: "Publications" })).toBeVisible();
@@ -83,11 +85,11 @@ test.describe("core competencies cards", () => {
     const card = cardFor(page, /Website Development/);
     await card.scrollIntoViewIfNeeded();
     await card.hover();
-    await page.waitForTimeout(900);
 
     await expect(card.getByRole("link", { name: "Projects" })).toHaveAttribute(
       "href",
       "/projects?category=website",
+      { timeout: 10_000 },
     );
     await expect(card.getByRole("link", { name: "Member" })).toHaveAttribute(
       "href",
