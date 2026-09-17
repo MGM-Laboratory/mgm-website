@@ -10,9 +10,9 @@ import {
   Check,
   Envelope,
   EnvelopeOpen,
-  DotsThreeOutline,
   FloppyDisk,
   Flask,
+  GearSix,
   GraduationCap,
   House,
   ImageSquare,
@@ -100,33 +100,32 @@ const TABS: { id: EditorTab; label: string }[] = [
   { id: "credentials", label: "Credentials" },
 ];
 
+// "home" and "contact" are deliberately absent here — both moved under the
+// "other"/Settings workspace's own nested sub-nav (see SettingsSubNav) so
+// they no longer take a slot in the main collection switcher.
 const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: string }[] = [
-  { id: "home", label: "Home" },
   { id: "articles", label: "Articles" },
   { id: "projects", label: "Projects" },
   { id: "publications", label: "Publications" },
   { id: "research", label: "Research" },
   { id: "members", label: "Member" },
   { id: "careers", label: "Careers" },
-  { id: "contact", label: "Contact Settings" },
   { id: "contact-inquiries", label: "Contact Inquiries" },
   { id: "events", label: "Events" },
-  { id: "other", label: "Other" },
+  { id: "other", label: "Settings" },
 ];
 
 const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "overview", label: "Overview", tone: "text-brand-blue" },
-  { id: "home", label: "Home", tone: "text-brand-blue" },
   { id: "articles", label: "Articles", tone: "text-brand-yellow" },
   { id: "projects", label: "Projects", tone: "text-brand-red" },
   { id: "publications", label: "Publications", tone: "text-brand-green" },
   { id: "research", label: "Research", tone: "text-brand-blue" },
   { id: "members", label: "Member", tone: "text-brand-red" },
   { id: "careers", label: "Careers", tone: "text-brand-yellow" },
-  { id: "contact", label: "Contact Settings", tone: "text-brand-green" },
   { id: "contact-inquiries", label: "Contact Inquiries", tone: "text-brand-green" },
   { id: "events", label: "Events", tone: "text-brand-green" },
-  { id: "other", label: "Other", tone: "text-brand-yellow" },
+  { id: "other", label: "Settings", tone: "text-brand-yellow" },
   { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
 
@@ -141,7 +140,14 @@ const LIVE_WORKSPACES = new Set<EditorialSection>([
   "projects",
   "events",
   "home",
+  "other",
 ]);
+
+/** The pages nested inside the Settings workspace's own sub-navigation. */
+const SETTINGS_SUBSECTIONS: { id: "home" | "contact"; label: string }[] = [
+  { id: "home", label: "Home" },
+  { id: "contact", label: "Contact Settings" },
+];
 
 /** Each editorial workspace maps to the permission page that gates it. */
 const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
@@ -181,7 +187,7 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
     case "home":
       return <MonitorPlay size={size} weight="duotone" />;
     case "other":
-      return <DotsThreeOutline size={size} weight="duotone" />;
+      return <GearSix size={size} weight="duotone" />;
     case "administration":
       return <ShieldCheck size={size} weight="duotone" />;
     default:
@@ -535,6 +541,7 @@ export function MemberCmsStudio({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const workspacePickerRef = useRef<HTMLDivElement>(null);
+  const [settingsSection, setSettingsSection] = useState<"home" | "contact">("home");
   const [viewer, setViewer] = useState<AdminViewer>(session);
 
   // Refresh the viewer on mount so permission changes made elsewhere in the
@@ -555,6 +562,11 @@ export function MemberCmsStudio({
   const canAccess = (target: EditorialSection) => {
     if (target === "overview") return true;
     if (viewer.role === "superadmin") return true;
+    // Settings is reachable as soon as any one of its nested sub-pages is —
+    // the sub-nav itself then hides whichever ones the admin can't open.
+    if (target === "other") {
+      return SETTINGS_SUBSECTIONS.some((item) => can(viewer.permissions, item.id, "read"));
+    }
     const page = SECTION_PAGE[target];
     return page !== undefined && can(viewer.permissions, page, "read");
   };
@@ -730,6 +742,16 @@ export function MemberCmsStudio({
     setSection(nextSection);
     setWorkspaceOpen(false);
   };
+  const chooseSettingsSection = (next: "home" | "contact") => {
+    if (next !== settingsSection && !confirmDiscard()) return;
+    if (next !== settingsSection) setHasUnsavedChanges(false);
+    setSettingsSection(next);
+  };
+  // Falls back to whichever nested page the admin can actually open, so a
+  // permission set that excludes "home" still lands somewhere usable.
+  const activeSettingsSection = canAccess(settingsSection)
+    ? settingsSection
+    : (SETTINGS_SUBSECTIONS.find((item) => canAccess(item.id))?.id ?? settingsSection);
   const currentMember = selected ?? members[0] ?? MEMBERS[0];
   const activeWorkspace = WORKSPACES.find((workspace) => workspace.id === section) ?? WORKSPACES[0];
   const selectedArticle = sortedArticleRecords.find(
@@ -1227,30 +1249,12 @@ export function MemberCmsStudio({
                   Administrator accounts, passphrases, and per-page permissions.
                 </p>
               </div>
-            ) : section === "contact" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
-              <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
-                <span className="grid size-9 place-items-center rounded-xl bg-white text-brand-green dark:bg-white/10">
-                  <Envelope size={20} weight="duotone" />
-                </span>
-                <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">
-                  Contact Settings
-                </p>
-                <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
-                  A single record — the recipient inbox, HQ address, and map coordinates shown on
-                  the public contact page.
-                </p>
-              </div>
-            ) : section === "home" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
-              <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
-                <span className="grid size-9 place-items-center rounded-xl bg-white text-brand-blue dark:bg-white/10">
-                  <MonitorPlay size={20} weight="duotone" />
-                </span>
-                <p className="mt-4 font-display text-lg font-semibold tracking-[-0.035em]">Home</p>
-                <p className="mt-1 text-sm leading-6 text-[#778299] dark:text-white/45">
-                  A single record — the homepage&apos;s video block: its title, short description,
-                  and source.
-                </p>
-              </div>
+            ) : section === "other" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+              <SettingsSubNav
+                active={activeSettingsSection}
+                canAccess={canAccess}
+                onChoose={chooseSettingsSection}
+              />
             ) : (
               <div className="rounded-2xl border border-[#dfe4ee] bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.025]">
                 <span
@@ -1433,13 +1437,15 @@ export function MemberCmsStudio({
                 />
               ) : section === "administration" ? (
                 <AdminManagementPanel initialAdmins={initialAdmins} />
-              ) : section === "contact" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
-                <ContactSettingsEditor
-                  isSuperadmin={viewer.role === "superadmin"}
-                  onDirtyChange={setHasUnsavedChanges}
-                />
-              ) : section === "home" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
-                <HomeSettingsEditor onDirtyChange={setHasUnsavedChanges} />
+              ) : section === "other" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+                activeSettingsSection === "contact" ? (
+                  <ContactSettingsEditor
+                    isSuperadmin={viewer.role === "superadmin"}
+                    onDirtyChange={setHasUnsavedChanges}
+                  />
+                ) : (
+                  <HomeSettingsEditor onDirtyChange={setHasUnsavedChanges} />
+                )
               ) : (
                 <EditorialOverview
                   canAccess={canAccess}
@@ -1480,6 +1486,65 @@ function DeniedScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
+/**
+ * The Settings workspace's own nested navigation — site-wide/global config
+ * that doesn't belong to a specific CMS collection (currently the homepage
+ * video block and Contact Settings) lives here instead of taking its own
+ * slot in the main workspace switcher.
+ */
+function SettingsSubNav({
+  active,
+  canAccess,
+  onChoose,
+}: Readonly<{
+  active: "home" | "contact";
+  canAccess: (section: EditorialSection) => boolean;
+  onChoose: (next: "home" | "contact") => void;
+}>) {
+  const items = SETTINGS_SUBSECTIONS.filter((item) => canAccess(item.id));
+  return (
+    <div>
+      <p className="px-1 pb-2 font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
+        Settings
+      </p>
+      {items.length ? (
+        <div className="space-y-1">
+          {items.map((item) => (
+            <button
+              aria-current={item.id === active ? "page" : undefined}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${
+                item.id === active
+                  ? "bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/20"
+                  : "text-[#4f5a6f] hover:bg-[#f5f7fb] dark:text-white/65 dark:hover:bg-white/[0.06]"
+              }`}
+              key={item.id}
+              onClick={() => onChoose(item.id)}
+              type="button"
+            >
+              <span
+                className={
+                  item.id === active ? "text-brand-blue" : "text-[#8993a7] dark:text-white/40"
+                }
+              >
+                {item.id === "home" ? (
+                  <MonitorPlay size={18} weight="duotone" />
+                ) : (
+                  <Envelope size={18} weight="duotone" />
+                )}
+              </span>
+              <span className="flex-1">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="px-1 text-sm text-[#778299] dark:text-white/45">
+          No settings pages are available for your account yet.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function EditorialOverview({
   canAccess,
   onChoose,
@@ -1504,7 +1569,7 @@ function EditorialOverview({
       {section === "members" ? null : (
         <p className="mt-5 max-w-xl text-base leading-7 text-[#6b768b] dark:text-white/55">
           {section === "overview"
-            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, Publications, Research, Careers, and Contact Settings are ready to edit; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
+            ? "Choose a collection with the workspace switcher above. Member profiles, Articles, Publications, Research, and Careers are ready to edit, and Settings holds the homepage video block and Contact Settings; the remaining editorial collections are intentionally reserved for their dedicated publishing workflows."
             : `${label} is reserved for its own editorial workflow. It will be added here without changing the member, article, or publication workspaces.`}
         </p>
       )}

@@ -212,6 +212,11 @@ export function publishedProjects(records: readonly CmsProjectRecord[]) {
     .sort((left, right) => projectSortKey(right).localeCompare(projectSortKey(left)));
 }
 
+/** Published projects an admin has flagged for spotlight placement (the homepage card swap). */
+export function featuredProjects(records: readonly CmsProjectRecord[]) {
+  return publishedProjects(records).filter((record) => record.project.featured);
+}
+
 /** Resolves a media key to a loadable URL — bundled seed art or CMS media. */
 export function projectMediaUrl(key?: string) {
   if (!key) return undefined;

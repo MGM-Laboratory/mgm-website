@@ -1,43 +1,11 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, ImageIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
-import { PatternTile } from "@/components/process/pattern-tile";
-
-export type ShowcaseItem = {
-  title: string;
-  description: string;
-};
-
-const CARD_ICONS = [
-  { kind: "circle", fg: "blue" },
-  { kind: "square", fg: "red" },
-  { kind: "x", fg: "yellow" },
-] as const;
-
-/** The plain title/description/icon-dots card Achievements has always used. */
-export function ShowcaseCard({ title, description }: Readonly<ShowcaseItem>) {
-  return (
-    <>
-      <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-[var(--surface-muted)]">
-        <ImageIcon className="size-10 text-foreground/25" strokeWidth={1.5} />
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <h3 className="font-display font-semibold text-foreground">{title}</h3>
-        <div className="flex items-center gap-1.5">
-          {CARD_ICONS.map(({ kind, fg }, i) => (
-            <PatternTile key={i} kind={kind} bg="canvas" fg={fg} className="size-5" />
-          ))}
-        </div>
-      </div>
-      <p className="mt-2 line-clamp-2 text-sm text-foreground/60">{description}</p>
-    </>
-  );
-}
 
 /**
  * A "Netflix row": header (title/intro/see-more/arrows) plus a
@@ -70,7 +38,8 @@ export function ShowcaseSection({
   seeMoreLabel?: string;
   emptyMessage?: string;
   /** Tighter vertical padding for pages that stack this directly between
-   * other sections (e.g. About) — the homepage default is untouched. */
+   * other sections — used on About, and on the homepage's own tightened row
+   * stack (Core Competencies/Trusted By/Projects/Publications/Articles). */
   compact?: boolean;
 }>) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -84,7 +53,7 @@ export function ShowcaseSection({
   }, []);
 
   function scrollTrack(dir: 1 | -1) {
-    trackRef.current?.scrollBy({ left: dir * 340, behavior: "smooth" });
+    trackRef.current?.scrollBy({ left: dir * 332, behavior: "smooth" });
   }
 
   return (
@@ -143,7 +112,7 @@ export function ShowcaseSection({
         {count > 0 && (
           <div
             ref={trackRef}
-            className="mt-10 flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none]"
+            className="mt-10 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]"
           >
             {children}
           </div>

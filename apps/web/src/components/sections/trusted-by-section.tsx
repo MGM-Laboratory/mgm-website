@@ -186,7 +186,8 @@ export function TrustedBySection({
   compact = false,
 }: {
   /** Tighter vertical padding for pages that stack this directly between
-   * other sections (e.g. About) — the homepage default is untouched. */
+   * other sections — used on About, and on the homepage's own tightened row
+   * stack (Core Competencies/Trusted By/Projects/Publications/Articles). */
   compact?: boolean;
 } = {}) {
   const rootRef = useRef<HTMLDivElement>(null);

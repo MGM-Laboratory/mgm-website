@@ -13,21 +13,10 @@ import { ConfigService } from "@nestjs/config";
 import { ApiTags } from "@nestjs/swagger";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { ADMIN_PAGE_IDS as PAGES } from "@repo/shared";
 
 import type { Env } from "../config/env.validation.js";
 import { CmsAdminsService } from "./cms-admins.service.js";
-
-const PAGES = [
-  "articles",
-  "publications",
-  "members",
-  "projects",
-  "research",
-  "careers",
-  "contact",
-  "contact-inquiries",
-  "events",
-] as const;
 
 const ACTION_RANK: Record<string, number> = { read: 1, write: 2, delete: 3 };
 

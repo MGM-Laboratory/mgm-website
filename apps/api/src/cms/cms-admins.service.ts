@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import { ADMIN_PAGE_IDS as PAGES, type AdminPermissions } from "@repo/shared";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -18,20 +19,8 @@ const ADMIN_RECORDS_CACHE_KEY = "cms:admins:v1";
 const ADMIN_RECORDS_CACHE_TTL_SECONDS = 30;
 const SCRYPT = { N: 16384, r: 8, p: 1 };
 const KEY_LENGTH = 64;
-const PAGES = [
-  "articles",
-  "publications",
-  "members",
-  "projects",
-  "research",
-  "careers",
-  "contact",
-  "contact-inquiries",
-  "events",
-] as const;
 
-type AdminPageId = (typeof PAGES)[number];
-export type AdminPermissions = Record<AdminPageId, ("read" | "write" | "delete")[]>;
+export type { AdminPermissions };
 
 export type AdminCreateInput = {
   name: string;

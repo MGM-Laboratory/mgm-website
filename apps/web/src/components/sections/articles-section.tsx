@@ -15,6 +15,7 @@ export function ArticlesSection({ initialRecords = [] }: { initialRecords?: CmsA
 
   return (
     <ShowcaseSection
+      compact
       id="articles"
       title="Articles"
       intro="Notes on research, design, and engineering from the lab."
