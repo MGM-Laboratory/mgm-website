@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import type { AdminAction, AdminPageId } from "@/lib/admin-permissions";
 import { requireAdminPermission, requireSuperadmin, type AdminSession } from "@/lib/admin-session";
-import { cmsApi } from "@/lib/cms-api";
+import { apiBaseUrl, cmsApi } from "@/lib/cms-api";
 
 export type AdminGate = { ok: true; session: AdminSession } | { ok: false; response: NextResponse };
 
@@ -83,6 +83,77 @@ export function detailRoute(
       if (!g.ok) return g.response;
       const { slug } = await params;
       return proxyJson(cmsPath(slug), { method: "DELETE" });
+    },
+  };
+}
+
+/**
+ * A GET + PUT route for a singleton record (no slug) — e.g. a single
+ * settings row. Same shape as listRoute/detailRoute, just for the one CMS
+ * collection that's a single row instead of a list of records.
+ */
+export function singletonRoute(
+  readGate: () => Promise<AdminGate>,
+  writeGate: () => Promise<AdminGate>,
+  cmsPath: string,
+) {
+  return {
+    async GET() {
+      const g = await readGate();
+      if (!g.ok) return g.response;
+      return proxyJson(cmsPath);
+    },
+    async PUT(request: Request) {
+      const g = await writeGate();
+      if (!g.ok) return g.response;
+      return proxyJson(cmsPath, { body: JSON.stringify(await request.json()), method: "PUT" });
+    },
+  };
+}
+
+const DEFAULT_MAX_VIDEO_BYTES = 524_288_000;
+
+function maxVideoBytes() {
+  return Number(process.env.CMS_MAX_VIDEO_BYTES ?? DEFAULT_MAX_VIDEO_BYTES);
+}
+
+/**
+ * Streams a raw video upload through to the API untouched (no buffering, so
+ * memory use stays flat regardless of file size), after the same
+ * content-type/size checks every video-upload route needs.
+ */
+export function videoUploadRoute(gate: () => Promise<AdminGate>, cmsPath: string) {
+  return {
+    async POST(request: Request) {
+      const g = await gate();
+      if (!g.ok) return g.response;
+
+      const contentType = request.headers.get("content-type") ?? "";
+      if (contentType !== "video/mp4" && contentType !== "video/webm") {
+        return NextResponse.json(
+          { message: "The video must be an MP4 or WebM file." },
+          { status: 400 },
+        );
+      }
+      const contentLength = Number(request.headers.get("content-length"));
+      if (contentLength && contentLength > maxVideoBytes()) {
+        return NextResponse.json(
+          { message: `The video must be under ${Math.floor(maxVideoBytes() / 1024 / 1024)} MB.` },
+          { status: 413 },
+        );
+      }
+
+      const response = await fetch(`${apiBaseUrl()}${cmsPath}`, {
+        body: request.body,
+        headers: {
+          "content-type": contentType,
+          "x-cms-passphrase": process.env.ADMIN_PASSPHRASE ?? "",
+        },
+        method: "POST",
+        // Node's fetch requires an explicit duplex mode for streamed bodies.
+        duplex: "half",
+      } as RequestInit);
+      return NextResponse.json(await response.json(), { status: response.status });
     },
   };
 }
