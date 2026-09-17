@@ -1,7 +1,30 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
-function cardFor(page: import("@playwright/test").Page, name: RegExp) {
+function cardFor(page: Page, name: RegExp) {
   return page.locator("div.reveal-card").filter({ has: page.getByRole("button", { name }) });
+}
+
+/**
+ * ScrollSmoother eases toward a new scroll position rather than snapping
+ * instantly, so hover()'s coordinates can land short of a just-scrolled-to
+ * element (seen intermittently in Firefox). Polling the element's own
+ * bounding box for two consecutive stable reads is an observable condition
+ * to synchronize on, instead of guessing a fixed settle time.
+ */
+async function waitForStableLayout(locator: Locator, timeout = 5000) {
+  let last: number | undefined;
+  await expect
+    .poll(
+      async () => {
+        const box = await locator.boundingBox();
+        const y = box?.y;
+        const stable = last !== undefined && y !== undefined && Math.abs(y - last) < 0.5;
+        last = y;
+        return stable;
+      },
+      { timeout },
+    )
+    .toBe(true);
 }
 
 test.describe("core competencies cards", () => {
@@ -22,27 +45,24 @@ test.describe("core competencies cards", () => {
     await page.goto("/");
     const card = cardFor(page, /Website Development/);
     await card.scrollIntoViewIfNeeded();
-    // Let the scroll-triggered entrance animation settle before interacting.
-    await page.waitForTimeout(800);
+    // Let the scroll-triggered entrance animation (reveal-card's opacity
+    // fade-in) finish before interacting.
+    await expect.poll(() => card.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
 
     const inner = card.locator("> div").first();
     const restTransform = await inner.evaluate((el) => getComputedStyle(el).transform);
 
     await card.hover();
-    await page.waitForTimeout(500);
-    const hoverTransform = await inner.evaluate((el) => getComputedStyle(el).transform);
-
-    expect(hoverTransform).not.toBe(restTransform);
+    await expect
+      .poll(() => inner.evaluate((el) => getComputedStyle(el).transform))
+      .not.toBe(restTransform);
   });
 
   test("back-face links are unreachable until the card opens", async ({ page }) => {
     await page.goto("/");
     const card = cardFor(page, /Website Development/);
     await card.scrollIntoViewIfNeeded();
-    // ScrollSmoother eases toward the new scroll position rather than
-    // snapping instantly; hover()'s coordinates can land short of the card
-    // if it fires before that settles (seen intermittently in Firefox).
-    await page.waitForTimeout(800);
+    await waitForStableLayout(card);
 
     const exploreLink = card.getByRole("link", { name: "Explore" });
     await expect(exploreLink).toBeHidden();
@@ -68,7 +88,8 @@ test.describe("core competencies cards", () => {
 
     const trigger = page.getByRole("button", { name: /Website Development/ });
     await trigger.focus();
-    await page.waitForTimeout(900);
+    // No wait needed: the inert/aria-hidden flip happens synchronously in the
+    // focus handler, and these assertions already poll on their own.
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
     await expect(card.getByRole("link", { name: "Explore" })).toBeVisible();
 
@@ -92,7 +113,7 @@ test.describe("core competencies cards", () => {
     const card = cardFor(page, /Website Development/);
     await card.scrollIntoViewIfNeeded();
     // See the "back-face links are unreachable" test above.
-    await page.waitForTimeout(800);
+    await waitForStableLayout(card);
     await card.hover();
 
     // Generous timeout on every assertion — see the comment in the
@@ -123,12 +144,12 @@ test.describe("core competencies cards", () => {
     const card = cardFor(page, /UX Research/);
     await card.scrollIntoViewIfNeeded();
     await card.hover();
-    await page.waitForTimeout(900);
 
-    const color = await card
-      .getByText("UX Research & Design")
-      .last()
-      .evaluate((el) => getComputedStyle(el).color);
-    expect(color).toBe("rgb(0, 0, 0)");
+    // The yellow card's text color is a static class, not hover-driven, but
+    // poll anyway (an observable condition) rather than assume timing.
+    const title = card.getByText("UX Research & Design").last();
+    await expect
+      .poll(() => title.evaluate((el) => getComputedStyle(el).color))
+      .toBe("rgb(0, 0, 0)");
   });
 });

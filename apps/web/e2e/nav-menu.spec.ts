@@ -45,9 +45,12 @@ test.describe("nav menu", () => {
     // forever (playClose killed the open timeline before its onComplete
     // could clear it), so the next playOpen() silently no-op'd: aria state
     // said "open" but the panel never actually animated in.
-    await page.waitForTimeout(60);
+    // No observable condition to synchronize on here by design: the point is
+    // to interrupt the animation at an arbitrary moment while it's still in
+    // flight, not to wait for it to reach some state.
+    await page.waitForTimeout(60); // NOSONAR: deliberate mid-animation interrupt, see comment above
     await page.getByRole("button", { name: "Close menu" }).click();
-    await page.waitForTimeout(60);
+    await page.waitForTimeout(60); // NOSONAR: deliberate mid-animation interrupt, see comment above
     await page.getByRole("button", { name: "Open menu" }).click();
 
     const panel = page.locator("#site-nav-panel");
