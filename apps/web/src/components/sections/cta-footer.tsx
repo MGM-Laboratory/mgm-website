@@ -26,22 +26,23 @@ const EXPLORE_LINKS = [
   { label: "About Us", href: "/about" },
   { label: "Core Competencies", href: "/#process" },
   { label: "Portfolio", href: "/projects" },
-  { label: "Achievements", href: "/#achievements" },
   { label: "Contact", href: "/contact" },
 ];
 
 export function CtaFooter() {
   return (
-    <footer className="bg-[var(--surface-inverse)] text-white">
+    <footer className="bg-[var(--footer-bg)] text-foreground">
       <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-20 sm:px-10 sm:py-28 lg:flex-row lg:items-center lg:justify-between lg:px-16">
         <div className="max-w-md">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Let&apos;s make something meaningful.
           </h2>
-          <p className="mt-3 text-white/60">Research, technology, and ideas brought together.</p>
+          <p className="mt-3 text-foreground/60">
+            Research, technology, and ideas brought together.
+          </p>
           <Link
             href="/contact"
-            className="mt-6 inline-flex items-center rounded-md border border-white/25 px-5 py-2.5 text-sm font-medium transition-colors hover:border-white/50"
+            className="mt-6 inline-flex items-center rounded-md border border-foreground/25 px-5 py-2.5 text-sm font-medium transition-colors hover:border-foreground/50"
           >
             Get in touch
           </Link>
@@ -54,7 +55,7 @@ export function CtaFooter() {
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-5xl flex-col gap-10 border-t border-white/10 px-6 py-14 sm:px-10 lg:flex-row lg:justify-between lg:px-16">
+      <div className="mx-auto flex max-w-5xl flex-col gap-10 border-t border-[var(--line)] px-6 py-14 sm:px-10 lg:flex-row lg:justify-between lg:px-16">
         <div className="max-w-sm">
           <div className="flex items-center gap-2.5">
             <Image src="/logo.svg" alt="MGM Laboratory" width={32} height={32} />
@@ -62,7 +63,7 @@ export function CtaFooter() {
           <p className="mt-4 font-display text-xl font-semibold">
             Media, Game, and Mobile Laboratory
           </p>
-          <p className="mt-4 text-sm text-white/45">
+          <p className="mt-4 text-sm text-foreground/45">
             © {new Date().getFullYear()} MGM Research Laboratory. Built for research. Designed for
             impact.
           </p>
@@ -70,11 +71,13 @@ export function CtaFooter() {
 
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
           <div>
-            <p className="text-xs font-semibold tracking-wide text-white/40 uppercase">Explore</p>
-            <ul className="mt-3 flex flex-col gap-2 text-sm text-white/70">
+            <p className="text-xs font-semibold tracking-wide text-foreground/40 uppercase">
+              Explore
+            </p>
+            <ul className="mt-3 flex flex-col gap-2 text-sm text-foreground/70">
               {EXPLORE_LINKS.map((l) => (
                 <li key={l.label}>
-                  <Link href={l.href} className="transition-colors hover:text-white">
+                  <Link href={l.href} className="transition-colors hover:text-foreground">
                     {l.label}
                   </Link>
                 </li>
@@ -83,8 +86,10 @@ export function CtaFooter() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold tracking-wide text-white/40 uppercase">Location</p>
-            <p className="mt-3 max-w-[200px] text-sm text-white/70">
+            <p className="text-xs font-semibold tracking-wide text-foreground/40 uppercase">
+              Location
+            </p>
+            <p className="mt-3 max-w-[200px] text-sm text-foreground/70">
               {HQ_ADDRESS_LINES.map((line, i) => (
                 <span key={line}>
                   {i > 0 ? <br /> : null}
@@ -95,19 +100,21 @@ export function CtaFooter() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold tracking-wide text-white/40 uppercase">Connect</p>
+            <p className="text-xs font-semibold tracking-wide text-foreground/40 uppercase">
+              Connect
+            </p>
             <div className="mt-3 flex gap-3">
               <a
                 href="https://linkedin.com"
                 aria-label="LinkedIn"
-                className="flex size-9 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-white/20"
+                className="flex size-9 items-center justify-center rounded-full bg-foreground/10 transition-colors hover:bg-foreground/20"
               >
                 <LinkedinGlyph className="size-4" />
               </a>
               <a
                 href="https://instagram.com"
                 aria-label="Instagram"
-                className="flex size-9 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-white/20"
+                className="flex size-9 items-center justify-center rounded-full bg-foreground/10 transition-colors hover:bg-foreground/20"
               >
                 <InstagramGlyph className="size-4" />
               </a>
