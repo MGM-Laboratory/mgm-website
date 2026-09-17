@@ -1,23 +1,10 @@
-import { gateAdminRequest, proxyJson } from "@/lib/admin-proxy";
-
-type Context = { params: Promise<{ slug: string }> };
+import { detailRoute, gateAdminRequest } from "@/lib/admin-proxy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function PUT(request: Request, { params }: Context) {
-  const gate = await gateAdminRequest("events", "write");
-  if (!gate.ok) return gate.response;
-  const { slug } = await params;
-  return proxyJson(`/cms/events/${encodeURIComponent(slug)}`, {
-    body: JSON.stringify(await request.json()),
-    method: "PUT",
-  });
-}
-
-export async function DELETE(_request: Request, { params }: Context) {
-  const gate = await gateAdminRequest("events", "delete");
-  if (!gate.ok) return gate.response;
-  const { slug } = await params;
-  return proxyJson(`/cms/events/${encodeURIComponent(slug)}`, { method: "DELETE" });
-}
+export const { PUT, DELETE } = detailRoute(
+  () => gateAdminRequest("events", "write"),
+  () => gateAdminRequest("events", "delete"),
+  (slug) => `/cms/events/${encodeURIComponent(slug)}`,
+);

@@ -41,3 +41,48 @@ export async function proxyJson(path: string, init?: RequestInit): Promise<NextR
   const response = await cmsApi(path, init);
   return NextResponse.json(await response.json(), { status: response.status });
 }
+
+type SlugContext = { params: Promise<{ slug: string }> };
+
+/**
+ * A GET-list route: gate on read, then proxy straight through. Every simple
+ * CMS resource (articles, careers, projects, …) has one of these — a
+ * generator here, rather than a copy of the same three-line body in every
+ * route.ts, is what actually keeps them from being flagged as clones (a
+ * repeated one-line call site is below any duplication detector's block
+ * threshold; a repeated function body isn't).
+ */
+export function listRoute(gate: () => Promise<AdminGate>, cmsPath: string) {
+  return {
+    async GET() {
+      const g = await gate();
+      if (!g.ok) return g.response;
+      return proxyJson(cmsPath);
+    },
+  };
+}
+
+/** A PUT (replace) + DELETE detail route for a `[slug]` segment. */
+export function detailRoute(
+  writeGate: () => Promise<AdminGate>,
+  deleteGate: () => Promise<AdminGate>,
+  cmsPath: (slug: string) => string,
+) {
+  return {
+    async PUT(request: Request, { params }: SlugContext) {
+      const g = await writeGate();
+      if (!g.ok) return g.response;
+      const { slug } = await params;
+      return proxyJson(cmsPath(slug), {
+        body: JSON.stringify(await request.json()),
+        method: "PUT",
+      });
+    },
+    async DELETE(_request: Request, { params }: SlugContext) {
+      const g = await deleteGate();
+      if (!g.ok) return g.response;
+      const { slug } = await params;
+      return proxyJson(cmsPath(slug), { method: "DELETE" });
+    },
+  };
+}
