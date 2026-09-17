@@ -15,7 +15,6 @@ type Shape = {
   rotate: number;
   depth: number;
   hideOnMobile: boolean;
-  onLeftEdge: boolean;
 };
 
 const KINDS: PatternKind[] = [
@@ -45,10 +44,55 @@ function mulberry32(seed: number) {
   };
 }
 
-// Shapes thin out with depth on purpose: dense near the top (where the hero
-// headline lives), tapering off by the bottom of the field instead of
-// stopping dead at the hero's own edge.
+// Both the hero heading and every story row below it are centered in a
+// max-w-3xl column, so "keep clear of the text" means the same thing at
+// every scroll depth: stay within this margin of the left or right edge,
+// never the middle. Comfortably inside the column's own natural gutter
+// even at a wide desktop viewport, where that gutter is at its narrowest.
+const EDGE_MARGIN = 14;
+
+// One independent, deliberately-spaced column per edge, instead of scoring
+// every shape's position independently — the earlier approach let shapes
+// land close together purely by chance (worst on the right edge, which
+// visibly clustered). Walking down a single column and growing the gap
+// after every shape guarantees no two shapes on the same edge ever crowd
+// each other, and the growing gap is what makes density fall off with
+// depth, rather than a probability curve that could still roll a cluster.
 //
+// Bigger shapes need more room than smaller ones, which the `size * 0.6`
+// term already bakes into the step forward — so a bigger base size range
+// (this field's shapes read larger than the original pass) doesn't
+// reintroduce the crowding that same growing-gap trick was built to fix. A
+// smaller starting gap is what actually packs more shapes into the hero's
+// own top stretch specifically, since the gap is still small there before
+// its own 1.24x-per-shape growth takes over further down.
+function placeColumn(rand: () => number, onLeftEdge: boolean, startY: number): Shape[] {
+  const shapes: Shape[] = [];
+  let y = startY;
+  let gap = 2.5 + rand() * 1.5;
+  let i = 0;
+
+  while (y < 96) {
+    const density = Math.max(1 - y / 100, 0.15);
+    const size = 2.4 + rand() * 4.6 * density;
+    const fromEdge = 2 + rand() * (EDGE_MARGIN - 2);
+    shapes.push({
+      kind: KINDS[Math.floor(rand() * KINDS.length)],
+      tone: TONES[Math.floor(rand() * TONES.length)],
+      top: round(y, 2),
+      left: round(onLeftEdge ? fromEdge : 100 - fromEdge, 2),
+      size: round(size, 2),
+      rotate: Math.round(rand() * 360),
+      depth: round(0.4 + rand() * 0.9, 2),
+      hideOnMobile: i % 2 === 0,
+    });
+    y += gap + size * 0.6;
+    gap *= 1.24;
+    i++;
+  }
+  return shapes;
+}
+
 // Every value is rounded to a short, fixed precision before it's used —
 // the browser's CSSOM re-serializes a `style` attribute's numbers with its
 // own (coarser) precision once it parses the initial HTML, so handing it a
@@ -60,84 +104,48 @@ function round(n: number, decimals: number) {
   return Math.round(n * f) / f;
 }
 
-// Every story row below the hero is centered in a max-w-3xl column, so
-// "keep clear of the text" means the same thing at every scroll depth below
-// the hero: stay within this margin of the left or right edge, never the
-// middle. Comfortably inside the column's own natural gutter even at a wide
-// desktop viewport, where that gutter is at its narrowest.
-const EDGE_MARGIN = 14;
-
-// The hero itself (unlike the story rows after it) is left-anchored at lg:,
-// with the lanyard filling its right side — so right-edge shapes that would
-// land within the hero's own vertical span are hidden there instead of
-// clashing with it, and the left edge is thinned to just its topmost shape
-// so it doesn't compete with the now-larger, right-shifted text either.
-// Measured as a percentage of this field's total height (hero + every story
-// row combined): the hero is `min-h-[100dvh-4rem]` while the field spans
-// much further down, so this is necessarily an approximation, padded a
-// little past the hero's actual measured share.
-const HERO_ZONE_PERCENT = 34;
-
-// One independent, deliberately-spaced column per edge, instead of scoring
-// every shape's position independently — the earlier approach let shapes
-// land close together purely by chance (worst on the right edge, which
-// visibly clustered). Walking down a single column and growing the gap
-// after every shape guarantees no two shapes on the same edge ever crowd
-// each other, and the growing gap is what makes density fall off with
-// depth, rather than a probability curve that could still roll a cluster.
-function placeColumn(rand: () => number, onLeftEdge: boolean, startY: number): Shape[] {
-  const shapes: Shape[] = [];
-  let y = startY;
-  let gap = 5 + rand() * 2;
-  let i = 0;
-
-  while (y < 96) {
-    const density = Math.max(1 - y / 100, 0.15);
-    const size = 1.6 + rand() * 3.2 * density;
-    const fromEdge = 2 + rand() * (EDGE_MARGIN - 2);
-    shapes.push({
-      kind: KINDS[Math.floor(rand() * KINDS.length)],
-      tone: TONES[Math.floor(rand() * TONES.length)],
-      top: round(y, 2),
-      left: round(onLeftEdge ? fromEdge : 100 - fromEdge, 2),
-      size: round(size, 2),
-      rotate: Math.round(rand() * 360),
-      depth: round(0.4 + rand() * 0.9, 2),
-      hideOnMobile: i % 2 === 0,
-      onLeftEdge,
-    });
-    y += gap + size * 0.6;
-    gap *= 1.24;
-    i++;
-  }
-  return shapes;
-}
-
-// The left column is walked top-to-bottom (see placeColumn), so its very
-// first entry is already the topmost one — everything else that column
-// placed within the hero's own zone is dropped, keeping just that one shape
-// there while leaving the same column's shapes further down (in the story
-// section) untouched.
-function pruneHeroLeftShapes(shapes: Shape[]): Shape[] {
-  let keptTopLeft = false;
-  return shapes.filter((shape) => {
-    if (!shape.onLeftEdge || shape.top >= HERO_ZONE_PERCENT) return true;
-    if (keptTopLeft) return false;
-    keptTopLeft = true;
-    return true;
-  });
-}
-
 function buildShapes(): Shape[] {
   const rand = mulberry32(20260917);
-  const shapes = [
-    ...placeColumn(rand, true, rand() * 3),
-    ...placeColumn(rand, false, 1 + rand() * 3),
-  ];
-  return pruneHeroLeftShapes(shapes);
+  return [...placeColumn(rand, true, rand() * 3), ...placeColumn(rand, false, 1 + rand() * 3)];
 }
 
 const SHAPES = buildShapes();
+
+// A field that snaps into place once and then sits still reads as static —
+// a slow, perpetual bob (every shape) plus a very slow continuous spin (on
+// roughly a third of them, direction alternated by index) is what actually
+// makes it feel alive at rest, not just on entrance or on mouse move.
+// Desynced per shape via its own index rather than randomized, so it stays
+// deterministic like the rest of the field. This targets the inner
+// `.bauhaus-shape` element specifically — the outer `.parallax-el` wrapper
+// already owns x/y for the mouse-parallax effect (setupParallax), so idle
+// motion lives on a different element to avoid two GSAP instances fighting
+// over the same transform property.
+function startIdleLoops(shapeEls: HTMLElement[]): gsap.core.Tween[] {
+  return shapeEls.flatMap((el, i) => {
+    const loops = [
+      gsap.to(el, {
+        y: 8 + (i % 4) * 3,
+        duration: 2.6 + (i % 5) * 0.4,
+        delay: (i % 7) * 0.22,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: -1,
+      }),
+    ];
+    if (i % 3 === 0) {
+      loops.push(
+        gsap.to(el, {
+          rotate: i % 6 === 0 ? "+=360" : "-=360",
+          duration: 24 + (i % 5) * 5,
+          ease: "none",
+          repeat: -1,
+        }),
+      );
+    }
+    return loops;
+  });
+}
 
 /**
  * A field of the site's own Bauhaus shape vocabulary, spanning whatever
@@ -172,35 +180,38 @@ export function BauhausField() {
       stagger: { each: 0.03, from: "random" },
     });
 
+    let idleLoops: gsap.core.Tween[] = [];
+    tl.eventCallback("onComplete", () => {
+      idleLoops = startIdleLoops(shapeEls);
+    });
+
     const removeParallax = setupParallax(root, { duration: 0.9, xStrength: 14, yStrength: 10 });
 
     return () => {
       tl.kill();
+      idleLoops.forEach((loop) => loop.kill());
       removeParallax();
     };
   }, []);
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {SHAPES.map((shape, i) => {
-        const clearsForLanyard = !shape.onLeftEdge && shape.top < HERO_ZONE_PERCENT;
-        return (
+      {SHAPES.map((shape, i) => (
+        <div
+          key={i}
+          className={`parallax-el absolute ${shape.hideOnMobile ? "hidden sm:block" : ""}`}
+          data-depth={shape.depth}
+          style={{ top: `${shape.top}%`, left: `${shape.left}%` }}
+        >
           <div
-            key={i}
-            className={`parallax-el absolute ${shape.hideOnMobile ? "hidden sm:block" : ""} ${clearsForLanyard ? "lg:hidden" : ""}`}
-            data-depth={shape.depth}
-            style={{ top: `${shape.top}%`, left: `${shape.left}%` }}
+            className="bauhaus-shape opacity-0"
+            data-rotate={shape.rotate}
+            style={{ width: `${shape.size}rem`, height: `${shape.size}rem` }}
           >
-            <div
-              className="bauhaus-shape opacity-0"
-              data-rotate={shape.rotate}
-              style={{ width: `${shape.size}rem`, height: `${shape.size}rem` }}
-            >
-              <FlairShape kind={shape.kind} tone={shape.tone} className="h-full w-full" />
-            </div>
+            <FlairShape kind={shape.kind} tone={shape.tone} className="h-full w-full" />
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
