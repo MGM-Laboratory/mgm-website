@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -43,4 +44,26 @@ export function fadeUpOnScroll(
     { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger },
   );
   return tl;
+}
+
+/**
+ * The common wiring every `fadeUpOnScroll` call site otherwise repeats: a
+ * root ref, a mount-time effect that starts the reveal, and cleanup that
+ * kills its ScrollTrigger. Extracted after a second, near-identical call
+ * site made the duplication visible.
+ */
+export function useFadeUpOnScroll<T extends HTMLElement = HTMLDivElement>(
+  selector: string,
+  { start, stagger, y }: { start?: string; stagger?: number; y?: number } = {},
+) {
+  const rootRef = useRef<T>(null);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const tween = fadeUpOnScroll(root, selector, { start, stagger, y });
+    return () => tween?.scrollTrigger?.kill();
+  }, [selector, start, stagger, y]);
+
+  return rootRef;
 }

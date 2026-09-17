@@ -6,7 +6,7 @@ import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { fadeUpOnScroll } from "@/lib/scroll-reveal";
+import { useFadeUpOnScroll } from "@/lib/scroll-reveal";
 import { COMPETENCIES, type CompetencyColor, type Competency } from "@/data/competencies";
 import { CompetencyCardShape, CompetencyMotifShape } from "./competency-motif";
 
@@ -91,7 +91,7 @@ function reducedMotion() {
 }
 
 export function CoreCompetenciesSection() {
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useFadeUpOnScroll<HTMLDivElement>(".reveal-card", { stagger: 0.12 });
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const innerRefs = useRef<(HTMLDivElement | null)[]>([]);
   const frontMotifRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -99,13 +99,6 @@ export function CoreCompetenciesSection() {
   const backContentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const triggerRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const hoverTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
-
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const tween = fadeUpOnScroll(root, ".reveal-card", { stagger: 0.12 });
-    return () => tween?.scrollTrigger?.kill();
-  }, []);
 
   // Each card gets its own paused timeline (built once) driving the flip,
   // the lift, the front motif's exit spin, and the back content's staggered
