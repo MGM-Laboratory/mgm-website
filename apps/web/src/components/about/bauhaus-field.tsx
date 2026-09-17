@@ -69,12 +69,14 @@ const EDGE_MARGIN = 14;
 
 // The hero itself (unlike the story rows after it) is left-anchored at lg:,
 // with the lanyard filling its right side — so right-edge shapes that would
-// land within the hero's own vertical span are hidden there instead, rather
-// than clashing with it. Measured as a percentage of this field's total
-// height (hero + every story row combined): the hero is `min-h-[100dvh-4rem]`
-// while the field spans much further down, so this is necessarily an
-// approximation, padded a little past the hero's actual measured share.
-const HERO_LANYARD_CLEAR_PERCENT = 34;
+// land within the hero's own vertical span are hidden there instead of
+// clashing with it, and the left edge is thinned to just its topmost shape
+// so it doesn't compete with the now-larger, right-shifted text either.
+// Measured as a percentage of this field's total height (hero + every story
+// row combined): the hero is `min-h-[100dvh-4rem]` while the field spans
+// much further down, so this is necessarily an approximation, padded a
+// little past the hero's actual measured share.
+const HERO_ZONE_PERCENT = 34;
 
 // One independent, deliberately-spaced column per edge, instead of scoring
 // every shape's position independently — the earlier approach let shapes
@@ -111,9 +113,28 @@ function placeColumn(rand: () => number, onLeftEdge: boolean, startY: number): S
   return shapes;
 }
 
+// The left column is walked top-to-bottom (see placeColumn), so its very
+// first entry is already the topmost one — everything else that column
+// placed within the hero's own zone is dropped, keeping just that one shape
+// there while leaving the same column's shapes further down (in the story
+// section) untouched.
+function pruneHeroLeftShapes(shapes: Shape[]): Shape[] {
+  let keptTopLeft = false;
+  return shapes.filter((shape) => {
+    if (!shape.onLeftEdge || shape.top >= HERO_ZONE_PERCENT) return true;
+    if (keptTopLeft) return false;
+    keptTopLeft = true;
+    return true;
+  });
+}
+
 function buildShapes(): Shape[] {
   const rand = mulberry32(20260917);
-  return [...placeColumn(rand, true, rand() * 3), ...placeColumn(rand, false, 1 + rand() * 3)];
+  const shapes = [
+    ...placeColumn(rand, true, rand() * 3),
+    ...placeColumn(rand, false, 1 + rand() * 3),
+  ];
+  return pruneHeroLeftShapes(shapes);
 }
 
 const SHAPES = buildShapes();
@@ -162,7 +183,7 @@ export function BauhausField() {
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       {SHAPES.map((shape, i) => {
-        const clearsForLanyard = !shape.onLeftEdge && shape.top < HERO_LANYARD_CLEAR_PERCENT;
+        const clearsForLanyard = !shape.onLeftEdge && shape.top < HERO_ZONE_PERCENT;
         return (
           <div
             key={i}

@@ -8,7 +8,7 @@ export function AboutHero() {
         <style>{".reveal-item{opacity:1 !important}"}</style>
       </noscript>
 
-      <RevealSection className="relative z-10 mx-auto max-w-3xl lg:mx-0" stagger={0.14}>
+      <RevealSection className="relative z-10 mx-auto max-w-3xl lg:mr-auto lg:ml-16" stagger={0.14}>
         <p className="reveal-item text-sm font-semibold tracking-wide text-brand-red uppercase opacity-0">
           About us
         </p>
