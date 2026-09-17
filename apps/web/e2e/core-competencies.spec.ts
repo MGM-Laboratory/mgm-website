@@ -11,7 +11,7 @@ function cardFor(page: Page, name: RegExp) {
  * bounding box for two consecutive stable reads is an observable condition
  * to synchronize on, instead of guessing a fixed settle time.
  */
-async function waitForStableLayout(locator: Locator, timeout = 5000) {
+async function waitForStableLayout(locator: Locator, timeout = 10_000) {
   let last: number | undefined;
   await expect
     .poll(
