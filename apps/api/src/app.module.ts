@@ -12,6 +12,7 @@ import { CmsArticlesModule } from "./cms/cms-articles.module.js";
 import { CmsContactInquiriesModule } from "./cms/cms-contact-inquiries.module.js";
 import { CmsContactSettingsModule } from "./cms/cms-contact-settings.module.js";
 import { CmsEventsModule } from "./cms/cms-events.module.js";
+import { CmsHomeContentModule } from "./cms/cms-home-content.module.js";
 import { CmsJobsModule } from "./cms/cms-jobs.module.js";
 import { CmsMembersModule } from "./cms/cms-members.module.js";
 import { CmsProjectsModule } from "./cms/cms-projects.module.js";
@@ -52,6 +53,7 @@ import { StorageModule } from "./storage/storage.module.js";
     CmsPublicationsModule,
     CmsContactSettingsModule,
     CmsContactInquiriesModule,
+    CmsHomeContentModule,
     ContactModule,
     CmsJobsModule,
     CmsResearchModule,

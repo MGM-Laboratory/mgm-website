@@ -66,6 +66,16 @@ model CmsContactSettings {
   updatedAt DateTime @updatedAt
 }
 
+// Singleton record — always read/written at slug "home". Same slug + data
+// Json shape as the other collections purely for consistency (see
+// CmsContactSettings); there is only ever one row.
+model CmsHomeContent {
+  slug      String   @id
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model CmsProject {
   slug      String   @id
   data      Json
