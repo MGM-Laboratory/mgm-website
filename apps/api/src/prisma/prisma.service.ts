@@ -100,5 +100,55 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "updatedAt" TIMESTAMP(3) NOT NULL
       )
     `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CmsContactSettings" (
+        "slug" TEXT PRIMARY KEY,
+        "data" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CmsHomeContent" (
+        "slug" TEXT PRIMARY KEY,
+        "data" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CmsContactInquiry" (
+        "slug" TEXT PRIMARY KEY,
+        "data" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "MailProviderUsage" (
+        "provider" TEXT PRIMARY KEY,
+        "dailyRemaining" INTEGER,
+        "dailyResetAt" TIMESTAMP(3),
+        "longRemaining" INTEGER,
+        "longResetAt" TIMESTAMP(3),
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "MailSendLog" (
+        "id" TEXT PRIMARY KEY,
+        "provider" TEXT NOT NULL,
+        "sentAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "MailSendLog_provider_sentAt_idx" ON "MailSendLog" ("provider", "sentAt")
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "MailRoutingState" (
+        "key" TEXT PRIMARY KEY,
+        "value" INTEGER NOT NULL DEFAULT 0
+      )
+    `);
   }
 }
