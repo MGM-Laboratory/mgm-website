@@ -1,43 +1,12 @@
-import { NextResponse } from "next/server";
-
-import { cmsApi } from "@/lib/cms-api";
+import { videoPlaybackRoute } from "@/lib/video-proxy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// Mirrors the projects demo-video proxy: range requests are relayed to
-// storage and the 206 responses streamed back so the player can seek
-// without downloading the whole file.
 const VIDEO_KEY_PATTERN =
   /^home-video-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:mp4|webm)$/;
 
-export async function GET(request: Request, { params }: { params: Promise<{ key: string }> }) {
-  const { key } = await params;
-  if (!VIDEO_KEY_PATTERN.test(key)) return new NextResponse(null, { status: 404 });
-
-  const response = await cmsApi(`/cms/home/video/${encodeURIComponent(key)}`, {
-    redirect: "manual",
-  });
-  const location = response.headers.get("location");
-  if (!location) return new NextResponse(null, { status: response.status || 502 });
-
-  const range = request.headers.get("range");
-  const source = await fetch(location, {
-    cache: "no-store",
-    headers: range ? { range } : {},
-  });
-  if (!source.ok || !source.body) return new NextResponse(null, { status: source.status });
-
-  const headers = new Headers({
-    "accept-ranges": "bytes",
-    "cache-control": "private, no-cache",
-    "content-type":
-      source.headers.get("content-type") ?? (key.endsWith(".webm") ? "video/webm" : "video/mp4"),
-    "x-content-type-options": "nosniff",
-  });
-  const contentRange = source.headers.get("content-range");
-  const contentLength = source.headers.get("content-length");
-  if (contentRange) headers.set("content-range", contentRange);
-  if (contentLength) headers.set("content-length", contentLength);
-  return new NextResponse(source.body, { headers, status: range ? source.status : 200 });
-}
+export const { GET } = videoPlaybackRoute(
+  VIDEO_KEY_PATTERN,
+  (key) => `/cms/home/video/${encodeURIComponent(key)}`,
+);

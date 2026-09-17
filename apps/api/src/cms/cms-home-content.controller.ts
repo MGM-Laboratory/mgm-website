@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import {
   BadRequestException,
@@ -21,38 +21,14 @@ import { homeContentSchema } from "@repo/shared";
 
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
+import { safeEqual } from "./admin-auth.util.js";
 import { CmsHomeContentService } from "./cms-home-content.service.js";
+import { isValidVideo } from "./video-validation.util.js";
 
 // Every home video upload mints a `home-video-<uuid>.<ext>` key; anything
 // else belongs to another namespace and is refused.
 const VIDEO_KEY_PATTERN =
   /^home-video-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:mp4|webm)$/;
-
-function safeEqual(left: string, right: string) {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
-}
-
-function isValidVideo(buffer: Buffer, contentType: string) {
-  // Buffer.isBuffer() at the call site already proves this isn't array-shaped;
-  // CodeQL's request-parameter model doesn't know about main.ts's raw-body middleware.
-  if (contentType === "video/mp4") {
-    // codeql[js/type-confusion-through-parameter-tampering]
-    return buffer.length >= 12 && buffer.subarray(4, 8).toString("ascii") === "ftyp";
-  }
-  if (contentType === "video/webm") {
-    return (
-      // codeql[js/type-confusion-through-parameter-tampering]
-      buffer.length >= 4 &&
-      buffer[0] === 0x1a &&
-      buffer[1] === 0x45 &&
-      buffer[2] === 0xdf &&
-      buffer[3] === 0xa3
-    );
-  }
-  return false;
-}
 
 @ApiTags("cms-home-content")
 @Controller("cms/home")
