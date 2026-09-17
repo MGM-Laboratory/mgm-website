@@ -145,6 +145,97 @@ body {
   );
 }
 
+/* ---------------------------------------------------------------------------
+   /about "Evidence Ledger" — the four confidence tiers from the evidence
+   review, reusing the closed brand palette as a functional legend instead of
+   introducing new color. `--tier-text` exists because brand-yellow can never
+   carry text on a light fill (DESIGN_SYSTEM.md §2.3) — every other tier's
+   fill takes white text, inference's yellow fill takes --ink instead.
+--------------------------------------------------------------------------- */
+[data-tier="confirmed"] {
+  --tier-color: var(--brand-green);
+  --tier-text: #ffffff;
+}
+[data-tier="historical"] {
+  --tier-color: var(--brand-blue);
+  --tier-text: #ffffff;
+}
+[data-tier="inference"] {
+  --tier-color: var(--brand-yellow);
+  --tier-text: var(--ink);
+}
+[data-tier="unverified"] {
+  --tier-color: var(--brand-red);
+  --tier-text: #ffffff;
+}
+
+.tier-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--tier-color);
+  color: var(--tier-text);
+}
+
+.cite-marks {
+  margin-left: 0.2rem;
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: super;
+  font-size: 0.625em;
+}
+
+.cite-mark {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  padding: 0 3px;
+  font-weight: 700;
+  text-decoration: none;
+  background: var(--tier-color, var(--ink-4));
+  color: var(--tier-text, #ffffff);
+}
+.cite-mark:hover,
+.cite-mark:focus-visible {
+  outline: 2px solid var(--tier-color, var(--ink-3));
+  outline-offset: 1px;
+}
+
+/* Evidence Lens — dims every tiered claim that doesn't match the selected
+   tier, using `filter` alone rather than `opacity`. The scroll-reveal
+   entrance (fadeUpOnScroll) writes its end state as an inline `opacity`
+   style, which beats any stylesheet rule on the same property regardless of
+   specificity — an opacity-based dimming rule would silently no-op on any
+   claim that already finished revealing. `filter` is a property GSAP never
+   touches on this page, so the two can't collide. Also never `transform`,
+   so this can't stack with a GSAP transform either (gotcha #1). */
+[data-tier] {
+  transition: filter 0.3s ease;
+}
+html[data-evidence-filter="confirmed"] [data-tier]:not([data-tier="confirmed"]),
+html[data-evidence-filter="historical"] [data-tier]:not([data-tier="historical"]),
+html[data-evidence-filter="inference"] [data-tier]:not([data-tier="inference"]),
+html[data-evidence-filter="unverified"] [data-tier]:not([data-tier="unverified"]) {
+  filter: grayscale(0.75) opacity(22%);
+}
+
+/* Source register jump target (`#src-S07`) — plain browser anchor
+   navigation, so this highlight works with JavaScript disabled. */
+.source-entry:target {
+  background: var(--brand-yellow-50);
+  outline: 2px solid var(--brand-yellow);
+  outline-offset: 2px;
+}
+.dark .source-entry:target {
+  background: color-mix(in srgb, var(--brand-yellow) 20%, transparent);
+}
+
 @keyframes admin-enter {
   from {
     opacity: 0;
