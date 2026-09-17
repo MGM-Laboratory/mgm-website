@@ -15,8 +15,14 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect Changes
+    uses: ./.github/workflows/detect-changes.yml
+
   e2e:
     name: Playwright (${{ matrix.os }}, ${{ matrix.project }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
       fail-fast: false
       matrix:

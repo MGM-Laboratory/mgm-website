@@ -13,8 +13,14 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect Changes
+    uses: ./.github/workflows/detect-changes.yml
+
   lighthouse:
     name: Lighthouse CI budget
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_API_URL: http://localhost:4000/api

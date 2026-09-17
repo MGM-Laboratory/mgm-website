@@ -12,7 +12,13 @@ permissions:
   security-events: write
 
 jobs:
+  changes:
+    name: Detect Changes
+    uses: ./.github/workflows/detect-changes.yml
+
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/publish-docker-image.yml
     with:
       # workflow_dispatch has no PR number, so fall back to the run number.
