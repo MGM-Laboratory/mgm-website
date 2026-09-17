@@ -259,9 +259,19 @@ class MorphEngine {
   mesh: Mesh;
 
   resizeObserver: ResizeObserver;
+  intersectionObserver: IntersectionObserver;
+  intersecting = true;
   raf = 0;
   private boundLoop: (t: number) => void;
   private boundContextLost: (e: Event) => void;
+
+  // `document.visibilityState` is read live rather than cached from a
+  // `visibilitychange` listener — the render loop already re-checks this
+  // every frame, so there's nothing a listener would add beyond another
+  // thing to unregister in destroy().
+  private get onScreen() {
+    return this.intersecting && document.visibilityState === "visible";
+  }
 
   constructor(
     container: HTMLElement,
@@ -333,6 +343,19 @@ class MorphEngine {
     this.resizeObserver.observe(container);
     this.resize();
 
+    // This shader renders a full 5-octave noise pass every frame even at
+    // rest (the idle "drift" wobble is baked into the fragment shader, not
+    // gated on an active transition) — cheap enough while on screen, but
+    // pointless work once the slider scrolls out of view. `onScreen` above
+    // also folds in tab visibility, so backgrounding the tab pauses it too.
+    this.intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        this.intersecting = entry?.isIntersecting ?? true;
+      },
+      { threshold: 0 },
+    );
+    this.intersectionObserver.observe(container);
+
     this.loadTextures();
 
     this.boundLoop = this.loop.bind(this);
@@ -377,9 +400,11 @@ class MorphEngine {
   }
 
   loop(t: number) {
-    this.program.uniforms.uTime.value = t * 0.001;
-    if (!this.dragging && !this.animating) this.syncOptions();
-    this.renderer.render({ scene: this.mesh });
+    if (this.onScreen) {
+      this.program.uniforms.uTime.value = t * 0.001;
+      if (!this.dragging && !this.animating) this.syncOptions();
+      this.renderer.render({ scene: this.mesh });
+    }
     this.raf = requestAnimationFrame(this.boundLoop);
   }
 
@@ -517,6 +542,7 @@ class MorphEngine {
     cancelAnimationFrame(this.raf);
     this.tween?.kill();
     this.resizeObserver.disconnect();
+    this.intersectionObserver.disconnect();
     this.canvas.removeEventListener("webglcontextlost", this.boundContextLost);
     this.textures.forEach((tex) => {
       const handle = (tex as unknown as { texture?: WebGLTexture }).texture;
