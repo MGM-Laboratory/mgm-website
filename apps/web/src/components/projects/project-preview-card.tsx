@@ -4,7 +4,7 @@ import Link from "next/link";
 import { PROJECT_CATEGORY_LABELS, projectMediaUrl, type CmsProjectRecord } from "@/lib/project-cms";
 
 /** The compact card used for the homepage's "Projects" preview row. */
-export function ProjectPreviewCard({ record }: { record: CmsProjectRecord }) {
+export function ProjectPreviewCard({ record }: Readonly<{ record: CmsProjectRecord }>) {
   const { project } = record;
   const cover = projectMediaUrl(project.coverKey);
 

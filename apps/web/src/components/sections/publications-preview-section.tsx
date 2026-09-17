@@ -25,9 +25,9 @@ function authorSummary(authors: readonly PublicationAuthor[]) {
  */
 export function PublicationsPreviewSection({
   records,
-}: {
+}: Readonly<{
   records: readonly CmsPublicationRecord[];
-}) {
+}>) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {

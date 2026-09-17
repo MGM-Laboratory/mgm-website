@@ -66,6 +66,149 @@ const VIDEO_MODE_LABELS: Record<HomeVideoMode, string> = {
   youtube: "YouTube",
 };
 
+/** Uploads the file for "upload" mode, or clears any stale upload fields otherwise. */
+async function applyVideoUpload(
+  mode: HomeVideoMode,
+  videoFile: File | undefined,
+  payload: HomeContent,
+): Promise<HomeContent> {
+  if (mode !== "upload") {
+    return { ...payload, videoKey: undefined, videoName: undefined, videoSize: undefined };
+  }
+  if (!videoFile) return payload;
+
+  const response = await fetch("/api/admin/home-content/video", {
+    body: videoFile,
+    headers: { "content-type": videoFile.type },
+    method: "POST",
+  });
+  if (!response.ok) throw new Error(await responseError(response, "Video upload failed."));
+  const uploaded = (await response.json()) as { key: string; size: number };
+  return {
+    ...payload,
+    videoKey: uploaded.key,
+    videoName: payload.videoName?.trim() || videoFile.name,
+    videoSize: uploaded.size,
+  };
+}
+
+function VideoSourceFields({
+  form,
+  ready,
+  videoFile,
+  videoInput,
+  videoLimitMb,
+  onUrlChange,
+  onChooseVideo,
+  onRemoveVideo,
+}: Readonly<{
+  form: FormState;
+  ready: boolean;
+  videoFile: File | undefined;
+  videoInput: React.RefObject<HTMLInputElement | null>;
+  videoLimitMb: number;
+  onUrlChange: (value: string) => void;
+  onChooseVideo: (file: File | undefined) => void;
+  onRemoveVideo: () => void;
+}>) {
+  if (form.videoMode === "upload") {
+    return (
+      <div className="mt-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 dark:border-white/10 dark:bg-white/[0.035]">
+        {videoFile || form.videoKey ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/15">
+              <VideoCamera size={20} weight="duotone" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">
+                {videoFile?.name ?? form.videoName ?? "home video"}
+              </span>
+              <span className="mt-0.5 block font-mono text-[11px] text-[#8490a5]">
+                {videoFile
+                  ? `${formatVideoSize(videoFile.size)} · not uploaded yet`
+                  : (formatVideoSize(form.videoSize) ?? "uploaded")}
+              </span>
+            </span>
+            <button
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-white hover:text-brand-blue dark:text-white/60 dark:hover:bg-white/10"
+              onClick={() => videoInput.current?.click()}
+              type="button"
+            >
+              Replace
+            </button>
+            <button
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-brand-red-50 hover:text-brand-red dark:text-white/60 dark:hover:bg-brand-red/15"
+              onClick={onRemoveVideo}
+              type="button"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <button
+            className="grid w-full place-items-center gap-2 rounded-xl border border-dashed border-brand-blue/40 bg-brand-blue/[0.04] px-4 py-10 text-center transition hover:border-brand-blue hover:bg-brand-blue/[0.07]"
+            onClick={() => videoInput.current?.click()}
+            type="button"
+          >
+            <VideoCamera className="text-brand-blue" size={30} weight="duotone" />
+            <span className="text-sm font-semibold text-brand-blue">Upload the video</span>
+            <span className="font-mono text-[10px] tracking-[0.12em] text-[#8490a5] uppercase">
+              MP4 or WebM · up to {videoLimitMb} MB
+            </span>
+          </button>
+        )}
+        <input
+          accept="video/mp4,video/webm"
+          className="hidden"
+          onChange={(event) => {
+            onChooseVideo(event.target.files?.[0]);
+            event.currentTarget.value = "";
+          }}
+          ref={videoInput}
+          type="file"
+        />
+      </div>
+    );
+  }
+
+  if (form.videoMode === "url") {
+    return (
+      <div className="mt-3">
+        <Field hint="A direct video file link." label="Video URL">
+          <input
+            className={inputClass}
+            disabled={!ready}
+            onChange={(event) => onUrlChange(event.target.value)}
+            placeholder="https://.../video.mp4"
+            value={form.videoUrl}
+          />
+        </Field>
+      </div>
+    );
+  }
+
+  if (form.videoMode === "youtube") {
+    return (
+      <div className="mt-3">
+        <Field label="YouTube URL">
+          <div className="flex items-center gap-1.5">
+            <YoutubeLogo className="shrink-0 text-[#8490a5]" size={16} />
+            <input
+              className={inputClass}
+              disabled={!ready}
+              onChange={(event) => onUrlChange(event.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={form.videoUrl}
+            />
+          </div>
+        </Field>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export function HomeSettingsEditor({
   onDirtyChange,
 }: Readonly<{ onDirtyChange: (dirty: boolean) => void }>) {
@@ -103,9 +246,9 @@ export function HomeSettingsEditor({
         setForm(next);
         setBaseline(JSON.stringify(next));
         setReady(true);
-      } catch (loadFailure) {
+      } catch (error_) {
         if (cancelled) return;
-        const detail = loadFailure instanceof Error ? loadFailure.message : "The request failed.";
+        const detail = error_ instanceof Error ? error_.message : "The request failed.";
         setLoadError(`Home content could not be loaded. ${detail}`);
       }
     })();
@@ -150,7 +293,7 @@ export function HomeSettingsEditor({
     setStatus("saving");
     setError(undefined);
     try {
-      let payload: HomeContent = {
+      const basePayload: HomeContent = {
         videoMode: form.videoMode,
         videoKey: form.videoKey,
         videoName: form.videoName,
@@ -159,24 +302,7 @@ export function HomeSettingsEditor({
         videoTitle: form.videoTitle.trim(),
         videoDescription: form.videoDescription.trim(),
       };
-
-      if (form.videoMode === "upload" && videoFile) {
-        const response = await fetch("/api/admin/home-content/video", {
-          body: videoFile,
-          headers: { "content-type": videoFile.type },
-          method: "POST",
-        });
-        if (!response.ok) throw new Error(await responseError(response, "Video upload failed."));
-        const uploaded = (await response.json()) as { key: string; size: number };
-        payload = {
-          ...payload,
-          videoKey: uploaded.key,
-          videoName: payload.videoName?.trim() || videoFile.name,
-          videoSize: uploaded.size,
-        };
-      } else if (form.videoMode !== "upload") {
-        payload = { ...payload, videoKey: undefined, videoName: undefined, videoSize: undefined };
-      }
+      const payload = await applyVideoUpload(form.videoMode, videoFile, basePayload);
 
       const response = await fetch("/api/admin/home-content", {
         body: JSON.stringify(payload),
@@ -277,93 +403,19 @@ export function HomeSettingsEditor({
             ))}
           </div>
 
-          {form.videoMode === "upload" ? (
-            <div className="mt-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 dark:border-white/10 dark:bg-white/[0.035]">
-              {videoFile || form.videoKey ? (
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/15">
-                    <VideoCamera size={20} weight="duotone" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold">
-                      {videoFile?.name ?? form.videoName ?? "home video"}
-                    </span>
-                    <span className="mt-0.5 block font-mono text-[11px] text-[#8490a5]">
-                      {videoFile
-                        ? `${formatVideoSize(videoFile.size)} · not uploaded yet`
-                        : (formatVideoSize(form.videoSize) ?? "uploaded")}
-                    </span>
-                  </span>
-                  <button
-                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-white hover:text-brand-blue dark:text-white/60 dark:hover:bg-white/10"
-                    onClick={() => videoInput.current?.click()}
-                    type="button"
-                  >
-                    Replace
-                  </button>
-                  <button
-                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-brand-red-50 hover:text-brand-red dark:text-white/60 dark:hover:bg-brand-red/15"
-                    onClick={() => {
-                      setVideoFile(undefined);
-                      update({ videoKey: undefined, videoName: undefined, videoSize: undefined });
-                    }}
-                    type="button"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <button
-                  className="grid w-full place-items-center gap-2 rounded-xl border border-dashed border-brand-blue/40 bg-brand-blue/[0.04] px-4 py-10 text-center transition hover:border-brand-blue hover:bg-brand-blue/[0.07]"
-                  onClick={() => videoInput.current?.click()}
-                  type="button"
-                >
-                  <VideoCamera className="text-brand-blue" size={30} weight="duotone" />
-                  <span className="text-sm font-semibold text-brand-blue">Upload the video</span>
-                  <span className="font-mono text-[10px] tracking-[0.12em] text-[#8490a5] uppercase">
-                    MP4 or WebM · up to {videoLimitMb} MB
-                  </span>
-                </button>
-              )}
-              <input
-                accept="video/mp4,video/webm"
-                className="hidden"
-                onChange={(event) => {
-                  chooseVideo(event.target.files?.[0]);
-                  event.currentTarget.value = "";
-                }}
-                ref={videoInput}
-                type="file"
-              />
-            </div>
-          ) : form.videoMode === "url" ? (
-            <div className="mt-3">
-              <Field hint="A direct video file link." label="Video URL">
-                <input
-                  className={inputClass}
-                  disabled={!ready}
-                  onChange={(event) => update({ videoUrl: event.target.value })}
-                  placeholder="https://.../video.mp4"
-                  value={form.videoUrl}
-                />
-              </Field>
-            </div>
-          ) : form.videoMode === "youtube" ? (
-            <div className="mt-3">
-              <Field label="YouTube URL">
-                <div className="flex items-center gap-1.5">
-                  <YoutubeLogo className="shrink-0 text-[#8490a5]" size={16} />
-                  <input
-                    className={inputClass}
-                    disabled={!ready}
-                    onChange={(event) => update({ videoUrl: event.target.value })}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    value={form.videoUrl}
-                  />
-                </div>
-              </Field>
-            </div>
-          ) : null}
+          <VideoSourceFields
+            form={form}
+            onChooseVideo={chooseVideo}
+            onRemoveVideo={() => {
+              setVideoFile(undefined);
+              update({ videoKey: undefined, videoName: undefined, videoSize: undefined });
+            }}
+            onUrlChange={(value) => update({ videoUrl: value })}
+            ready={ready}
+            videoFile={videoFile}
+            videoInput={videoInput}
+            videoLimitMb={videoLimitMb}
+          />
         </div>
       </div>
 

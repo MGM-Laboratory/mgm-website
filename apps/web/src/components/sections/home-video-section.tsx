@@ -18,7 +18,7 @@ function resolveSrc(content: HomeContent): string | undefined {
 }
 
 /** Admin-configurable homepage video block — renders nothing until a video is set. */
-export function HomeVideoSection({ content }: { content: HomeContent }) {
+export function HomeVideoSection({ content }: Readonly<{ content: HomeContent }>) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {

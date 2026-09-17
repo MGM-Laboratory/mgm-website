@@ -19,7 +19,7 @@ const CARD_ICONS = [
 ] as const;
 
 /** The plain title/description/icon-dots card Achievements has always used. */
-export function ShowcaseCard({ title, description }: ShowcaseItem) {
+export function ShowcaseCard({ title, description }: Readonly<ShowcaseItem>) {
   return (
     <>
       <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-[var(--surface-muted)]">
@@ -58,7 +58,7 @@ export function ShowcaseSection({
   seeMoreHref,
   seeMoreLabel = "See more",
   emptyMessage,
-}: {
+}: Readonly<{
   id: string;
   title: string;
   intro: string;
@@ -67,7 +67,7 @@ export function ShowcaseSection({
   seeMoreHref?: string;
   seeMoreLabel?: string;
   emptyMessage?: string;
-}) {
+}>) {
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -128,18 +128,19 @@ export function ShowcaseSection({
           </div>
         </div>
 
-        {count ? (
+        {count > 0 && (
           <div
             ref={trackRef}
             className="mt-10 flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none]"
           >
             {children}
           </div>
-        ) : emptyMessage ? (
+        )}
+        {count === 0 && emptyMessage && (
           <div className="reveal-card mt-10 rounded-2xl border border-[var(--line)] px-8 py-16 text-center opacity-0">
             <p className="text-foreground/60">{emptyMessage}</p>
           </div>
-        ) : null}
+        )}
       </div>
     </section>
   );
