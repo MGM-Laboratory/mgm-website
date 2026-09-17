@@ -10,6 +10,7 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ArrowDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { setupParallax } from "@/lib/parallax";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
 
@@ -52,31 +53,6 @@ const shapeBoxClass = "w-[clamp(4rem,8vw,6.5rem)]";
 const shapeHeightClass = "h-[clamp(4rem,8vw,6.5rem)]";
 
 const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
-
-function setupParallax(root: HTMLElement) {
-  if (!window.matchMedia("(pointer: fine)").matches) return () => {};
-
-  const els = Array.from(root.querySelectorAll<HTMLElement>(".parallax-el"));
-  if (!els.length) return () => {};
-
-  const setters = els.map((el) => ({
-    depth: Number(el.dataset.depth ?? 1),
-    x: gsap.quickTo(el, "x", { duration: 0.7, ease: "power3.out" }),
-    y: gsap.quickTo(el, "y", { duration: 0.7, ease: "power3.out" }),
-  }));
-
-  function onMove(e: MouseEvent) {
-    const relX = e.clientX / window.innerWidth - 0.5;
-    const relY = e.clientY / window.innerHeight - 0.5;
-    for (const { x, y, depth } of setters) {
-      x(relX * 20 * depth);
-      y(relY * 14 * depth);
-    }
-  }
-
-  window.addEventListener("mousemove", onMove);
-  return () => window.removeEventListener("mousemove", onMove);
-}
 
 function startIdleLoops(): gsap.core.Animation[] {
   const loops: gsap.core.Animation[] = [];

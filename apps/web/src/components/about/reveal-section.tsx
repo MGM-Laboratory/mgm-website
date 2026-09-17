@@ -1,8 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
-
-import { fadeUpOnScroll } from "@/lib/scroll-reveal";
+import { useFadeUpOnScroll } from "@/lib/scroll-reveal";
 
 // A thin, reusable version of the fade-up-on-scroll wiring already used by
 // CoreCompetenciesSection / ProcessSection — one timeline-level ScrollTrigger
@@ -20,14 +18,7 @@ export function RevealSection({
   y?: number;
   children: React.ReactNode;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const tween = fadeUpOnScroll(root, ".reveal-item", { stagger, y });
-    return () => tween?.scrollTrigger?.kill();
-  }, [stagger, y]);
+  const rootRef = useFadeUpOnScroll<HTMLDivElement>(".reveal-item", { stagger, y });
 
   return (
     <div ref={rootRef} className={className}>

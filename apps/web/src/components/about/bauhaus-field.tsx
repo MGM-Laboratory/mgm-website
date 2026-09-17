@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
+import { setupParallax } from "@/lib/parallax";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 
 // A hand-composed field of the site's own Bauhaus shape vocabulary, at the
@@ -150,30 +151,6 @@ const SHAPES: Shape[] = [
   },
 ];
 
-function setupParallax(root: HTMLElement) {
-  if (!window.matchMedia("(pointer: fine)").matches) return () => {};
-  const els = Array.from(root.querySelectorAll<HTMLElement>(".parallax-el"));
-  if (!els.length) return () => {};
-
-  const setters = els.map((el) => ({
-    depth: Number(el.dataset.depth ?? 1),
-    x: gsap.quickTo(el, "x", { duration: 0.8, ease: "power3.out" }),
-    y: gsap.quickTo(el, "y", { duration: 0.8, ease: "power3.out" }),
-  }));
-
-  function onMove(e: MouseEvent) {
-    const relX = e.clientX / window.innerWidth - 0.5;
-    const relY = e.clientY / window.innerHeight - 0.5;
-    for (const { x, y, depth } of setters) {
-      x(relX * 24 * depth);
-      y(relY * 16 * depth);
-    }
-  }
-
-  window.addEventListener("mousemove", onMove);
-  return () => window.removeEventListener("mousemove", onMove);
-}
-
 export function BauhausField() {
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -220,7 +197,7 @@ export function BauhausField() {
       });
     });
 
-    const removeParallax = setupParallax(root);
+    const removeParallax = setupParallax(root, { duration: 0.8, xStrength: 24, yStrength: 16 });
 
     return () => {
       tl.kill();
