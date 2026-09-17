@@ -7,7 +7,7 @@ import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
-import { COMPETENCIES, type CompetencyColor } from "@/data/competencies";
+import { COMPETENCIES, type CompetencyColor, type Competency } from "@/data/competencies";
 import { CompetencyCardShape, CompetencyMotifShape } from "./competency-motif";
 
 // Blue, red, and green match the shared brand tokens exactly, but this
@@ -22,16 +22,82 @@ const CARD_BG: Record<CompetencyColor, string> = {
   green: "bg-brand-green",
 };
 
+// The yellow card's saturated, light background reads poorly with the same
+// white text every other card uses — switched to black just for that card.
+const CARD_TEXT: Record<CompetencyColor, string> = {
+  blue: "text-white",
+  red: "text-white",
+  yellow: "text-black",
+  green: "text-white",
+};
+const CARD_TEXT_MUTED: Record<CompetencyColor, string> = {
+  blue: "text-white/80",
+  red: "text-white/80",
+  yellow: "text-black/70",
+  green: "text-white/80",
+};
+const CARD_PILL: Record<CompetencyColor, string> = {
+  blue: "bg-white/20 text-white group-hover:bg-white/30",
+  red: "bg-white/20 text-white group-hover:bg-white/30",
+  yellow: "bg-black/10 text-black group-hover:bg-black/15",
+  green: "bg-white/20 text-white group-hover:bg-white/30",
+};
+const CARD_TILE: Record<CompetencyColor, string> = {
+  blue: "bg-white/15 text-white hover:bg-white/25",
+  red: "bg-white/15 text-white hover:bg-white/25",
+  yellow: "bg-black/10 text-black hover:bg-black/[0.15]",
+  green: "bg-white/15 text-white hover:bg-white/25",
+};
+
+// The competency pages already use these exact slugs (website/mobile/ux/game
+// — see apps/web/src/data/competencies.ts `href`), and both the member
+// directory's `division` field and the projects CMS's `category` enum reuse
+// the same four-way split, just under different vocabularies. Mapping off
+// the slug keeps that reuse local to this component instead of growing the
+// shared Competency type for two links.
+const MEMBER_DIVISION_BY_SLUG: Record<string, string> = {
+  website: "Website",
+  mobile: "Mobile",
+  ux: "HCI/UX",
+  game: "Game & XR",
+};
+const PROJECT_CATEGORY_BY_SLUG: Record<string, string> = {
+  website: "website",
+  mobile: "mobile",
+  ux: "hci-ux",
+  game: "game",
+};
+
+function bentoLinks(c: Competency) {
+  const slug = c.href.slice(1);
+  return [
+    {
+      label: "Member",
+      href: `/member?division=${encodeURIComponent(MEMBER_DIVISION_BY_SLUG[slug])}`,
+    },
+    { label: "Projects", href: `/projects?category=${PROJECT_CATEGORY_BY_SLUG[slug]}` },
+    // Publications and articles have no R&D-division tag in their data today
+    // (publications carry no category field at all; article categories are
+    // publication-type tags like "Journal"/"Conference", not a division) —
+    // linking to the CMS enum a project/member division doesn't have would
+    // silently filter to nothing, so these two stay unfiltered on purpose.
+    { label: "Publications", href: "/publications" },
+    { label: "Article", href: "/articles" },
+  ];
+}
+
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
 }
 
 export function CoreCompetenciesSection() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const innerRefs = useRef<(HTMLDivElement | null)[]>([]);
   const frontMotifRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const backRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const backFaceRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const backContentRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const triggerRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const hoverTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
 
   useLayoutEffect(() => {
@@ -53,17 +119,17 @@ export function CoreCompetenciesSection() {
     const idleLoops: gsap.core.Animation[] = [];
 
     COMPETENCIES.forEach((_, i) => {
-      const link = linkRefs.current[i];
+      const card = cardRefs.current[i];
       const inner = innerRefs.current[i];
       const frontMotif = frontMotifRefs.current[i];
-      const back = backRefs.current[i];
-      if (!link || !inner || !frontMotif || !back) return;
+      const back = backContentRefs.current[i];
+      if (!card || !inner || !frontMotif || !back) return;
 
       const d = reduced ? 0 : 1;
       const tl = gsap.timeline({ paused: true, defaults: { overwrite: "auto" } });
-      // `link`'s y/opacity and `frontMotif`'s scale are also driven by
+      // `card`'s y/opacity and `frontMotif`'s scale are also driven by
       // animations outside this timeline (the section's scroll-triggered
-      // entrance on `link`, the idle loop on `frontMotif`) — a plain
+      // entrance on `card`, the idle loop on `frontMotif`) — a plain
       // `.to()` takes "current value" as its implicit start, and if hover
       // fires while one of those is still mid-flight, `overwrite: "auto"`
       // cuts it off right there, so reversing on mouseleave returned to
@@ -85,7 +151,7 @@ export function CoreCompetenciesSection() {
       // specifically for that case rather than needing the `.fromTo()`
       // protection at all.
       tl.fromTo(
-        link,
+        card,
         { y: 0, opacity: 1 },
         {
           y: -10,
@@ -142,16 +208,36 @@ export function CoreCompetenciesSection() {
     };
   }, []);
 
+  // The back face starts `inert` (and its trigger reports `aria-expanded:
+  // false`) so its four link-shaped tab stops per card don't sit invisibly
+  // in the page's tab order while closed — opening lifts that gate on
+  // whichever mechanism opened it (mouse, keyboard focus, or a touch tap,
+  // which focuses a real <button> the same way keyboard focus does).
+  function setOpen(i: number, open: boolean) {
+    const backFace = backFaceRefs.current[i];
+    const trigger = triggerRefs.current[i];
+    if (backFace) {
+      backFace.inert = !open;
+      backFace.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+    trigger?.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
   function play(i: number) {
     hoverTimelines.current[i]?.play();
+    setOpen(i, true);
   }
 
   function reverse(i: number) {
     hoverTimelines.current[i]?.reverse();
+    setOpen(i, false);
   }
 
   return (
-    <section ref={rootRef} className="bg-background px-6 py-20 sm:px-10 sm:py-28 lg:px-16">
+    <section
+      ref={rootRef}
+      className="bg-background px-6 pt-12 pb-20 sm:px-10 sm:pt-16 sm:pb-28 lg:px-16"
+    >
       <noscript>
         <style>{".reveal-card{opacity:1 !important}"}</style>
       </noscript>
@@ -167,17 +253,23 @@ export function CoreCompetenciesSection() {
 
         <div className="mt-10 grid grid-cols-2 gap-7 sm:grid-cols-4">
           {COMPETENCIES.map((c, i) => (
-            <Link
+            <div
               key={c.title}
-              href={c.href}
               ref={(el) => {
-                linkRefs.current[i] = el;
+                cardRefs.current[i] = el;
               }}
               onMouseEnter={() => play(i)}
               onMouseLeave={() => reverse(i)}
               onFocus={() => play(i)}
-              onBlur={() => reverse(i)}
-              className="reveal-card group relative block aspect-[279/472] rounded-3xl opacity-0 [perspective:1400px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
+              onBlur={(e) => {
+                // Focus moving to this same card's front trigger or one of
+                // its now-reachable back-face links must not reverse the
+                // flip out from under a keyboard user — only reverse when
+                // focus actually leaves the card.
+                if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                reverse(i);
+              }}
+              className="reveal-card group relative aspect-[279/472] rounded-3xl opacity-0 [perspective:1400px]"
               style={{ boxShadow: "0 0 0 0 rgba(0,0,0,0)" }}
             >
               <div
@@ -186,52 +278,109 @@ export function CoreCompetenciesSection() {
                 }}
                 className="relative h-full w-full rounded-3xl [transform-style:preserve-3d]"
               >
-                {/* Front */}
-                <div
-                  className={cn(
-                    "absolute inset-0 flex flex-col justify-between overflow-hidden rounded-3xl p-6 [backface-visibility:hidden]",
-                    CARD_BG[c.color],
-                  )}
+                {/* Front — a real <button> (not the old wrapping <Link>) so
+                    it can be tapped/focused on its own: the back face now
+                    holds real links, and a link can't nest inside a link. */}
+                <button
+                  type="button"
+                  ref={(el) => {
+                    triggerRefs.current[i] = el;
+                  }}
+                  aria-expanded="false"
+                  aria-label={`${c.title} — show related member, project, publication, and article links`}
+                  // Firefox bug 1201471: backface-visibility:hidden is ignored
+                  // on a child that has no transform of its own, even inside a
+                  // rotating preserve-3d parent — it only culls elements it
+                  // considers "transformed". The back face gets this for free
+                  // (its own static rotateY(180deg) counts), so the front face
+                  // needs an explicit identity transform to qualify too, or
+                  // Firefox renders both faces at once, mirrored and overlapping.
+                  className="absolute inset-0 block w-full cursor-pointer rounded-3xl text-left [backface-visibility:hidden] [transform:rotateY(0deg)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
                 >
-                  <h3 className="relative z-10 text-lg font-semibold text-white">{c.title}</h3>
+                  {/* Firefox renders both faces at once if `overflow-hidden`
+                      and `[backface-visibility:hidden]` land on the same
+                      element — so the rounding/clipping/background live on
+                      this inner wrapper instead of the face element itself. */}
                   <div
-                    ref={(el) => {
-                      frontMotifRefs.current[i] = el;
-                    }}
-                    className="pointer-events-none absolute inset-0"
+                    className={cn(
+                      "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-6",
+                      CARD_BG[c.color],
+                    )}
                   >
-                    <CompetencyCardShape motif={c.motif} className="h-full w-full" />
+                    <h3 className={cn("relative z-10 text-lg font-semibold", CARD_TEXT[c.color])}>
+                      {c.title}
+                    </h3>
+                    <div
+                      ref={(el) => {
+                        frontMotifRefs.current[i] = el;
+                      }}
+                      className="pointer-events-none absolute inset-0"
+                    >
+                      <CompetencyCardShape motif={c.motif} className="h-full w-full" />
+                    </div>
                   </div>
-                </div>
+                </button>
 
                 {/* Back */}
                 <div
-                  className={cn(
-                    "absolute inset-0 flex flex-col justify-between overflow-hidden rounded-3xl p-6 [backface-visibility:hidden] [transform:rotateY(180deg)]",
-                    CARD_BG[c.color],
-                  )}
+                  ref={(el) => {
+                    backFaceRefs.current[i] = el;
+                  }}
+                  inert
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-3xl [backface-visibility:hidden] [transform:rotateY(180deg)]"
                 >
-                  <CompetencyMotifShape
-                    motif={c.motif}
-                    stroke="rgba(255,255,255,0.16)"
-                    className="-top-6 -left-6 size-28 rotate-12"
-                  />
                   <div
-                    ref={(el) => {
-                      backRefs.current[i] = el;
-                    }}
-                    className="relative z-10 opacity-0"
+                    className={cn(
+                      "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-6",
+                      CARD_BG[c.color],
+                    )}
                   >
-                    <h3 className="text-lg font-semibold text-white">{c.title}</h3>
-                    <p className="mt-2 text-sm text-white/80">{c.description}</p>
-                    <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors group-hover:bg-white/30">
-                      Explore
-                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                    </span>
+                    <CompetencyMotifShape
+                      motif={c.motif}
+                      stroke="rgba(255,255,255,0.16)"
+                      className="-top-6 -left-6 size-28 rotate-12"
+                    />
+                    <div
+                      ref={(el) => {
+                        backContentRefs.current[i] = el;
+                      }}
+                      className="relative z-10 opacity-0"
+                    >
+                      <h3 className={cn("text-lg font-semibold", CARD_TEXT[c.color])}>{c.title}</h3>
+                      <p className={cn("mt-2 text-sm", CARD_TEXT_MUTED[c.color])}>
+                        {c.description}
+                      </p>
+                      <Link
+                        href={c.href}
+                        className={cn(
+                          "mt-4 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium backdrop-blur-sm transition-colors",
+                          CARD_PILL[c.color],
+                        )}
+                      >
+                        Explore
+                        <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        {bentoLinks(c).map((b) => (
+                          <Link
+                            key={b.label}
+                            href={b.href}
+                            className={cn(
+                              "rounded-xl px-3 py-2.5 text-xs font-semibold backdrop-blur-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current",
+                              CARD_TILE[c.color],
+                            )}
+                          >
+                            {b.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
