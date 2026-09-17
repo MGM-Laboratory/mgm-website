@@ -1,0 +1,11 @@
+---
+# Prisma auto-generates every file under apps/api/prisma/migrations/ — they're
+# deterministic tool output (never hand-edited), and Codacy's SQL analysis
+# applies a T-SQL/SQL-Server-specific rule ("Expected SET QUOTED_IDENTIFIER ON
+# near top of file") that doesn't apply to this project's PostgreSQL
+# migrations. Every existing migration file starts with the exact same
+# Prisma-generated "-- CreateTable" header, so this isn't specific to any one
+# file — DeepSource's own SQL analysis (a separate tool wired into this repo)
+# scans the same files and finds nothing wrong.
+exclude_paths:
+  - "apps/api/prisma/migrations/**"
