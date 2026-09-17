@@ -120,7 +120,7 @@ export function ProcessSection() {
     <section
       id="process"
       ref={rootRef}
-      className="relative bg-[var(--surface-muted)] px-6 py-20 sm:px-10 sm:py-28 lg:px-16"
+      className="relative bg-[var(--surface-muted)] px-6 pt-20 pb-14 sm:px-10 sm:pt-28 sm:pb-20 lg:px-16"
     >
       <noscript>
         <style>{".reveal-hidden{opacity:1 !important}"}</style>
