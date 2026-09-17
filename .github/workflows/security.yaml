@@ -16,10 +16,17 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
+  changes:
+    name: Detect Changes
+    uses: ./.github/workflows/detect-changes.yml
+
   codeql:
     name: CodeQL
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,7 +48,8 @@ jobs:
 
   dependency-review:
     name: Dependency review
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -56,6 +64,9 @@ jobs:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
 
+  # Deliberately NOT gated on `changes`: a secret can be pasted into a
+  # markdown file just as easily as into source, so this has to scan
+  # doc-only diffs too rather than trusting them to be risk-free.
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
@@ -85,6 +96,8 @@ jobs:
 
   trivy-fs:
     name: Trivy filesystem scan
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
