@@ -9,6 +9,9 @@ import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { PROJECT_CATEGORY_LABELS, projectMediaUrl, type CmsProjectRecord } from "@/lib/project-cms";
 
 const AUTO_ADVANCE_MS = 6000;
+// Kept well under AUTO_ADVANCE_MS so the Ken Burns drift (see playEnter)
+// never gets cut off mid-motion by the next auto-advance.
+const KEN_BURNS_MS = AUTO_ADVANCE_MS - 800;
 
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -20,28 +23,33 @@ function FeaturedProjectSlide({ record }: Readonly<{ record: CmsProjectRecord }>
 
   return (
     <div className="grid gap-8 sm:gap-10 lg:grid-cols-2 lg:items-center lg:gap-14">
-      {cover ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img alt="" className="aspect-[4/3] w-full rounded-2xl object-cover" src={cover} />
-      ) : (
-        <div className="flex aspect-[4/3] w-full items-center justify-center rounded-2xl bg-[var(--surface-muted)]">
-          <ImageIcon className="size-12 text-foreground/25" strokeWidth={1.5} />
-        </div>
-      )}
+      <div className="overflow-hidden rounded-2xl [clip-path:inset(0)]">
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img alt="" data-slide-image className="aspect-[4/3] w-full object-cover" src={cover} />
+        ) : (
+          <div
+            data-slide-image
+            className="flex aspect-[4/3] w-full items-center justify-center bg-[var(--surface-muted)]"
+          >
+            <ImageIcon className="size-12 text-foreground/25" strokeWidth={1.5} />
+          </div>
+        )}
+      </div>
 
       <div>
         {project.categories[0] ? (
-          <p className="text-xs font-semibold tracking-wide text-brand-blue uppercase">
+          <p className="slide-el text-xs font-semibold tracking-wide text-brand-blue uppercase opacity-0">
             {PROJECT_CATEGORY_LABELS[project.categories[0]]}
           </p>
         ) : null}
-        <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h3 className="slide-el mt-2 font-display text-2xl font-semibold tracking-tight text-foreground opacity-0 sm:text-3xl">
           {project.title}
         </h3>
-        <p className="mt-4 text-foreground/65">{project.summary}</p>
+        <p className="slide-el mt-4 text-foreground/65 opacity-0">{project.summary}</p>
         <Link
           href={`/projects/${record.slug}`}
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90"
+          className="slide-el mt-6 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white opacity-0 transition-colors hover:bg-brand-blue/90"
         >
           View project
           <ArrowRight className="size-4" />
@@ -55,15 +63,20 @@ function FeaturedProjectSlide({ record }: Readonly<{ record: CmsProjectRecord }>
  * The homepage's Projects preview: a single-slide carousel that cycles
  * through the projects an admin has flagged "Featured" (see
  * project-cms-editor.tsx) — each slide pairs the project's cover with its
- * title, description, and a "View project" CTA rather than a bare card.
- * Renders nothing if no project is currently featured, same empty-state
- * convention as the other homepage preview rows.
+ * title, description, and a "View project" CTA. Transitions are a clip-path
+ * wipe on the image (a real morph, not a crossfade) plus a staggered
+ * text/CTA entrance, followed by a slow Ken Burns drift while the slide sits
+ * — all skipped in favor of an instant, fully-settled swap under reduced
+ * motion, same as every other decorative loop on the site. Renders nothing
+ * if no project is currently featured.
  */
 export function FeaturedProjectsSection({
   records,
 }: Readonly<{ records: readonly CmsProjectRecord[] }>) {
   const rootRef = useRef<HTMLDivElement>(null);
   const slideRef = useRef<HTMLDivElement>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const transitioning = useRef(false);
   const [index, setIndex] = useState(0);
   const count = records.length;
 
@@ -74,34 +87,78 @@ export function FeaturedProjectsSection({
     return () => tween?.scrollTrigger?.kill();
   }, []);
 
-  // Every slide change (auto-advance, arrows, or dots) re-enters through
-  // this same effect, so the fade-in plays consistently regardless of what
-  // triggered it — and collapses to an instant swap under reduced motion,
-  // matching the rest of the site's decorative-loop rule.
-  useLayoutEffect(() => {
+  function playEnter() {
     const slide = slideRef.current;
     if (!slide) return;
+    tlRef.current?.kill();
     const reduced = reducedMotion();
-    gsap.fromTo(
-      slide,
-      { opacity: reduced ? 1 : 0, y: reduced ? 0 : 14 },
-      { opacity: 1, y: 0, duration: reduced ? 0 : 0.5, ease: "power2.out" },
+    const d = reduced ? 0 : 1;
+    const image = slide.querySelector<HTMLElement>("[data-slide-image]");
+    const els = slide.querySelectorAll<HTMLElement>(".slide-el");
+
+    const tl = gsap.timeline({ onComplete: () => (transitioning.current = false) });
+    if (image) {
+      // The wipe is a real clip-path morph (0% revealed → fully revealed),
+      // not an opacity crossfade — paired with a slight scale-out-of-zoom so
+      // the image reads as sliding into frame rather than just uncovering.
+      tl.fromTo(
+        image,
+        { clipPath: "inset(0 0 0 100%)", scale: 1.12 },
+        { clipPath: "inset(0 0 0 0%)", scale: 1, duration: 0.9 * d, ease: "power3.out" },
+        0,
+      );
+    }
+    tl.fromTo(
+      els,
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.55 * d, ease: "back.out(1.7)", stagger: 0.08 * d },
+      reduced ? 0 : 0.2,
     );
-  }, [index]);
+    // A slow, continuous drift while the slide sits on screen — killed the
+    // instant the next transition starts (tlRef.current?.kill() above).
+    if (image && !reduced) {
+      tl.to(image, { scale: 1.06, duration: KEN_BURNS_MS / 1000, ease: "none" });
+    }
+    tlRef.current = tl;
+  }
+
+  useLayoutEffect(playEnter, [index]);
+
+  function playExitThenGo(next: number) {
+    if (transitioning.current) return;
+    const slide = slideRef.current;
+    const reduced = reducedMotion();
+    if (!slide || reduced) {
+      setIndex(next);
+      return;
+    }
+    transitioning.current = true;
+    tlRef.current?.kill();
+    gsap.to(slide, {
+      opacity: 0,
+      scale: 0.98,
+      duration: 0.25,
+      ease: "power2.in",
+      onComplete: () => {
+        gsap.set(slide, { opacity: 1, scale: 1 });
+        setIndex(next);
+      },
+    });
+  }
 
   const [paused, setPaused] = useState(false);
   useLayoutEffect(() => {
     if (count < 2 || paused || reducedMotion()) return;
     const id = window.setInterval(() => {
-      setIndex((current) => (current + 1) % count);
+      playExitThenGo((index + 1) % count);
     }, AUTO_ADVANCE_MS);
     return () => window.clearInterval(id);
-  }, [count, paused]);
+  }, [count, paused, index]);
 
   const active = useMemo(() => records[index % Math.max(count, 1)], [records, index, count]);
 
   function go(delta: 1 | -1) {
-    setIndex((current) => (current + delta + count) % count);
+    playExitThenGo((index + delta + count) % count);
   }
 
   return (
@@ -153,7 +210,7 @@ export function FeaturedProjectsSection({
                         i === index ? "bg-brand-blue" : "bg-[var(--line)] hover:bg-foreground/30"
                       }`}
                       key={record.slug}
-                      onClick={() => setIndex(i)}
+                      onClick={() => playExitThenGo(i)}
                       type="button"
                     />
                   ))}
