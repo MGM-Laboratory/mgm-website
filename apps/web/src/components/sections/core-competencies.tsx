@@ -7,7 +7,7 @@ import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useFadeUpOnScroll } from "@/lib/scroll-reveal";
-import { COMPETENCIES, type CompetencyColor, type Competency } from "@/data/competencies";
+import { COMPETENCIES, type CompetencyColor } from "@/data/competencies";
 import { CompetencyCardShape, CompetencyMotifShape } from "./competency-motif";
 
 // Blue, red, and green match the shared brand tokens exactly, but this
@@ -42,49 +42,6 @@ const CARD_PILL: Record<CompetencyColor, string> = {
   yellow: "bg-black/10 text-black group-hover:bg-black/15",
   green: "bg-white/20 text-white group-hover:bg-white/30",
 };
-const CARD_TILE: Record<CompetencyColor, string> = {
-  blue: "bg-white/15 text-white hover:bg-white/25",
-  red: "bg-white/15 text-white hover:bg-white/25",
-  yellow: "bg-black/10 text-black hover:bg-black/[0.15]",
-  green: "bg-white/15 text-white hover:bg-white/25",
-};
-
-// The competency pages already use these exact slugs (website/mobile/ux/game
-// — see apps/web/src/data/competencies.ts `href`), and both the member
-// directory's `division` field and the projects CMS's `category` enum reuse
-// the same four-way split, just under different vocabularies. Mapping off
-// the slug keeps that reuse local to this component instead of growing the
-// shared Competency type for two links.
-const MEMBER_DIVISION_BY_SLUG: Record<string, string> = {
-  website: "Website",
-  mobile: "Mobile",
-  ux: "HCI/UX",
-  game: "Game & XR",
-};
-const PROJECT_CATEGORY_BY_SLUG: Record<string, string> = {
-  website: "website",
-  mobile: "mobile",
-  ux: "hci-ux",
-  game: "game",
-};
-
-function bentoLinks(c: Competency) {
-  const slug = c.href.slice(1);
-  return [
-    {
-      label: "Member",
-      href: `/member?division=${encodeURIComponent(MEMBER_DIVISION_BY_SLUG[slug])}`,
-    },
-    { label: "Projects", href: `/projects?category=${PROJECT_CATEGORY_BY_SLUG[slug]}` },
-    // Publications and articles have no R&D-division tag in their data today
-    // (publications carry no category field at all; article categories are
-    // publication-type tags like "Journal"/"Conference", not a division) —
-    // linking to the CMS enum a project/member division doesn't have would
-    // silently filter to nothing, so these two stay unfiltered on purpose.
-    { label: "Publications", href: "/publications" },
-    { label: "Article", href: "/articles" },
-  ];
-}
 
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -202,10 +159,10 @@ export function CoreCompetenciesSection() {
   }, []);
 
   // The back face starts `inert` (and its trigger reports `aria-expanded:
-  // false`) so its four link-shaped tab stops per card don't sit invisibly
-  // in the page's tab order while closed — opening lifts that gate on
-  // whichever mechanism opened it (mouse, keyboard focus, or a touch tap,
-  // which focuses a real <button> the same way keyboard focus does).
+  // false`) so its "Explore" link doesn't sit invisibly in the page's tab
+  // order while closed — opening lifts that gate on whichever mechanism
+  // opened it (mouse, keyboard focus, or a touch tap, which focuses a real
+  // <button> the same way keyboard focus does).
   function setOpen(i: number, open: boolean) {
     const backFace = backFaceRefs.current[i];
     const trigger = triggerRefs.current[i];
@@ -280,7 +237,7 @@ export function CoreCompetenciesSection() {
                     triggerRefs.current[i] = el;
                   }}
                   aria-expanded="false"
-                  aria-label={`${c.title} — show related member, project, publication, and article links`}
+                  aria-label={`${c.title} — show details and explore link`}
                   // Firefox bug 1201471: backface-visibility:hidden is ignored
                   // on a child that has no transform of its own, even inside a
                   // rotating preserve-3d parent — it only culls elements it
@@ -354,21 +311,6 @@ export function CoreCompetenciesSection() {
                         Explore
                         <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                       </Link>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        {bentoLinks(c).map((b) => (
-                          <Link
-                            key={b.label}
-                            href={b.href}
-                            className={cn(
-                              "rounded-xl px-3 py-2.5 text-xs font-semibold backdrop-blur-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current",
-                              CARD_TILE[c.color],
-                            )}
-                          >
-                            {b.label}
-                          </Link>
-                        ))}
-                      </div>
                     </div>
                   </div>
                 </div>
