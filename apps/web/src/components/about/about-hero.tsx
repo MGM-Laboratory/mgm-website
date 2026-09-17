@@ -1,4 +1,5 @@
 import { RevealSection } from "./reveal-section";
+import { AboutLanyard } from "./lanyard/about-lanyard";
 
 export function AboutHero() {
   return (
@@ -7,7 +8,7 @@ export function AboutHero() {
         <style>{".reveal-item{opacity:1 !important}"}</style>
       </noscript>
 
-      <RevealSection className="relative z-10 mx-auto max-w-3xl" stagger={0.14}>
+      <RevealSection className="relative z-10 mx-auto max-w-3xl lg:mx-0" stagger={0.14}>
         <p className="reveal-item text-sm font-semibold tracking-wide text-brand-red uppercase opacity-0">
           About us
         </p>
@@ -19,6 +20,28 @@ export function AboutHero() {
           websites, and we still get excited every time someone actually uses one.
         </p>
       </RevealSection>
+
+      {/* Interactive 3D lanyard — desktop only (a WASM physics stack isn't
+          worth the weight or the drag-interaction cost on a touch/mobile
+          viewport that has no room for it beside the text anyway). Confined
+          to the hero's own box (unlike the homepage's version of this
+          component): this section sits inside page.tsx's `relative z-10`
+          wrapper, which both caps any z-index inside it below the fixed
+          header's z-50 and clips anything above its own top edge via
+          `overflow-hidden` on its parent — so reaching up behind the header
+          the way the homepage did isn't possible here regardless of
+          z-index. AboutLanyard's own drag-time z-index bump still runs, just
+          scoped to rising above this page's own content instead. */}
+      <div className="absolute inset-y-10 right-0 hidden w-[38%] lg:block">
+        <AboutLanyard
+          className="h-full w-full"
+          position={[0, 0, 20]}
+          gravity={[0, -40, 0]}
+          frontImage="/lanyard/front.png"
+          backImage="/lanyard/back.png"
+          lanyardImage="/lanyard/tali.png"
+        />
+      </div>
     </section>
   );
 }

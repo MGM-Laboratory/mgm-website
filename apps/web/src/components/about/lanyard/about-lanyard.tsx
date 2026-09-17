@@ -26,17 +26,18 @@ function useReducedMotion() {
   return reduced;
 }
 
-export function HeroLanyard(props: LanyardProps & { className?: string }) {
+export function AboutLanyard(props: LanyardProps & { className?: string }) {
   const { className, ...lanyardProps } = props;
   const reduced = useReducedMotion();
   const [dragging, setDragging] = useState(false);
 
   if (reduced === null) return null;
 
-  // Sits under the fixed site header at rest (z-50) — the card's rope anchor
-  // is out of view above the canvas, so nothing is lost by staying behind it
-  // — but lifts above it while the user is actively swinging the card, so a
-  // big swing visibly passes over the nav instead of getting clipped by it.
+  // Lifted above nearby content only while the card is being actively
+  // dragged, so a big swing visibly passes over whatever it's layered
+  // against rather than getting clipped by it. (On a page whose ancestor
+  // caps the stacking context below the fixed site header, that cap still
+  // applies here — see the call site for why.)
   const wrapperClassName = cn(className, dragging ? "z-[60]" : "z-30");
 
   if (reduced) {

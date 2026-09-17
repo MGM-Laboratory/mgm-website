@@ -15,6 +15,7 @@ type Shape = {
   rotate: number;
   depth: number;
   hideOnMobile: boolean;
+  onLeftEdge: boolean;
 };
 
 const KINDS: PatternKind[] = [
@@ -59,12 +60,21 @@ function round(n: number, decimals: number) {
   return Math.round(n * f) / f;
 }
 
-// Both the hero heading and every story row below it are centered in a
-// max-w-3xl column, so "keep clear of the text" means the same thing at
-// every scroll depth: stay within this margin of the left or right edge,
-// never the middle. Comfortably inside the column's own natural gutter
-// even at a wide desktop viewport, where that gutter is at its narrowest.
+// Every story row below the hero is centered in a max-w-3xl column, so
+// "keep clear of the text" means the same thing at every scroll depth below
+// the hero: stay within this margin of the left or right edge, never the
+// middle. Comfortably inside the column's own natural gutter even at a wide
+// desktop viewport, where that gutter is at its narrowest.
 const EDGE_MARGIN = 14;
+
+// The hero itself (unlike the story rows after it) is left-anchored at lg:,
+// with the lanyard filling its right side — so right-edge shapes that would
+// land within the hero's own vertical span are hidden there instead, rather
+// than clashing with it. Measured as a percentage of this field's total
+// height (hero + every story row combined): the hero is `min-h-[100dvh-4rem]`
+// while the field spans much further down, so this is necessarily an
+// approximation, padded a little past the hero's actual measured share.
+const HERO_LANYARD_CLEAR_PERCENT = 34;
 
 // One independent, deliberately-spaced column per edge, instead of scoring
 // every shape's position independently — the earlier approach let shapes
@@ -92,6 +102,7 @@ function placeColumn(rand: () => number, onLeftEdge: boolean, startY: number): S
       rotate: Math.round(rand() * 360),
       depth: round(0.4 + rand() * 0.9, 2),
       hideOnMobile: i % 2 === 0,
+      onLeftEdge,
     });
     y += gap + size * 0.6;
     gap *= 1.24;
@@ -150,22 +161,25 @@ export function BauhausField() {
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {SHAPES.map((shape, i) => (
-        <div
-          key={i}
-          className={`parallax-el absolute ${shape.hideOnMobile ? "hidden sm:block" : ""}`}
-          data-depth={shape.depth}
-          style={{ top: `${shape.top}%`, left: `${shape.left}%` }}
-        >
+      {SHAPES.map((shape, i) => {
+        const clearsForLanyard = !shape.onLeftEdge && shape.top < HERO_LANYARD_CLEAR_PERCENT;
+        return (
           <div
-            className="bauhaus-shape opacity-0"
-            data-rotate={shape.rotate}
-            style={{ width: `${shape.size}rem`, height: `${shape.size}rem` }}
+            key={i}
+            className={`parallax-el absolute ${shape.hideOnMobile ? "hidden sm:block" : ""} ${clearsForLanyard ? "lg:hidden" : ""}`}
+            data-depth={shape.depth}
+            style={{ top: `${shape.top}%`, left: `${shape.left}%` }}
           >
-            <FlairShape kind={shape.kind} tone={shape.tone} className="h-full w-full" />
+            <div
+              className="bauhaus-shape opacity-0"
+              data-rotate={shape.rotate}
+              style={{ width: `${shape.size}rem`, height: `${shape.size}rem` }}
+            >
+              <FlairShape kind={shape.kind} tone={shape.tone} className="h-full w-full" />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
