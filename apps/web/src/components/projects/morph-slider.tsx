@@ -605,6 +605,32 @@ export function MorphSlider({
   const [index, setIndex] = useState(startIndex);
   const [hovering, setHovering] = useState(false);
   const [webglFailed, setWebglFailed] = useState(false);
+  const [nearViewport, setNearViewport] = useState(false);
+
+  // The engine below is expensive to spin up (WebGL context, shader
+  // compile, texture uploads) and this section sits well below the fold —
+  // without this, every page load pays that cost immediately regardless of
+  // scroll position, purely because the component is mounted. Observed a
+  // renderer crash ("This page couldn't load") on CI's mobile-safari
+  // project that reproduced on every run once this component started
+  // constructing eagerly; deferring construction until the slider is
+  // actually about to be seen removes that cost from the common case where
+  // a visitor never scrolls this far.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setNearViewport(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   const optsRef = useRef<EngineOptions>({
     transition,
@@ -635,7 +661,7 @@ export function MorphSlider({
   });
 
   useEffect(() => {
-    if (!containerRef.current || items.length === 0) return undefined;
+    if (!nearViewport || !containerRef.current || items.length === 0) return undefined;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // WebGL context creation is exactly the kind of thing that's been
@@ -649,7 +675,11 @@ export function MorphSlider({
         items,
         startIndex,
         reducedMotion,
-        dprCap: 2,
+        // Capped at 1 rather than the more typical 2 — this shader's cost
+        // scales with pixel count, and a background carousel image doesn't
+        // need retina sharpness enough to justify up to 4x the fragment
+        // work on high-DPI devices.
+        dprCap: 1,
         getOptions: () => optsRef.current,
         onIndexChange: (i) => {
           setIndex(i);
@@ -677,7 +707,7 @@ export function MorphSlider({
       engineRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, startIndex]);
+  }, [nearViewport, items, startIndex]);
 
   const handleNext = useCallback(() => engineRef.current?.next(), []);
   const handlePrev = useCallback(() => engineRef.current?.prev(), []);
