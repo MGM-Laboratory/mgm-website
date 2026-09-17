@@ -14,6 +14,7 @@ if (typeof window !== "undefined") {
 
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const pendingKillRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRender = useRef(true);
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
   const shouldSmooth = pathname === "/";
@@ -54,6 +55,29 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       }, 0);
     };
   }, [shouldSmooth]);
+
+  // Every real route change (not the first render, and not a same-page hash
+  // navigation — usePathname() excludes the hash, so hero.tsx's anchor
+  // scrolling never triggers this) should land at the very top of the new
+  // page. Next's own "scroll to top on navigate" walks the DOM for a
+  // scrollable, non-fixed element and gives up otherwise — ScrollSmoother
+  // puts #smooth-wrapper at `position: fixed`, so on "/" that walk finds
+  // nothing and silently skips the reset. Declared after the effect above so
+  // a smoother for the page we're arriving on already exists by the time
+  // this runs: on entry this forces its just-created position to 0 (instead
+  // of whatever native scrollY it happened to read while mounting), and on
+  // exit it resets the still-live outgoing smoother — clearing the stale
+  // transform on #smooth-content — before its deferred kill() tears it down.
+  useLayoutEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    window.scrollTo(0, 0);
+    ScrollSmoother.get()?.scrollTo(0, false);
+    const content = document.getElementById("smooth-content");
+    if (content) content.style.transform = "";
+  }, [pathname]);
 
   // The public-site header is deliberately outside this wrapper and the
   // content receives its 64px offset below. Admin owns its own chrome, so
