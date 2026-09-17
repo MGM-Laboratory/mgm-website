@@ -88,6 +88,10 @@ export function FeaturedProjectsSection({
   }, []);
 
   function playEnter() {
+    // Cleared unconditionally, not just on the timeline's own onComplete: if
+    // the slide ref isn't attached yet (or any other early return below),
+    // leaving this true forever would permanently disable every arrow/dot.
+    transitioning.current = false;
     const slide = slideRef.current;
     if (!slide) return;
     tlRef.current?.kill();
@@ -96,7 +100,7 @@ export function FeaturedProjectsSection({
     const image = slide.querySelector<HTMLElement>("[data-slide-image]");
     const els = slide.querySelectorAll<HTMLElement>(".slide-el");
 
-    const tl = gsap.timeline({ onComplete: () => (transitioning.current = false) });
+    const tl = gsap.timeline();
     if (image) {
       // The wipe is a real clip-path morph (0% revealed → fully revealed),
       // not an opacity crossfade — paired with a slight scale-out-of-zoom so
