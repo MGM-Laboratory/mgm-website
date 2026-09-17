@@ -3,23 +3,15 @@
  * studio imports it directly, and the server session lib builds on it.
  */
 
-export const ADMIN_PAGE_IDS = [
-  "articles",
-  "publications",
-  "members",
-  "projects",
-  "research",
-  "careers",
-  "contact",
-  "contact-inquiries",
-  "events",
-  "home",
-  "other",
-] as const;
+import {
+  ADMIN_PAGE_IDS,
+  type AdminAction,
+  type AdminPageId,
+  type AdminPermissions,
+} from "@repo/shared";
 
-export type AdminPageId = (typeof ADMIN_PAGE_IDS)[number];
-export type AdminAction = "read" | "write" | "delete";
-export type AdminPermissions = Record<AdminPageId, AdminAction[]>;
+export { ADMIN_PAGE_IDS };
+export type { AdminAction, AdminPageId, AdminPermissions };
 
 export const ACTION_RANK: Record<AdminAction, number> = { read: 1, write: 2, delete: 3 };
 
