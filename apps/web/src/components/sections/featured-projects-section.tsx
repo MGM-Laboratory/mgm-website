@@ -7,7 +7,7 @@ import Link from "next/link";
 
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { PROJECT_CATEGORY_LABELS, projectMediaUrl, type CmsProjectRecord } from "@/lib/project-cms";
-import { MorphSlider, type MorphSliderItem } from "@/components/projects/morph-slider";
+import { type MorphSliderItem } from "@/components/projects/morph-slider";
 
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -93,16 +93,21 @@ export function FeaturedProjectsSection({
         {active ? (
           <div className="reveal-card mt-14 grid gap-8 opacity-0 sm:gap-10 lg:grid-cols-2 lg:items-center lg:gap-14">
             <div className="h-80 overflow-hidden rounded-2xl sm:h-96">
-              <MorphSlider
-                autoplay
-                autoplayDelay={6}
-                items={items}
-                loop
-                onIndexChange={setIndex}
-                radius={0}
-                showCaptions={false}
-                transition="melt"
-              />
+              {/* Diagnostic: MorphSlider swapped for a plain image to
+                  isolate a WebKit renderer crash ("This page couldn't
+                  load") that's been reproducing on CI's mobile-safari
+                  project on every run since MorphSlider was introduced,
+                  including on tests that never scroll near it (so it's
+                  not about when the WebGL context gets constructed). This
+                  commit is here to get one CI run's answer, not to stay. */}
+              {items[index % Math.max(items.length, 1)]?.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt=""
+                  className="h-full w-full object-cover"
+                  src={items[index % Math.max(items.length, 1)].image}
+                />
+              ) : null}
             </div>
 
             <div ref={textRef}>
