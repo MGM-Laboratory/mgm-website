@@ -45,9 +45,10 @@ test.describe("core competencies cards", () => {
     await page.goto("/");
     const card = cardFor(page, /Website Development/);
     await card.scrollIntoViewIfNeeded();
-    // Let the scroll-triggered entrance animation (reveal-card's opacity
-    // fade-in) finish before interacting.
-    await expect.poll(() => card.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+    // Let the scroll-triggered entrance animation settle before capturing
+    // the "rest" transform below (see waitForStableLayout's own doc comment
+    // for why this polls layout rather than a fixed sleep).
+    await waitForStableLayout(card);
 
     const inner = card.locator("> div").first();
     const restTransform = await inner.evaluate((el) => getComputedStyle(el).transform);
