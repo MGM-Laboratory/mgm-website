@@ -28,18 +28,6 @@ async function waitForStableLayout(locator: Locator, timeout = 10_000) {
 }
 
 test.describe("core competencies cards", () => {
-  // WebKit's hover-driven GSAP flip (scroll settle + a 0.7s timeline) is the
-  // slowest interaction in this file, and it's consistently what times out
-  // on a contended CI runner — mobile-safari worst of all, since it's WebKit
-  // plus mobile viewport/touch emulation on top. This triples the overall
-  // per-test timeout (fixes `locator.hover` itself timing out); the
-  // individual `expect.poll`/`toBeVisible` timeouts below are separate
-  // budgets this doesn't touch, bumped on their own where needed.
-  test.slow(
-    ({ browserName }) => browserName === "webkit",
-    "hover/flip settles slower on WebKit under CI load",
-  );
-
   test("mount at rest under reduced motion (no snap-to-hovered)", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
