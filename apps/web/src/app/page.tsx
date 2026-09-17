@@ -2,7 +2,7 @@ import { Hero } from "@/components/hero/hero";
 import { ProcessSection } from "@/components/process/process-section";
 import { CoreCompetenciesSection } from "@/components/sections/core-competencies";
 import { TrustedBySection } from "@/components/sections/trusted-by-section";
-import { ShowcaseSection, ShowcaseCard } from "@/components/sections/showcase-section";
+import { ShowcaseSection } from "@/components/sections/showcase-section";
 import { ArticlesSection } from "@/components/sections/articles-section";
 import { PublicationsPreviewSection } from "@/components/sections/publications-preview-section";
 import { CtaFooter } from "@/components/sections/cta-footer";
@@ -17,21 +17,6 @@ import { publishedPublications, type CmsPublicationRecord } from "@/lib/publicat
 import { ensurePublicationFeed } from "@/lib/publication-cms-seed";
 
 const HOMEPAGE_PREVIEW_LIMIT = 10;
-
-const ACHIEVEMENTS = [
-  {
-    title: "Best Research Prototype",
-    description: "Recognized at a national interactive-media showcase for early prototype work.",
-  },
-  {
-    title: "Campus Innovation Award",
-    description: "Awarded for a mobile-first research tool built with the local community.",
-  },
-  {
-    title: "Published Case Study",
-    description: "A usability study from the lab was featured in a regional design publication.",
-  },
-];
 
 export default async function Home() {
   // Only the newest ten records of each kind render on the homepage, so the
@@ -72,18 +57,6 @@ export default async function Home() {
           ))}
         </ShowcaseSection>
         <PublicationsPreviewSection records={publications} />
-        <ShowcaseSection
-          id="achievements"
-          title="Achievements"
-          intro="Milestones the lab has reached along the way."
-          count={ACHIEVEMENTS.length}
-        >
-          {ACHIEVEMENTS.map((item) => (
-            <article key={item.title} className="reveal-card w-[320px] shrink-0 opacity-0">
-              <ShowcaseCard {...item} />
-            </article>
-          ))}
-        </ShowcaseSection>
         <ArticlesSection initialRecords={initialArticles} />
       </main>
       <CtaFooter />
