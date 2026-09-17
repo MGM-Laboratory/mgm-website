@@ -1,39 +1,68 @@
 import type { Metadata } from "next";
 
 import { CtaFooter } from "@/components/sections/cta-footer";
+import { TrustedBySection } from "@/components/sections/trusted-by-section";
+import { ShowcaseSection } from "@/components/sections/showcase-section";
+import { ProjectPreviewCard } from "@/components/projects/project-preview-card";
 import { AboutHero } from "@/components/about/about-hero";
-import { IdentitySection } from "@/components/about/identity-section";
-import { HistorySection } from "@/components/about/history-section";
-import { ResearchSection } from "@/components/about/research-section";
-import { GovernanceSection } from "@/components/about/governance-section";
-import { RecordSection } from "@/components/about/record-section";
-import { NetworkSection } from "@/components/about/network-section";
-import { OpenQuestionsSection } from "@/components/about/open-questions-section";
-import { SourceRegister } from "@/components/about/source-register";
-import { EvidenceLens } from "@/components/about/evidence-lens";
+import { BauhausField } from "@/components/about/bauhaus-field";
+import { StorySection } from "@/components/about/story-section";
+import { TeamSpotlight } from "@/components/about/team-spotlight";
+import { FlowingCompetencies } from "@/components/about/flowing-competencies";
+import { FaqSection } from "@/components/about/faq-section";
+import { publishedProjects, type CmsProjectRecord } from "@/lib/project-cms";
+import { fetchProjectFeed } from "@/lib/project-cms-server";
+import type { CmsMemberRecord } from "@/lib/member-cms";
+import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 
 export const metadata: Metadata = {
-  title: "About Us — MGM Laboratory",
-  description:
-    "MGM Laboratory, presented as an evidence ledger — every claim footnoted and confidence-rated against the public FILKOM UB record.",
+  title: "About Us | MGM Laboratory",
+  description: "Who we are, how we started, and what we build at MGM Laboratory.",
 };
 
-export default function AboutPage() {
+const PROJECT_PREVIEW_LIMIT = 6;
+
+export default async function AboutPage() {
+  const [projects, memberRecords] = await Promise.all([
+    fetchProjectFeed()
+      .then((records) => publishedProjects(records).slice(0, PROJECT_PREVIEW_LIMIT))
+      .catch(() => [] as CmsProjectRecord[]),
+    ensureMemberCmsSeeded().catch(() => [] as CmsMemberRecord[]),
+  ]);
+
   return (
     <div className="relative flex flex-1 flex-col">
-      <main className="flex flex-1 flex-col pb-24">
-        <AboutHero />
-        <IdentitySection />
-        <HistorySection />
-        <ResearchSection />
-        <GovernanceSection />
-        <RecordSection />
-        <NetworkSection />
-        <OpenQuestionsSection />
-        <SourceRegister />
+      <main className="flex flex-1 flex-col">
+        <div className="relative overflow-hidden bg-[var(--surface-muted)]">
+          <BauhausField />
+          <div className="relative z-10">
+            <AboutHero />
+            <StorySection />
+          </div>
+        </div>
+
+        <FlowingCompetencies />
+        <TeamSpotlight initialRecords={memberRecords} />
+
+        <ShowcaseSection
+          id="about-projects"
+          title="What we've built"
+          intro="A few of the projects that came out of the lab."
+          seeMoreHref="/projects"
+          emptyMessage="Our first projects are on their way."
+          count={projects.length}
+        >
+          {projects.map((record) => (
+            <article key={record.slug} className="reveal-card w-[320px] shrink-0 opacity-0">
+              <ProjectPreviewCard record={record} />
+            </article>
+          ))}
+        </ShowcaseSection>
+
+        <TrustedBySection />
+        <FaqSection />
       </main>
       <CtaFooter />
-      <EvidenceLens />
     </div>
   );
 }

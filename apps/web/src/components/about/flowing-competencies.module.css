@@ -1,0 +1,81 @@
+.menu {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+}
+
+.item:first-child {
+  border-top: none;
+}
+
+.itemLink {
+  position: relative;
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: clamp(1.25rem, 1.4vw + 1rem, 2.25rem);
+}
+
+.marquee {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translate3d(0, 101%, 0);
+}
+
+.innerWrap {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.inner {
+  position: relative;
+  display: flex;
+  height: 100%;
+  width: fit-content;
+  align-items: center;
+  will-change: transform;
+}
+
+.part {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.part span {
+  padding: 0 1vw;
+  white-space: nowrap;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: clamp(1.25rem, 1.4vw + 1rem, 2.25rem);
+  line-height: 1;
+}
+
+.icon {
+  position: relative;
+  margin: 0 1.5vw;
+  height: 3.5rem;
+  width: 3.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 0.9rem;
+}
