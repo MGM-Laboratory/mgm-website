@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   e2e:
+    name: Playwright (${{ matrix.os }}, ${{ matrix.project }})
     strategy:
       fail-fast: false
       matrix:

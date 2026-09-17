@@ -1,4 +1,4 @@
-name: PR comment commands
+name: PR Comment Commands
 
 on:
   issue_comment:
