@@ -155,6 +155,8 @@ gh api --method PUT repos/MGM-Laboratory/mgm-website/rulesets/23450743 --input c
 
 Fetch the _current_ ruleset first and edit only the `context` fields — don't reuse an old saved payload verbatim, since other settings may have changed too. This has now recurred at least 3 times (2026-09-15 twice, 2026-09-16 once); re-fixing via API is a workaround, not a durable solution — the actual fix is either restricting who can edit rulesets (repo Settings → Rulesets → bypass/edit permissions) or getting `SyafaHadyan` to stop re-saving the branch protection page without updating the check names first.
 
+**Update (2026-09-17):** `ci`, `e2e`, and `lighthouse` were missing the explicit job `name:` the naming convention calls for (see above), which is the other half of why the "Actual job name" column read as bare ids. `chore/ci-workflow-naming-convention` (PR #22) added `name:` to all three, matching the exact strings the ruleset already required (`Lint, typecheck, test & build`, `Playwright (<os>, <project>)`, `Lighthouse CI budget`) — so the table above is now itself the stale side, and these three rows should no longer need the fix recipe unless the ruleset gets reset again. That reset risk is still open (the root cause above is unchanged), so re-check with the same commands if `N of N required status checks are expected` comes back.
+
 ## Local
 
 `docker compose up` runs Postgres 17 + api (4000) + web (3000) with vars from `.env` / `.env.example`. `DOCKERHUB_NAMESPACE` in `.env.example` is the compose image namespace — CI uses repo-level GitHub vars instead.
