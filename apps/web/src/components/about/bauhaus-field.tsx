@@ -31,6 +31,24 @@ const KINDS: PatternKind[] = [
 ];
 const TONES: PatternTone[] = ["red", "yellow", "blue", "green"];
 
+// "clover" and "quads" are both a small 4-blob cluster — different path data,
+// same silhouette at a glance. Rejecting only an exact `kind` repeat still
+// let one land right after the other, reading as the same shape twice.
+// Grouping them here (everything else keeps its own family) is what the
+// adjacency check in placeColumn actually needs to reject against.
+const VISUAL_FAMILY: Record<PatternKind, string> = {
+  fans: "fans",
+  square: "square",
+  arcs: "arcs",
+  circle: "circle",
+  leaves: "leaves",
+  plus: "plus",
+  clover: "cluster",
+  domes: "domes",
+  quads: "cluster",
+  x: "x",
+};
+
 // A small deterministic PRNG (not Math.random) so this renders the exact
 // same layout on the server and the client, and the exact same layout on
 // every visit — no reshuffle on reload, no hydration mismatch.
@@ -66,19 +84,37 @@ const EDGE_MARGIN = 14;
 // smaller starting gap is what actually packs more shapes into the hero's
 // own top stretch specifically, since the gap is still small there before
 // its own 1.24x-per-shape growth takes over further down.
+//
+// Picking kind/tone independently at random for every shape let the same
+// icon or color land back-to-back purely by chance (four different colors,
+// ten shapes — a repeat is one in four, or one in ten, on any given step) —
+// visibly a run of three yellow shapes stacked down the same edge, or
+// "clover" immediately followed by "quads" (different kind, same 4-blob
+// silhouette — see VISUAL_FAMILY). Each pick is rerolled against only the
+// *immediately previous* shape on this same edge, so a run like that can no
+// longer happen, without touching how kind/tone vary further down the
+// column.
 function placeColumn(rand: () => number, onLeftEdge: boolean, startY: number): Shape[] {
   const shapes: Shape[] = [];
   let y = startY;
   let gap = 2.5 + rand() * 1.5;
   let i = 0;
+  let prevFamily: string | null = null;
+  let prevTone: PatternTone | null = null;
 
   while (y < 96) {
     const density = Math.max(1 - y / 100, 0.15);
     const size = 2.4 + rand() * 4.6 * density;
     const fromEdge = 2 + rand() * (EDGE_MARGIN - 2);
+
+    let kind = KINDS[Math.floor(rand() * KINDS.length)];
+    while (VISUAL_FAMILY[kind] === prevFamily) kind = KINDS[Math.floor(rand() * KINDS.length)];
+    let tone = TONES[Math.floor(rand() * TONES.length)];
+    while (tone === prevTone) tone = TONES[Math.floor(rand() * TONES.length)];
+
     shapes.push({
-      kind: KINDS[Math.floor(rand() * KINDS.length)],
-      tone: TONES[Math.floor(rand() * TONES.length)],
+      kind,
+      tone,
       top: round(y, 2),
       left: round(onLeftEdge ? fromEdge : 100 - fromEdge, 2),
       size: round(size, 2),
@@ -86,6 +122,8 @@ function placeColumn(rand: () => number, onLeftEdge: boolean, startY: number): S
       depth: round(0.4 + rand() * 0.9, 2),
       hideOnMobile: i % 2 === 0,
     });
+    prevFamily = VISUAL_FAMILY[kind];
+    prevTone = tone;
     y += gap + size * 0.6;
     gap *= 1.24;
     i++;
