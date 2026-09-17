@@ -23,7 +23,7 @@ import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { safeEqual } from "./admin-auth.util.js";
 import { CmsHomeContentService } from "./cms-home-content.service.js";
-import { isValidVideo } from "./video-validation.util.js";
+import { parseVideoUploadBody, redirectToSignedVideoUrl } from "./video-validation.util.js";
 
 // Every home video upload mints a `home-video-<uuid>.<ext>` key; anything
 // else belongs to another namespace and is refused.
@@ -60,13 +60,7 @@ export class CmsHomeContentController {
     if (!(await this.home.videoKeyMatches(key))) {
       throw new BadRequestException("Video not found");
     }
-    let url: string;
-    try {
-      url = await this.storage.getSignedDownloadUrl(key, 60 * 60);
-    } catch {
-      throw new BadRequestException("Media storage is not configured in this environment.");
-    }
-    return response.redirect(url);
+    await redirectToSignedVideoUrl(response, this.storage, key);
   }
 
   // Raw video bytes; the global raw-body middleware (main.ts) enforces the
@@ -74,35 +68,9 @@ export class CmsHomeContentController {
   @Post("video")
   async uploadVideo(@Req() request: Request, @Headers("x-cms-passphrase") passphrase = "") {
     this.assertAdmin(passphrase);
-    const contentType = String(request.headers["content-type"] ?? "")
-      .split(";")[0]
-      .trim()
-      .toLowerCase();
-    // CodeQL's type-confusion query only recognizes typeof/Array.isArray checks
-    // as sanitizing barriers, not Buffer.isBuffer() below — this rejects the
-    // array shape its model worries about before that real (sufficient) check.
-    if (Array.isArray(request.body)) {
-      throw new BadRequestException("The video must be an MP4 or WebM file.");
-    }
-    const body = Buffer.isBuffer(request.body) ? request.body : undefined;
     const maxBytes = this.config.getOrThrow<number>("CMS_MAX_VIDEO_BYTES");
+    const { body, contentType, extension } = parseVideoUploadBody(request, maxBytes);
 
-    if ((contentType !== "video/mp4" && contentType !== "video/webm") || !body?.length) {
-      throw new BadRequestException("The video must be an MP4 or WebM file.");
-    }
-    // body is a real Buffer here (guarded above), not an attacker-tamperable
-    // array; see the isValidVideo() note.
-    // codeql[js/type-confusion-through-parameter-tampering]
-    if (body.length > maxBytes) {
-      throw new BadRequestException(
-        `The video must be under ${Math.floor(maxBytes / 1024 / 1024)} MB.`,
-      );
-    }
-    if (!isValidVideo(body, contentType)) {
-      throw new BadRequestException("That file is not a valid video.");
-    }
-
-    const extension = contentType === "video/mp4" ? "mp4" : "webm";
     const key = `home-video-${randomUUID()}.${extension}`;
     try {
       await this.storage.uploadFile({ body, contentType, key });
