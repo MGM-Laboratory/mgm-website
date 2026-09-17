@@ -9,12 +9,32 @@ import "@vidstack/react/player/styles/default/layouts/video.css";
 
 import type { HomeContent } from "@repo/shared";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
-import { homeVideoUrl } from "@/lib/home-cms";
+import { homeVideoUrl, youtubeVideoId } from "@/lib/home-cms";
 
 function resolveSrc(content: HomeContent): string | undefined {
   if (content.videoMode === "upload") return homeVideoUrl(content.videoKey);
-  if (content.videoMode === "url" || content.videoMode === "youtube") return content.videoUrl;
+  if (content.videoMode === "url") return content.videoUrl;
   return undefined;
+}
+
+/**
+ * YouTube gets the platform's own embed iframe rather than routing through
+ * Vidstack — Vidstack's YouTube provider still renders its own custom
+ * control skin over the video, but a YouTube link should show YouTube's own
+ * familiar player chrome, not a lookalike.
+ */
+function YouTubeEmbed({ url, title }: Readonly<{ url: string; title: string }>) {
+  const videoId = youtubeVideoId(url);
+  if (!videoId) return null;
+  return (
+    <iframe
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowFullScreen
+      className="aspect-video w-full"
+      src={`https://www.youtube.com/embed/${videoId}`}
+      title={title}
+    />
+  );
 }
 
 /** Admin-configurable homepage video block — renders nothing until a video is set. */
@@ -28,8 +48,9 @@ export function HomeVideoSection({ content }: Readonly<{ content: HomeContent }>
     return () => tween?.scrollTrigger?.kill();
   }, []);
 
+  const isYouTube = content.videoMode === "youtube" && content.videoUrl;
   const src = resolveSrc(content);
-  if (!src) return null;
+  if (!isYouTube && !src) return null;
 
   return (
     <section ref={rootRef} className="bg-background px-6 py-20 sm:px-10 sm:py-28 lg:px-16">
@@ -50,15 +71,19 @@ export function HomeVideoSection({ content }: Readonly<{ content: HomeContent }>
         ) : null}
 
         <div className="reveal-card mt-10 overflow-hidden rounded-2xl opacity-0">
-          <MediaPlayer
-            aspectRatio="16/9"
-            src={src}
-            title={content.videoTitle || "MGM Laboratory"}
-            viewType="video"
-          >
-            <MediaProvider />
-            <DefaultVideoLayout icons={defaultLayoutIcons} />
-          </MediaPlayer>
+          {isYouTube && content.videoUrl ? (
+            <YouTubeEmbed title={content.videoTitle || "MGM Laboratory"} url={content.videoUrl} />
+          ) : src ? (
+            <MediaPlayer
+              aspectRatio="16/9"
+              src={src}
+              title={content.videoTitle || "MGM Laboratory"}
+              viewType="video"
+            >
+              <MediaProvider />
+              <DefaultVideoLayout icons={defaultLayoutIcons} />
+            </MediaPlayer>
+          ) : null}
         </div>
       </div>
     </section>
