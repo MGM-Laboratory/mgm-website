@@ -100,6 +100,7 @@ function RegisterModal({
     try {
       const response = await fetch(`/api/events-cms/${encodeURIComponent(eventSlug)}/register`, {
         body: JSON.stringify({
+          agreedToTerms: true,
           email: email.trim(),
           fullName: fullName.trim(),
           phone: `${phoneCountry}${phoneNumber.trim()}`,

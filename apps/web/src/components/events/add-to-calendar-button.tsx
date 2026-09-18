@@ -48,6 +48,7 @@ export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
         autoAlpha: 1,
         duration: 0.28 * d,
         ease: "back.out(1.7)",
+        overwrite: "auto",
         scale: 1,
         y: 0,
       });
@@ -56,6 +57,7 @@ export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
         autoAlpha: 0,
         duration: 0.18 * d,
         ease: "power2.in",
+        overwrite: "auto",
         scale: 0.95,
         y: -6,
       });

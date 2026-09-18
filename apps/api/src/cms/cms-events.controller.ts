@@ -138,6 +138,7 @@ const bootstrapSchema = z.object({ records: z.array(eventSchema).min(1).max(500)
 const imageSchema = z.object({ image: z.string().startsWith("data:image/") });
 
 const registerSchema = z.object({
+  agreedToTerms: z.literal(true, "You must agree to the Terms of Service and Privacy Policy."),
   fullName: z.string().trim().min(2).max(200),
   email: z.email().max(254),
   phone: z.string().trim().min(5).max(30),
