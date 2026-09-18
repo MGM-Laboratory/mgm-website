@@ -21,8 +21,6 @@ import {
   DiscordGlyph,
   InstagramGlyph,
   LinkedinGlyph,
-  XGlyph,
-  YoutubeGlyph,
   type GlyphProps,
 } from "@/components/social-icons";
 import { LogoMark as ShardLogo } from "@/components/hero/shapes";
@@ -32,8 +30,6 @@ import { WorkBento } from "./work-bento";
 
 const SOCIAL_ICONS: Record<string, ComponentType<GlyphProps>> = {
   Instagram: InstagramGlyph,
-  "X (Formerly Twitter)": XGlyph,
-  YouTube: YoutubeGlyph,
   LinkedIn: LinkedinGlyph,
   Discord: DiscordGlyph,
 };
