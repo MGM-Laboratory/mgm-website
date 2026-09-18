@@ -35,9 +35,9 @@ export function LiveProof() {
               This exact page is the portfolio piece.
             </h2>
             <p className="mt-4 max-w-md text-foreground/60">
-              Every animation, every breakpoint, every dark-mode toggle you can try right now on
-              this site was built with the same stack described above. No staged screenshot — the
-              real thing, live, while you&apos;re looking at it.
+              Every animation and every breakpoint you can try right now on this site was built with
+              the same stack described above. No staged screenshot — the real thing, live, while
+              you&apos;re looking at it.
             </p>
           </div>
 

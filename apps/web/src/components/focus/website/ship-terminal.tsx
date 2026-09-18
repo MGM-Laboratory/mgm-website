@@ -287,7 +287,10 @@ export function ShipTerminal() {
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-[var(--surface-inverse)]/55" />
+        {/* Heavier than a typical legibility wash on purpose — the source
+            photo's code is Python/ML, not web tooling, so it needs to read
+            as ambient dark texture rather than literal, readable content. */}
+        <div className="absolute inset-0 bg-[var(--surface-inverse)]/80" />
       </div>
       <GrainOverlay className="opacity-[0.07]" />
       <div ref={rootRef} className="relative mx-auto max-w-3xl">

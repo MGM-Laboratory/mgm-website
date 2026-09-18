@@ -26,7 +26,8 @@ export function OutroStatement() {
           The point
         </p>
         <p className="reveal-card mt-4 font-display text-[clamp(2rem,6vw,4.5rem)] leading-[1.02] font-semibold tracking-tight text-foreground opacity-0">
-          Six monitors. One desk. <span className="text-brand-red">Zero</span> excuses.
+          You bring the idea. We&apos;ll handle the{" "}
+          <span className="text-brand-red">other 40 tabs</span>.
         </p>
       </div>
     </section>

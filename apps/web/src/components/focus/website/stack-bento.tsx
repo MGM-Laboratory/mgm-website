@@ -7,8 +7,19 @@ import { cn } from "@/lib/utils";
 import { useSpotlight } from "@/lib/spotlight";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { WEBSITE_FOCUS_STACK, type FocusStackCategory } from "@/data/website-focus";
-import { TOOL_ICONS } from "@/data/tool-icons";
 import type { CompetencyColor } from "@/data/competencies";
+
+// Non-photo cells carry their accent as a real background tint (the
+// design system's own -50 tokens, paired with the site's established
+// dark-mode convention of swapping to a low-opacity brand fill — see
+// research/projects detail pages) rather than a border-only accent on a
+// white card, which read as thin/generic in review.
+const ACCENT_BG: Record<CompetencyColor, string> = {
+  blue: "bg-brand-blue-50 dark:bg-brand-blue/15",
+  red: "bg-brand-red-50 dark:bg-brand-red/15",
+  yellow: "bg-brand-yellow-50 dark:bg-brand-yellow/20",
+  green: "bg-brand-green-50 dark:bg-brand-green/15",
+};
 
 const ACCENT_BORDER: Record<CompetencyColor, string> = {
   blue: "border-t-brand-blue",
@@ -17,18 +28,11 @@ const ACCENT_BORDER: Record<CompetencyColor, string> = {
   green: "border-t-brand-green",
 };
 
-const ACCENT_CHIP: Record<CompetencyColor, string> = {
-  blue: "bg-brand-blue-50 text-brand-blue",
-  red: "bg-brand-red-50 text-brand-red",
-  yellow: "bg-brand-yellow-50 text-[var(--ink)]",
-  green: "bg-brand-green-50 text-brand-green",
-};
-
 const ACCENT_TEXT: Record<CompetencyColor, string> = {
-  blue: "text-brand-blue",
-  red: "text-brand-red",
-  yellow: "text-[color-mix(in_srgb,var(--brand-yellow)_65%,var(--ink))]",
-  green: "text-brand-green",
+  blue: "text-brand-blue dark:text-[#9db8e8]",
+  red: "text-brand-red dark:text-[#ef9a9a]",
+  yellow: "text-[color-mix(in_srgb,var(--brand-yellow)_65%,var(--ink))] dark:text-[#e3c36a]",
+  green: "text-brand-green dark:text-[#7cc9a5]",
 };
 
 const GRID_SPAN: Record<string, string> = {
@@ -39,21 +43,6 @@ const GRID_SPAN: Record<string, string> = {
   automate: "sm:col-span-1",
   reach: "sm:col-span-4",
 };
-
-function ToolChip({ tool, accent }: Readonly<{ tool: string; accent: CompetencyColor }>) {
-  const Icon = TOOL_ICONS[tool];
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-        ACCENT_CHIP[accent],
-      )}
-    >
-      {Icon ? <Icon size={13} className="shrink-0" /> : null}
-      {tool}
-    </span>
-  );
-}
 
 function BentoCard({ category }: Readonly<{ category: FocusStackCategory }>) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -66,7 +55,9 @@ function BentoCard({ category }: Readonly<{ category: FocusStackCategory }>) {
       className={cn(
         "group/card reveal-card relative flex min-h-[260px] flex-col justify-between overflow-hidden rounded-3xl p-7 opacity-0 sm:p-8",
         GRID_SPAN[category.id],
-        hasPhoto ? "text-white" : cn("border-t-4 bg-background", ACCENT_BORDER[category.accent]),
+        hasPhoto
+          ? "text-white"
+          : cn("border-t-4", ACCENT_BORDER[category.accent], ACCENT_BG[category.accent]),
       )}
     >
       {hasPhoto ? (
@@ -88,7 +79,7 @@ function BentoCard({ category }: Readonly<{ category: FocusStackCategory }>) {
           "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/card:opacity-100",
           hasPhoto
             ? "[background:radial-gradient(360px_circle_at_var(--mx,50%)_var(--my,50%),rgba(255,255,255,0.18),transparent_60%)]"
-            : "[background:radial-gradient(360px_circle_at_var(--mx,50%)_var(--my,50%),rgba(0,0,0,0.05),transparent_60%)] dark:[background:radial-gradient(360px_circle_at_var(--mx,50%)_var(--my,50%),rgba(255,255,255,0.06),transparent_60%)]",
+            : "[background:radial-gradient(360px_circle_at_var(--mx,50%)_var(--my,50%),rgba(0,0,0,0.06),transparent_60%)] dark:[background:radial-gradient(360px_circle_at_var(--mx,50%)_var(--my,50%),rgba(255,255,255,0.08),transparent_60%)]",
         )}
       />
 
@@ -119,11 +110,14 @@ function BentoCard({ category }: Readonly<{ category: FocusStackCategory }>) {
         >
           {category.body}
         </p>
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {category.tools.map((tool) => (
-            <ToolChip key={tool} tool={tool} accent={category.accent} />
-          ))}
-        </div>
+        <p
+          className={cn(
+            "mt-4 font-mono text-xs tracking-wide",
+            hasPhoto ? "text-white/50" : "text-foreground/40",
+          )}
+        >
+          {category.tools.join(" · ")}
+        </p>
       </div>
     </div>
   );
