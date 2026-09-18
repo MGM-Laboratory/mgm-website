@@ -210,9 +210,13 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
   const cardRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const card = cardRef.current;
-    if (!card || reducedMotion()) return;
+    if (!card) return;
     const rows = card.querySelectorAll<HTMLElement>(".info-reveal");
     if (!rows.length) return;
+    if (reducedMotion()) {
+      gsap.set(rows, { opacity: 1, y: 0 });
+      return;
+    }
     const tween = gsap.fromTo(
       rows,
       { opacity: 0, y: 12 },
@@ -229,6 +233,9 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
       ref={cardRef}
       className="rounded-3xl border border-[var(--line)] bg-[var(--surface-muted)] p-6 sm:p-7"
     >
+      <noscript>
+        <style>{".info-reveal{opacity:1 !important}"}</style>
+      </noscript>
       <p className="info-reveal text-xs font-semibold tracking-wide text-foreground/45 uppercase opacity-0">
         Reach us directly
       </p>
