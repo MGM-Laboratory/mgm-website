@@ -1,7 +1,6 @@
 // Content for the /ux Focus page. See docs/project-overview.md for how this
-// fits the other three Focus pages (/game, /website, /mobile).
-
-import type { PipelineStage } from "@/components/focus/shared/focus-pipeline-section";
+// fits the other three Focus pages (/game, /website, /mobile). Process
+// stages live in focus-pipelines.ts instead of here — see that file for why.
 
 export type ResearchPoint = {
   label: string;
@@ -46,11 +45,4 @@ export const EQUIPMENT: EquipmentItem[] = [
   },
   { label: "Figma", body: "Where the studies turn into an actual interface." },
   { label: "Maze", body: "Unmoderated testing at a scale a single researcher can't cover alone." },
-];
-
-export const PROCESS_STAGES: PipelineStage[] = [
-  { label: "Observe", detail: "Real sessions, unscripted tasks" },
-  { label: "Analyze", detail: "Heatmaps, transcripts, patterns across sessions" },
-  { label: "Design", detail: "Wireframe to a clickable prototype in Figma" },
-  { label: "Validate", detail: "Test the fix — don't just ship it and hope" },
 ];

@@ -4,8 +4,9 @@
 // fits the other three Focus pages (/website, /mobile, /ux).
 
 import type { StoryRowItem } from "@/components/focus/shared/focus-story-rows";
-import type { ToolkitRole } from "@/components/focus/shared/focus-toolkit-section";
-import type { PipelineStage } from "@/components/focus/shared/focus-pipeline-section";
+
+// Studio toolkit roles and release stages live in focus-toolkits.ts /
+// focus-pipelines.ts instead of here — see those files for why.
 
 export type PlatformItem = { label: string; detail: string };
 
@@ -24,40 +25,6 @@ export const XR_STATS: XRStat[] = [
   { value: "10+", label: "Meta Quest 3 headsets on the floor" },
   { value: "30", label: "Mac Mini M4s for the team" },
   { value: "VR · AR · MR", label: "Every reality, one team" },
-];
-
-export const STUDIO_ROLES: ToolkitRole[] = [
-  {
-    role: "Engines",
-    tagline: "Whatever the platform actually calls for",
-    story:
-      "Unity for one project, Unreal for the next, Godot when it's the right fit — engineers pick the engine the platform actually needs instead of forcing every idea through the same pipeline.",
-  },
-  {
-    role: "Art & animation",
-    tagline: "From first sketch to a motion-captured performance",
-    story:
-      "Twenty-one big drawing tablets get used every day, not just for concept art — the same artists take a character from a sketch through the motion-capture rig to a finished in-game performance.",
-  },
-  {
-    role: "Audio",
-    tagline: "Scored and sound-designed in house",
-    story:
-      "Nobody's licensing a stock soundtrack. Tracks get built on real studio gear and mixed by hand, by people in the building who watched the scene they're scoring.",
-  },
-  {
-    role: "Engineering & hardware",
-    tagline: "A real device farm, not a simulator guess",
-    story:
-      "Every build gets tested across macOS, Windows, and Linux rigs, on whatever screen a player might actually use — engineers debugging multiplayer sync over a real network, not assuming it just works.",
-  },
-];
-
-export const RELEASE_STAGES: PipelineStage[] = [
-  { label: "Prototype", detail: "Playable in days, not sprints" },
-  { label: "Playtest", detail: "Real hands on real hardware before anything ships" },
-  { label: "Publish", detail: "Steam, Google Play Console, Apple Developer — ready to go" },
-  { label: "Support", detail: "Patches, live-ops, and marketing help after launch" },
 ];
 
 export const PUBLISHING_TOOLS: string[] = [

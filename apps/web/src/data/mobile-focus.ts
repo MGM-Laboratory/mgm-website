@@ -1,11 +1,11 @@
 // Content for the /mobile Focus page. Same rule as website-focus.ts: casual,
 // specific, written for a working mobile developer — not a capability deck.
 // See docs/project-overview.md for how this fits the other three Focus pages
-// (/game, /website, /ux).
+// (/game, /website, /ux). Toolkit roles and pipeline stages live in
+// focus-toolkits.ts / focus-pipelines.ts instead of here — see those files
+// for why.
 
 import type { PatternKind, PatternTone } from "@/components/process/pattern-tile";
-import type { ToolkitRole } from "@/components/focus/shared/focus-toolkit-section";
-import type { PipelineStage } from "@/components/focus/shared/focus-pipeline-section";
 
 export type DeviceStat = {
   value: string;
@@ -31,34 +31,6 @@ export const DEVICE_STATS: DeviceStat[] = [
     label: "Virtual Android instances",
     detail: "For parallel, mass-scale testing no shelf of physical phones could cover alone.",
   },
-];
-
-export const TOOLKIT_ROLES: ToolkitRole[] = [
-  {
-    role: "Product & PM",
-    tagline: "Same discipline, a different shelf of hardware to plan around",
-    story:
-      "Same discipline as the web team — a plan in Jira, a doc in Notion, and a PM who pushes back on scope creep before it turns into a delayed release. Every feature earns its spot on the roadmap by solving something a real user actually hit.",
-  },
-  {
-    role: "Design & UX",
-    tagline: "From a wireframe to a prototype you can actually tap through",
-    story:
-      "Screens get drawn in Figma and tested in Maze before a single line of Swift or Kotlin gets written, so the team already knows a flow works before it's expensive to change.",
-  },
-  {
-    role: "Engineering",
-    tagline: "Native feel, built and debugged by hand",
-    story:
-      "Real coding work, on real devices — engineers writing native code, testing it on the hardware sitting on the shelf, and fixing what breaks instead of trusting a simulator to catch it first.",
-  },
-];
-
-export const PIPELINE_STAGES: PipelineStage[] = [
-  { label: "Prototype", detail: "Expo Pro — on a real device in minutes, not a build queue" },
-  { label: "Internal testing", detail: "TestFlight and Play Console internal tracks" },
-  { label: "Store review", detail: "Apple Developer and Google Play Console submissions" },
-  { label: "Live", detail: "Shipped to the store, monitored from day one" },
 ];
 
 export type HistoryHighlight = {

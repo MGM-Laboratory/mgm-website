@@ -1,5 +1,5 @@
 import { FocusToolkitSection } from "../shared/focus-toolkit-section";
-import { TOOLKIT_ROLES } from "@/data/mobile-focus";
+import { toolkitRolesFor } from "@/data/focus-toolkits";
 
 const ACCENT_VARS = ["var(--brand-red)", "var(--brand-yellow)", "var(--brand-blue)"];
 
@@ -10,7 +10,7 @@ export function ToolkitSection() {
       eyebrowClassName="text-brand-red"
       headline="Every role gets the tools it actually needs."
       body="Same discipline as our web team — a real toolkit per role, not one shared login sheet nobody's updated since the app was approved."
-      roles={TOOLKIT_ROLES}
+      roles={toolkitRolesFor("mobile")}
       accentVars={ACCENT_VARS}
     />
   );
