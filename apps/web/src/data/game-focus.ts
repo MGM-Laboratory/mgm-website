@@ -4,6 +4,8 @@
 // fits the other three Focus pages (/website, /mobile, /ux).
 
 import type { StoryRowItem } from "@/components/focus/shared/focus-story-rows";
+import type { ToolkitRole } from "@/components/focus/shared/focus-toolkit-section";
+import type { PipelineStage } from "@/components/focus/shared/focus-pipeline-section";
 
 export type PlatformItem = { label: string; detail: string };
 
@@ -24,13 +26,7 @@ export const XR_STATS: XRStat[] = [
   { value: "VR · AR · MR", label: "Every reality, one team" },
 ];
 
-export type StudioRole = {
-  role: string;
-  tagline: string;
-  story: string;
-};
-
-export const STUDIO_ROLES: StudioRole[] = [
+export const STUDIO_ROLES: ToolkitRole[] = [
   {
     role: "Engines",
     tagline: "Whatever the platform actually calls for",
@@ -57,12 +53,7 @@ export const STUDIO_ROLES: StudioRole[] = [
   },
 ];
 
-export type ReleaseStage = {
-  label: string;
-  detail: string;
-};
-
-export const RELEASE_STAGES: ReleaseStage[] = [
+export const RELEASE_STAGES: PipelineStage[] = [
   { label: "Prototype", detail: "Playable in days, not sprints" },
   { label: "Playtest", detail: "Real hands on real hardware before anything ships" },
   { label: "Publish", detail: "Steam, Google Play Console, Apple Developer — ready to go" },

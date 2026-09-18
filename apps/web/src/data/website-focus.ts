@@ -3,6 +3,9 @@
 // corporate capability statement. See docs/project-overview.md for how this
 // fits the other three Focus pages (/game, /mobile, /ux).
 
+import type { ToolkitRole } from "@/components/focus/shared/focus-toolkit-section";
+import type { PipelineStage } from "@/components/focus/shared/focus-pipeline-section";
+
 export type BuildKind = {
   label: string;
   kicker: string;
@@ -32,12 +35,6 @@ export const BUILD_KINDS: BuildKind[] = [
   },
 ];
 
-export type ToolkitRole = {
-  role: string;
-  tagline: string;
-  story: string;
-};
-
 export const TOOLKIT_ROLES: ToolkitRole[] = [
   {
     role: "Product & PM",
@@ -58,11 +55,6 @@ export const TOOLKIT_ROLES: ToolkitRole[] = [
       "This is real coding work — engineers writing the code, reading each other's pull requests, and debugging the thing at 11pm when it breaks. No shortcuts, no black box deciding what ships; just people who know the codebase because they built it.",
   },
 ];
-
-export type PipelineStage = {
-  label: string;
-  detail: string;
-};
 
 // Mirrors this repo's actual pipeline (see docs/ci-cd.md) — not a stock
 // diagram. Push to main triggers exactly these four stages, in order.

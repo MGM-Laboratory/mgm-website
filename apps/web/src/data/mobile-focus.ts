@@ -4,6 +4,8 @@
 // (/game, /website, /ux).
 
 import type { PatternKind, PatternTone } from "@/components/process/pattern-tile";
+import type { ToolkitRole } from "@/components/focus/shared/focus-toolkit-section";
+import type { PipelineStage } from "@/components/focus/shared/focus-pipeline-section";
 
 export type DeviceStat = {
   value: string;
@@ -31,16 +33,10 @@ export const DEVICE_STATS: DeviceStat[] = [
   },
 ];
 
-export type ToolkitRole = {
-  role: string;
-  tagline: string;
-  story: string;
-};
-
 export const TOOLKIT_ROLES: ToolkitRole[] = [
   {
     role: "Product & PM",
-    tagline: "Keeping the build pointed at something real",
+    tagline: "Same discipline, a different shelf of hardware to plan around",
     story:
       "Same discipline as the web team — a plan in Jira, a doc in Notion, and a PM who pushes back on scope creep before it turns into a delayed release. Every feature earns its spot on the roadmap by solving something a real user actually hit.",
   },
@@ -57,11 +53,6 @@ export const TOOLKIT_ROLES: ToolkitRole[] = [
       "Real coding work, on real devices — engineers writing native code, testing it on the hardware sitting on the shelf, and fixing what breaks instead of trusting a simulator to catch it first.",
   },
 ];
-
-export type PipelineStage = {
-  label: string;
-  detail: string;
-};
 
 export const PIPELINE_STAGES: PipelineStage[] = [
   { label: "Prototype", detail: "Expo Pro — on a real device in minutes, not a build queue" },
