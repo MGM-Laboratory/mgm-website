@@ -1,27 +1,10 @@
-import { NextResponse } from "next/server";
-
-import { requireAdminPermission } from "@/lib/admin-session";
-import { cmsApi } from "@/lib/cms-api";
-
-type Context = { params: Promise<{ slug: string }> };
+import { gateAdminRequest, slugPostRoute } from "@/lib/admin-proxy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// BlockNote image embeds for job descriptions; the payload is a base64 data
-// URL, relayed as JSON the same way article covers are.
-export async function POST(request: Request, { params }: Context) {
-  const gate = await requireAdminPermission("careers", "write");
-  if (gate.status !== 200) {
-    return NextResponse.json(
-      { error: gate.status === 401 ? "Unauthorized" : "Forbidden" },
-      { status: gate.status },
-    );
-  }
-  const { slug } = await params;
-  const response = await cmsApi(`/cms/jobs/${encodeURIComponent(slug)}/media`, {
-    body: JSON.stringify(await request.json()),
-    method: "POST",
-  });
-  return NextResponse.json(await response.json(), { status: response.status });
-}
+// BlockNote image embeds use the same JSON relay as other record media.
+export const { POST } = slugPostRoute(
+  () => gateAdminRequest("careers", "write"),
+  (slug) => `/cms/jobs/${encodeURIComponent(slug)}/media`,
+);

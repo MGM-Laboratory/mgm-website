@@ -44,6 +44,49 @@ export async function proxyJson(path: string, init?: RequestInit): Promise<NextR
 
 type SlugContext = { params: Promise<{ slug: string }> };
 
+type JsonRequest = Request;
+
+/** A JSON PUT route whose CMS target is derived from its `[slug]` segment. */
+export function slugPutRoute(gate: () => Promise<AdminGate>, cmsPath: (slug: string) => string) {
+  return {
+    async PUT(request: JsonRequest, { params }: SlugContext) {
+      const g = await gate();
+      if (!g.ok) return g.response;
+      const { slug } = await params;
+      return proxyJson(cmsPath(slug), {
+        body: JSON.stringify(await request.json()),
+        method: "PUT",
+      });
+    },
+  };
+}
+
+/** A JSON POST route whose CMS target is derived from its `[slug]` segment. */
+export function slugPostRoute(gate: () => Promise<AdminGate>, cmsPath: (slug: string) => string) {
+  return {
+    async POST(request: JsonRequest, { params }: SlugContext) {
+      const g = await gate();
+      if (!g.ok) return g.response;
+      const { slug } = await params;
+      return proxyJson(cmsPath(slug), {
+        body: JSON.stringify(await request.json()),
+        method: "POST",
+      });
+    },
+  };
+}
+
+/** A JSON POST route with a fixed CMS target. */
+export function postRoute(gate: () => Promise<AdminGate>, cmsPath: string) {
+  return {
+    async POST(request: JsonRequest) {
+      const g = await gate();
+      if (!g.ok) return g.response;
+      return proxyJson(cmsPath, { body: JSON.stringify(await request.json()), method: "POST" });
+    },
+  };
+}
+
 /**
  * A GET-list route: gate on read, then proxy straight through. Every simple
  * CMS resource (articles, careers, projects, …) has one of these — a
