@@ -302,7 +302,11 @@ export function JobApplicationForm({
               Phone number
             </label>
             <div className="flex gap-3">
-              <PhoneCountrySelect onChange={setPhoneCountry} value={phoneCountry} />
+              <PhoneCountrySelect
+                hasError={Boolean(phoneError)}
+                onChange={setPhoneCountry}
+                value={phoneCountry}
+              />
               <input
                 aria-describedby={phoneError ? "phone-error" : undefined}
                 autoComplete="tel"
