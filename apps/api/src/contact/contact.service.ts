@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import type { ContactFormPayload } from "@repo/shared";
 import type { Prisma } from "../generated/prisma/client.js";
 
@@ -6,6 +7,8 @@ import { CmsContactInquiriesService } from "../cms/cms-contact-inquiries.service
 import { CmsContactSettingsService } from "../cms/cms-contact-settings.service.js";
 import { MailService } from "../mail/mail.service.js";
 import { StorageService } from "../storage/storage.service.js";
+import { buildContactConfirmationEmail } from "../mail/templates/contact-confirmation-email.js";
+import type { Env } from "../config/env.validation.js";
 
 function escapeHtml(value: string) {
   return value
@@ -18,11 +21,14 @@ function escapeHtml(value: string) {
 
 @Injectable()
 export class ContactService {
+  private readonly logger = new Logger(ContactService.name);
+
   constructor(
     private readonly mail: MailService,
     private readonly storage: StorageService,
     private readonly settings: CmsContactSettingsService,
     private readonly inquiries: CmsContactInquiriesService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   /**
@@ -80,5 +86,31 @@ export class ContactService {
       weights: settings.mailProviderWeights,
       limits: settings.mailProviderLimits,
     });
+
+    // A missing/misconfigured provider must never surface as a failed
+    // submission — the inquiry is already safely stored above, and the
+    // notification to the lab already went out (or was attempted) via the
+    // call above. This confirmation is a courtesy, not the source of truth.
+    try {
+      await this.mail.sendEmail({
+        to: payload.email,
+        subject: "We've received your message — MGM Laboratory",
+        html: buildContactConfirmationEmail({
+          name: payload.name,
+          message: payload.message,
+          siteUrl: this.config.get("PUBLIC_WEB_URL"),
+        }),
+        strategy: settings.mailStrategy,
+        providerOrder: settings.mailProviderOrder,
+        weights: settings.mailProviderWeights,
+        limits: settings.mailProviderLimits,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Could not send confirmation email to ${payload.email}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 }
