@@ -1,18 +1,33 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
-import { COUNTRY_CODES, countryFlag, DEFAULT_COUNTRY } from "@/lib/country-codes";
+import { COUNTRY_CODES, countryFlag } from "@/lib/country-codes";
+
+function findIndex(dial: string) {
+  return Math.max(
+    0,
+    COUNTRY_CODES.findIndex((country) => country.dial === dial),
+  );
+}
 
 /**
- * A custom listbox rather than a native <select>: macOS Safari's default
- * keyboard-navigation mode excludes <select> (and <button>) from the Tab
- * order, only including text fields — which made this control unreachable
- * by Tab for anyone on default settings. This trigger reads and behaves
- * like a text control, so it stays in the Tab sequence everywhere, and it
- * also lets us draw and position our own chevron instead of relying on the
- * OS-drawn arrow a native <select> can't reposition.
+ * A select-only combobox (WAI-ARIA APG pattern) rather than a native
+ * <select> or a <button>-triggered listbox: macOS Safari's default
+ * keyboard-navigation mode excludes <select>, <button>, checkboxes, and
+ * radios from the Tab order — only text fields (and links) are included —
+ * so a <button> trigger is just as unreachable by Tab as the native
+ * <select> it replaced. A read-only text input stays a real text field for
+ * Tab purposes everywhere, and it lets us draw and position our own
+ * chevron instead of relying on the OS-drawn arrow a native <select> can't
+ * reposition.
+ *
+ * Selection is tracked by list index, not by dial string: several
+ * countries share a calling code (US/Canada both use +1), so resolving
+ * "the selected country" from the dial value alone can't tell them apart
+ * and would silently re-resolve a Canada selection back to the first +1
+ * match (the United States).
  */
 export function PhoneCountrySelect({
   value,
@@ -24,17 +39,14 @@ export function PhoneCountrySelect({
   hasError?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [highlight, setHighlight] = useState(() =>
-    Math.max(
-      0,
-      COUNTRY_CODES.findIndex((country) => country.dial === value),
-    ),
-  );
+  const [selectedIndex, setSelectedIndex] = useState(() => findIndex(value));
+  const [highlight, setHighlight] = useState(selectedIndex);
   const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const listboxId = useId();
 
-  const selected = COUNTRY_CODES.find((country) => country.dial === value) ?? DEFAULT_COUNTRY;
+  const selected = COUNTRY_CODES[selectedIndex];
 
   useEffect(() => {
     if (!open) return;
@@ -51,70 +63,77 @@ export function PhoneCountrySelect({
     el?.scrollIntoView({ block: "nearest" });
   }, [open, highlight]);
 
+  function openList() {
+    setHighlight(selectedIndex);
+    setOpen(true);
+  }
+
   function select(index: number) {
-    const country = COUNTRY_CODES[index];
-    onChange(country.dial);
-    setHighlight(index);
+    setSelectedIndex(index);
+    onChange(COUNTRY_CODES[index].dial);
     setOpen(false);
-    triggerRef.current?.focus();
+    inputRef.current?.focus();
   }
 
   return (
     <div className="relative w-[128px] shrink-0" ref={containerRef}>
-      <button
+      <input
+        aria-activedescendant={open ? `${listboxId}-${highlight}` : undefined}
+        aria-controls={listboxId}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label="Country code"
-        className={`flex h-12 w-full items-center justify-between gap-1 rounded-xl border bg-white pl-3 pr-2.5 text-[15px] text-[var(--ink)] outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:bg-[#15181e] dark:text-white ${
+        className={`h-12 w-full cursor-pointer rounded-xl border bg-white pl-3 pr-8 text-[15px] text-[var(--ink)] caret-transparent outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:bg-[#15181e] dark:text-white ${
           hasError
             ? "border-brand-red/60 dark:border-brand-red/50"
             : "border-[var(--line-strong)] dark:border-white/10"
         }`}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => (open ? setOpen(false) : openList())}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown") {
             event.preventDefault();
-            if (!open) setOpen(true);
+            if (!open) openList();
             else setHighlight((current) => Math.min(current + 1, COUNTRY_CODES.length - 1));
           } else if (event.key === "ArrowUp") {
             event.preventDefault();
-            if (!open) setOpen(true);
+            if (!open) openList();
             else setHighlight((current) => Math.max(current - 1, 0));
           } else if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             if (open) select(highlight);
-            else setOpen(true);
+            else openList();
           } else if (event.key === "Escape" && open) {
             event.preventDefault();
             setOpen(false);
           }
         }}
-        ref={triggerRef}
-        type="button"
-      >
-        <span className="truncate">
-          {countryFlag(selected.code)} {selected.dial}
-        </span>
-        <ChevronDown
-          aria-hidden="true"
-          className={`size-4 shrink-0 text-[var(--ink-3)] transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
+        readOnly
+        ref={inputRef}
+        role="combobox"
+        type="text"
+        value={`${countryFlag(selected.code)} ${selected.dial}`}
+      />
+      <ChevronDown
+        aria-hidden="true"
+        className={`pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--ink-3)] transition-transform ${open ? "rotate-180" : ""}`}
+      />
       {open ? (
         <ul
           aria-label="Country code options"
           className="absolute z-20 mt-1.5 max-h-64 w-56 overflow-y-auto rounded-xl border border-[var(--line-strong)] bg-white p-1 shadow-[var(--shadow-2)] dark:border-white/10 dark:bg-[#15181e]"
+          id={listboxId}
           ref={listRef}
           role="listbox"
         >
           {COUNTRY_CODES.map((country, index) => (
             <li
-              aria-selected={country.dial === value}
+              aria-selected={index === selectedIndex}
               className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                 index === highlight
                   ? "bg-brand-blue/10 text-brand-blue"
                   : "text-[var(--ink)] dark:text-white"
               }`}
+              id={`${listboxId}-${index}`}
               key={country.code}
               onMouseDown={(event) => {
                 event.preventDefault();
