@@ -15,16 +15,32 @@ import { LogoMark } from "@/components/hero/shapes";
  *    always lands on white before the real destination shows through,
  *    rather than cutting straight from the colored curtain to the page.
  * 2. The brand-blue backdrop with a white MGM mark on top of that wash. The
- *    mark starts at giant scale, offset off-center so a solid region of its
- *    own linework (not just its empty space) fills the frame, then shrinks,
- *    un-rotates, and slides back to center together as it settles into its
- *    idle size. It holds there (with a breathing loop if the destination is
+ *    mark scales up to giant and back down to its idle size, un-rotating as
+ *    it settles. It holds there (with a breathing loop if the destination is
  *    genuinely slow), then reverses fast once the destination is ready.
  *
  * The giant scale is computed from the logo's own measured size and the
  * current viewport diagonal (not hardcoded), then multiplied by
- * GIANT_SCALE_MULTIPLIER for a dramatic close-up rather than a neatly
- * fitted mark — the same scale is used on both the cover-in and reveal-out.
+ * GIANT_SCALE_MULTIPLIER for a dramatic close-up rather than a neatly fitted
+ * mark — the same scale is used on both the cover-in and reveal-out.
+ *
+ * LOGO_PIVOT is the actual coverage mechanism, and it matters more than the
+ * multiplier: scaling from the mark's own center pivots on a point that
+ * sits in the empty space between its three shards, so growing from center
+ * mostly reveals more of that empty gap, not more solid white — no
+ * multiplier fixes that. LOGO_PIVOT instead re-centers the scale transform
+ * on a point deep inside one shard's solid fill (found empirically — see
+ * the PR description for the verification method: render the mark alone at
+ * a candidate pivot and scale, then sample element-under-pointer at all
+ * four viewport corners plus center across several aspect ratios). Scaling
+ * from a true interior point is a "zoom into a point" operation: every
+ * other point in the mark recedes from view as scale grows, so sufficient
+ * scale is *guaranteed* to fill the viewport with solid color, regardless of
+ * aspect ratio — confirmed at 8x for standard viewports but not for an
+ * ultrawide (2560×1080) until 12x, which is why the multiplier below is 12,
+ * not 8. Because scale=1 (idle) makes any transform-origin a no-op, this
+ * off-center pivot never visibly affects the centered idle mark — it only
+ * matters while giant.
  *
  * Scope: this only ever engages for client-side navigations triggered by an
  * in-app link click (see the capture-phase click listener below) or a
@@ -43,20 +59,14 @@ const GROW_DURATION = 0.4;
 const GROW_TO_ROTATION = 18;
 const FADE_OUT_DURATION = 0.22;
 const GIANT_SCALE_MARGIN = 1.15;
-// The "just covers the viewport" scale, times this — big enough that a
-// single solid region of the mark's own linework (not the whole compact
-// three-shard cluster, and not just the empty space between shards) spans
-// the screen on its own, on both the cover-in and the reveal-out.
-const GIANT_SCALE_MULTIPLIER = 8;
-// Percent-of-its-own-(scaled)-box offset applied to the mark while giant, so
-// scaling up doesn't just zoom into empty space around a fixed center. The
-// cover-in starts offset and slides to center as it shrinks; the reveal-out
-// starts centered and slides off to (the mirrored) offset as it grows —
-// "shift the position... move it to center when animating in, same for out."
-const COVER_OFFSET_X = -26;
-const COVER_OFFSET_Y = 20;
-const REVEAL_OFFSET_X = 26;
-const REVEAL_OFFSET_Y = -20;
+// See LOGO_PIVOT above: 12x the "just covers the viewport" scale, verified
+// empirically to fully cover every sampled corner across five aspect ratios
+// (8x left the corners of an ultrawide viewport uncovered).
+const GIANT_SCALE_MULTIPLIER = 12;
+// A point inside the left leg's solid stroke, expressed as a percentage of
+// the mark's own viewBox (57.5 86.0265 660 660) — see the multiplier
+// comment above for how this was found and verified.
+const LOGO_PIVOT = "30% 27%";
 const CEILING_MS = 8000;
 // Time-based, not tied to the pathname-change effect: if the destination is
 // slow enough that even its loading.tsx shell hasn't arrived yet,
@@ -113,6 +123,21 @@ export function RouteTransition() {
     window.addEventListener("resize", syncViewportSize);
     return () => window.removeEventListener("resize", syncViewportSize);
   }, []);
+
+  // Set once, never animated — see LOGO_PIVOT above. A no-op at scale:1, so
+  // it never touches the centered idle appearance.
+  useEffect(() => {
+    if (logoRef.current) gsap.set(logoRef.current, { transformOrigin: LOGO_PIVOT });
+  }, []);
+
+  // Inline style, not a second Tailwind class: `pointer-events-auto` and the
+  // static `pointer-events-none` default resolve by generated-CSS order,
+  // not by which was added to the classList more recently, so toggling the
+  // class never reliably took effect (confirmed in the PR description). An
+  // inline style always wins over any class regardless of order.
+  function setOverlayBlocking(blocking: boolean) {
+    if (overlayRef.current) overlayRef.current.style.pointerEvents = blocking ? "auto" : "";
+  }
 
   function getGiantScale() {
     if (!logoRef.current) return 20;
@@ -190,10 +215,9 @@ export function RouteTransition() {
       onComplete: () => {
         if (overlayRef.current) {
           gsap.set(overlayRef.current, { autoAlpha: 0 });
-          overlayRef.current.classList.remove("pointer-events-auto");
+          setOverlayBlocking(false);
         }
-        if (logoRef.current)
-          gsap.set(logoRef.current, { scale: 1, rotation: 0, xPercent: 0, yPercent: 0 });
+        if (logoRef.current) gsap.set(logoRef.current, { scale: 1, rotation: 0 });
         if (whiteRef.current) gsap.set(whiteRef.current, { autoAlpha: 0 });
         pendingRef.current = freshPendingState();
       },
@@ -206,8 +230,6 @@ export function RouteTransition() {
     tl.to(logoRef.current, {
       scale: giantScale,
       rotation: GROW_TO_ROTATION,
-      xPercent: REVEAL_OFFSET_X,
-      yPercent: REVEAL_OFFSET_Y,
       duration: GROW_DURATION,
       ease: "power2.in",
     });
@@ -271,18 +293,16 @@ export function RouteTransition() {
       return;
     pendingRef.current = { ...freshPendingState(), active: true };
 
-    overlayRef.current.classList.add("pointer-events-auto");
+    setOverlayBlocking(true);
 
     const giantScale = getGiantScale();
-    // The logo starts already giant and off-center (a solid region of its
-    // own linework fills the frame, not just empty space around a fixed
-    // center) — settles for a beat, then shrinks, un-rotates, and slides
-    // back to center together into its idle position.
+    // The logo starts already giant — that's the cover, on its own, the
+    // instant it appears (LOGO_PIVOT is what makes this solid white rather
+    // than empty gap) — settles for a beat, then shrinks and un-rotates
+    // down into its idle position.
     gsap.set(logoRef.current, {
       scale: giantScale,
       rotation: SHRINK_FROM_ROTATION,
-      xPercent: COVER_OFFSET_X,
-      yPercent: COVER_OFFSET_Y,
       opacity: 1,
     });
 
@@ -307,8 +327,6 @@ export function RouteTransition() {
       {
         scale: 1,
         rotation: 0,
-        xPercent: 0,
-        yPercent: 0,
         duration: SHRINK_DURATION,
         ease: "power3.out",
       },
@@ -329,10 +347,10 @@ export function RouteTransition() {
       isPopstate: true,
     };
 
-    overlayRef.current.classList.add("pointer-events-auto");
+    setOverlayBlocking(true);
     gsap.set(whiteRef.current, { autoAlpha: 1 });
     gsap.set(overlayRef.current, { autoAlpha: 1 });
-    gsap.set(logoRef.current, { scale: 1, rotation: 0, xPercent: 0, yPercent: 0, opacity: 1 });
+    gsap.set(logoRef.current, { scale: 1, rotation: 0, opacity: 1 });
 
     armTimers();
   }
