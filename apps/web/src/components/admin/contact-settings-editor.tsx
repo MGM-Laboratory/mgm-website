@@ -7,6 +7,8 @@ import {
   Check,
   DotsSixVertical,
   FloppyDisk,
+  Plus,
+  Trash,
 } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -239,7 +241,7 @@ async function responseError(response: Response, fallback: string) {
 }
 
 type FormState = {
-  email: string;
+  emails: string[];
   address: string;
   lat: string;
   lng: string;
@@ -250,7 +252,7 @@ type FormState = {
 };
 
 const toForm = (settings: ContactSettings): FormState => ({
-  email: settings.email,
+  emails: settings.emails.length ? [...settings.emails] : [""],
   address: settings.address,
   lat: String(settings.lat),
   lng: String(settings.lng),
@@ -266,8 +268,13 @@ function numOrUndefined(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function validateContactSettingsForm(form: FormState): string | null {
-  if (!form.email.trim()) return "Email is required.";
+  const emails = form.emails.map((email) => email.trim()).filter(Boolean);
+  if (!emails.length) return "Add at least one recipient email.";
+  const invalid = emails.find((email) => !EMAIL_PATTERN.test(email));
+  if (invalid) return `"${invalid}" is not a valid email address.`;
   if (!form.address.trim()) return "Address is required.";
   const lat = Number(form.lat);
   if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
@@ -278,6 +285,59 @@ function validateContactSettingsForm(form: FormState): string | null {
     return "Longitude must be a number between -180 and 180.";
   }
   return null;
+}
+
+// Recipient emails — every configured address receives a copy of each new
+// inquiry notification (see MailService.sendEmail, which already accepts
+// `to: string[]`). At least one row always stays on screen so the list can
+// never be emptied down to nothing from the UI itself.
+function EmailListEditor({
+  emails,
+  disabled,
+  onChange,
+}: Readonly<{
+  emails: string[];
+  disabled: boolean;
+  onChange: (emails: string[]) => void;
+}>) {
+  return (
+    <div className="space-y-2">
+      {emails.map((email, index) => (
+        // skipcq: JS-0437 -- rows are edited by index, not reordered/keyed by identity
+        <div className="flex items-center gap-2" key={index}>
+          <input
+            className={inputClass}
+            disabled={disabled}
+            onChange={(event) => {
+              const next = [...emails];
+              next[index] = event.target.value;
+              onChange(next);
+            }}
+            placeholder="hi@labmgm.org"
+            type="email"
+            value={email}
+          />
+          <button
+            aria-label={`Remove recipient ${index + 1}`}
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl text-[#69748a] transition hover:bg-[#eef1f6] disabled:cursor-not-allowed disabled:opacity-30 dark:text-white/50 dark:hover:bg-white/[0.06]"
+            disabled={disabled || emails.length <= 1}
+            onClick={() => onChange(emails.filter((_, i) => i !== index))}
+            type="button"
+          >
+            <Trash size={16} weight="bold" />
+          </button>
+        </div>
+      ))}
+      <button
+        className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[#d9dfeb] px-3 py-2 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/15 dark:hover:bg-white/[0.06]"
+        disabled={disabled}
+        onClick={() => onChange([...emails, ""])}
+        type="button"
+      >
+        <Plus size={14} weight="bold" /> Add recipient
+      </button>
+    </div>
+  );
 }
 
 function ProviderOrderList({
@@ -702,7 +762,7 @@ export function ContactSettingsEditor({
 }>) {
   const [ready, setReady] = useState(false);
   const [form, setForm] = useState<FormState>({
-    email: "",
+    emails: [""],
     address: "",
     lat: "",
     lng: "",
@@ -815,7 +875,7 @@ export function ContactSettingsEditor({
       const response = await fetch("/api/admin/contact-settings", {
         body: JSON.stringify({
           address: form.address.trim(),
-          email: form.email.trim(),
+          emails: form.emails.map((email) => email.trim()).filter(Boolean),
           lat,
           lng,
           mailStrategy: form.mailStrategy,
@@ -862,7 +922,8 @@ export function ContactSettingsEditor({
             Contact Settings
           </h1>
           <p className="mt-2 text-sm text-[#69748a] dark:text-white/50">
-            The recipient inbox, HQ address, and map coordinates shown on the public /contact page.
+            The recipient inboxes and HQ address shown on the public /contact page. Coordinates
+            power the &ldquo;Open in Maps&rdquo; link only — no map is embedded on the site.
           </p>
         </div>
       </div>
@@ -885,16 +946,17 @@ export function ContactSettingsEditor({
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Field label="Recipient email">
-            <input
-              className={inputClass}
-              disabled={!ready}
-              onChange={(event) => update({ email: event.target.value })}
-              placeholder="hi@labmgm.org"
-              type="email"
-              value={form.email}
-            />
-          </Field>
+          <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+            Recipient emails
+          </span>
+          <EmailListEditor
+            disabled={!ready}
+            emails={form.emails}
+            onChange={(emails) => update({ emails })}
+          />
+          <p className="mt-2 text-xs text-[#8b93a6] dark:text-white/40">
+            Every address here gets a copy of each new inquiry notification.
+          </p>
         </div>
         <div className="sm:col-span-2">
           <Field label="HQ address">

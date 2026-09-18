@@ -71,7 +71,7 @@ export class ContactService {
     const settings = await this.settings.get();
 
     await this.mail.sendEmail({
-      to: settings.email,
+      to: settings.emails,
       subject: `New contact form message from ${payload.name}`,
       html,
       replyTo: payload.email,
