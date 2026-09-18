@@ -52,7 +52,10 @@ test.describe("footer", () => {
     await page.goto("/");
 
     const instagram = page.locator('footer a[href="https://www.instagram.com/labmgmfilkomub/"]');
-    await instagram.scrollIntoViewIfNeeded();
+    for (let i = 0; i < 30; i++) {
+      await page.mouse.wheel(0, 500);
+    }
+    await expect(instagram).toBeInViewport();
     await instagram.hover();
 
     await expect
