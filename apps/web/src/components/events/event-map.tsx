@@ -3,7 +3,6 @@
 import { ArrowSquareOut, MapPin } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
-import { MapLibreFallback } from "@/components/maps/maplibre-fallback";
 import { env } from "@/lib/env";
 import { loadGoogleMaps } from "@/lib/google-maps-loader";
 
@@ -24,9 +23,9 @@ type EventMapProps = {
 };
 
 /**
- * Google Maps is tried first whenever a browser API key is configured; any
- * failure to load or authenticate (or no key at all) falls back to the
- * MapLibre/OpenFreeMap renderer instead of a broken or empty box.
+ * Google Maps only. Any failure to load or authenticate (or no key
+ * configured at all) falls back to a plain "Open in Google Maps" link
+ * instead of a broken or empty box.
  */
 export function EventMap(props: EventMapProps) {
   const { lat, lng, address, label } = props;
@@ -61,7 +60,7 @@ export function EventMap(props: EventMapProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey, hasCoords, lat, lng]);
 
-  if (!hasCoords) {
+  if (!hasCoords || googleFailed) {
     return (
       <div className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)] p-6">
         <p className="flex items-center gap-2 text-sm font-medium text-[var(--ink)] dark:text-white">
@@ -81,11 +80,7 @@ export function EventMap(props: EventMapProps) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--line)]">
-      {googleFailed ? (
-        <MapLibreFallback label={label} lat={lat!} lng={lng!} className="h-72 w-full sm:h-96" />
-      ) : (
-        <div className="h-72 w-full sm:h-96" ref={containerRef} />
-      )}
+      <div className="h-72 w-full sm:h-96" ref={containerRef} />
     </div>
   );
 }
