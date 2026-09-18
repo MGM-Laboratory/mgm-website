@@ -1,8 +1,14 @@
-import { CalendarBlank, MapPin, Microphone, Ticket } from "@phosphor-icons/react/dist/ssr";
+import {
+  CalendarBlank,
+  CalendarX,
+  MapPin,
+  Microphone,
+  Ticket,
+} from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
 import { EventDateTime } from "@/components/events/event-date-time";
-import type { CmsEventRecord } from "@/lib/events-cms";
+import { isEventPast, type CmsEventRecord } from "@/lib/events-cms";
 
 function mediaUrl(key?: string) {
   return key ? `/api/events-cms/media/${encodeURIComponent(key)}` : undefined;
@@ -16,6 +22,7 @@ function mediaUrl(key?: string) {
  */
 export function EventCard({ event }: { event: CmsEventRecord }) {
   const thumbnail = mediaUrl(event.thumbnailKey);
+  const isPast = isEventPast(event);
   const speakerNames = event.speakers
     .map((speaker) => speaker.name)
     .filter(Boolean)
@@ -64,13 +71,20 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
       </div>
 
       {event.registrationEnabled ? (
-        <Link
-          className="relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full bg-brand-blue px-3.5 text-xs font-semibold text-white transition hover:bg-brand-blue/90"
-          href={`/events/${event.slug}`}
-        >
-          <Ticket size={14} weight="bold" />
-          Register
-        </Link>
+        isPast ? (
+          <span className="relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full border border-[var(--line)] px-3.5 text-xs font-semibold text-[var(--ink-3)] dark:border-white/10">
+            <CalendarX size={14} weight="bold" />
+            Event ended
+          </span>
+        ) : (
+          <Link
+            className="relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full bg-brand-blue px-3.5 text-xs font-semibold text-white transition hover:bg-brand-blue/90"
+            href={`/events/${event.slug}`}
+          >
+            <Ticket size={14} weight="bold" />
+            Register
+          </Link>
+        )
       ) : null}
     </li>
   );

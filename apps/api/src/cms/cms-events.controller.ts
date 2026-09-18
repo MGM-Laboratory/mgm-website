@@ -427,6 +427,9 @@ export class CmsEventsController {
     if (event.registrationEnabled !== true) {
       throw new ConflictException("This event is not accepting registrations.");
     }
+    if (typeof event.endAt === "string" && new Date(event.endAt) < new Date()) {
+      throw new ConflictException("This event has already ended.");
+    }
 
     await this.registrations.create({
       registration: {

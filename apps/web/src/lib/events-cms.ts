@@ -119,6 +119,11 @@ export function sortEventsByStart(records: readonly CmsEventRecord[]) {
   return [...records].sort((left, right) => left.startAt.localeCompare(right.startAt));
 }
 
+/** Whether an event's end time has already passed. */
+export function isEventPast(record: CmsEventRecord, now: Date = new Date()): boolean {
+  return record.endAt < now.toISOString();
+}
+
 /** Upcoming first (soonest first), then past (most recent first). */
 export function partitionEvents(records: readonly CmsEventRecord[], now = new Date()) {
   const nowIso = now.toISOString();
