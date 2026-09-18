@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { CompetencyPageContent } from "@/components/sections/competency-page";
+import { WebsiteFocusPage } from "@/components/focus/website/website-focus-page";
 import { COMPETENCIES } from "@/data/competencies";
 
 const competency = COMPETENCIES.find((c) => c.href === "/website")!;
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function WebsitePage() {
-  return <CompetencyPageContent competency={competency} />;
+  return <WebsiteFocusPage />;
 }
