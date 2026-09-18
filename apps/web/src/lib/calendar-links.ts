@@ -11,6 +11,13 @@ function formatDateOnlyCompact(iso: string) {
   return formatUtcCompact(iso).slice(0, 8);
 }
 
+/** The maps link reads better in a calendar's venue field than the raw
+ * place name — it opens directions with one tap. Falls back to the plain
+ * text when no maps link was set. */
+function calendarLocation(event: CmsEventRecord): string | undefined {
+  return event.mapsUrl?.trim() || event.location?.trim() || undefined;
+}
+
 /** Google Calendar's "quick add" template — opens with the event prefilled. */
 export function buildGoogleCalendarUrl(event: CmsEventRecord): string {
   const params = new URLSearchParams({ action: "TEMPLATE", text: event.title });
@@ -32,7 +39,8 @@ export function buildGoogleCalendarUrl(event: CmsEventRecord): string {
     .filter(Boolean)
     .join("\n");
   if (details) params.set("details", details);
-  if (event.location) params.set("location", event.location);
+  const location = calendarLocation(event);
+  if (location) params.set("location", location);
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
@@ -58,6 +66,7 @@ export function buildOutlookUrl(event: CmsEventRecord): string {
     .filter(Boolean)
     .join("\n");
   if (body) params.set("body", body);
-  if (event.location) params.set("location", event.location);
+  const location = calendarLocation(event);
+  if (location) params.set("location", location);
   return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
 }
