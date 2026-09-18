@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { CaretDown, MagnifyingGlass } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 
 import { EventCard } from "@/components/events/event-card";
@@ -10,10 +10,12 @@ import { partitionEvents, type CmsEventRecord } from "@/lib/events-cms";
  * Client-side search over an already-fetched feed (Publications' pattern —
  * the dataset is small enough that a server round trip per keystroke would
  * only add latency), split into Upcoming/Past sections via the existing
- * `partitionEvents` helper.
+ * `partitionEvents` helper. Past events stay collapsed behind a "Show past
+ * events" button so the page opens on what's actually coming up.
  */
 export function EventsList({ records }: { records: readonly CmsEventRecord[] }) {
   const [query, setQuery] = useState("");
+  const [showPast, setShowPast] = useState(false);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
@@ -62,16 +64,29 @@ export function EventsList({ records }: { records: readonly CmsEventRecord[] }) 
           )}
         </div>
         {past.length ? (
-          <div>
-            <h2 className="font-display text-lg font-semibold text-[var(--ink)] dark:text-white">
-              Past
-            </h2>
-            <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)] dark:divide-white/10 dark:border-white/10">
-              {past.map((event) => (
-                <EventCard event={event} key={event.slug} />
-              ))}
-            </ul>
-          </div>
+          showPast ? (
+            <div className="events-past-reveal">
+              <h2 className="font-display text-lg font-semibold text-[var(--ink)] dark:text-white">
+                Past
+              </h2>
+              <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)] dark:divide-white/10 dark:border-white/10">
+                {past.map((event) => (
+                  <EventCard event={event} key={event.slug} />
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <button
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-[var(--line)] px-5 text-sm font-semibold text-[var(--ink-2)] transition hover:border-brand-blue/50 hover:text-brand-blue dark:border-white/10 dark:text-white/70"
+                onClick={() => setShowPast(true)}
+                type="button"
+              >
+                <CaretDown size={16} weight="bold" />
+                Show past events ({past.length})
+              </button>
+            </div>
+          )
         ) : null}
       </div>
     </div>
