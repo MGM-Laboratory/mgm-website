@@ -2,7 +2,7 @@
 
 import { Check, Globe, GraduationCap } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { CareerCvDropzone } from "@/components/careers/career-cv-dropzone";
@@ -56,16 +56,21 @@ export function JobApplicationForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isUb = applicantType === "ub-student";
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
   // The success card collapses a long, scrolled-through form down to a
   // short one. Native scroll position doesn't retreat on its own, which
   // left visitors stranded below the (now much shorter) footer looking at
   // blank space. Land on top, then let ScrollTrigger (CtaFooter's fade-ups
   // and back-to-top button) re-measure against the new, shorter layout.
+  // The submit button (and the rest of the form) unmounts along with it,
+  // so focus also moves to the success heading — otherwise keyboard and
+  // screen-reader users lose their place entirely.
   useEffect(() => {
     if (status !== "success") return;
     window.scrollTo(0, 0);
     ScrollTrigger.refresh();
+    successHeadingRef.current?.focus();
   }, [status]);
 
   const touch = (field: string) =>
@@ -180,7 +185,11 @@ export function JobApplicationForm({
         <span className="mx-auto grid size-14 place-items-center rounded-full bg-brand-green-50 text-brand-green dark:bg-brand-green/15 dark:text-[#6fd3a5]">
           <Check aria-hidden="true" size={26} strokeWidth={2.25} />
         </span>
-        <h2 className="mt-5 font-display text-2xl font-semibold text-[#0e1116] dark:text-white">
+        <h2
+          className="mt-5 font-display text-2xl font-semibold text-[#0e1116] outline-none dark:text-white"
+          ref={successHeadingRef}
+          tabIndex={-1}
+        >
           Application received!
         </h2>
         <p className="mx-auto mt-2 max-w-md text-[var(--ink-2)] dark:text-[#c3c7d1]">
