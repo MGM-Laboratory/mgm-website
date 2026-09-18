@@ -2,7 +2,8 @@
 
 import { Check, Globe, GraduationCap } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { CareerCvDropzone } from "@/components/careers/career-cv-dropzone";
 import { PhoneCountrySelect } from "@/components/careers/phone-country-select";
@@ -55,6 +56,17 @@ export function JobApplicationForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isUb = applicantType === "ub-student";
+
+  // The success card collapses a long, scrolled-through form down to a
+  // short one. Native scroll position doesn't retreat on its own, which
+  // left visitors stranded below the (now much shorter) footer looking at
+  // blank space. Land on top, then let ScrollTrigger (CtaFooter's fade-ups
+  // and back-to-top button) re-measure against the new, shorter layout.
+  useEffect(() => {
+    if (status !== "success") return;
+    window.scrollTo(0, 0);
+    ScrollTrigger.refresh();
+  }, [status]);
 
   const touch = (field: string) =>
     setTouched((current) => (current[field] ? current : { ...current, [field]: true }));
