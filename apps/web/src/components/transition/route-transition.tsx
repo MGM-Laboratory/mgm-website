@@ -17,8 +17,9 @@ import { LogoMark } from "@/components/hero/shapes";
  * reveal the new page.
  *
  * The giant scale is computed from the logo's own measured size and the
- * current viewport diagonal (not hardcoded), so it reliably covers the
- * screen at any viewport size or logo scale tuning.
+ * current viewport diagonal (not hardcoded), then multiplied by
+ * GIANT_SCALE_MULTIPLIER for a dramatic close-up rather than a neatly
+ * fitted mark — the same scale is used on both the cover-in and reveal-out.
  *
  * Scope: this only ever engages for client-side navigations triggered by an
  * in-app link click (see the capture-phase click listener below) or a
@@ -36,6 +37,10 @@ const GROW_DURATION = 0.4;
 const GROW_TO_ROTATION = 18;
 const FADE_OUT_DURATION = 0.22;
 const GIANT_SCALE_MARGIN = 1.15;
+// The "just covers the viewport" scale, times 5 — big enough that a single
+// solid region of the mark (not the whole compact three-shard cluster)
+// spans the screen on its own, on both the cover-in and the reveal-out.
+const GIANT_SCALE_MULTIPLIER = 5;
 const CEILING_MS = 8000;
 // Time-based, not tied to the pathname-change effect: if the destination is
 // slow enough that even its loading.tsx shell hasn't arrived yet,
@@ -97,7 +102,7 @@ export function RouteTransition() {
     const rect = logoRef.current.getBoundingClientRect();
     const logoSize = Math.max(rect.width, rect.height) || 1;
     const { width, height } = dimsRef.current;
-    return (Math.hypot(width, height) / logoSize) * GIANT_SCALE_MARGIN;
+    return (Math.hypot(width, height) / logoSize) * GIANT_SCALE_MARGIN * GIANT_SCALE_MULTIPLIER;
   }
 
   function clearCeiling() {
