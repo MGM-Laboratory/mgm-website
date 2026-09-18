@@ -6,6 +6,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { CmsContactInquiriesService } from "../cms/cms-contact-inquiries.service.js";
 import { CmsContactSettingsService } from "../cms/cms-contact-settings.service.js";
 import { MailService } from "../mail/mail.service.js";
+import { sendConfirmationEmail } from "../mail/send-confirmation-email.js";
 import { StorageService } from "../storage/storage.service.js";
 import { buildContactConfirmationEmail } from "../mail/templates/contact-confirmation-email.js";
 import type { Env } from "../config/env.validation.js";
@@ -87,32 +88,23 @@ export class ContactService {
       limits: settings.mailProviderLimits,
     });
 
-    // A missing/misconfigured provider must never surface as a failed
+    // Fire-and-forget: never block the response on mail delivery. A
+    // missing/misconfigured provider must never surface as a failed
     // submission - the inquiry is already safely stored above, and the
     // notification to the lab already went out (or was attempted) via the
     // call above. This confirmation is a courtesy, not the source of truth.
-    try {
-      await this.mail.sendEmail({
-        to: payload.email,
-        subject: "We've received your message - MGM Laboratory",
-        html: buildContactConfirmationEmail({
-          name: payload.name,
-          message: payload.message,
-          siteUrl: this.config.get("PUBLIC_WEB_URL"),
-        }),
-        strategy: settings.mailStrategy,
-        providerOrder: settings.mailProviderOrder,
-        weights: settings.mailProviderWeights,
-        limits: settings.mailProviderLimits,
-      });
-    } catch (error) {
-      // Deliberately excludes the submitter's address and the raw provider
-      // error text from the log line - the stack trace (developer-facing,
-      // not user-facing PII) is enough to diagnose a delivery failure.
-      this.logger.warn(
-        "Confirmation email delivery failed",
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
+    sendConfirmationEmail(this.mail, this.logger, "Confirmation email delivery failed", {
+      to: payload.email,
+      subject: "We've received your message - MGM Laboratory",
+      html: buildContactConfirmationEmail({
+        name: payload.name,
+        message: payload.message,
+        siteUrl: this.config.get("PUBLIC_WEB_URL"),
+      }),
+      strategy: settings.mailStrategy,
+      providerOrder: settings.mailProviderOrder,
+      weights: settings.mailProviderWeights,
+      limits: settings.mailProviderLimits,
+    });
   }
 }
