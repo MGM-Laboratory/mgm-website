@@ -123,6 +123,12 @@ body {
   animation-delay: -2.5s;
 }
 
+/* Page-transition curtain: see route-transition.tsx. Its rainbow gradient
+   (same brand-color order as .cta-ring-spin above) is drawn as an SVG
+   <linearGradient> rather than a CSS background, since the curtain itself
+   is an SVG <rect> masked by a growing circle and SVG shapes don't render
+   the CSS `background` property. */
+
 @keyframes cta-ring-spin {
   to {
     background-position: -200% 0;

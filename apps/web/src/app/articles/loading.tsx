@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteLoadingSentinel } from "@/components/transition/route-loading-sentinel";
 
 function ArticleCardSkeleton() {
   return (
@@ -17,6 +18,7 @@ function ArticleCardSkeleton() {
 export default function ArticlesLoading() {
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
+      <RouteLoadingSentinel />
       <main className="flex-1">
         <section className="mx-auto w-full max-w-[1200px] px-[55px] pt-24 pb-20">
           <Skeleton className="h-3 w-20" />
