@@ -70,13 +70,11 @@ const DEPLOY_LINES: readonly string[] = [
 // response to print.
 const DANGEROUS_PATTERN = /rm\s+-rf|sudo|format\s|drop\s+table|:\(\)\s*\{/i;
 
-function guardrailLines(command: string): readonly string[] {
-  return [
-    `$ ${command} — permission denied`,
-    "that's exactly why there's a whole IT & Infra division standing between you and the servers.",
-    "try 'deploy' instead.",
-  ];
-}
+const GUARDRAIL_LINES: readonly string[] = [
+  "permission denied.",
+  "that's exactly why there's a whole IT & Infra division standing between you and the servers.",
+  "try 'deploy' instead.",
+];
 
 function Terminal() {
   const [lines, setLines] = useState<TerminalLine[]>(() =>
@@ -145,7 +143,7 @@ function Terminal() {
       return;
     }
     if (DANGEROUS_PATTERN.test(cmd)) {
-      await typeOut(guardrailLines(trimmed));
+      await typeOut(GUARDRAIL_LINES);
       return;
     }
     switch (cmd) {
