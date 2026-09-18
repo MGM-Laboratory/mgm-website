@@ -6,6 +6,7 @@ import {
   Delete,
   Get,
   Headers,
+  Logger,
   Param,
   Post,
   Put,
@@ -21,6 +22,8 @@ import { z } from "zod";
 
 import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
+import { MailService } from "../mail/mail.service.js";
+import { buildEventRegistrationConfirmationEmail } from "../mail/templates/event-registration-confirmation-email.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsEventsService } from "./cms-events.service.js";
 import { CmsEventRegistrationsService } from "./cms-event-registrations.service.js";
@@ -224,11 +227,14 @@ function safeEqual(left: string, right: string) {
 @ApiTags("cms-events")
 @Controller("cms/events")
 export class CmsEventsController {
+  private readonly logger = new Logger(CmsEventsController.name);
+
   constructor(
     private readonly events: CmsEventsService,
     private readonly registrations: CmsEventRegistrationsService,
     private readonly storage: StorageService,
     private readonly config: ConfigService<Env, true>,
+    private readonly mail: MailService,
   ) {}
 
   @Get()
@@ -448,6 +454,32 @@ export class CmsEventsController {
         status: "inbox",
       },
     } as unknown as Prisma.InputJsonValue);
+
+    // Best-effort: a delivery failure must never turn an already-recorded
+    // registration into a failed request (matches the contact-form pattern).
+    try {
+      await this.mail.sendEmail({
+        to: fields.email,
+        subject: "You're registered - MGM Laboratory",
+        html: buildEventRegistrationConfirmationEmail({
+          name: fields.fullName,
+          eventTitle: typeof event.title === "string" ? event.title : slug,
+          eventSlug: slug,
+          startAt: typeof event.startAt === "string" ? event.startAt : new Date().toISOString(),
+          endAt: typeof event.endAt === "string" ? event.endAt : new Date().toISOString(),
+          allDay: event.allDay === true,
+          timezoneOffset: typeof event.timezoneOffset === "number" ? event.timezoneOffset : 7,
+          location: typeof event.location === "string" ? event.location : undefined,
+          siteUrl: this.config.get("PUBLIC_WEB_URL"),
+        }),
+      });
+    } catch (error) {
+      this.logger.warn(
+        "Registration confirmation email delivery failed",
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
     return { ok: true };
   }
 

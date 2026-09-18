@@ -6,6 +6,7 @@ import {
   Delete,
   Get,
   Headers,
+  Logger,
   Param,
   PayloadTooLargeException,
   Post,
@@ -25,6 +26,8 @@ import { z } from "zod";
 
 import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
+import { MailService } from "../mail/mail.service.js";
+import { buildJobApplicationConfirmationEmail } from "../mail/templates/job-application-confirmation-email.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsJobsService, isOpenJob } from "./cms-jobs.service.js";
 import { CmsJobApplicationsService } from "./cms-jobs-applications.service.js";
@@ -152,11 +155,14 @@ function safeEqual(left: string, right: string) {
 @ApiTags("cms-jobs")
 @Controller("cms/jobs")
 export class CmsJobsController {
+  private readonly logger = new Logger(CmsJobsController.name);
+
   constructor(
     private readonly jobs: CmsJobsService,
     private readonly applicationsService: CmsJobApplicationsService,
     private readonly storage: StorageService,
     private readonly config: ConfigService<Env, true>,
+    private readonly mail: MailService,
   ) {}
 
   // Open roles only. The listing never renders BlockNote body text, so the
@@ -275,11 +281,12 @@ export class CmsJobsController {
     }
 
     const jobTitle = (job.job as { title?: unknown } | undefined)?.title ?? slug;
+    const resolvedJobTitle = typeof jobTitle === "string" ? jobTitle : slug;
     await this.applicationsService.create({
       application: {
         ...fields,
         jobSlug: slug,
-        jobTitle: typeof jobTitle === "string" ? jobTitle : slug,
+        jobTitle: resolvedJobTitle,
         cvKey: key,
         cvFilename: sanitizeFilename(file.originalname),
         cvContentType: file.mimetype,
@@ -288,6 +295,26 @@ export class CmsJobsController {
         status: "inbox",
       },
     } as unknown as Prisma.InputJsonValue);
+
+    // Best-effort: a delivery failure must never turn an already-recorded
+    // application into a failed request (matches the contact-form pattern).
+    try {
+      await this.mail.sendEmail({
+        to: fields.email,
+        subject: "We've received your application - MGM Laboratory",
+        html: buildJobApplicationConfirmationEmail({
+          name: fields.fullName,
+          jobTitle: resolvedJobTitle,
+          siteUrl: this.config.get("PUBLIC_WEB_URL"),
+        }),
+      });
+    } catch (error) {
+      this.logger.warn(
+        "Application confirmation email delivery failed",
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
     return { ok: true };
   }
 
