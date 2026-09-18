@@ -118,11 +118,11 @@ export function CtaFooter() {
           </p>
         </div>
 
-        <nav aria-label="Social links" className="lg:flex lg:self-stretch lg:flex-col">
+        <nav aria-label="Social links">
           <p className="text-xs font-semibold tracking-wide text-foreground/70 uppercase">
             Connect
           </p>
-          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium lg:mt-auto">
+          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium">
             {SOCIAL_LINKS.map((social) => (
               <li key={social.label}>
                 <a
