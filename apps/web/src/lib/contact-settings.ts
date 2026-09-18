@@ -13,7 +13,7 @@ import { cmsApi } from "@/lib/cms-api";
  * because nobody has opened the CMS editor, or the API is briefly down.
  * Parsed through the same schema the API validates against (rather than
  * trusted as-is) so a stale/legacy-shaped or briefly-mismatched response
- * never crashes the page — it just falls back to the default settings. */
+ * never crashes the page - it just falls back to the default settings. */
 export async function fetchContactSettings(): Promise<ContactSettings> {
   try {
     const response = await cmsApi("/cms/contact-settings");

@@ -7,7 +7,7 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#39;");
 }
 
-// MGM Laboratory brand tokens (see /DESIGN_SYSTEM.md) inlined as plain hex —
+// MGM Laboratory brand tokens (see /DESIGN_SYSTEM.md) inlined as plain hex -
 // email clients don't resolve CSS custom properties, so this deliberately
 // doesn't import from globals.css/Tailwind config.
 const BRAND = {
@@ -22,7 +22,7 @@ const BRAND = {
   surfaceMuted: "#f7f7f5",
 } as const;
 
-// Mirrors apps/web/src/data/nav.ts's NAV_SOCIALS — that file duplicates the
+// Mirrors apps/web/src/data/nav.ts's NAV_SOCIALS - that file duplicates the
 // same three links locally too (see cta-footer.tsx), so this keeps the
 // existing repo convention rather than introducing a new shared import for
 // three static URLs.
@@ -40,7 +40,7 @@ const ADDRESS_LINES = [
 /**
  * Builds a self-contained, table-based HTML email confirming a contact-form
  * submission. Every style is inlined (no <style> dependency for the layout
- * itself — Outlook's Word engine ignores <style> blocks for anything but a
+ * itself - Outlook's Word engine ignores <style> blocks for anything but a
  * handful of properties) so it renders consistently across desktop and
  * mobile mail clients.
  */
@@ -67,11 +67,11 @@ export function buildContactConfirmationEmail({
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>We've received your message — MGM Laboratory</title>
+    <title>We've received your message - MGM Laboratory</title>
   </head>
   <body style="margin:0;padding:0;background-color:${BRAND.surfaceMuted};-webkit-text-size-adjust:100%;text-size-adjust:100%;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-      Thanks for reaching out, ${safeName} — we've received your message and will get back to you soon.
+      Thanks for reaching out, ${safeName} - we've received your message and will get back to you soon.
     </div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${BRAND.surfaceMuted};">
       <tr>
@@ -109,7 +109,7 @@ export function buildContactConfirmationEmail({
                 </h1>
                 <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:${BRAND.ink2};">
                   Thanks for reaching out to MGM Laboratory. Your message has been received and
-                  routed to our team — please kindly wait while we review it and get back to you.
+                  routed to our team - please kindly wait while we review it and get back to you.
                 </p>
 
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;background-color:${BRAND.surfaceMuted};border-left:4px solid ${BRAND.blue};border-radius:12px;">
@@ -162,7 +162,7 @@ export function buildContactConfirmationEmail({
                   ).join("")}
                 </p>
                 <p style="margin:0;font-size:11px;color:${BRAND.ink3};">
-                  &copy; ${year} MGM Laboratory. This is an automated confirmation — you&rsquo;re
+                  &copy; ${year} MGM Laboratory. This is an automated confirmation - you&rsquo;re
                   receiving it because this address was used to submit our contact form.
                 </p>
               </td>

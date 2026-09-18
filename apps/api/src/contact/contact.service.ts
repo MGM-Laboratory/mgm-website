@@ -38,7 +38,7 @@ export class ContactService {
   async send(payload: ContactFormPayload): Promise<void> {
     const attachmentKeys = payload.attachmentKeys ?? [];
 
-    // Persisted unconditionally, before the email is even attempted — the
+    // Persisted unconditionally, before the email is even attempted - the
     // inquiry must never be lost to an email provider outage, since this is
     // the only guaranteed record of the submission.
     await this.inquiries.create({
@@ -60,7 +60,7 @@ export class ContactService {
           const url = await this.storage.getSignedDownloadUrl(key, 60 * 60 * 24 * 7);
           return `<li><a href="${url}">${escapeHtml(key)}</a></li>`;
         } catch {
-          return `<li>${escapeHtml(key)} (stored locally — not reachable outside this environment)</li>`;
+          return `<li>${escapeHtml(key)} (stored locally - not reachable outside this environment)</li>`;
         }
       }),
     );
@@ -88,13 +88,13 @@ export class ContactService {
     });
 
     // A missing/misconfigured provider must never surface as a failed
-    // submission — the inquiry is already safely stored above, and the
+    // submission - the inquiry is already safely stored above, and the
     // notification to the lab already went out (or was attempted) via the
     // call above. This confirmation is a courtesy, not the source of truth.
     try {
       await this.mail.sendEmail({
         to: payload.email,
-        subject: "We've received your message — MGM Laboratory",
+        subject: "We've received your message - MGM Laboratory",
         html: buildContactConfirmationEmail({
           name: payload.name,
           message: payload.message,
@@ -107,7 +107,7 @@ export class ContactService {
       });
     } catch (error) {
       // Deliberately excludes the submitter's address and the raw provider
-      // error text from the log line — the stack trace (developer-facing,
+      // error text from the log line - the stack trace (developer-facing,
       // not user-facing PII) is enough to diagnose a delivery failure.
       this.logger.warn(
         "Confirmation email delivery failed",

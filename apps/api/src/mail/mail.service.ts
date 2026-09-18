@@ -167,11 +167,11 @@ export class MailService {
    * call regardless of how many addresses are in `to`. Providers that count
    * per-recipient (SES, Resend) can exhaust their real allowance earlier
    * than a configured MailProviderLimits daily/long limit would suggest.
-   * Not fixed here — it needs the reservation/recording paths (and their
+   * Not fixed here - it needs the reservation/recording paths (and their
    * concurrency-sensitive advisory-lock transaction) reworked to reserve
    * `to.length` units atomically, which deserves its own change with test
    * coverage rather than a rushed edit alongside an unrelated feature.
-   * Only matters once a provider limit is actually configured — unset by
+   * Only matters once a provider limit is actually configured - unset by
    * default.
    */
   async sendEmail(params: {

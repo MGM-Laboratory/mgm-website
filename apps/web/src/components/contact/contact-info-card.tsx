@@ -48,13 +48,13 @@ async function copyToClipboard(label: string, value: string) {
     toast.success(`${label} copied`);
   } catch {
     toast.error(`${label} could not be copied`, {
-      description: "Your browser blocked clipboard access — copy it by hand.",
+      description: "Your browser blocked clipboard access - copy it by hand.",
     });
   }
 }
 
 // Clicking the value reveals a small action menu instead of always-visible
-// buttons — same interaction as the nav menu's email trigger
+// buttons - same interaction as the nav menu's email trigger
 // (components/nav/email-reveal.tsx), reused here for both email and address.
 function RevealPopover({
   trigger,
@@ -147,7 +147,7 @@ function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
 }
 
-// One persistent, paused timeline per icon — hover plays it forward, unhover
+// One persistent, paused timeline per icon - hover plays it forward, unhover
 // reverses it. `overwrite: "auto"` keeps rapid re-hovering from desyncing the
 // timeline mid-play (see the events-cms popover work for why that matters).
 function useSocialWiggle() {

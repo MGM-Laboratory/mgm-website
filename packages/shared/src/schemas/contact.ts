@@ -115,7 +115,7 @@ const contactSettingsShape = z.object({
 });
 
 // A record saved before multi-recipient support shipped still has a single
-// `email: string` field in the database instead of `emails: string[]` — this
+// `email: string` field in the database instead of `emails: string[]` - this
 // lifts that legacy shape into the current one before validating, so an old
 // stored row (or an old cached copy) doesn't fail parsing and silently fall
 // back to DEFAULT_CONTACT_SETTINGS, wiping out the real configured inbox.

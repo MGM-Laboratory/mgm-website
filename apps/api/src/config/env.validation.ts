@@ -9,7 +9,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
-  // The public web app's own origin — used to build absolute asset/link URLs
+  // The public web app's own origin - used to build absolute asset/link URLs
   // in outgoing emails, which (unlike a browser) can't resolve relative
   // paths against "the site the user is on".
   PUBLIC_WEB_URL: z.url().default("https://web-production-589d3f.up.railway.app"),
