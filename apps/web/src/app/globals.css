@@ -24,10 +24,6 @@
   --line: #ececea;
   --surface-muted: #f7f7f5;
   --surface-inverse: #0e1116;
-  /* The footer's own surface — one step darker than the page background in
-     both themes (not a fixed dark inverse) so it stays visually distinct
-     from the section above it without ever flipping to the opposite theme. */
-  --footer-bg: #e7e8e5;
 
   /* The "white" half of every pattern tile (patterns/*.svg) — swaps with
      the section surface it sits on so tiles never render as a literal
@@ -40,7 +36,6 @@
   --foreground: #ededed;
   --line: #262a33;
   --surface-muted: #15181e;
-  --footer-bg: #0a0c10;
 }
 
 @theme inline {
