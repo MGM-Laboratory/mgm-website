@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { CompetencyPageContent } from "@/components/sections/competency-page";
+import { MobileFocusPage } from "@/components/focus/mobile/mobile-focus-page";
 import { COMPETENCIES } from "@/data/competencies";
 
 const competency = COMPETENCIES.find((c) => c.href === "/mobile")!;
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function MobilePage() {
-  return <CompetencyPageContent competency={competency} />;
+  return <MobileFocusPage />;
 }
