@@ -118,9 +118,7 @@ export function buildContactConfirmationEmail({
                       <p style="margin:0 0 8px 0;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${BRAND.ink3};">
                         Your message
                       </p>
-                      <p style="margin:0;font-size:14px;line-height:1.7;color:${BRAND.ink};white-space:pre-wrap;">
-                        ${safeMessage}
-                      </p>
+                      <p style="margin:0;font-size:14px;line-height:1.7;color:${BRAND.ink};">${safeMessage}</p>
                     </td>
                   </tr>
                 </table>
