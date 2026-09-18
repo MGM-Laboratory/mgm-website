@@ -7,14 +7,19 @@ import gsap from "gsap";
 import { LogoMark } from "@/components/hero/shapes";
 
 /**
- * Full-screen page-transition curtain: a solid brand-blue backdrop with a
- * white MGM mark, played on every internal navigation. The mark starts at
- * giant scale — big enough on its own to read as "covering the screen" the
- * instant it appears — then shrinks and un-rotates down to its (bigger than
- * the header's) idle size. It holds there (with a breathing loop if the
- * destination is genuinely slow), then grows back to giant fast once the
- * destination is ready, at which point the whole curtain fades away to
- * reveal the new page.
+ * Full-screen page-transition curtain, two layers:
+ *
+ * 1. A plain white wash, behind everything else. It fades in first (the
+ *    current page visibly bleaches to white) and only fades out last, after
+ *    every other animation below has finished — so peeling back the curtain
+ *    always lands on white before the real destination shows through,
+ *    rather than cutting straight from the colored curtain to the page.
+ * 2. The brand-blue backdrop with a white MGM mark on top of that wash. The
+ *    mark starts at giant scale, offset off-center so a solid region of its
+ *    own linework (not just its empty space) fills the frame, then shrinks,
+ *    un-rotates, and slides back to center together as it settles into its
+ *    idle size. It holds there (with a breathing loop if the destination is
+ *    genuinely slow), then reverses fast once the destination is ready.
  *
  * The giant scale is computed from the logo's own measured size and the
  * current viewport diagonal (not hardcoded), then multiplied by
@@ -29,6 +34,7 @@ import { LogoMark } from "@/components/hero/shapes";
  * again, which is a strictly worse outcome than skipping the boot moment.
  */
 
+const WHITE_FADE_DURATION = 0.3;
 const GIANT_SETTLE_DURATION = 0.12;
 const GIANT_HOLD_DELAY = 0.1;
 const SHRINK_DURATION = 0.7;
@@ -37,10 +43,20 @@ const GROW_DURATION = 0.4;
 const GROW_TO_ROTATION = 18;
 const FADE_OUT_DURATION = 0.22;
 const GIANT_SCALE_MARGIN = 1.15;
-// The "just covers the viewport" scale, times 5 — big enough that a single
-// solid region of the mark (not the whole compact three-shard cluster)
-// spans the screen on its own, on both the cover-in and the reveal-out.
-const GIANT_SCALE_MULTIPLIER = 5;
+// The "just covers the viewport" scale, times this — big enough that a
+// single solid region of the mark's own linework (not the whole compact
+// three-shard cluster, and not just the empty space between shards) spans
+// the screen on its own, on both the cover-in and the reveal-out.
+const GIANT_SCALE_MULTIPLIER = 8;
+// Percent-of-its-own-(scaled)-box offset applied to the mark while giant, so
+// scaling up doesn't just zoom into empty space around a fixed center. The
+// cover-in starts offset and slides to center as it shrinks; the reveal-out
+// starts centered and slides off to (the mirrored) offset as it grows —
+// "shift the position... move it to center when animating in, same for out."
+const COVER_OFFSET_X = -26;
+const COVER_OFFSET_Y = 20;
+const REVEAL_OFFSET_X = 26;
+const REVEAL_OFFSET_Y = -20;
 const CEILING_MS = 8000;
 // Time-based, not tied to the pathname-change effect: if the destination is
 // slow enough that even its loading.tsx shell hasn't arrived yet,
@@ -81,6 +97,7 @@ export function RouteTransition() {
   const router = useRouter();
   const pathname = usePathname();
 
+  const whiteRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<SVGSVGElement>(null);
   const holdTweenRef = useRef<gsap.core.Tween | null>(null);
@@ -162,7 +179,7 @@ export function RouteTransition() {
     holdTweenRef.current?.kill();
     holdTweenRef.current = null;
 
-    if (!overlayRef.current || !logoRef.current) {
+    if (!overlayRef.current || !logoRef.current || !whiteRef.current) {
       pendingRef.current = freshPendingState();
       return;
     }
@@ -175,19 +192,27 @@ export function RouteTransition() {
           gsap.set(overlayRef.current, { autoAlpha: 0 });
           overlayRef.current.classList.remove("pointer-events-auto");
         }
-        if (logoRef.current) gsap.set(logoRef.current, { scale: 1, rotation: 0 });
+        if (logoRef.current)
+          gsap.set(logoRef.current, { scale: 1, rotation: 0, xPercent: 0, yPercent: 0 });
+        if (whiteRef.current) gsap.set(whiteRef.current, { autoAlpha: 0 });
         pendingRef.current = freshPendingState();
       },
     });
-    // Fast grow back to giant — covering the whole screen a second time —
-    // then a quick fade of the whole curtain reveals the new page.
+    // Fast grow back to giant, sliding off-center as it grows — covering the
+    // whole screen a second time with a different solid region of the mark
+    // — then the blue backdrop fades (revealing the white wash underneath),
+    // and only once that's done does the white wash itself fade last,
+    // gradually bringing the real destination into view.
     tl.to(logoRef.current, {
       scale: giantScale,
       rotation: GROW_TO_ROTATION,
+      xPercent: REVEAL_OFFSET_X,
+      yPercent: REVEAL_OFFSET_Y,
       duration: GROW_DURATION,
       ease: "power2.in",
     });
     tl.to(overlayRef.current, { autoAlpha: 0, duration: FADE_OUT_DURATION, ease: "power1.in" });
+    tl.to(whiteRef.current, { autoAlpha: 0, duration: WHITE_FADE_DURATION, ease: "power2.in" });
   }
 
   function watchForRouteReady() {
@@ -242,17 +267,24 @@ export function RouteTransition() {
   }
 
   function startCover(href: string) {
-    if (pendingRef.current.active || !overlayRef.current || !logoRef.current) return;
+    if (pendingRef.current.active || !overlayRef.current || !logoRef.current || !whiteRef.current)
+      return;
     pendingRef.current = { ...freshPendingState(), active: true };
 
     overlayRef.current.classList.add("pointer-events-auto");
-    gsap.set(overlayRef.current, { autoAlpha: 1 });
 
     const giantScale = getGiantScale();
-    // The logo starts already giant — that's the cover, on its own, the
-    // instant it appears — settles for a beat, then shrinks and un-rotates
-    // down into its idle position.
-    gsap.set(logoRef.current, { scale: giantScale, rotation: SHRINK_FROM_ROTATION, opacity: 1 });
+    // The logo starts already giant and off-center (a solid region of its
+    // own linework fills the frame, not just empty space around a fixed
+    // center) — settles for a beat, then shrinks, un-rotates, and slides
+    // back to center together into its idle position.
+    gsap.set(logoRef.current, {
+      scale: giantScale,
+      rotation: SHRINK_FROM_ROTATION,
+      xPercent: COVER_OFFSET_X,
+      yPercent: COVER_OFFSET_Y,
+      opacity: 1,
+    });
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -261,11 +293,26 @@ export function RouteTransition() {
         maybeReveal();
       },
     });
-    tl.to(logoRef.current, { scale: giantScale, duration: GIANT_SETTLE_DURATION }, 0);
+    // The white wash fades in first — the current page visibly bleaches to
+    // white — then the blue backdrop + giant mark appear on top of it.
+    tl.to(whiteRef.current, { autoAlpha: 1, duration: WHITE_FADE_DURATION, ease: "power2.out" }, 0);
+    tl.set(overlayRef.current, { autoAlpha: 1 }, WHITE_FADE_DURATION);
     tl.to(
       logoRef.current,
-      { scale: 1, rotation: 0, duration: SHRINK_DURATION, ease: "power3.out" },
-      GIANT_SETTLE_DURATION + GIANT_HOLD_DELAY,
+      { scale: giantScale, duration: GIANT_SETTLE_DURATION },
+      WHITE_FADE_DURATION,
+    );
+    tl.to(
+      logoRef.current,
+      {
+        scale: 1,
+        rotation: 0,
+        xPercent: 0,
+        yPercent: 0,
+        duration: SHRINK_DURATION,
+        ease: "power3.out",
+      },
+      WHITE_FADE_DURATION + GIANT_SETTLE_DURATION + GIANT_HOLD_DELAY,
     );
 
     router.push(href);
@@ -273,7 +320,8 @@ export function RouteTransition() {
   }
 
   function startPopstateCover() {
-    if (pendingRef.current.active || !overlayRef.current || !logoRef.current) return;
+    if (pendingRef.current.active || !overlayRef.current || !logoRef.current || !whiteRef.current)
+      return;
     pendingRef.current = {
       ...freshPendingState(),
       active: true,
@@ -282,8 +330,9 @@ export function RouteTransition() {
     };
 
     overlayRef.current.classList.add("pointer-events-auto");
+    gsap.set(whiteRef.current, { autoAlpha: 1 });
     gsap.set(overlayRef.current, { autoAlpha: 1 });
-    gsap.set(logoRef.current, { scale: 1, rotation: 0, opacity: 1 });
+    gsap.set(logoRef.current, { scale: 1, rotation: 0, xPercent: 0, yPercent: 0, opacity: 1 });
 
     armTimers();
   }
@@ -348,14 +397,21 @@ export function RouteTransition() {
   );
 
   return (
-    <div
-      ref={overlayRef}
-      aria-hidden
-      className="pointer-events-none invisible fixed inset-0 z-[999] opacity-0 bg-[var(--brand-blue)]"
-    >
-      <div className="absolute inset-0 flex items-center justify-center">
-        <LogoMark ref={logoRef} tone="white" solid className="h-24 w-24 sm:h-32 sm:w-32" />
+    <>
+      <div
+        ref={whiteRef}
+        aria-hidden
+        className="pointer-events-none invisible fixed inset-0 z-[999] bg-white opacity-0"
+      />
+      <div
+        ref={overlayRef}
+        aria-hidden
+        className="pointer-events-none invisible fixed inset-0 z-[999] opacity-0 bg-[var(--brand-blue)]"
+      >
+        <div className="absolute inset-0 flex items-center justify-center">
+          <LogoMark ref={logoRef} tone="white" solid className="h-24 w-24 sm:h-32 sm:w-32" />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
