@@ -199,7 +199,7 @@ export function JobApplicationForm({
 
   return (
     <form
-      className="space-y-12"
+      className="space-y-8"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -425,7 +425,7 @@ export function JobApplicationForm({
       </section>
 
       {/* Agreement + submit */}
-      <section className="border-t border-[var(--line)] pt-8">
+      <section className="border-t border-[var(--line)] pt-6">
         <label className="flex cursor-pointer items-start gap-3">
           <input
             checked={agreedToTerms}
