@@ -1,5 +1,18 @@
 import { BRAND, escapeHtml, renderEmailShell } from "./email-shell.js";
 
+// Compares calendar dates in UTC, not the API host's local timezone - start
+// and end are already shifted to event-local time and formatted with
+// timeZone: "UTC" below, so the same-day check has to use the same frame of
+// reference or a host running outside UTC can misclassify an overnight or
+// multi-day event.
+function isSameUtcDate(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
 // Mirrors the GMT-offset convention events-cms.ts uses on the web side
 // (Intl's timeZone option won't accept an arbitrary numeric offset, so the
 // UTC instant is shifted by hand first, then formatted with timeZone: "UTC").
@@ -30,9 +43,12 @@ function formatEventWhen({
     minute: "2-digit",
   });
   const gmt = `GMT${timezoneOffset >= 0 ? "+" : ""}${timezoneOffset}`;
+  const sameDay = isSameUtcDate(start, end);
 
-  if (allDay) return dateFmt.format(start);
-  if (start.toDateString() === end.toDateString()) {
+  if (allDay) {
+    return sameDay ? dateFmt.format(start) : `${dateFmt.format(start)} - ${dateFmt.format(end)}`;
+  }
+  if (sameDay) {
     return `${dateFmt.format(start)}, ${timeFmt.format(start)} - ${timeFmt.format(end)} (${gmt})`;
   }
   return `${dateFmt.format(start)} ${timeFmt.format(start)} - ${dateFmt.format(end)} ${timeFmt.format(end)} (${gmt})`;

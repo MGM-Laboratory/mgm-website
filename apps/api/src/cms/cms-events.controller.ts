@@ -23,6 +23,7 @@ import { z } from "zod";
 import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { MailService } from "../mail/mail.service.js";
+import { sendConfirmationEmail } from "../mail/send-confirmation-email.js";
 import { buildEventRegistrationConfirmationEmail } from "../mail/templates/event-registration-confirmation-email.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsEventsService } from "./cms-events.service.js";
@@ -455,10 +456,14 @@ export class CmsEventsController {
       },
     } as unknown as Prisma.InputJsonValue);
 
-    // Best-effort: a delivery failure must never turn an already-recorded
-    // registration into a failed request (matches the contact-form pattern).
-    try {
-      await this.mail.sendEmail({
+    // Fire-and-forget: never block the response on mail delivery, and a
+    // failure must never turn an already-recorded registration into a
+    // failed request (matches the contact-form pattern).
+    sendConfirmationEmail(
+      this.mail,
+      this.logger,
+      "Registration confirmation email delivery failed",
+      {
         to: fields.email,
         subject: "You're registered - MGM Laboratory",
         html: buildEventRegistrationConfirmationEmail({
@@ -472,13 +477,8 @@ export class CmsEventsController {
           location: typeof event.location === "string" ? event.location : undefined,
           siteUrl: this.config.get("PUBLIC_WEB_URL"),
         }),
-      });
-    } catch (error) {
-      this.logger.warn(
-        "Registration confirmation email delivery failed",
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
+      },
+    );
 
     return { ok: true };
   }
