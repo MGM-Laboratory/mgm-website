@@ -66,6 +66,7 @@ function BackToTop() {
 export function CtaFooter() {
   const rootRef = useRef<HTMLElement>(null);
   const wordmarkTrackRef = useRef<HTMLDivElement>(null);
+  const year = new Date().getFullYear();
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -99,7 +100,7 @@ export function CtaFooter() {
             Media, Game, and Mobile Laboratory
           </p>
           <p className="mt-4 max-w-md text-sm leading-6 text-foreground/75">
-            © 2026 MGM Research Laboratory. Built for research. Designed for impact.
+            © {year} MGM Research Laboratory. Built for research. Designed for impact.
           </p>
         </div>
 
@@ -173,13 +174,13 @@ export function CtaFooter() {
       </div>
 
       <div className="footer-reveal mx-auto flex max-w-5xl flex-col items-center gap-3 px-6 py-6 text-xs text-foreground/70 opacity-0 sm:flex-row sm:justify-between sm:px-10 lg:px-16">
-        <p>© {new Date().getFullYear()} MGM Laboratory. All rights reserved.</p>
+        <p>© {year} MGM Laboratory. All rights reserved.</p>
         <div className="flex gap-5">
           {LEGAL_LINKS.map((link) => (
             <Link
               key={link.label}
               href={link.href}
-              className="transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
+              className="transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
             >
               {link.label}
             </Link>

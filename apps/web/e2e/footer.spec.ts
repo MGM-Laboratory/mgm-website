@@ -56,6 +56,18 @@ test.describe("footer", () => {
       await page.mouse.wheel(0, 500);
     }
     await expect(instagram).toBeInViewport();
+    await expect
+      .poll(() =>
+        instagram.locator("svg").evaluate((element) => Number(getComputedStyle(element).opacity)),
+      )
+      .toBe(0);
+    await expect
+      .poll(() =>
+        instagram
+          .locator("span")
+          .evaluate((element) => Number.parseFloat(getComputedStyle(element).scale)),
+      )
+      .toBe(0);
     await instagram.hover();
 
     await expect
