@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteLoadingSentinel } from "@/components/transition/route-loading-sentinel";
 
 function MemberCardSkeleton() {
   return (
@@ -15,6 +16,7 @@ function MemberCardSkeleton() {
 export default function MemberLoading() {
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col">
+      <RouteLoadingSentinel />
       <section className="relative min-h-[max(76dvh,56.25vw)] overflow-hidden bg-[var(--background)] pt-16">
         <Skeleton className="absolute inset-x-0 top-16 aspect-video w-full rounded-none" />
       </section>

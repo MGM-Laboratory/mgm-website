@@ -1,8 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteLoadingSentinel } from "@/components/transition/route-loading-sentinel";
 
 export default function ArticleDetailLoading() {
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
+      <RouteLoadingSentinel />
       <main className="flex-1">
         <article className="mx-auto max-w-[1200px] pt-[91px] pb-16">
           <header className="flex flex-col items-center text-center">

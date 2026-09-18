@@ -1,8 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteLoadingSentinel } from "@/components/transition/route-loading-sentinel";
 
 export default function MemberDetailLoading() {
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col">
+      <RouteLoadingSentinel />
       <div className="mx-auto grid w-full max-w-[1200px] gap-10 px-6 pt-24 pb-16 sm:px-10 lg:grid-cols-[320px_minmax(0,1fr)]">
         <Skeleton className="aspect-[4/5] w-full rounded-none" />
 

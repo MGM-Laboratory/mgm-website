@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteLoadingSentinel } from "@/components/transition/route-loading-sentinel";
 
 function EventRowSkeleton() {
   return (
@@ -20,6 +21,7 @@ function EventRowSkeleton() {
 export default function EventsLoading() {
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
+      <RouteLoadingSentinel />
       <main className="flex-1">
         <section className="relative overflow-hidden">
           <div className="relative mx-auto flex min-h-[45vh] w-full max-w-[1200px] flex-col justify-center px-6 py-20 sm:px-10 lg:px-14">
