@@ -118,11 +118,11 @@ export function CtaFooter() {
           </p>
         </div>
 
-        <nav aria-label="Social links">
+        <nav aria-label="Social links" className="lg:flex lg:self-stretch lg:flex-col">
           <p className="text-xs font-semibold tracking-wide text-foreground/70 uppercase">
             Connect
           </p>
-          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium">
+          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium lg:mt-auto">
             {SOCIAL_LINKS.map((social) => (
               <li key={social.label}>
                 <a
@@ -153,7 +153,7 @@ export function CtaFooter() {
           {[0, 1].map((copy) => (
             <span key={copy} className="flex shrink-0 items-center">
               {Array.from({ length: 4 }).map((_, i) => (
-                <span key={i} className="mx-4 flex shrink-0 items-center gap-4 sm:mx-6">
+                <span key={i} className="mx-4 flex shrink-0 items-center gap-8 sm:mx-6 sm:gap-12">
                   <span
                     className="font-display text-5xl font-semibold tracking-tight text-transparent opacity-30 sm:text-7xl"
                     style={{ WebkitTextStroke: "1.5px var(--foreground)" }}
