@@ -19,12 +19,12 @@ export function FocusStoryRows({
   eyebrowClassName = "text-brand-blue",
   headline,
   items,
-}: {
+}: Readonly<{
   eyebrow: string;
   eyebrowClassName?: string;
   headline: string;
   items: StoryRowItem[];
-}) {
+}>) {
   return (
     <RevealSection
       className="border-t border-[var(--line)] px-6 py-20 sm:px-10 sm:py-28 lg:px-16"

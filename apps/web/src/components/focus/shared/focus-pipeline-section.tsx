@@ -30,7 +30,7 @@ export function FocusPipelineSection({
   accentVar,
   dotStyle = "fill",
   tools,
-}: {
+}: Readonly<{
   eyebrow: string;
   headline: string;
   body: string;
@@ -38,7 +38,7 @@ export function FocusPipelineSection({
   accentVar: string;
   dotStyle?: "fill" | "border";
   tools?: string[];
-}) {
+}>) {
   const rootRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
 

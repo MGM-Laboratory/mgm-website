@@ -14,7 +14,7 @@ export function FocusToolkitSection({
   roles,
   accentVars,
   columnsClassName = "lg:grid-cols-3",
-}: {
+}: Readonly<{
   eyebrow: string;
   eyebrowClassName?: string;
   headline: string;
@@ -22,7 +22,7 @@ export function FocusToolkitSection({
   roles: ToolkitRole[];
   accentVars: string[];
   columnsClassName?: string;
-}) {
+}>) {
   return (
     <RevealSection
       className="border-t border-[var(--line)] bg-[var(--surface-muted)] px-6 py-24 sm:px-10 lg:px-16"

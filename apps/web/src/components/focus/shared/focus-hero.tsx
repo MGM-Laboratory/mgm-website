@@ -9,12 +9,12 @@ export function FocusHero({
   eyebrowClassName = "text-brand-blue",
   headline,
   body,
-}: {
+}: Readonly<{
   eyebrow: string;
   eyebrowClassName?: string;
   headline: ReactNode;
   body: string;
-}) {
+}>) {
   return (
     <section className="relative flex min-h-[calc(100dvh-4rem)] flex-col justify-center px-6 py-24 sm:px-10 sm:py-32 lg:px-16">
       <RevealSection className="relative z-10 mx-auto max-w-3xl" stagger={0.14}>
