@@ -119,10 +119,9 @@ test.describe("core competencies cards", () => {
     await page.goto("/");
     const card = cardFor(page, /UX Research/);
     await card.scrollIntoViewIfNeeded();
-    await card.hover();
 
-    // The yellow card's text color is a static class, not hover-driven, but
-    // poll anyway (an observable condition) rather than assume timing.
+    // The yellow card's text color is static, including on touch-only
+    // browsers where a hover interaction is not available.
     const title = card.getByText("UX Research & Design").last();
     await expect
       .poll(() => title.evaluate((el) => getComputedStyle(el).color))
