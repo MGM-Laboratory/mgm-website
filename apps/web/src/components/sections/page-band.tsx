@@ -15,7 +15,7 @@ export function PageBand({
   eyebrow: string;
   title: string;
   description: string;
-  tone: Exclude<PatternTone, "canvas" | "white">;
+  tone: Exclude<PatternTone, "background" | "canvas" | "white">;
   motif: PatternKind;
 }) {
   return (

@@ -1,30 +1,7 @@
-import { NextResponse } from "next/server";
-
-import { cmsApi } from "@/lib/cms-api";
+import { mediaPlaybackRoute } from "@/lib/cms-media-proxy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const IMMUTABLE_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable";
-
-// Job description images stream from the API's signed-URL redirect the same
-// way article covers do; the key allowlist lives on the API side.
-export async function GET(request: Request, { params }: { params: Promise<{ key: string }> }) {
-  const { key } = await params;
-
-  const response = await cmsApi(`/cms/jobs/media/${encodeURIComponent(key)}`, {
-    redirect: "manual",
-  });
-  const location = response.headers.get("location");
-  const source = location ? await fetch(location, { cache: "no-store" }) : response;
-  if (!source.ok || !source.body) return new NextResponse(null, { status: source.status });
-
-  const headers = new Headers({
-    "cache-control": IMMUTABLE_MEDIA_CACHE_CONTROL,
-    "content-type": source.headers.get("content-type") ?? "application/octet-stream",
-    "x-content-type-options": "nosniff",
-  });
-  const contentLength = source.headers.get("content-length");
-  if (contentLength) headers.set("content-length", contentLength);
-  return new NextResponse(source.body, { headers });
-}
+// The API owns key validation for job-description images.
+export const { GET } = mediaPlaybackRoute((key) => `/cms/jobs/media/${encodeURIComponent(key)}`);
