@@ -30,7 +30,7 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
 
   return (
     <li className="relative flex gap-5 py-6 sm:gap-6">
-      <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-2xl bg-[var(--surface-muted)] sm:w-40">
+      <div className="relative aspect-video w-28 shrink-0 self-start overflow-hidden rounded-2xl bg-[var(--surface-muted)] sm:w-40">
         {thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img alt="" className="size-full object-cover" src={thumbnail} />
