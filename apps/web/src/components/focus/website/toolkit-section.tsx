@@ -22,7 +22,7 @@ export function ToolkitSection() {
           Every role gets the tools it actually needs.
         </h2>
         <p className="reveal-item opacity-0 mt-4 max-w-xl text-foreground/65">
-          Not a shared spreadsheet of logins — a real toolkit per discipline, kept current instead
+          Not a shared spreadsheet of logins — a real practice per discipline, kept current instead
           of frozen at whatever was approved three years ago.
         </p>
 
@@ -42,16 +42,7 @@ export function ToolkitSection() {
                   {role.role}
                 </h3>
                 <p className="mt-1.5 text-sm text-foreground/60">{role.tagline}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {role.tools.map((tool) => (
-                    <span
-                      key={tool}
-                      className="rounded-full border border-[var(--line)] px-3 py-1 text-xs font-medium text-foreground/75"
-                    >
-                      {tool}
-                    </span>
-                  ))}
-                </div>
+                <p className="mt-4 text-sm text-foreground/70">{role.story}</p>
               </div>
             );
           })}

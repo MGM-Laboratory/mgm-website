@@ -1,3 +1,4 @@
+import { BauhausField } from "@/components/about/bauhaus-field";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { BuildTypesSection } from "./build-types-section";
 import { PipelineSection } from "./pipeline-section";
@@ -9,7 +10,12 @@ export function WebsiteFocusPage() {
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">
       <main className="flex flex-1 flex-col">
-        <WebsiteHero />
+        <div className="relative overflow-hidden bg-[var(--surface-muted)]">
+          <BauhausField />
+          <div className="relative z-10">
+            <WebsiteHero />
+          </div>
+        </div>
         <BuildTypesSection />
         <ToolkitSection />
         <PipelineSection />

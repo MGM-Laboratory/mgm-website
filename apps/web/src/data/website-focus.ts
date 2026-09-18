@@ -35,24 +35,27 @@ export const BUILD_KINDS: BuildKind[] = [
 export type ToolkitRole = {
   role: string;
   tagline: string;
-  tools: string[];
+  story: string;
 };
 
 export const TOOLKIT_ROLES: ToolkitRole[] = [
   {
     role: "Product & PM",
     tagline: "Keeping the build pointed at something real",
-    tools: ["Jira", "Notion", "Figma", "AI planning agents"],
+    story:
+      "Every project starts as a plan in Jira and a doc in Notion, not a vibe. PMs sit in the same room as engineering, push back on scope creep out loud, and keep asking the question that actually matters: who is this for, and have we talked to them yet?",
   },
   {
     role: "Design & UX",
-    tagline: "From wireframe to a prototype you can click through",
-    tools: ["Figma", "Maze", "Framer"],
+    tagline: "From a wireframe to something you can actually click through",
+    story:
+      "Every screen gets drawn in Figma, tested with Maze, and reworked more than once before it's good enough to hand off. A Framer prototype gets argued over in review the same way code does — nothing ships because it looked fine on the first pass.",
   },
   {
     role: "Engineering",
-    tagline: "Every model, every way of running one",
-    tools: ["Claude", "ChatGPT", "Kimi", "GLM", "Local inference", "AI APIs · ElevenLabs TTS"],
+    tagline: "Written, reviewed, and shipped by hand",
+    story:
+      "This is real coding work — engineers writing the code, reading each other's pull requests, and debugging the thing at 11pm when it breaks. No shortcuts, no black box deciding what ships; just people who know the codebase because they built it.",
   },
 ];
 
@@ -74,8 +77,6 @@ export const INFRA_TOOLS: string[] = [
   "Sentry",
   "Datadog",
   "Grafana",
-  "CodeRabbit",
-  "Devin",
   "Meilisearch",
   "n8n",
   "Vercel",
