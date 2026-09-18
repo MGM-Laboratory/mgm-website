@@ -282,4 +282,25 @@ body {
   .events-past-reveal {
     animation: none;
   }
+
+  .event-card-past {
+    transition: none;
+  }
+}
+
+/* A past event reads as "over" at a glance: desaturated and slightly faded,
+   restored to full color on hover/focus so the row still reads as
+   interactive. */
+.event-card-past {
+  filter: grayscale(1);
+  opacity: 0.8;
+  transition:
+    filter 500ms,
+    opacity 500ms;
+}
+
+.event-card-past:hover,
+.event-card-past:focus-within {
+  filter: grayscale(0);
+  opacity: 1;
 }
