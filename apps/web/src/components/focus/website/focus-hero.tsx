@@ -107,7 +107,11 @@ export function FocusHero() {
   return (
     <section
       ref={setSectionEl}
-      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-background px-6"
+      // Dark mode uses --surface-inverse rather than --background's dark
+      // value — matching the reference's near-black requires it, and it's
+      // also the exact token ToolTickerBand (right below) already renders
+      // in, so there's no visible seam between the two sections.
+      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-background px-6 dark:bg-[var(--surface-inverse)]"
     >
       {mounted && (
         <SphereHeroScene sectionEl={sectionEl} play={play} reducedMotion={reduced} dark={dark} />
@@ -119,38 +123,40 @@ export function FocusHero() {
         </div>
       )}
 
-      <div className="relative z-10 w-full max-w-[1600px]">
-        <h1
-          ref={headlineRef}
-          className="pointer-events-none text-center font-display font-semibold tracking-tight text-foreground uppercase opacity-0 [text-wrap:balance] text-[clamp(3.5rem,14vw,11rem)] leading-[0.92]"
-        >
-          Website
-        </h1>
+      <h1
+        ref={headlineRef}
+        className="pointer-events-none relative z-10 w-full text-center font-display font-black tracking-tight text-foreground uppercase opacity-0 [text-wrap:balance] text-[clamp(3.5rem,20vw,19rem)] leading-[0.9]"
+      >
+        Website
+      </h1>
 
-        <div
-          ref={footRef}
-          className="relative z-10 mx-auto mt-8 flex max-w-3xl flex-col items-center gap-6 text-center opacity-0 sm:mt-12 sm:flex-row sm:items-end sm:justify-between sm:text-left"
-        >
-          <div className="max-w-md">
-            <p className="font-mono text-xs font-semibold tracking-wide text-brand-blue uppercase">
-              Focus — Website Development
-            </p>
-            <p className="mt-3 text-foreground/60">
-              &quot;We know React&quot; is table stakes. What actually changes how fast something
-              ships is everything else — already running, before you&apos;ve opened your laptop.
-            </p>
-          </div>
-
-          <Link
-            href="#stack"
-            className="group inline-flex shrink-0 items-center gap-2.5 rounded-full bg-brand-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90"
-          >
-            Scroll to see the stack
-            <span aria-hidden="true" className="transition-transform group-hover:translate-y-0.5">
-              ↓
-            </span>
-          </Link>
+      {/* Anchored to the corner, not centered under the headline — the
+          reference keeps its caption/CTA in a fixed bottom-left spot,
+          independent of the headline block, well clear of the sphere
+          cluster's own lower edge. */}
+      <div
+        ref={footRef}
+        className="absolute bottom-8 left-6 z-10 flex max-w-xs flex-col items-start gap-5 opacity-0 sm:bottom-12 sm:left-10 sm:max-w-sm"
+      >
+        <div>
+          <p className="font-mono text-xs font-semibold tracking-wide text-brand-blue uppercase">
+            Focus — Website Development
+          </p>
+          <p className="mt-3 text-sm text-foreground/60 sm:text-base">
+            &quot;We know React&quot; is table stakes. What actually changes how fast something
+            ships is everything else — already running, before you&apos;ve opened your laptop.
+          </p>
         </div>
+
+        <Link
+          href="#stack"
+          className="group inline-flex shrink-0 items-center gap-2.5 rounded-full bg-brand-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90"
+        >
+          Scroll to see the stack
+          <span aria-hidden="true" className="transition-transform group-hover:translate-y-0.5">
+            ↓
+          </span>
+        </Link>
       </div>
     </section>
   );
