@@ -7,7 +7,25 @@ type InlineNode =
 
 type InlineContent = InlineNode[] | string | undefined;
 
-const BODY_TEXT = "text-[1.1875rem] leading-[23px] text-[#3f3f3f] dark:text-[#d6d6d1]";
+export type ContentBodyStyles = {
+  bodyText: string;
+  figure: string;
+  heading: Record<number, string>;
+  spacing: string;
+  imageClassName: string;
+};
+
+export const ARTICLE_BODY_STYLES: ContentBodyStyles = {
+  bodyText: "text-[1.1875rem] leading-[23px] text-[#3f3f3f] dark:text-[#d6d6d1]",
+  figure: "mb-[23px]",
+  heading: {
+    1: "mt-14 mb-6 font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white",
+    2: "mt-10 mb-5 font-display text-[1.5rem] leading-snug font-semibold tracking-[-0.015em] text-[#0e1116] dark:text-white",
+    3: "mt-8 mb-4 font-display text-[1.25rem] leading-snug font-semibold tracking-[-0.01em] text-[#0e1116] dark:text-white",
+  },
+  imageClassName: "block w-full",
+  spacing: "mb-[23px]",
+};
 
 // CMS-authored URLs are trusted but rendered publicly, so non-web schemes
 // are refused outright — React's own javascript: blocking stays the last line
@@ -65,18 +83,18 @@ function renderInline(nodes: InlineContent, keyPrefix: string): React.ReactNode 
   });
 }
 
-function ImageBlock({ block }: { block: ArticleBlock }) {
+function ImageBlock({ block, styles }: { block: ArticleBlock; styles: ContentBodyStyles }) {
   const rawUrl = typeof block.props?.url === "string" ? block.props.url : undefined;
   const url = rawUrl ? safeImageSrc(rawUrl) : undefined;
   if (!url) return null;
   return (
-    <figure className="mb-[23px]">
+    <figure className={styles.figure}>
       {/* CMS media stays a plain image: content is authored in the editor
           and revalidated by route, so a remote loader adds no benefit. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         alt={typeof block.props?.caption === "string" ? block.props.caption : ""}
-        className="block w-full"
+        className={styles.imageClassName}
         src={url}
       />
       {typeof block.props?.caption === "string" && block.props.caption.trim() ? (
@@ -88,18 +106,17 @@ function ImageBlock({ block }: { block: ArticleBlock }) {
   );
 }
 
-const HEADING_STYLES: Record<number, string> = {
-  1: "mt-14 mb-6 font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white",
-  2: "mt-10 mb-5 font-display text-[1.5rem] leading-snug font-semibold tracking-[-0.015em] text-[#0e1116] dark:text-white",
-  3: "mt-8 mb-4 font-display text-[1.25rem] leading-snug font-semibold tracking-[-0.01em] text-[#0e1116] dark:text-white",
-};
-
 /**
- * Renders a saved BlockNote document with the article template's typography:
- * a dense 19px/23px editorial column, display headings, and full-width
- * images — no editor stylesheet required on the public site.
+ * Renders a saved BlockNote document using page-specific typography while
+ * sharing the same safe inline/link/media rendering for every public surface.
  */
-export function ArticleBody({ blocks }: { blocks: ArticleBlock[] }) {
+export function ContentBody({
+  blocks,
+  styles = ARTICLE_BODY_STYLES,
+}: {
+  blocks: ArticleBlock[];
+  styles?: ContentBodyStyles;
+}) {
   const rendered: React.ReactNode[] = [];
   let pendingListItems: React.ReactNode[] = [];
   let pendingListKind: "ul" | "ol" | undefined;
@@ -117,7 +134,7 @@ export function ArticleBody({ blocks }: { blocks: ArticleBlock[] }) {
         className={cn(
           "mb-[23px] list-outside pl-6",
           kind === "ol" ? "list-decimal" : "list-disc",
-          BODY_TEXT,
+          styles.bodyText,
         )}
         key={`list-${listKey++}`}
       >
@@ -143,7 +160,7 @@ export function ArticleBody({ blocks }: { blocks: ArticleBlock[] }) {
     switch (block.type) {
       case "paragraph":
         rendered.push(
-          <p className={cn("mb-[23px]", BODY_TEXT)} key={block.id}>
+          <p className={cn(styles.spacing, styles.bodyText)} key={block.id}>
             {renderInline(block.content as InlineContent, block.id)}
           </p>,
         );
@@ -152,20 +169,20 @@ export function ArticleBody({ blocks }: { blocks: ArticleBlock[] }) {
         const level = typeof block.props?.level === "number" ? block.props.level : 2;
         const Tag = (["h1", "h2", "h3"] as const)[Math.min(Math.max(level, 1), 3) - 1];
         rendered.push(
-          <Tag className={HEADING_STYLES[level] ?? HEADING_STYLES[2]} key={block.id}>
+          <Tag className={styles.heading[level] ?? styles.heading[2]} key={block.id}>
             {renderInline(block.content as InlineContent, block.id)}
           </Tag>,
         );
         break;
       }
       case "image":
-        rendered.push(<ImageBlock block={block} key={block.id} />);
+        rendered.push(<ImageBlock block={block} key={block.id} styles={styles} />);
         break;
       default:
         // Unknown blocks (e.g. tables, quotes) degrade to their inline text.
         if (block.content != null) {
           rendered.push(
-            <p className={cn("mb-[23px]", BODY_TEXT)} key={block.id}>
+            <p className={cn(styles.spacing, styles.bodyText)} key={block.id}>
               {renderInline(block.content as InlineContent, block.id)}
             </p>,
           );
@@ -175,4 +192,8 @@ export function ArticleBody({ blocks }: { blocks: ArticleBlock[] }) {
   flushList();
 
   return <div className="min-w-0">{rendered}</div>;
+}
+
+export function ArticleBody({ blocks }: { blocks: ArticleBlock[] }) {
+  return <ContentBody blocks={blocks} />;
 }
