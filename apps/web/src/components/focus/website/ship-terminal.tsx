@@ -281,12 +281,13 @@ export function ShipTerminal() {
       </noscript>
       <div className="absolute inset-0">
         <Image
-          src="/focus/website/ship-backdrop.png"
+          src="/focus/website/photos/moody-code.jpg"
           alt=""
           fill
           sizes="100vw"
           className="object-cover"
         />
+        <div className="absolute inset-0 bg-[var(--surface-inverse)]/55" />
       </div>
       <GrainOverlay className="opacity-[0.07]" />
       <div ref={rootRef} className="relative mx-auto max-w-3xl">

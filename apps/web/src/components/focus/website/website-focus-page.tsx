@@ -1,7 +1,9 @@
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { FocusHero } from "./focus-hero";
 import { ToolTickerBand } from "./tool-ticker-band";
-import { DeskGallery } from "./desk-gallery";
+import { ToolConnections } from "./tool-connections";
+import { StackBento } from "./stack-bento";
+import { LiveProof } from "./live-proof";
 import { ShipTerminal } from "./ship-terminal";
 import { OutroStatement } from "./outro-statement";
 
@@ -16,7 +18,9 @@ export function WebsiteFocusPage() {
       <main className="flex flex-1 flex-col">
         <FocusHero />
         <ToolTickerBand />
-        <DeskGallery />
+        <ToolConnections />
+        <StackBento />
+        <LiveProof />
         <ShipTerminal />
         <OutroStatement />
       </main>
