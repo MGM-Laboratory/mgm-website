@@ -31,7 +31,7 @@ export function EventsList({ records }: { records: readonly CmsEventRecord[] }) 
 
   return (
     <div>
-      <div className="relative max-w-sm">
+      <div className="relative w-full">
         <MagnifyingGlass
           className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-3)]"
           size={18}
