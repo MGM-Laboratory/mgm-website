@@ -453,9 +453,14 @@ export function EventEditor({
   };
 
   const fillMgmLaboratoryAddress = async () => {
+    // Location and coordinates always move together with the URL — an
+    // unrelated leftover venue name or a stale marker from whatever was
+    // there before would otherwise contradict the lab's own link.
     setDraft((current) => ({
       ...current,
-      location: current.location?.trim() || MGM_LABORATORY_NAME,
+      location: MGM_LABORATORY_NAME,
+      mapsLat: undefined,
+      mapsLng: undefined,
       mapsUrl: MGM_LABORATORY_MAPS_URL,
     }));
     await resolveCoordinatesFor(MGM_LABORATORY_MAPS_URL);
