@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { CompetencyPageContent } from "@/components/sections/competency-page";
+import { UxFocusPage } from "@/components/focus/ux/ux-focus-page";
 import { COMPETENCIES } from "@/data/competencies";
 
 const competency = COMPETENCIES.find((c) => c.href === "/ux")!;
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function UxPage() {
-  return <CompetencyPageContent competency={competency} />;
+  return <UxFocusPage />;
 }
