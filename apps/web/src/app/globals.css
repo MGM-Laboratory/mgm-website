@@ -172,6 +172,21 @@ body {
   }
 }
 
+@keyframes events-past-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.events-past-reveal {
+  animation: events-past-reveal 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* ---------------------------------------------------------------------------
    PDF viewer layers. pdf.js positions every span/section inline and sizes
    them with the `--total-scale-factor` CSS variable, which each page wrapper
@@ -263,4 +278,29 @@ body {
   .admin-editor-enter {
     animation: none;
   }
+
+  .events-past-reveal {
+    animation: none;
+  }
+
+  .event-card-past {
+    transition: none;
+  }
+}
+
+/* A past event reads as "over" at a glance: desaturated and slightly faded,
+   restored to full color on hover/focus so the row still reads as
+   interactive. */
+.event-card-past {
+  filter: grayscale(1);
+  opacity: 0.8;
+  transition:
+    filter 500ms,
+    opacity 500ms;
+}
+
+.event-card-past:hover,
+.event-card-past:focus-within {
+  filter: grayscale(0);
+  opacity: 1;
 }

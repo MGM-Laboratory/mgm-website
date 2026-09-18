@@ -2,6 +2,7 @@
 
 import {
   ArrowSquareOut,
+  Buildings,
   Camera,
   Check,
   FloppyDisk,
@@ -52,6 +53,11 @@ function Field({ children, label }: { children: React.ReactNode; label: string }
     </label>
   );
 }
+
+// The lab's own address, so admins filling in an event held on-site don't
+// have to go find the maps link every time.
+const MGM_LABORATORY_MAPS_URL = "https://maps.app.goo.gl/cveQreqmCE22zS97A";
+const MGM_LABORATORY_NAME = "MGM Laboratory";
 
 // Paths claimed by routes on the events controller; an event can never use one.
 const RESERVED_EVENT_SLUGS = new Set([
@@ -410,12 +416,7 @@ export function EventEditor({
     }));
   };
 
-  const resolveMapsLink = async () => {
-    const url = draft.mapsUrl?.trim();
-    if (!url) {
-      toast.error("Paste a Google Maps link first.");
-      return;
-    }
+  const resolveCoordinatesFor = async (url: string) => {
     setResolvingMaps(true);
     try {
       const response = await fetch("/api/admin/events/resolve-maps-link", {
@@ -440,6 +441,24 @@ export function EventEditor({
     } finally {
       setResolvingMaps(false);
     }
+  };
+
+  const resolveMapsLink = async () => {
+    const url = draft.mapsUrl?.trim();
+    if (!url) {
+      toast.error("Paste a Google Maps link first.");
+      return;
+    }
+    await resolveCoordinatesFor(url);
+  };
+
+  const fillMgmLaboratoryAddress = async () => {
+    setDraft((current) => ({
+      ...current,
+      location: current.location?.trim() || MGM_LABORATORY_NAME,
+      mapsUrl: MGM_LABORATORY_MAPS_URL,
+    }));
+    await resolveCoordinatesFor(MGM_LABORATORY_MAPS_URL);
   };
 
   const save = async () => {
@@ -770,9 +789,20 @@ export function EventEditor({
       </div>
 
       <div className="space-y-3 rounded-2xl border border-[#eef1f7] p-4 dark:border-white/[0.06]">
-        <p className="flex items-center gap-2 text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-          <MapPin size={14} weight="bold" /> Location on the map
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="flex items-center gap-2 text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+            <MapPin size={14} weight="bold" /> Location on the map
+          </p>
+          <button
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-blue transition hover:underline disabled:opacity-60"
+            disabled={resolvingMaps}
+            onClick={() => void fillMgmLaboratoryAddress()}
+            type="button"
+          >
+            <Buildings size={13} weight="bold" />
+            Use MGM Laboratory
+          </button>
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             className={inputClass}

@@ -67,6 +67,7 @@ export function emptyEventDraft(): EventDraft {
 export type CmsEventRegistrationRecord = {
   slug: string;
   registration: {
+    agreedToTerms: boolean;
     eventSlug: string;
     eventTitle: string;
     fullName: string;
@@ -119,11 +120,20 @@ export function sortEventsByStart(records: readonly CmsEventRecord[]) {
   return [...records].sort((left, right) => left.startAt.localeCompare(right.startAt));
 }
 
+/**
+ * Whether an event's end time has already passed. Compares as epoch
+ * milliseconds, not ISO strings — `endAt` may omit seconds/milliseconds
+ * (the API's stored format allows it), and a shorter string doesn't sort
+ * lexically the same way its instant compares numerically.
+ */
+export function isEventPast(record: CmsEventRecord, now: Date = new Date()): boolean {
+  return new Date(record.endAt).getTime() < now.getTime();
+}
+
 /** Upcoming first (soonest first), then past (most recent first). */
 export function partitionEvents(records: readonly CmsEventRecord[], now = new Date()) {
-  const nowIso = now.toISOString();
-  const upcoming = sortEventsByStart(records.filter((record) => record.endAt >= nowIso));
-  const past = sortEventsByStart(records.filter((record) => record.endAt < nowIso)).reverse();
+  const upcoming = sortEventsByStart(records.filter((record) => !isEventPast(record, now)));
+  const past = sortEventsByStart(records.filter((record) => isEventPast(record, now))).reverse();
   return { past, upcoming };
 }
 

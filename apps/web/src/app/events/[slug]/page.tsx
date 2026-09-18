@@ -1,4 +1,11 @@
-import { Clock, MapPin, Microphone, UsersThree, VideoCamera } from "@phosphor-icons/react/dist/ssr";
+import {
+  CalendarX,
+  Clock,
+  MapPin,
+  Microphone,
+  UsersThree,
+  VideoCamera,
+} from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,7 +17,7 @@ import { EventDateTime } from "@/components/events/event-date-time";
 import { EventMap } from "@/components/events/event-map";
 import { EventRegisterButton } from "@/components/events/event-register-button";
 import { CtaFooter } from "@/components/sections/cta-footer";
-import { sortEventsByStart, type CmsEventRecord } from "@/lib/events-cms";
+import { isEventPast, sortEventsByStart, type CmsEventRecord } from "@/lib/events-cms";
 import { fetchEventBySlug, fetchEventsFeed } from "@/lib/events-cms-server";
 
 type EventPageProps = { params: Promise<{ slug: string }> };
@@ -45,7 +52,7 @@ function InfoRow({ children, label }: { children: React.ReactNode; label: string
       <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[var(--ink-3)] uppercase">
         {label}
       </p>
-      <p className="mt-1 text-sm leading-6 text-[var(--ink)] dark:text-white/85">{children}</p>
+      <div className="mt-1 text-sm leading-6 text-[var(--ink)] dark:text-white/85">{children}</div>
     </div>
   );
 }
@@ -69,6 +76,7 @@ export default async function EventPage({ params }: EventPageProps) {
   const others = sortEventsByStart(feed.filter((item) => item.slug !== slug)).slice(0, 3);
   const isOnlineLocation = event.location?.trim().toLocaleLowerCase() === "online";
   const locationLinkable = Boolean(event.mapsUrl) && !isOnlineLocation;
+  const isPast = isEventPast(event);
 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
@@ -97,10 +105,17 @@ export default async function EventPage({ params }: EventPageProps) {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <AddToCalendarButton event={event} />
             {event.registrationEnabled ? (
-              <EventRegisterButton
-                eventSlug={event.slug}
-                registrationCapacity={event.registrationCapacity}
-              />
+              isPast ? (
+                <span className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--line)] px-4 text-sm font-semibold text-[var(--ink-3)] dark:border-white/10">
+                  <CalendarX size={16} weight="bold" />
+                  Registration closed
+                </span>
+              ) : (
+                <EventRegisterButton
+                  eventSlug={event.slug}
+                  registrationCapacity={event.registrationCapacity}
+                />
+              )
             ) : null}
           </div>
 

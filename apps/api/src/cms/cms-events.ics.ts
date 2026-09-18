@@ -11,6 +11,7 @@ export type IcsEventRecord = {
   endAt: string;
   allDay: boolean;
   location?: string;
+  mapsUrl?: string;
   meetingLink?: string;
   updatedAt: string;
 };
@@ -82,8 +83,12 @@ function writeVEvent(lines: string[], record: IcsEventRecord, stamp: Date) {
     writeIcsLine(lines, `DTEND:${formatIcsUtc(new Date(record.endAt))}`);
   }
   writeIcsLine(lines, `SUMMARY:${escapeIcsText(record.title)}`);
-  if (record.location?.trim()) {
-    writeIcsLine(lines, `LOCATION:${escapeIcsText(record.location.trim())}`);
+  // The maps link opens directions in one tap from the calendar app, so it
+  // takes priority over the raw place name; the name is still the fallback
+  // when no maps link was set.
+  const location = record.mapsUrl?.trim() || record.location?.trim();
+  if (location) {
+    writeIcsLine(lines, `LOCATION:${escapeIcsText(location)}`);
   }
   const description = buildDescription(record);
   if (description) writeIcsLine(lines, `DESCRIPTION:${escapeIcsText(description)}`);
