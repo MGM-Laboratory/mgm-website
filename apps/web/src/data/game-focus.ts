@@ -3,6 +3,8 @@
 // corporate capability statement. See docs/project-overview.md for how this
 // fits the other three Focus pages (/website, /mobile, /ux).
 
+import type { StoryRowItem } from "@/components/focus/shared/focus-story-rows";
+
 export type PlatformItem = { label: string; detail: string };
 
 export const PLATFORM_ITEMS: PlatformItem[] = [
@@ -80,9 +82,14 @@ export const PUBLISHING_TOOLS: string[] = [
 // mgm.md [S11]: BandoAR, presented at the 5th IEEE ICETAS, Bangkok, 22–23
 // November 2018, supervised by Herman Tolle, Ahmad Afif Supianto, and Kohei
 // Arai. Framed here as a highlight from the division's history, not a
-// current release.
-export const BANDOAR_HIGHLIGHT = {
-  title: "BandoAR",
-  meta: "Best Paper — 5th IEEE ICETAS, Bangkok · November 2018",
-  body: "A smartphone app that points your camera at Banjar script and hands back Indonesian — AR and OCR doing real-time translation. Built by a lab member, recognized on an international stage.",
-};
+// current release. Shaped as a one-item array so it can render through the
+// same FocusStoryRows component the /mobile history section uses.
+export const BANDOAR_HIGHLIGHT: StoryRowItem[] = [
+  {
+    tag: "Best Paper — 5th IEEE ICETAS, Bangkok · November 2018",
+    title: "BandoAR",
+    body: "A smartphone app that points your camera at Banjar script and hands back Indonesian — AR and OCR doing real-time translation. Built by a lab member, recognized on an international stage.",
+    pattern: "quads",
+    tone: "green",
+  },
+];
