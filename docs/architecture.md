@@ -46,7 +46,7 @@ Theme implementation: Tailwind v4 `@custom-variant dark (&:where(.dark, .dark *)
 | `components/sections/page-band.tsx`         | Generic standalone-page hero band (used by all non-home pages)                                                                                                                         |
 | `components/publications/`                  | Publication index filter, journal-style author block, citation box, first-page preview, and the full-screen PDF viewer (zoom / fit-width / page jumps / download, lazy page rendering) |
 | `components/sections/cta-footer.tsx`        | Shared CTA/footer (socials reuse `social-icons.tsx`)                                                                                                                                   |
-| `components/social-icons.tsx`               | Hand-drawn brand glyphs (Instagram, LinkedIn, X, YouTube, Discord) — `currentColor` SVGs, React 19 ref-as-prop (`ref?: Ref<SVGSVGElement>`) so GSAP can animate them                   |
+| `components/social-icons.tsx`               | Hand-drawn brand glyphs (Instagram, LinkedIn, GitHub, WhatsApp, Discord) — `currentColor` SVGs, React 19 ref-as-prop (`ref?: Ref<SVGSVGElement>`) so GSAP can animate them             |
 | `components/theme-toggle.tsx`               | Light/dark toggle (next-themes)                                                                                                                                                        |
 | `components/api-status.tsx`                 | API health indicator (uses `hooks/use-health.ts`)                                                                                                                                      |
 

@@ -4,8 +4,6 @@ import {
   InstagramLogoIcon,
   LinkedinLogoIcon,
   WhatsappLogoIcon,
-  XLogoIcon,
-  YoutubeLogoIcon,
 } from "@phosphor-icons/react";
 import type { Ref } from "react";
 
@@ -21,6 +19,4 @@ export const InstagramGlyph = glyph(InstagramLogoIcon);
 export const LinkedinGlyph = glyph(LinkedinLogoIcon);
 export const GithubGlyph = glyph(GithubLogoIcon);
 export const WhatsappGlyph = glyph(WhatsappLogoIcon);
-export const XGlyph = glyph(XLogoIcon);
-export const YoutubeGlyph = glyph(YoutubeLogoIcon);
 export const DiscordGlyph = glyph(DiscordLogoIcon);

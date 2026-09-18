@@ -40,7 +40,7 @@ export function ArticleSearchBox({ initialQuery = "" }: { initialQuery?: string 
   };
 
   return (
-    <div className="relative w-full max-w-md">
+    <div className="relative w-full">
       <MagnifyingGlass
         aria-hidden="true"
         className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-3)]"

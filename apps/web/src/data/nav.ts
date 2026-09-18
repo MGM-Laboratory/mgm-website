@@ -55,13 +55,10 @@ export const NAV_ITEMS: (NavItem & { accent: PatternTone })[] = [
 export const CONTACT_EMAIL = "hi@labmgm.org";
 
 // Icon-only in the panel — matched to a glyph in nav-menu.tsx by label.
-// Placeholder hrefs until real accounts exist.
 export const NAV_SOCIALS: NavLink[] = [
-  { label: "Instagram", href: "https://instagram.com" },
-  { label: "X (Formerly Twitter)", href: "https://x.com" },
-  { label: "YouTube", href: "https://youtube.com" },
-  { label: "LinkedIn", href: "https://linkedin.com" },
-  { label: "Discord", href: "https://discord.com" },
+  { label: "Instagram", href: "https://www.instagram.com/labmgmfilkomub/" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/company/mgmlab" },
+  { label: "Discord", href: "https://discord.gg/h7PTA7XCq4" },
 ];
 
 export const LEGAL_LINKS: NavLink[] = [

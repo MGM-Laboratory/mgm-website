@@ -6,7 +6,7 @@ The **MGM Laboratory** company-profile site: a single marketing homepage with a 
 
 - **Public contact email:** `hi@labmgm.org`
 - **Timezone displayed in the menu:** Malang, Indonesia (WIB, `Asia/Jakarta`)
-- **Socials (placeholder links for now):** Instagram, X (Formerly Twitter), YouTube, LinkedIn, Discord — configured in `apps/web/src/data/nav.ts`
+- **Socials:** Instagram, LinkedIn, Discord — configured in `apps/web/src/data/nav.ts`
 
 ## Pages
 
@@ -53,5 +53,5 @@ Full behavior spec: `docs/navigation-menu.md`.
 
 ## What's placeholder vs. real
 
-- **Real:** homepage hero, Core Competencies, nav/menu system, theme toggle, smooth scrolling, all page scaffolding, CI/CD, the About Us page, the Articles, Members, Publications, Careers, Research, and Events CMS collections (editable from `/admin` with the passphrase).
-- **Placeholder:** social media hrefs (`#`), page-band content on standalone pages, and the departments' actual copy. The API (`apps/api`) has working health/mail/storage modules but the web pages don't yet consume them beyond an API-status indicator.
+- **Real:** homepage hero, Core Competencies, nav/menu system, theme toggle, smooth scrolling, all page scaffolding, CI/CD, the About Us page, the Articles, Members, Publications, Careers, Research, and Events CMS collections (editable from `/admin` with the passphrase), social media hrefs (Instagram, LinkedIn, Discord).
+- **Placeholder:** page-band content on standalone pages and the departments' actual copy. The API (`apps/api`) has working health/mail/storage modules but the web pages don't yet consume them beyond an API-status indicator.

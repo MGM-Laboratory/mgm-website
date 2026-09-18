@@ -2,11 +2,12 @@
 
 import { Check, Globe, GraduationCap } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { CareerCvDropzone } from "@/components/careers/career-cv-dropzone";
+import { PhoneCountrySelect } from "@/components/careers/phone-country-select";
 import { submitApplication } from "@/lib/career-apply";
-import { COUNTRY_CODES, countryFlag } from "@/lib/country-codes";
 import { UB_FACULTIES } from "@/lib/ub-faculties";
 
 type ApplicantType = "ub-student" | "general";
@@ -55,6 +56,22 @@ export function JobApplicationForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isUb = applicantType === "ub-student";
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  // The success card collapses a long, scrolled-through form down to a
+  // short one. Native scroll position doesn't retreat on its own, which
+  // left visitors stranded below the (now much shorter) footer looking at
+  // blank space. Land on top, then let ScrollTrigger (CtaFooter's fade-ups
+  // and back-to-top button) re-measure against the new, shorter layout.
+  // The submit button (and the rest of the form) unmounts along with it,
+  // so focus also moves to the success heading — otherwise keyboard and
+  // screen-reader users lose their place entirely.
+  useEffect(() => {
+    if (status !== "success") return;
+    window.scrollTo(0, 0);
+    ScrollTrigger.refresh();
+    successHeadingRef.current?.focus();
+  }, [status]);
 
   const touch = (field: string) =>
     setTouched((current) => (current[field] ? current : { ...current, [field]: true }));
@@ -168,7 +185,11 @@ export function JobApplicationForm({
         <span className="mx-auto grid size-14 place-items-center rounded-full bg-brand-green-50 text-brand-green dark:bg-brand-green/15 dark:text-[#6fd3a5]">
           <Check aria-hidden="true" size={26} strokeWidth={2.25} />
         </span>
-        <h2 className="mt-5 font-display text-2xl font-semibold text-[#0e1116] dark:text-white">
+        <h2
+          className="mt-5 font-display text-2xl font-semibold text-[#0e1116] outline-none dark:text-white"
+          ref={successHeadingRef}
+          tabIndex={-1}
+        >
           Application received!
         </h2>
         <p className="mx-auto mt-2 max-w-md text-[var(--ink-2)] dark:text-[#c3c7d1]">
@@ -187,7 +208,7 @@ export function JobApplicationForm({
 
   return (
     <form
-      className="space-y-12"
+      className="space-y-8"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -290,18 +311,11 @@ export function JobApplicationForm({
               Phone number
             </label>
             <div className="flex gap-3">
-              <select
-                aria-label="Country code"
-                className="h-12 w-[128px] shrink-0 rounded-xl border border-[var(--line-strong)] bg-white px-2 text-[15px] text-[var(--ink)] outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-[#15181e] dark:text-white"
-                onChange={(event) => setPhoneCountry(event.target.value)}
+              <PhoneCountrySelect
+                hasError={Boolean(phoneError)}
+                onChange={setPhoneCountry}
                 value={phoneCountry}
-              >
-                {COUNTRY_CODES.map((country) => (
-                  <option key={country.code} title={country.name} value={country.dial}>
-                    {countryFlag(country.code)} {country.dial}
-                  </option>
-                ))}
-              </select>
+              />
               <input
                 aria-describedby={phoneError ? "phone-error" : undefined}
                 autoComplete="tel"
@@ -424,7 +438,7 @@ export function JobApplicationForm({
       </section>
 
       {/* Agreement + submit */}
-      <section className="border-t border-[var(--line)] pt-8">
+      <section className="border-t border-[var(--line)] pt-6">
         <label className="flex cursor-pointer items-start gap-3">
           <input
             checked={agreedToTerms}
