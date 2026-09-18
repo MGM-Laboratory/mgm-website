@@ -351,9 +351,9 @@ export function ContactForm() {
               addFiles(Array.from(event.dataTransfer.files));
             }}
             className={cn(
-              "mt-2 w-full cursor-pointer rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200",
+              "mt-2 w-full cursor-pointer rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200 motion-reduce:transition-none",
               dragOver
-                ? "scale-[1.01] border-brand-blue bg-brand-blue-50"
+                ? "scale-[1.01] border-brand-blue bg-brand-blue-50 motion-reduce:scale-100"
                 : "border-[var(--line)] hover:border-brand-blue/60 hover:bg-[var(--surface-muted)]",
             )}
           >
@@ -455,7 +455,7 @@ export function ContactForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-6 flex w-full scale-100 items-center justify-center gap-2.5 rounded-xl bg-brand-blue px-5 py-4 text-base font-semibold text-white transition-all duration-200 hover:scale-[1.01] hover:opacity-90 active:scale-[0.99] disabled:cursor-wait disabled:opacity-60 disabled:hover:scale-100"
+        className="mt-6 flex w-full scale-100 items-center justify-center gap-2.5 rounded-xl bg-brand-blue px-5 py-4 text-base font-semibold text-white transition-all duration-200 hover:scale-[1.01] hover:opacity-90 active:scale-[0.99] disabled:cursor-wait disabled:opacity-60 disabled:hover:scale-100 motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
       >
         {isSubmitting ? (
           <Loader2 className="size-4 animate-spin" strokeWidth={2.25} />

@@ -11,6 +11,7 @@ import {
   Res,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import {
   CONTACT_ATTACHMENT_KEY_PATTERN,
   CONTACT_MAX_ATTACHMENT_BYTES,
@@ -110,7 +111,14 @@ export class ContactController {
     return response.redirect(url);
   }
 
-  /** Rejects invalid messages with field-level errors before submitting valid payloads. */
+  /**
+   * Rejects invalid messages with field-level errors before submitting valid
+   * payloads. Throttled tighter than the app-wide default — every submission
+   * now also sends a branded confirmation to whatever address is given, so a
+   * loose limit here would let this endpoint be abused as an unsolicited
+   * mail relay against arbitrary third-party inboxes.
+   */
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post()
   async submit(@Req() request: Request) {
     const parsed = contactFormSchema.safeParse(request.body);

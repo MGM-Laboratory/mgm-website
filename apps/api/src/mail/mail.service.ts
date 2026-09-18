@@ -162,6 +162,17 @@ export class MailService {
    * Sends an HTML email using the requested routing strategy, falling through
    * ordered candidates on failure. Rejects when the sender is missing, no
    * provider is eligible, or every candidate fails.
+   *
+   * Known gap: quota accounting below reserves/records exactly one unit per
+   * call regardless of how many addresses are in `to`. Providers that count
+   * per-recipient (SES, Resend) can exhaust their real allowance earlier
+   * than a configured MailProviderLimits daily/long limit would suggest.
+   * Not fixed here — it needs the reservation/recording paths (and their
+   * concurrency-sensitive advisory-lock transaction) reworked to reserve
+   * `to.length` units atomically, which deserves its own change with test
+   * coverage rather than a rushed edit alongside an unrelated feature.
+   * Only matters once a provider limit is actually configured — unset by
+   * default.
    */
   async sendEmail(params: {
     to: string | string[];

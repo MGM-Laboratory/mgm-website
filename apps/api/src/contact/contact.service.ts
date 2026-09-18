@@ -106,10 +106,12 @@ export class ContactService {
         limits: settings.mailProviderLimits,
       });
     } catch (error) {
+      // Deliberately excludes the submitter's address and the raw provider
+      // error text from the log line — the stack trace (developer-facing,
+      // not user-facing PII) is enough to diagnose a delivery failure.
       this.logger.warn(
-        `Could not send confirmation email to ${payload.email}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        "Confirmation email delivery failed",
+        error instanceof Error ? error.stack : String(error),
       );
     }
   }
