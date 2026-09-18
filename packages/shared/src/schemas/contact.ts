@@ -101,8 +101,10 @@ export type MailProviderLimits = z.infer<typeof mailProviderLimitsSchema>;
 
 // The lab's public contact details — CMS-editable (unlike the credentials in
 // apps/api/.env), since these are ordinary business info, not secrets.
-export const contactSettingsSchema = z.object({
-  email: z.string().trim().min(1, "Please enter an email.").email("Enter a valid email address."),
+const contactSettingsShape = z.object({
+  emails: z
+    .array(z.string().trim().min(1).email("Enter a valid email address."))
+    .min(1, "Add at least one recipient email."),
   address: z.string().trim().min(1, "Please enter an address."),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
@@ -112,13 +114,29 @@ export const contactSettingsSchema = z.object({
   mailProviderLimits: mailProviderLimitsSchema,
 });
 
+// A record saved before multi-recipient support shipped still has a single
+// `email: string` field in the database instead of `emails: string[]` — this
+// lifts that legacy shape into the current one before validating, so an old
+// stored row (or an old cached copy) doesn't fail parsing and silently fall
+// back to DEFAULT_CONTACT_SETTINGS, wiping out the real configured inbox.
+export const contactSettingsSchema = z.preprocess((value) => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    if (record.emails === undefined && typeof record.email === "string") {
+      const { email, ...rest } = record;
+      return { ...rest, emails: [email] };
+    }
+  }
+  return value;
+}, contactSettingsShape);
+
 export type ContactSettings = z.infer<typeof contactSettingsSchema>;
 
 // Used both as the API's fallback when no CMS record has been saved yet, and
 // as the web's fallback if the API is unreachable — so the site never shows
 // a broken contact page just because nobody has opened the CMS editor yet.
 export const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
-  email: "hi@labmgm.org",
+  emails: ["hi@labmgm.org"],
   address:
     "Faculty of Computer Science, Building F Room F10.5 and F10.6\nVeteran Street No. 8, Malang, 65145, Indonesia",
   lat: -7.9543,

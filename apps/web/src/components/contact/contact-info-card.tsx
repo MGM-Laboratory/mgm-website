@@ -1,11 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import gsap from "gsap";
 import { Copy, Mail, MapPin, Navigation, Plus, Send } from "lucide-react";
 import type { ContactSettings } from "@repo/shared";
 import { toast } from "sonner";
 
-import { HqMap } from "@/components/contact/hq-map";
+import {
+  DiscordGlyph,
+  InstagramGlyph,
+  LinkedinGlyph,
+  type GlyphProps,
+} from "@/components/social-icons";
+import { NAV_SOCIALS } from "@/data/nav";
 import { useDismissableOpen } from "@/hooks/use-dismissable-open";
 import { cn } from "@/lib/utils";
 
@@ -130,36 +137,128 @@ function RevealPopover({
   );
 }
 
+const SOCIAL_GLYPHS: Record<string, React.ComponentType<GlyphProps>> = {
+  Discord: DiscordGlyph,
+  Instagram: InstagramGlyph,
+  LinkedIn: LinkedinGlyph,
+};
+
+function reducedMotion() {
+  return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
+}
+
+// One persistent, paused timeline per icon — hover plays it forward, unhover
+// reverses it. `overwrite: "auto"` keeps rapid re-hovering from desyncing the
+// timeline mid-play (see the events-cms popover work for why that matters).
+function useSocialWiggle() {
+  return (icon: SVGSVGElement | null) => {
+    if (!icon || reducedMotion()) return;
+    const tl = gsap.timeline({ paused: true, defaults: { overwrite: "auto" } });
+    tl.to(icon, { rotate: -12, scale: 1.08, duration: 0.12, ease: "power1.out" }).to(icon, {
+      rotate: 0,
+      scale: 1,
+      duration: 0.22,
+      ease: "back.out(2.5)",
+    });
+    const play = () => tl.play(0);
+    icon.addEventListener("mouseenter", play);
+    return () => icon.removeEventListener("mouseenter", play);
+  };
+}
+
+function FoundUsOn() {
+  const wireIcon = useSocialWiggle();
+
+  return (
+    <div>
+      <p className="text-xs font-semibold tracking-wide text-foreground/45 uppercase">
+        Found us on
+      </p>
+      <div className="mt-3 flex items-center gap-2.5">
+        {NAV_SOCIALS.map((social) => {
+          const Glyph = SOCIAL_GLYPHS[social.label];
+          if (!Glyph) return null;
+          return (
+            <a
+              key={social.label}
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${social.label} (opens in a new tab)`}
+              className="flex size-11 items-center justify-center rounded-full border border-[var(--line)] text-foreground/70 transition-colors duration-200 hover:border-brand-blue hover:bg-brand-blue-50 hover:text-brand-blue focus-visible:border-brand-blue focus-visible:ring-4 focus-visible:ring-brand-blue/15 focus-visible:outline-none"
+            >
+              <Glyph
+                className="size-[1.15rem]"
+                ref={(node) => {
+                  if (!node) return;
+                  return wireIcon(node);
+                }}
+              />
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettings }>) {
   const addressLines = settings.address.split("\n");
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${settings.lat}%2C${settings.lng}`;
+  const primaryEmail = settings.emails[0];
+
+  const cardRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rows = card.querySelectorAll<HTMLElement>(".info-reveal");
+    if (!rows.length) return;
+    if (reducedMotion()) {
+      gsap.set(rows, { opacity: 1, y: 0 });
+      return;
+    }
+    const tween = gsap.fromTo(
+      rows,
+      { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.08, immediateRender: true },
+    );
+    return () => {
+      tween.kill();
+    };
+  }, []);
 
   return (
     // skipcq: JS-0415 -- ordinary card layout depth, not a code smell
-    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)] p-6 sm:p-8">
-      <p className="text-xs font-semibold tracking-wide text-foreground/45 uppercase">
+    <div
+      ref={cardRef}
+      className="rounded-3xl border border-[var(--line)] bg-[var(--surface-muted)] p-6 sm:p-7"
+    >
+      <noscript>
+        <style>{".info-reveal{opacity:1 !important}"}</style>
+      </noscript>
+      <p className="info-reveal text-xs font-semibold tracking-wide text-foreground/45 uppercase opacity-0">
         Reach us directly
       </p>
 
-      <div className="mt-4 flex flex-col divide-y divide-[var(--line)]">
-        <div className="pb-4">
+      <div className="mt-4 flex flex-col gap-5">
+        <div className="info-reveal opacity-0">
           <InfoRow icon={Mail} label="Email">
             <RevealPopover
-              trigger={settings.email}
+              trigger={primaryEmail}
               triggerClassName="font-display text-base font-semibold text-foreground"
               actions={[
-                { icon: Send, label: "Send email", href: `mailto:${settings.email}` },
+                { icon: Send, label: "Send email", href: `mailto:${primaryEmail}` },
                 {
                   icon: Copy,
                   label: "Copy email",
-                  onClick: () => copyToClipboard("Email", settings.email),
+                  onClick: () => copyToClipboard("Email", primaryEmail),
                 },
               ]}
             />
           </InfoRow>
         </div>
 
-        <div className="py-4">
+        <div className="info-reveal opacity-0">
           <InfoRow icon={MapPin} label="Based in">
             <RevealPopover
               align="start"
@@ -182,10 +281,11 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
                 },
               ]}
             />
-            <div className="mt-3">
-              <HqMap lat={settings.lat} lng={settings.lng} />
-            </div>
           </InfoRow>
+        </div>
+
+        <div className="info-reveal opacity-0 border-t border-[var(--line)] pt-5">
+          <FoundUsOn />
         </div>
       </div>
     </div>

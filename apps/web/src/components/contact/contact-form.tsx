@@ -248,15 +248,25 @@ export function ContactForm() {
     }
   }
 
+  const fieldClass =
+    "mt-2 w-full rounded-xl border border-[var(--line)] bg-transparent px-4 py-3.5 text-base text-foreground outline-none transition-all duration-200 placeholder:text-foreground/35 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10";
+
   return (
     // skipcq: JS-0415 -- ordinary form layout depth, not a code smell
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 sm:p-8"
+      className="rounded-3xl border border-[var(--line)] bg-[var(--surface)] p-7 shadow-[var(--shadow-1)] sm:p-10 dark:border-white/10 dark:bg-white/[0.04]"
     >
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <div>
-          <label htmlFor="contact-name" className="text-sm font-medium text-foreground">
+      <p className="font-mono text-xs font-bold tracking-[0.16em] text-brand-blue uppercase">
+        Send a message
+      </p>
+      <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+        Tell us about your project
+      </h2>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="reveal-field opacity-0">
+          <label htmlFor="contact-name" className="text-sm font-semibold text-foreground">
             Name <span className="text-brand-red">*</span>
           </label>
           <input
@@ -264,16 +274,16 @@ export function ContactForm() {
             type="text"
             autoComplete="name"
             placeholder="Your name"
-            className="mt-1.5 w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-foreground/35 focus:border-brand-blue"
+            className={fieldClass}
             {...register("name")}
           />
           {showError("name") ? (
-            <p className="mt-1 text-sm font-medium text-brand-red">{errors.name?.message}</p>
+            <p className="mt-1.5 text-sm font-medium text-brand-red">{errors.name?.message}</p>
           ) : null}
         </div>
 
-        <div>
-          <label htmlFor="contact-email" className="text-sm font-medium text-foreground">
+        <div className="reveal-field opacity-0">
+          <label htmlFor="contact-email" className="text-sm font-semibold text-foreground">
             Email <span className="text-brand-red">*</span>
           </label>
           <input
@@ -281,16 +291,16 @@ export function ContactForm() {
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
-            className="mt-1.5 w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-foreground/35 focus:border-brand-blue"
+            className={fieldClass}
             {...register("email")}
           />
           {showError("email") ? (
-            <p className="mt-1 text-sm font-medium text-brand-red">{errors.email?.message}</p>
+            <p className="mt-1.5 text-sm font-medium text-brand-red">{errors.email?.message}</p>
           ) : null}
         </div>
 
-        <div className="sm:col-span-2">
-          <label htmlFor="contact-company" className="text-sm font-medium text-foreground">
+        <div className="reveal-field opacity-0 sm:col-span-2">
+          <label htmlFor="contact-company" className="text-sm font-semibold text-foreground">
             Company <span className="text-foreground/40">(optional)</span>
           </label>
           <input
@@ -298,31 +308,31 @@ export function ContactForm() {
             type="text"
             autoComplete="organization"
             placeholder="Company or organization name"
-            className="mt-1.5 w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-foreground/35 focus:border-brand-blue"
+            className={fieldClass}
             {...register("company")}
           />
         </div>
 
-        <div className="sm:col-span-2">
-          <label htmlFor="contact-message" className="text-sm font-medium text-foreground">
+        <div className="reveal-field opacity-0 sm:col-span-2">
+          <label htmlFor="contact-message" className="text-sm font-semibold text-foreground">
             How can we help? <span className="text-brand-red">*</span>
           </label>
           <textarea
             id="contact-message"
-            rows={5}
+            rows={6}
             placeholder="A few sentences about your project or question…"
-            className="mt-1.5 w-full resize-none rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-foreground/35 focus:border-brand-blue"
+            className={cn(fieldClass, "resize-none")}
             {...register("message")}
           />
           {showError("message") ? (
-            <p className="mt-1 text-sm font-medium text-brand-red">{errors.message?.message}</p>
+            <p className="mt-1.5 text-sm font-medium text-brand-red">{errors.message?.message}</p>
           ) : null}
         </div>
 
-        <div className="sm:col-span-2">
+        <div className="reveal-field opacity-0 sm:col-span-2">
           <label
             htmlFor="contact-attachments-trigger"
-            className="text-sm font-medium text-foreground"
+            className="text-sm font-semibold text-foreground"
           >
             Attachments <span className="text-foreground/40">(optional · up to 25MB each)</span>
           </label>
@@ -341,14 +351,14 @@ export function ContactForm() {
               addFiles(Array.from(event.dataTransfer.files));
             }}
             className={cn(
-              "mt-1.5 w-full cursor-pointer rounded-xl border border-dashed px-6 py-8 text-center transition-colors",
+              "mt-2 w-full cursor-pointer rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200 motion-reduce:transition-none",
               dragOver
-                ? "border-brand-blue bg-brand-blue-50"
+                ? "scale-[1.01] border-brand-blue bg-brand-blue-50 motion-reduce:scale-100"
                 : "border-[var(--line)] hover:border-brand-blue/60 hover:bg-[var(--surface-muted)]",
             )}
           >
-            <Paperclip className="mx-auto size-5 text-foreground/40" strokeWidth={2.25} />
-            <p className="mt-2 text-sm text-foreground/70">
+            <Paperclip className="mx-auto size-6 text-foreground/40" strokeWidth={2.25} />
+            <p className="mt-3 text-sm text-foreground/70">
               Drag &amp; drop files here, or{" "}
               <span className="font-medium text-brand-blue">browse</span>
             </p>
@@ -374,7 +384,7 @@ export function ContactForm() {
                 return (
                   <li
                     key={`${file.name}-${file.lastModified}-${file.size}`}
-                    className="flex items-center gap-3 rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-sm"
+                    className="file-chip-enter flex items-center gap-3 rounded-xl bg-[var(--surface-muted)] px-3.5 py-2.5 text-sm"
                   >
                     {isImage && isSafeBlobUrl(url) ? (
                       // eslint-disable-next-line @next/next/no-img-element -- ephemeral local blob: URL, not an optimizable remote asset
@@ -418,32 +428,34 @@ export function ContactForm() {
         </div>
       </div>
 
-      <label className="mt-6 flex items-start gap-2.5 text-sm text-foreground/70">
-        <input
-          type="checkbox"
-          className="mt-0.5 size-4 shrink-0 accent-brand-blue"
-          {...register("agree")}
-        />
-        <span>
-          I agree to the{" "}
-          <Link href="/privacy-policy" className="font-medium text-brand-blue hover:underline">
-            Privacy Policy
-          </Link>{" "}
-          and{" "}
-          <Link href="/terms-of-services" className="font-medium text-brand-blue hover:underline">
-            Terms of Service
-          </Link>
-          , and to MGM Laboratory contacting me about this enquiry.
-        </span>
-      </label>
-      {showError("agree") ? (
-        <p className="mt-1 text-sm font-medium text-brand-red">{errors.agree?.message}</p>
-      ) : null}
+      <div className="reveal-field opacity-0">
+        <label className="mt-8 flex items-start gap-3 text-sm text-foreground/70">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-4.5 shrink-0 accent-brand-blue"
+            {...register("agree")}
+          />
+          <span>
+            I agree to the{" "}
+            <Link href="/privacy-policy" className="font-medium text-brand-blue hover:underline">
+              Privacy Policy
+            </Link>{" "}
+            and{" "}
+            <Link href="/terms-of-services" className="font-medium text-brand-blue hover:underline">
+              Terms of Service
+            </Link>
+            , and to MGM Laboratory contacting me about this enquiry.
+          </span>
+        </label>
+        {showError("agree") ? (
+          <p className="mt-1.5 text-sm font-medium text-brand-red">{errors.agree?.message}</p>
+        ) : null}
+      </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-brand-blue px-5 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="mt-6 flex w-full scale-100 items-center justify-center gap-2.5 rounded-xl bg-brand-blue px-5 py-4 text-base font-semibold text-white transition-all duration-200 hover:scale-[1.01] hover:opacity-90 active:scale-[0.99] disabled:cursor-wait disabled:opacity-60 disabled:hover:scale-100 motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
       >
         {isSubmitting ? (
           <Loader2 className="size-4 animate-spin" strokeWidth={2.25} />

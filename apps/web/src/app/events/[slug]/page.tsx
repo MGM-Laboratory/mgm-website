@@ -14,7 +14,6 @@ import { AddToCalendarButton } from "@/components/events/add-to-calendar-button"
 import { EventBody } from "@/components/events/event-body";
 import { EventCard } from "@/components/events/event-card";
 import { EventDateTime } from "@/components/events/event-date-time";
-import { EventMap } from "@/components/events/event-map";
 import { EventRegisterButton } from "@/components/events/event-register-button";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { isEventPast, sortEventsByStart, type CmsEventRecord } from "@/lib/events-cms";
@@ -232,23 +231,6 @@ export default async function EventPage({ params }: EventPageProps) {
           {event.content.length ? (
             <div className="mt-10">
               <EventBody blocks={event.content} />
-            </div>
-          ) : null}
-
-          {event.mapsLat !== undefined && event.mapsLng !== undefined ? (
-            <div className="mt-10">
-              <h2 className="font-display text-xl font-semibold text-[var(--ink)] dark:text-white">
-                Location
-              </h2>
-              <div className="mt-4">
-                <EventMap
-                  address={event.location}
-                  label={event.title}
-                  lat={event.mapsLat}
-                  lng={event.mapsLng}
-                  mapsUrl={event.mapsUrl}
-                />
-              </div>
             </div>
           ) : null}
         </article>

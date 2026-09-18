@@ -9,6 +9,10 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  // The public web app's own origin — used to build absolute asset/link URLs
+  // in outgoing emails, which (unlike a browser) can't resolve relative
+  // paths against "the site the user is on".
+  PUBLIC_WEB_URL: z.url().default("https://web-production-589d3f.up.railway.app"),
   THROTTLE_TTL: z.coerce.number().int().positive().default(60000),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
   ADMIN_PASSPHRASE: z.string().min(1, "ADMIN_PASSPHRASE is required"),
