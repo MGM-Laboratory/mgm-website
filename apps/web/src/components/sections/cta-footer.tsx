@@ -9,6 +9,7 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ArrowUp, ArrowUpRight } from "lucide-react";
 
 import { PatternTile } from "@/components/process/pattern-tile";
+import { HQ_ADDRESS_LINES } from "@/data/contact";
 import { LEGAL_LINKS } from "@/data/nav";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 
@@ -91,11 +92,28 @@ export function CtaFooter() {
 
   return (
     <footer ref={rootRef} className="relative overflow-hidden bg-background text-foreground">
-      <div className="footer-reveal mx-auto flex max-w-5xl flex-col gap-10 px-6 py-14 opacity-0 sm:px-10 sm:py-16 lg:flex-row lg:items-end lg:justify-between lg:px-16">
+      <div className="footer-reveal mx-auto grid max-w-5xl gap-10 px-6 py-14 opacity-0 sm:grid-cols-2 sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-end lg:px-16">
         <div>
           <Image src="/logo.svg" alt="MGM Laboratory" width={32} height={32} />
           <p className="mt-4 font-display text-xl font-semibold tracking-tight">
             Media, Game, and Mobile Laboratory
+          </p>
+          <p className="mt-4 max-w-md text-sm leading-6 text-foreground/75">
+            © 2026 MGM Research Laboratory. Built for research. Designed for impact.
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold tracking-wide text-foreground/70 uppercase">
+            Location
+          </p>
+          <p className="mt-3 text-sm leading-6 text-foreground/80">
+            {HQ_ADDRESS_LINES.map((line, i) => (
+              <span key={line}>
+                {i > 0 ? <br /> : null}
+                {line}
+              </span>
+            ))}
           </p>
         </div>
 

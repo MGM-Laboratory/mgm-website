@@ -15,6 +15,10 @@ test.describe("footer", () => {
     await expect(footer).not.toContainText("Research, technology, and ideas brought together.");
     await expect(footer).not.toContainText("Explore");
     await expect(footer).not.toContainText("Malang (ID)");
+    await expect(footer).toContainText(
+      "© 2026 MGM Research Laboratory. Built for research. Designed for impact.",
+    );
+    await expect(footer).toContainText("Location");
 
     const socialNav = footer.getByRole("navigation", { name: "Social links" });
     const socialLinks = socialNav.getByRole("link");
@@ -40,14 +44,28 @@ test.describe("footer", () => {
       .toBe(true);
   });
 
-  test("reveals the external-link cue on hover", async ({ page }) => {
+  test("reveals the external-link cue on hover", async ({ page }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith("mobile"),
+      "Touch-only projects do not have a hover state.",
+    );
     await page.goto("/");
 
     const instagram = page.locator('footer a[href="https://www.instagram.com/labmgmfilkomub/"]');
     await instagram.scrollIntoViewIfNeeded();
     await instagram.hover();
 
-    await expect(instagram.locator("svg")).toHaveCSS("opacity", "1");
-    await expect(instagram.locator("span")).toHaveCSS("scale", "1");
+    await expect
+      .poll(() =>
+        instagram.locator("svg").evaluate((element) => Number(getComputedStyle(element).opacity)),
+      )
+      .toBe(1);
+    await expect
+      .poll(() =>
+        instagram
+          .locator("span")
+          .evaluate((element) => Number.parseFloat(getComputedStyle(element).scale)),
+      )
+      .toBe(1);
   });
 });
