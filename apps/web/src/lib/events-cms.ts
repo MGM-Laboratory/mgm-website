@@ -125,9 +125,16 @@ export function sortEventsByStart(records: readonly CmsEventRecord[]) {
  * milliseconds, not ISO strings — `endAt` may omit seconds/milliseconds
  * (the API's stored format allows it), and a shorter string doesn't sort
  * lexically the same way its instant compares numerically.
+ *
+ * An all-day event's `endAt` is stored as UTC midnight at the *start* of its
+ * last (inclusive) day — the same value the calendar exports treat as
+ * exclusive by adding a day — so the event isn't actually over until that
+ * day itself ends.
  */
 export function isEventPast(record: CmsEventRecord, now: Date = new Date()): boolean {
-  return new Date(record.endAt).getTime() < now.getTime();
+  const boundary = new Date(record.endAt);
+  if (record.allDay) boundary.setUTCDate(boundary.getUTCDate() + 1);
+  return boundary.getTime() < now.getTime();
 }
 
 /** Upcoming first (soonest first), then past (most recent first). */

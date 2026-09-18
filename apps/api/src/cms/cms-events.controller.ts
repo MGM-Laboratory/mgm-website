@@ -428,8 +428,14 @@ export class CmsEventsController {
     if (event.registrationEnabled !== true) {
       throw new ConflictException("This event is not accepting registrations.");
     }
-    if (typeof event.endAt === "string" && new Date(event.endAt) < new Date()) {
-      throw new ConflictException("This event has already ended.");
+    if (typeof event.endAt === "string") {
+      const boundary = new Date(event.endAt);
+      // An all-day event's endAt is UTC midnight at the *start* of its last
+      // (inclusive) day, so registration must stay open through that day.
+      if (event.allDay === true) boundary.setUTCDate(boundary.getUTCDate() + 1);
+      if (boundary < new Date()) {
+        throw new ConflictException("This event has already ended.");
+      }
     }
 
     await this.registrations.create({
