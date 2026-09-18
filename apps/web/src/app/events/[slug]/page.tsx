@@ -52,7 +52,7 @@ function InfoRow({ children, label }: { children: React.ReactNode; label: string
       <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[var(--ink-3)] uppercase">
         {label}
       </p>
-      <p className="mt-1 text-sm leading-6 text-[var(--ink)] dark:text-white/85">{children}</p>
+      <div className="mt-1 text-sm leading-6 text-[var(--ink)] dark:text-white/85">{children}</div>
     </div>
   );
 }
