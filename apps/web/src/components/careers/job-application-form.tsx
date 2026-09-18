@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { CareerCvDropzone } from "@/components/careers/career-cv-dropzone";
+import { PhoneCountrySelect } from "@/components/careers/phone-country-select";
 import { submitApplication } from "@/lib/career-apply";
-import { COUNTRY_CODES, countryFlag } from "@/lib/country-codes";
 import { UB_FACULTIES } from "@/lib/ub-faculties";
 
 type ApplicantType = "ub-student" | "general";
@@ -290,18 +290,7 @@ export function JobApplicationForm({
               Phone number
             </label>
             <div className="flex gap-3">
-              <select
-                aria-label="Country code"
-                className="h-12 w-[128px] shrink-0 rounded-xl border border-[var(--line-strong)] bg-white px-2 text-[15px] text-[var(--ink)] outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-[#15181e] dark:text-white"
-                onChange={(event) => setPhoneCountry(event.target.value)}
-                value={phoneCountry}
-              >
-                {COUNTRY_CODES.map((country) => (
-                  <option key={country.code} title={country.name} value={country.dial}>
-                    {countryFlag(country.code)} {country.dial}
-                  </option>
-                ))}
-              </select>
+              <PhoneCountrySelect onChange={setPhoneCountry} value={phoneCountry} />
               <input
                 aria-describedby={phoneError ? "phone-error" : undefined}
                 autoComplete="tel"
