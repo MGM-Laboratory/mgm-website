@@ -25,39 +25,33 @@ export const XR_STATS: XRStat[] = [
 export type StudioRole = {
   role: string;
   tagline: string;
-  tools: string[];
+  story: string;
 };
 
 export const STUDIO_ROLES: StudioRole[] = [
   {
     role: "Engines",
     tagline: "Whatever the platform actually calls for",
-    tools: ["Unity", "Unreal", "Godot", "Meta SDK"],
+    story:
+      "Unity for one project, Unreal for the next, Godot when it's the right fit — engineers pick the engine the platform actually needs instead of forcing every idea through the same pipeline.",
   },
   {
     role: "Art & animation",
     tagline: "From first sketch to a motion-captured performance",
-    tools: [
-      "Clip Studio Paint",
-      "Adobe Creative Cloud",
-      "21 large drawing tablets",
-      "Motion capture rig",
-    ],
+    story:
+      "Twenty-one big drawing tablets get used every day, not just for concept art — the same artists take a character from a sketch through the motion-capture rig to a finished in-game performance.",
   },
   {
     role: "Audio",
     tagline: "Scored and sound-designed in house",
-    tools: ["Ableton Live", "Native Instruments gear", "MIDI controllers", "Sample libraries"],
+    story:
+      "Nobody's licensing a stock soundtrack. Tracks get built on real studio gear and mixed by hand, by people in the building who watched the scene they're scoring.",
   },
   {
     role: "Engineering & hardware",
     tagline: "A real device farm, not a simulator guess",
-    tools: [
-      "Photon multiplayer",
-      "Cloud multiplayer hosting",
-      "macOS · Windows · Linux rigs",
-      "Every screen, phone to monitor",
-    ],
+    story:
+      "Every build gets tested across macOS, Windows, and Linux rigs, on whatever screen a player might actually use — engineers debugging multiplayer sync over a real network, not assuming it just works.",
   },
 ];
 
@@ -80,7 +74,6 @@ export const PUBLISHING_TOOLS: string[] = [
   "Jira",
   "Figma",
   "Notion",
-  "AI planning agents",
 ];
 
 // Real, documented work — a lab member's award, not a live product. See

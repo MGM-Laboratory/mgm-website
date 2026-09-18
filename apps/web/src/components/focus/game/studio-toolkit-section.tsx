@@ -23,8 +23,8 @@ export function StudioToolkitSection() {
           Every discipline gets a real setup, not a shared PC.
         </h2>
         <p className="reveal-item mt-4 max-w-xl text-foreground/65 opacity-0">
-          Same PM tooling as every other division — Jira, Figma, Notion, AI planning agents — on top
-          of a kit built specifically for making games and new-media work.
+          Same PM tooling as every other division — Jira, Figma, Notion — on top of a kit built
+          specifically for making games and new-media work.
         </p>
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2">
@@ -43,16 +43,7 @@ export function StudioToolkitSection() {
                   {role.role}
                 </h3>
                 <p className="mt-1.5 text-sm text-foreground/60">{role.tagline}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {role.tools.map((tool) => (
-                    <span
-                      key={tool}
-                      className="rounded-full border border-[var(--line)] px-3 py-1 text-xs font-medium text-foreground/75"
-                    >
-                      {tool}
-                    </span>
-                  ))}
-                </div>
+                <p className="mt-4 text-sm text-foreground/70">{role.story}</p>
               </div>
             );
           })}
