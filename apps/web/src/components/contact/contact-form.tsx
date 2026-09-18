@@ -255,7 +255,7 @@ export function ContactForm() {
     // skipcq: JS-0415 -- ordinary form layout depth, not a code smell
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="rounded-3xl border border-[var(--line)] bg-[var(--surface)] p-7 shadow-[var(--shadow-1)] sm:p-10"
+      className="rounded-3xl border border-[var(--line)] bg-[var(--surface)] p-7 shadow-[var(--shadow-1)] sm:p-10 dark:border-white/10 dark:bg-white/[0.04]"
     >
       <p className="font-mono text-xs font-bold tracking-[0.16em] text-brand-blue uppercase">
         Send a message
