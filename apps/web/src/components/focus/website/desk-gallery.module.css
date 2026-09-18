@@ -1,0 +1,72 @@
+/* Two presentations of the same DOM, toggled by one class the mount effect
+   adds only once it's confirmed (pointer: fine, >=1024px, motion allowed):
+   default is a native horizontal scroll-snap swipe; `.pinned` on `.wrap`
+   switches it into the ScrollTrigger-pinned, scrub-driven horizontal track.
+   Kept as plain CSS rather than conditional JSX so the mount effect can
+   flip one class on stable refs instead of racing a state-driven re-render
+   for its own DOM nodes. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+@media (min-width: 640px) {
+  .wrap {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+}
+
+.wrap.pinned {
+  height: 100vh;
+  overflow: hidden;
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+  cursor: none;
+}
+
+.track {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.wrap.pinned .track {
+  overflow: visible;
+  scroll-snap-type: none;
+  width: max-content;
+}
+
+.panel {
+  width: 85vw;
+  height: 30rem;
+  scroll-snap-align: center;
+}
+
+@media (min-width: 640px) {
+  .panel {
+    width: 60vw;
+    height: 34rem;
+  }
+}
+
+.wrap.pinned .panel {
+  height: 100%;
+  scroll-snap-align: none;
+  width: 60vw;
+}
+
+@media (min-width: 1024px) {
+  .wrap.pinned .panel {
+    width: 46vw;
+  }
+}

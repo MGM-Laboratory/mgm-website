@@ -1,7 +1,9 @@
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { FocusHero } from "./focus-hero";
-import { MonitorWall } from "./monitor-wall";
+import { ToolTickerBand } from "./tool-ticker-band";
+import { DeskGallery } from "./desk-gallery";
 import { ShipTerminal } from "./ship-terminal";
+import { OutroStatement } from "./outro-statement";
 
 /**
  * The Website focus page's own bespoke build — deliberately not the shared
@@ -13,8 +15,10 @@ export function WebsiteFocusPage() {
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">
       <main className="flex flex-1 flex-col">
         <FocusHero />
-        <MonitorWall />
+        <ToolTickerBand />
+        <DeskGallery />
         <ShipTerminal />
+        <OutroStatement />
       </main>
       <CtaFooter />
     </div>

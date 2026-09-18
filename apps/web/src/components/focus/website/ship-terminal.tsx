@@ -1,10 +1,12 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { MonitorWindow } from "./monitor-window";
+import { GrainOverlay } from "./grain-overlay";
 
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -273,18 +275,28 @@ export function ShipTerminal() {
   }, []);
 
   return (
-    <section className="bg-[var(--surface-inverse)] px-6 py-20 text-white sm:px-10 sm:py-28 lg:px-16">
+    <section className="relative overflow-hidden bg-[var(--surface-inverse)] px-6 py-24 text-white sm:px-10 sm:py-32 lg:px-16">
       <noscript>
         <style>{".reveal-card{opacity:1 !important}"}</style>
       </noscript>
-      <div ref={rootRef} className="mx-auto max-w-3xl">
+      <div className="absolute inset-0">
+        <Image
+          src="/focus/website/ship-backdrop.png"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover"
+        />
+      </div>
+      <GrainOverlay className="opacity-[0.07]" />
+      <div ref={rootRef} className="relative mx-auto max-w-3xl">
         <p className="reveal-card font-mono text-xs font-semibold tracking-wide text-brand-yellow uppercase opacity-0">
           Ship it
         </p>
-        <h2 className="reveal-card mt-3 font-display text-[clamp(1.75rem,3vw+1rem,2.5rem)] font-semibold tracking-tight opacity-0">
+        <h2 className="reveal-card mt-4 font-display text-[clamp(2.25rem,5vw,4rem)] leading-[0.98] font-semibold tracking-tight opacity-0">
           The only part you don&apos;t have to build.
         </h2>
-        <p className="reveal-card mt-4 max-w-xl text-white/65 opacity-0">
+        <p className="reveal-card mt-5 max-w-xl text-white/65 opacity-0">
           MGM has a dedicated IT &amp; Infrastructure division, so &quot;deployment,&quot;
           &quot;scaling,&quot; and &quot;did the build even pass&quot; are someone else&apos;s
           problem the moment you push — checked by CI, shipped as containers, live on Railway in
