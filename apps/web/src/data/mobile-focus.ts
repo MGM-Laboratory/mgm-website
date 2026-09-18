@@ -32,24 +32,27 @@ export const DEVICE_STATS: DeviceStat[] = [
 export type ToolkitRole = {
   role: string;
   tagline: string;
-  tools: string[];
+  story: string;
 };
 
 export const TOOLKIT_ROLES: ToolkitRole[] = [
   {
     role: "Product & PM",
     tagline: "Keeping the build pointed at something real",
-    tools: ["Jira", "Notion", "Figma", "AI planning agents"],
+    story:
+      "Same discipline as the web team — a plan in Jira, a doc in Notion, and a PM who pushes back on scope creep before it turns into a delayed release. Every feature earns its spot on the roadmap by solving something a real user actually hit.",
   },
   {
     role: "Design & UX",
-    tagline: "From wireframe to a prototype you can actually tap through",
-    tools: ["Figma", "Maze"],
+    tagline: "From a wireframe to a prototype you can actually tap through",
+    story:
+      "Screens get drawn in Figma and tested in Maze before a single line of Swift or Kotlin gets written, so the team already knows a flow works before it's expensive to change.",
   },
   {
     role: "Engineering",
-    tagline: "Native feel, backed by infra that scales without you thinking about it",
-    tools: ["Expo Pro", "Firebase", "Supabase", "Scalable backend tooling"],
+    tagline: "Native feel, built and debugged by hand",
+    story:
+      "Real coding work, on real devices — engineers writing native code, testing it on the hardware sitting on the shelf, and fixing what breaks instead of trusting a simulator to catch it first.",
   },
 ];
 

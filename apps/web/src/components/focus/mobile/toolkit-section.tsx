@@ -42,16 +42,7 @@ export function ToolkitSection() {
                   {role.role}
                 </h3>
                 <p className="mt-1.5 text-sm text-foreground/60">{role.tagline}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {role.tools.map((tool) => (
-                    <span
-                      key={tool}
-                      className="rounded-full border border-[var(--line)] px-3 py-1 text-xs font-medium text-foreground/75"
-                    >
-                      {tool}
-                    </span>
-                  ))}
-                </div>
+                <p className="mt-4 text-sm text-foreground/70">{role.story}</p>
               </div>
             );
           })}
