@@ -16,8 +16,8 @@ import { z } from "zod";
 import { env } from "@/lib/env";
 import { cn } from "@/lib/utils";
 
-// Extends the same schema the API validates against — "agree" is a
-// client-only concern that never reaches the server — so both sides agree
+// Extends the same schema the API validates against - "agree" is a
+// client-only concern that never reaches the server - so both sides agree
 // on the same rules and messages instead of drifting apart over time.
 const formSchema = contactFormSchema.extend({
   agree: z.boolean().refine((v) => v, "Please agree to the privacy policy."),
@@ -27,7 +27,7 @@ type FormValues = z.infer<typeof formSchema>;
 const FIELD_NAMES = new Set(Object.keys(formSchema.shape));
 
 // Attachments (File/blob objects) can't survive JSON serialization, so only
-// the text fields are persisted — the user re-selects files after a reload.
+// the text fields are persisted - the user re-selects files after a reload.
 const DRAFT_STORAGE_KEY = "mgm-contact-form-draft";
 type DraftValues = Pick<FormValues, "name" | "email" | "company" | "message">;
 
@@ -51,7 +51,7 @@ function saveDraft(values: DraftValues) {
     }
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(values));
   } catch {
-    // Storage unavailable (private browsing, quota) — the form still works.
+    // Storage unavailable (private browsing, quota) - the form still works.
   }
 }
 
@@ -59,7 +59,7 @@ function clearDraft() {
   try {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
   } catch {
-    // Storage unavailable — nothing to clear.
+    // Storage unavailable - nothing to clear.
   }
 }
 
@@ -155,7 +155,7 @@ export function ContactForm() {
     defaultValues: { name: "", email: "", company: "", message: "", agree: false },
   });
 
-  // Restore a saved draft once on mount — attachments are excluded, see
+  // Restore a saved draft once on mount - attachments are excluded, see
   // loadDraft/saveDraft above.
   useEffect(() => {
     const draft = loadDraft();
@@ -181,7 +181,7 @@ export function ContactForm() {
   }, [watchedDraft.name, watchedDraft.email, watchedDraft.company, watchedDraft.message]);
 
   // zodResolver validates the whole form on every run, so blurring one field
-  // also populates errors for fields the user hasn't touched yet — only
+  // also populates errors for fields the user hasn't touched yet - only
   // surface a field's error once that field itself was blurred, or once the
   // user has attempted a submit (at which point show everything).
   function showError<K extends keyof FormValues>(field: K) {
@@ -236,7 +236,7 @@ export function ContactForm() {
       }
 
       toast.success("Message sent", {
-        description: "Thanks for reaching out — we'll get back to you soon.",
+        description: "Thanks for reaching out - we'll get back to you soon.",
       });
       reset();
       setFiles([]);

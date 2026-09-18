@@ -83,7 +83,7 @@ export function ContactContent({ settings }: Readonly<{ settings: ContactSetting
               </h1>
               <p className="hero-reveal mt-6 max-w-xl text-lg leading-7 text-foreground/65 opacity-0">
                 Have a project, a research question, or just want to say hello? Tell us what&apos;s
-                on your mind — we&apos;ll get back to you soon.
+                on your mind - we&apos;ll get back to you soon.
               </p>
             </div>
           </div>

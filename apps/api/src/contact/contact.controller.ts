@@ -113,7 +113,7 @@ export class ContactController {
 
   /**
    * Rejects invalid messages with field-level errors before submitting valid
-   * payloads. Throttled tighter than the app-wide default — every submission
+   * payloads. Throttled tighter than the app-wide default - every submission
    * now also sends a branded confirmation to whatever address is given, so a
    * loose limit here would let this endpoint be abused as an unsolicited
    * mail relay against arbitrary third-party inboxes.

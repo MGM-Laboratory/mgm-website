@@ -287,7 +287,7 @@ function validateContactSettingsForm(form: FormState): string | null {
   return null;
 }
 
-// Recipient emails — every configured address receives a copy of each new
+// Recipient emails - every configured address receives a copy of each new
 // inquiry notification (see MailService.sendEmail, which already accepts
 // `to: string[]`). At least one row always stays on screen so the list can
 // never be emptied down to nothing from the UI itself.
@@ -923,7 +923,7 @@ export function ContactSettingsEditor({
           </h1>
           <p className="mt-2 text-sm text-[#69748a] dark:text-white/50">
             The recipient inboxes and HQ address shown on the public /contact page. Coordinates
-            power the &ldquo;Open in Maps&rdquo; link only — no map is embedded on the site.
+            power the &ldquo;Open in Maps&rdquo; link only - no map is embedded on the site.
           </p>
         </div>
       </div>
