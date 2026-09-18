@@ -1,109 +1,155 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
-import Image from "next/image";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useTheme } from "next-themes";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import { useSpotlight } from "@/lib/spotlight";
+import { LoaderBars } from "./hero/loader-bars";
+import type { SphereHeroSceneProps } from "./hero/sphere-hero-scene";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+const SphereHeroScene = dynamic<SphereHeroSceneProps>(() => import("./hero/sphere-hero-scene"), {
+  ssr: false,
+});
+
+function subscribeNoop() {
+  return () => {};
+}
+
+// Avoids a hydration mismatch the same way theme-toggle.tsx does — the
+// server always renders the "not ready yet" branch.
+function useMounted() {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
+}
 
 function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
 }
 
-const LINE_1 = ["Bring", "the", "idea."];
-const LINE_2 = ["Every", "tab's", "already", "open."];
+// The reference hero holds its loading state for a beat before cutting to
+// the full scene — long enough to register, even though nothing here is
+// actually being waited on (see loader-bars.tsx).
+const ENTRANCE_DELAY_MS = 950;
 
 export function FocusHero() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const typeRef = useRef<HTMLDivElement>(null);
-  useSpotlight(sectionRef);
+  const mounted = useMounted();
+  const { resolvedTheme } = useTheme();
+  // A state-backed callback ref rather than a plain ref: the scene needs the
+  // section element as a prop, and reading `ref.current` straight in JSX
+  // during render isn't allowed — this re-renders once the node exists instead.
+  const [sectionEl, setSectionEl] = useState<HTMLElement | null>(null);
+  const headlineRef = useRef<HTMLHeadingElement>(null);
+  const footRef = useRef<HTMLDivElement>(null);
+  const [showLoader, setShowLoader] = useState(true);
+  const [play, setPlay] = useState(false);
+  const [reduced, setReduced] = useState(false);
 
   useLayoutEffect(() => {
-    const root = typeRef.current;
-    if (!root) return;
-    const reduced = reducedMotion();
-    const d = reduced ? 0 : 1;
+    const isReduced = reducedMotion();
 
-    const words = gsap.utils.toArray<HTMLElement>(".hero-word", root);
-    gsap.set(words, { yPercent: reduced ? 0 : 115, rotate: reduced ? 0 : 3 });
-    gsap.set(".hero-fade", { opacity: reduced ? 1 : 0, y: reduced ? 0 : 16 });
+    if (isReduced) {
+      gsap.set([headlineRef.current, footRef.current], { opacity: 1, clipPath: "none" });
+      queueMicrotask(() => {
+        setReduced(true);
+        setShowLoader(false);
+        setPlay(true);
+      });
+      return;
+    }
 
-    gsap
-      .timeline({ defaults: { ease: "power4.out" } })
-      .to(words, { yPercent: 0, rotate: 0, duration: 0.85 * d, stagger: 0.045 })
-      .to(".hero-fade", { opacity: 1, y: 0, duration: 0.6 * d, stagger: 0.08 }, "-=0.45");
+    gsap.set(headlineRef.current, { opacity: 0.12, clipPath: "inset(0 100% 0 0)" });
+    gsap.set(footRef.current, { opacity: 0, y: 16 });
+
+    const timer = window.setTimeout(() => {
+      setShowLoader(false);
+      setPlay(true);
+      gsap
+        .timeline({ defaults: { ease: "power3.out" } })
+        .to(headlineRef.current, { opacity: 1, clipPath: "inset(0 0% 0 0)", duration: 0.55 })
+        .to(footRef.current, { opacity: 1, y: 0, duration: 0.5 }, "-=0.25");
+    }, ENTRANCE_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
   }, []);
+
+  // Exit half that lives in the DOM: dims the headline/foot block back down
+  // as the section scrolls past, mirroring the sphere field's own shrink-away
+  // (sphere-hero-scene.tsx) against the same trigger and range.
+  useLayoutEffect(() => {
+    if (!sectionEl || reduced) return undefined;
+
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: sectionEl, start: "top top", end: "+=55%", scrub: true },
+    });
+    tl.to([headlineRef.current, footRef.current], {
+      opacity: 0.1,
+      filter: "brightness(0.4)",
+      ease: "power1.in",
+    });
+    return () => {
+      tl.scrollTrigger?.kill();
+      tl.kill();
+    };
+  }, [sectionEl, reduced]);
+
+  const dark = mounted ? resolvedTheme === "dark" : true;
 
   return (
     <section
-      ref={sectionRef}
-      className="group relative min-h-[94vh] overflow-hidden bg-[var(--surface-inverse)]"
+      ref={setSectionEl}
+      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-background px-6"
     >
-      <Image
-        src="/focus/website/photos/hero-desk.jpg"
-        alt="A dual-monitor development setup, dark room, code on screen"
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover"
-      />
+      {mounted && (
+        <SphereHeroScene sectionEl={sectionEl} play={play} reducedMotion={reduced} dark={dark} />
+      )}
 
-      {/* Dot-grid texture, faded toward the text side via a radial mask. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle,rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_55%_55%_at_28%_45%,black,transparent)]"
-      />
+      {showLoader && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center">
+          <LoaderBars />
+        </div>
+      )}
 
-      {/* Legibility gradients for the headline column. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10"
-      />
+      <div className="relative z-10 w-full max-w-[1600px]">
+        <h1
+          ref={headlineRef}
+          className="pointer-events-none text-center font-display font-semibold tracking-tight text-foreground uppercase opacity-0 [text-wrap:balance] text-[clamp(3.5rem,14vw,11rem)] leading-[0.92]"
+        >
+          Website
+        </h1>
 
-      {/* Cursor-follow spotlight — desktop only (useSpotlight no-ops without pointer:fine), fades in on hover. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 [background:radial-gradient(560px_circle_at_var(--mx,50%)_var(--my,50%),rgba(58,109,197,0.35),transparent_60%)]"
-      />
-
-      <div
-        ref={typeRef}
-        className="relative z-10 mx-auto flex min-h-[94vh] max-w-[1600px] flex-col justify-center px-6 pt-24 pb-16 sm:px-10 lg:px-16"
-      >
-        <div className="max-w-2xl">
-          <p className="hero-fade font-mono text-xs font-semibold tracking-wide text-brand-yellow uppercase opacity-0">
-            Focus — Website Development
-          </p>
-          <h1 className="mt-5 font-display font-semibold tracking-tight text-white">
-            {[LINE_1, LINE_2].map((line, li) => (
-              <span
-                key={li}
-                className="block overflow-hidden text-[clamp(2.75rem,7.5vw,6.5rem)] leading-[0.96]"
-              >
-                {line.map((word, wi) => (
-                  <span key={wi} className="hero-word mr-[0.22em] inline-block last:mr-0">
-                    {word}
-                  </span>
-                ))}
-              </span>
-            ))}
-          </h1>
-          <p className="hero-fade mt-8 max-w-md text-white/70 opacity-0">
-            &quot;We know React&quot; is table stakes. What actually changes how fast something
-            ships is everything else — already running, before you&apos;ve opened your laptop.
-          </p>
-          <div className="hero-fade mt-10 flex items-center gap-2.5 text-xs text-white/50 opacity-0">
-            <span className="flex items-center gap-1" aria-hidden="true">
-              <span className="size-2 rounded-full bg-brand-red" />
-              <span className="size-2 rounded-full bg-brand-yellow" />
-              <span className="size-2 rounded-full bg-brand-green" />
-            </span>
-            <span>a real desk, mid-build — not a mockup</span>
+        <div
+          ref={footRef}
+          className="relative z-10 mx-auto mt-8 flex max-w-3xl flex-col items-center gap-6 text-center opacity-0 sm:mt-12 sm:flex-row sm:items-end sm:justify-between sm:text-left"
+        >
+          <div className="max-w-md">
+            <p className="font-mono text-xs font-semibold tracking-wide text-brand-blue uppercase">
+              Focus — Website Development
+            </p>
+            <p className="mt-3 text-foreground/60">
+              &quot;We know React&quot; is table stakes. What actually changes how fast something
+              ships is everything else — already running, before you&apos;ve opened your laptop.
+            </p>
           </div>
+
+          <Link
+            href="#stack"
+            className="group inline-flex shrink-0 items-center gap-2.5 rounded-full bg-brand-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90"
+          >
+            Scroll to see the stack
+            <span aria-hidden="true" className="transition-transform group-hover:translate-y-0.5">
+              ↓
+            </span>
+          </Link>
         </div>
       </div>
     </section>
