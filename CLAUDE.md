@@ -9,9 +9,11 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 3. `docs/architecture.md` — monorepo layout, component/data map, routing.
 4. `docs/animation-system.md` — GSAP setup, conventions, and the **gotchas that have already cost days** (read before touching any animation).
 5. `docs/navigation-menu.md` — the full-screen nav menu system spec.
-6. `docs/ci-cd.md` — GitHub Actions + Docker Hub + Railway wiring.
-7. `docs/testing-verification.md` — how work is verified here (Playwright + dev server).
-8. `docs/repo-history.md` — the 2026-09-12 migration and why git rules are strict.
+6. `docs/page-transition.md` — the full-screen navigation curtain played on every internal route change, and the related homepage-entrance-skip behavior.
+7. `docs/mail-system.md` — the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config** — Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
+8. `docs/ci-cd.md` — GitHub Actions + Docker Hub + Railway wiring.
+9. `docs/testing-verification.md` — how work is verified here (Playwright + dev server).
+10. `docs/repo-history.md` — the 2026-09-12 migration and why git rules are strict.
 
 ## ⚠️ Next.js 16 — not the Next.js in your training data
 
@@ -47,13 +49,15 @@ Node **22** (`.nvmrc`), pnpm **11.3.0** (`packageManager`), Turbo 2.10.
 ```
 apps/web/            Next.js 16 marketing site (the focus of most work)
   src/app/           route groups — one folder per page (18 pages)
-  src/components/    hero/ nav/ process/ sections/ + site-header, smooth-scroll,
-                     theme-toggle, social-icons, providers, api-status
-  src/data/          nav.ts (menu config), competencies.ts, projects.ts
-  src/lib/           env.ts (zod-validated), scroll-reveal.ts (fadeUpOnScroll), utils.ts
+  src/components/    hero/ nav/ transition/ (page-transition curtain) process/ sections/
+                     contact/ careers/ members/ articles/ projects/ (all real, CMS-driven)
+                     + site-header, smooth-scroll, theme-toggle, social-icons, providers,
+                     api-status, app-boot-tracker
+  src/data/          nav.ts (menu config), competencies.ts, projects.ts (homepage showcase only)
+  src/lib/           env.ts (zod-validated), scroll-reveal.ts (fadeUpOnScroll), app-boot.ts, utils.ts
   src/hooks/         use-health.ts (API health polling); the WIB menu clock hook lives inside nav/nav-menu.tsx
   public/            logo.svg, patterns/*.svg (pattern tiles), logo/*.svg (dept logos, untracked)
-apps/api/            NestJS + Prisma API (health, mail, storage modules; port 4000)
+apps/api/            NestJS + Prisma API (health, mail [3-provider: Resend/SMTP/SES], storage modules; port 4000)
 packages/@repo/shared  shared workspace package (workspace:*)
 .github/workflows/   ci.yaml (lint/typecheck/test/build), publish-docker-image-*.yml (Docker Hub)
 DESIGN_SYSTEM.md     brand/design source of truth
@@ -62,7 +66,7 @@ docs/                deep-dive documentation (read them)
 
 ## Pages (apps/web/src/app)
 
-`/` (hero + competencies + process + showcase) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services`. Most standalone pages are `PageBand` stubs (hero band + CTA footer). Full inventory: `docs/project-overview.md`.
+`/` (hero + competencies + process + showcase) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services`. Only `/media`, `/privacy-policy`, and `/terms-of-services` are still bare `PageBand` stubs — every other route is real and CMS-driven where applicable. Full inventory: `docs/project-overview.md`.
 
 ## CI/CD at a glance
 
