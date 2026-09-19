@@ -32,6 +32,12 @@ const envSchema = z.object({
   // Largest accepted job application CV upload, in bytes (100 MB by default).
   CMS_MAX_CV_BYTES: z.coerce.number().int().positive().max(1_073_741_824).default(104_857_600),
   SES_FROM_EMAIL: optionalString(z.email()),
+  // Display name paired with SES_FROM_EMAIL for the "From" header, shared
+  // across whichever provider actually sends (Resend/SMTP/SES all accept
+  // the same "Name <email>" format) — kept separate because SES_FROM_EMAIL
+  // itself must stay a bare address (validated as one, and some callers
+  // pass it as SES's raw `Source` field).
+  MAIL_FROM_NAME: optionalString(),
   RESEND_API_KEY: optionalString(),
   SMTP_HOST: optionalString(),
   SMTP_PORT: z.preprocess(
