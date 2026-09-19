@@ -559,7 +559,7 @@ export function Hero() {
           {
             reduced: "(prefers-reduced-motion: reduce)",
             full: "(prefers-reduced-motion: no-preference)",
-            compact: "(max-width: 767px)",
+            compact: "(max-width: 879px)",
           },
           (context) => {
             const { compact, reduced } = context.conditions as {
@@ -680,11 +680,11 @@ export function Hero() {
       className="hero relative flex flex-1 flex-col justify-center overflow-hidden bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
     >
       {/* Ambient background motifs — pure whitespace flourish, idle-floating */}
-      <Dot className="bg-motif reveal-hidden absolute top-[10%] left-[5%] hidden size-3 opacity-0 text-brand-yellow md:block md:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden absolute top-[16%] right-[8%] hidden size-4 opacity-0 text-brand-blue md:block md:size-5" />
-      <RingMotif className="bg-motif reveal-hidden absolute bottom-[22%] left-[4%] hidden size-4 opacity-0 text-brand-red md:block md:size-5" />
-      <Dot className="bg-motif reveal-hidden absolute top-[46%] right-[5%] hidden size-3 opacity-0 text-brand-green md:block md:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden absolute bottom-[10%] right-[22%] hidden size-3 opacity-0 text-brand-red md:block md:size-4" />
+      <Dot className="bg-motif reveal-hidden absolute top-[10%] left-[5%] hidden size-3 opacity-0 text-brand-yellow min-[880px]:block min-[880px]:size-4" />
+      <PlusMotif className="bg-motif reveal-hidden absolute top-[16%] right-[8%] hidden size-4 opacity-0 text-brand-blue min-[880px]:block min-[880px]:size-5" />
+      <RingMotif className="bg-motif reveal-hidden absolute bottom-[22%] left-[4%] hidden size-4 opacity-0 text-brand-red min-[880px]:block min-[880px]:size-5" />
+      <Dot className="bg-motif reveal-hidden absolute top-[46%] right-[5%] hidden size-3 opacity-0 text-brand-green min-[880px]:block min-[880px]:size-4" />
+      <PlusMotif className="bg-motif reveal-hidden absolute bottom-[10%] right-[22%] hidden size-3 opacity-0 text-brand-red min-[880px]:block min-[880px]:size-4" />
 
       {/* Progressive enhancement: without JS the reveal timeline never runs,
           so don't leave the hero blank. */}
@@ -695,7 +695,7 @@ export function Hero() {
       <h1 className="sr-only">Media, Game &amp; Mobile Laboratory</h1>
 
       <div
-        className="mx-auto hidden w-fit max-w-full flex-col gap-3 md:flex md:gap-4"
+        className="mx-auto hidden w-fit max-w-full flex-col gap-3 min-[880px]:flex min-[880px]:gap-4"
         aria-hidden="true"
       >
         {/* Row 1 — Media, */}
@@ -788,14 +788,14 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="hidden justify-center md:flex">
+      <div className="hidden justify-center min-[880px]:flex">
         <SeeWorkButton />
       </div>
 
       {/* The full geometric composition needs more horizontal room than a
-          phone affords. Keep its dense motion for medium screens upward and
+          phone affords. Keep its dense motion from 880px upward and
           give compact screens a focused, fully visible brand entrance. */}
-      <div className="mx-auto flex w-full max-w-xs flex-col items-center text-center md:hidden">
+      <div className="mx-auto flex w-full max-w-xs flex-col items-center text-center min-[880px]:hidden">
         <LogoMark solid className="compact-hero-logo w-[clamp(7rem,38vw,9.5rem)]" />
         <p className="compact-hero-title reveal-hidden mt-9 max-w-[18rem] opacity-0 font-display text-[clamp(2rem,9vw,2.75rem)] leading-[0.98] font-medium tracking-tight text-foreground">
           Media, Game &amp; Mobile Laboratory
@@ -803,7 +803,7 @@ export function Hero() {
         <SeeWorkButton animationClassName="compact-hero-cta" />
       </div>
 
-      <div className="corner-pattern reveal-hidden pointer-events-none absolute -right-6 -bottom-6 z-10 hidden opacity-0 md:block dark:hidden">
+      <div className="corner-pattern reveal-hidden pointer-events-none absolute -right-6 -bottom-6 z-10 hidden opacity-0 min-[880px]:block dark:hidden">
         <svg width="120" height="120" viewBox="0 0 100 100" aria-hidden>
           <circle cx="50" cy="50" r="40" fill="none" stroke="var(--brand-blue)" strokeWidth="20" />
         </svg>
@@ -812,7 +812,7 @@ export function Hero() {
       <button
         type="button"
         aria-label="Scroll to next section"
-        className="scroll-indicator reveal-hidden absolute bottom-1 left-1/2 z-10 hidden -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 md:block"
+        className="scroll-indicator reveal-hidden absolute bottom-1 left-1/2 z-10 hidden -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 min-[880px]:block"
         onClick={() => {
           const target = document.getElementById("process");
           if (!target) return;
