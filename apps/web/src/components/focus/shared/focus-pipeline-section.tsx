@@ -89,10 +89,10 @@ export function FocusPipelineSection({
         <p className="pipeline-reveal mt-4 max-w-xl text-white/65 opacity-0">{body}</p>
 
         <div className="relative mt-20">
-          <div className="absolute top-4 left-0 h-px w-full bg-white/15" />
+          <div className="absolute top-4 left-0 hidden h-px w-full bg-white/15 sm:block" />
           <div
             ref={lineRef}
-            className="absolute top-4 left-0 h-px w-full"
+            className="absolute top-4 left-0 hidden h-px w-full sm:block"
             style={{ backgroundColor: accentVar }}
           />
           <div className="relative grid gap-10 sm:grid-cols-4 sm:gap-6">
