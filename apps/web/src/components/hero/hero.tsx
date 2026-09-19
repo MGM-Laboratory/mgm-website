@@ -349,6 +349,51 @@ function buildEntranceTimeline(
   return tl;
 }
 
+function buildCompactEntranceTimeline(root: HTMLDivElement) {
+  const q = gsap.utils.selector(root);
+  const logoShards = q(".compact-hero-logo [data-part^='shard-']");
+  const title = q(".compact-hero-title");
+  const cta = q(".compact-hero-cta");
+  const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+  tl.fromTo(
+    logoShards,
+    {
+      opacity: 0,
+      scale: 0.35,
+      x: (index: number) => [-38, -48, 48][index] ?? 0,
+      y: (index: number) => [-52, 42, 42][index] ?? 0,
+      rotate: (index: number) => [-135, 115, -115][index] ?? 0,
+    },
+    {
+      opacity: 1,
+      scale: 1,
+      x: 0,
+      y: 0,
+      rotate: 0,
+      duration: 0.6,
+      stagger: 0.1,
+      ease: "back.out(1.9)",
+    },
+  )
+    .to(".compact-hero-logo", { scale: 1.08, duration: 0.12, ease: "power1.out" }, "-=0.1")
+    .to(".compact-hero-logo", { scale: 1, duration: 0.24, ease: "back.out(3)" })
+    .fromTo(
+      title,
+      { opacity: 0, y: 28, scale: 0.96 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: "back.out(1.6)" },
+      "-=0.08",
+    )
+    .fromTo(
+      cta,
+      { opacity: 0, y: 16, scale: 0.9 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: "back.out(2.2)" },
+      "-=0.25",
+    );
+
+  return tl;
+}
+
 export function Hero() {
   // Captured synchronously during the first render, not read fresh inside
   // the fonts.ready callback below: by the time that promise resolves, the
@@ -514,10 +559,44 @@ export function Hero() {
           {
             reduced: "(prefers-reduced-motion: reduce)",
             full: "(prefers-reduced-motion: no-preference)",
+            compact: "(max-width: 767px)",
           },
           (context) => {
-            const { reduced } = context.conditions as { reduced: boolean };
+            const { compact, reduced } = context.conditions as {
+              compact: boolean;
+              reduced: boolean;
+            };
             const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
+
+            if (compact) {
+              const compactLogoShards = gsap.utils.selector(root)(
+                ".compact-hero-logo [data-part^='shard-']",
+              );
+
+              if (reduced || startedScrolled || cameFromInternalNav) {
+                gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+                gsap.set(compactLogoShards, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+                reveal(false);
+                return;
+              }
+
+              const tl = buildCompactEntranceTimeline(root);
+              const logo = gsap.utils.selector(root)(".compact-hero-logo");
+              const idleLoop = gsap.to(logo, {
+                y: -5,
+                duration: 1.8,
+                ease: "sine.inOut",
+                yoyo: true,
+                repeat: -1,
+              });
+
+              tl.eventCallback("onComplete", () => reveal(true));
+
+              return () => {
+                tl.kill();
+                idleLoop.kill();
+              };
+            }
 
             if (reduced || startedScrolled || cameFromInternalNav) {
               gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
@@ -601,11 +680,11 @@ export function Hero() {
       className="hero relative flex flex-1 flex-col justify-center overflow-hidden bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
     >
       {/* Ambient background motifs — pure whitespace flourish, idle-floating */}
-      <Dot className="bg-motif reveal-hidden opacity-0 absolute top-[10%] left-[5%] size-3 text-brand-yellow sm:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden opacity-0 absolute top-[16%] right-[8%] size-4 text-brand-blue sm:size-5" />
-      <RingMotif className="bg-motif reveal-hidden opacity-0 absolute bottom-[22%] left-[4%] size-4 text-brand-red sm:size-5" />
-      <Dot className="bg-motif reveal-hidden opacity-0 absolute top-[46%] right-[5%] size-3 text-brand-green sm:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden opacity-0 absolute bottom-[10%] right-[22%] size-3 text-brand-red sm:size-4" />
+      <Dot className="bg-motif reveal-hidden absolute top-[10%] left-[5%] hidden size-3 opacity-0 text-brand-yellow md:block md:size-4" />
+      <PlusMotif className="bg-motif reveal-hidden absolute top-[16%] right-[8%] hidden size-4 opacity-0 text-brand-blue md:block md:size-5" />
+      <RingMotif className="bg-motif reveal-hidden absolute bottom-[22%] left-[4%] hidden size-4 opacity-0 text-brand-red md:block md:size-5" />
+      <Dot className="bg-motif reveal-hidden absolute top-[46%] right-[5%] hidden size-3 opacity-0 text-brand-green md:block md:size-4" />
+      <PlusMotif className="bg-motif reveal-hidden absolute bottom-[10%] right-[22%] hidden size-3 opacity-0 text-brand-red md:block md:size-4" />
 
       {/* Progressive enhancement: without JS the reveal timeline never runs,
           so don't leave the hero blank. */}
@@ -615,7 +694,10 @@ export function Hero() {
 
       <h1 className="sr-only">Media, Game &amp; Mobile Laboratory</h1>
 
-      <div className="mx-auto flex w-fit max-w-full flex-col gap-3 sm:gap-4" aria-hidden="true">
+      <div
+        className="mx-auto hidden w-fit max-w-full flex-col gap-3 md:flex md:gap-4"
+        aria-hidden="true"
+      >
         {/* Row 1 — Media, */}
         <div ref={row1Ref} className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
           <span className={cn("line-media [perspective:500px]", headline)}>Media,</span>
@@ -706,11 +788,22 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="flex justify-center">
+      <div className="hidden justify-center md:flex">
         <SeeWorkButton />
       </div>
 
-      <div className="corner-pattern reveal-hidden opacity-0 pointer-events-none absolute -right-6 -bottom-6 z-10 dark:hidden">
+      {/* The full geometric composition needs more horizontal room than a
+          phone affords. Keep its dense motion for medium screens upward and
+          give compact screens a focused, fully visible brand entrance. */}
+      <div className="mx-auto flex w-full max-w-xs flex-col items-center text-center md:hidden">
+        <LogoMark solid className="compact-hero-logo w-[clamp(7rem,38vw,9.5rem)]" />
+        <p className="compact-hero-title reveal-hidden mt-9 max-w-[18rem] opacity-0 font-display text-[clamp(2rem,9vw,2.75rem)] leading-[0.98] font-medium tracking-tight text-foreground">
+          Media, Game &amp; Mobile Laboratory
+        </p>
+        <SeeWorkButton animationClassName="compact-hero-cta" />
+      </div>
+
+      <div className="corner-pattern reveal-hidden pointer-events-none absolute -right-6 -bottom-6 z-10 hidden opacity-0 md:block dark:hidden">
         <svg width="120" height="120" viewBox="0 0 100 100" aria-hidden>
           <circle cx="50" cy="50" r="40" fill="none" stroke="var(--brand-blue)" strokeWidth="20" />
         </svg>
@@ -719,7 +812,7 @@ export function Hero() {
       <button
         type="button"
         aria-label="Scroll to next section"
-        className="scroll-indicator reveal-hidden absolute bottom-1 left-1/2 z-10 -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80"
+        className="scroll-indicator reveal-hidden absolute bottom-1 left-1/2 z-10 hidden -translate-x-1/2 text-foreground/50 opacity-0 transition-colors hover:text-foreground/80 md:block"
         onClick={() => {
           const target = document.getElementById("process");
           if (!target) return;
