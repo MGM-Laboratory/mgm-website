@@ -214,13 +214,26 @@ export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettin
     const rows = card.querySelectorAll<HTMLElement>(".info-reveal");
     if (!rows.length) return;
     if (reducedMotion()) {
-      gsap.set(rows, { opacity: 1, y: 0 });
+      gsap.set(rows, { opacity: 1 });
       return;
     }
+    // clearProps drops the inline transform once each row settles at rest -
+    // otherwise the leftover `transform: translateY(0)` keeps the row as its
+    // own stacking context forever, trapping its RevealPopover's z-30 below
+    // whatever row comes next in DOM order (see docs/animation-system.md
+    // gotcha #7). The popover's own position is unaffected either way.
     const tween = gsap.fromTo(
       rows,
       { opacity: 0, y: 12 },
-      { opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.08, immediateRender: true },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.5,
+        ease: "power3.out",
+        stagger: 0.08,
+        immediateRender: true,
+        clearProps: "transform",
+      },
     );
     return () => {
       tween.kill();
