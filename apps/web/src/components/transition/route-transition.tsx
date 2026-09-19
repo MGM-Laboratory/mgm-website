@@ -58,13 +58,13 @@ import { LogoMark } from "@/components/hero/shapes";
  */
 
 const WHITE_FADE_IN_DURATION = 0.1;
-const WHITE_FADE_OUT_DURATION = 0.06;
+const WHITE_FADE_OUT_DURATION = 0.35;
 const GIANT_SETTLE_DURATION = 0.06;
 const SHRINK_DURATION = 0.4;
 const SHRINK_FROM_ROTATION = -18;
-const GROW_DURATION = 0.18;
+const GROW_DURATION = 0.22;
 const GROW_TO_ROTATION = 18;
-const FADE_OUT_DURATION = 0.08;
+const FADE_OUT_DURATION = 0.1;
 const GIANT_SCALE_MARGIN = 1.15;
 // Guarantees the idle mark is actually visible for a beat before reversing,
 // even when the destination resolves almost instantly (a fast dev server or
@@ -257,19 +257,25 @@ export function RouteTransition() {
         pendingRef.current = freshPendingState();
       },
     });
-    // Fast grow back to giant, sliding off-center as it grows — covering the
-    // whole screen a second time with a different solid region of the mark
-    // — then the blue backdrop fades (revealing the white wash underneath),
-    // and only once that's done does the white wash itself fade last,
-    // gradually bringing the real destination into view.
+    // Grow back to giant with a pronounced accelerating curve — starts slow,
+    // then rushes — covering the whole screen a second time with a
+    // different solid region of the mark. The blue backdrop then fades
+    // (revealing the white wash underneath) with the same accelerating
+    // character, and only once that's done does the white wash itself fade
+    // — slower and smoother than the two above, so the destination page
+    // eases into view gradually rather than snapping in.
     tl.to(logoRef.current, {
       scale: giantScale,
       rotation: GROW_TO_ROTATION,
       duration: GROW_DURATION,
-      ease: "power2.in",
+      ease: "power4.in",
     });
-    tl.to(overlayRef.current, { autoAlpha: 0, duration: FADE_OUT_DURATION, ease: "power1.in" });
-    tl.to(whiteRef.current, { autoAlpha: 0, duration: WHITE_FADE_OUT_DURATION, ease: "power2.in" });
+    tl.to(overlayRef.current, { autoAlpha: 0, duration: FADE_OUT_DURATION, ease: "power3.in" });
+    tl.to(whiteRef.current, {
+      autoAlpha: 0,
+      duration: WHITE_FADE_OUT_DURATION,
+      ease: "sine.inOut",
+    });
   }
 
   function watchForRouteReady() {
