@@ -237,7 +237,7 @@ export function BauhausField() {
       {SHAPES.map((shape, i) => (
         <div
           key={i}
-          className={`parallax-el absolute ${shape.hideOnMobile ? "hidden sm:block" : ""}`}
+          className="parallax-el absolute hidden lg:block"
           data-depth={shape.depth}
           style={{ top: `${shape.top}%`, left: `${shape.left}%` }}
         >
