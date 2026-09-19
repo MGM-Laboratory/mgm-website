@@ -90,7 +90,9 @@ export class MailService {
         })
       : undefined;
 
-    this.fromEmail = configService.get<string | undefined>("SES_FROM_EMAIL");
+    const fromEmail = configService.get<string | undefined>("SES_FROM_EMAIL");
+    const fromName = configService.get<string | undefined>("MAIL_FROM_NAME");
+    this.fromEmail = fromEmail && fromName ? `${fromName} <${fromEmail}>` : fromEmail;
   }
 
   /**
