@@ -6,7 +6,7 @@ MGM Laboratory's website is currently maintained by a single maintainer, who has
 
 - Small fixes and clearly-scoped contributions (bug fixes, docs, dependency bumps) are merged once they pass the required checks and a maintainer review.
 - Larger changes (new pages, data model changes, CI/CD or infrastructure changes) should be discussed in an issue before a PR is opened, so direction is agreed on before the work is done.
-- The maintainer may merge urgent fixes directly to `main` (repo admins bypass branch protection for exactly this reason); everyone else goes through the standard PR flow described in `CONTRIBUTING.md`.
+- Every change, including urgent maintainer fixes, follows the branch → PR → required checks → `/merge` flow in `CONTRIBUTING.md`. The ruleset's administrative bypass exists but is not the established delivery path; do not use it as routine practice.
 
 ## Becoming a maintainer
 

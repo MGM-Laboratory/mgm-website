@@ -6,8 +6,12 @@ This is the **MGM Laboratory** website monorepo (Next.js 16 marketing site + Nes
 
 - `docs/project-overview.md` — product context, all pages, content status
 - `docs/architecture.md` — monorepo layout, components, data, routing
+- `docs/cms-admin.md` — CMS collections, `/admin`, signed sessions, RBAC, and media storage
 - `docs/animation-system.md` — GSAP conventions and known gotchas (read before touching animations)
 - `docs/navigation-menu.md` — the full-screen menu system
+- `docs/page-transition.md` — internal-navigation curtain and homepage entrance behavior
+- `docs/careers-cms.md` — openings, applications, and the careers inbox
+- `docs/mail-system.md` — mail providers, routing, quotas, and Railway's SMTP restriction
 - `docs/ci-cd.md` — GitHub Actions / Docker Hub / Railway
 - `docs/testing-verification.md` — Playwright verification methodology
 - `docs/repo-history.md` — the repo migration and why the git rules exist

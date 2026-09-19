@@ -1,114 +1,50 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# MGM Laboratory API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+The NestJS 12 API behind the MGM Laboratory website. It serves health checks, the public contact form, CMS collections, authenticated admin operations, S3-compatible media storage, and transactional mail. It is an ESM workspace in the pnpm monorepo; the web application lives in `../web` and shared schemas live in `../../packages/shared`.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+For the system-level picture, start with [`../../docs/architecture.md`](../../docs/architecture.md). CMS and administrator operations are documented in [`../../docs/cms-admin.md`](../../docs/cms-admin.md); mail configuration is in [`../../docs/mail-system.md`](../../docs/mail-system.md).
 
-## Description
+## Local development
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+From the repository root:
 
 ```bash
-$ pnpm install
+pnpm install
+cp apps/api/.env.example apps/api/.env
+pnpm dev:api
 ```
 
-## Compile and run the project
+The API listens on `http://localhost:4000`, with Swagger at `http://localhost:4000/docs` and the health check at `http://localhost:4000/api/health`. A running Postgres database and `DATABASE_URL` are required; `docker compose up` starts Postgres, API, and web together.
+
+Use the root scripts for normal work:
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm --filter api test:e2e
+pnpm build
 ```
 
-## Run tests
+## API surface
 
-```bash
-# unit tests
-$ pnpm run test
+All application routes are prefixed with `/api`. The public surface includes:
 
-# e2e tests
-$ pnpm run test:e2e
+- `GET /api/health` — verifies the API and its database connection.
+- `POST /api/contact` and `/api/contact/attachments` — submit a contact inquiry and optional uploaded files.
+- `GET /api/cms/{members,articles,publications,projects,research,events,jobs}` — published CMS content. Collection-specific media, papers, videos, calendar, registration, and application routes live beneath the same collection path.
+- `GET /api/cms/contact-settings` and `GET /api/cms/home` — public singleton site settings.
 
-# test coverage
-$ pnpm run test:cov
-```
+CMS mutations use `x-cms-passphrase` at the API boundary. The browser never receives that secret: `/admin` uses signed, HTTP-only sessions and Next route handlers proxy the authorized requests. See [`../../docs/cms-admin.md`](../../docs/cms-admin.md) before changing authentication, permissions, or a collection contract.
 
-## Deployment
+## Configuration
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+[`./.env.example`](.env.example) lists every API variable. The required runtime values are `DATABASE_URL` and `ADMIN_PASSPHRASE`; all mail, Redis, and object-storage values are optional until their related feature is used. Keep production values in Railway service variables, never in the repository.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Media uses the AWS S3 SDK and also supports S3-compatible endpoints through `AWS_ENDPOINT_URL` and `AWS_S3_FORCE_PATH_STYLE`. Mail can route through Resend, SMTP, or AWS SES; Railway blocks production SMTP on plans below Pro, so Resend's HTTPS API is the practical production choice.
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
+## Database and deployment
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Prisma owns the schema and migrations in `prisma/`. `prisma generate` runs after installation; use `pnpm --filter api prisma:migrate` for local schema changes and `pnpm --filter api prisma:deploy` for a deployed database. `PrismaService` also creates the slug-keyed CMS tables idempotently at startup so an existing deployment can boot safely while incremental migrations catch up.
 
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+`Dockerfile` builds from the monorepo root with Turbo pruning and produces a non-root Node 22 Alpine image. Railway deploys the `main` branch automatically after a merged pull request; CI and image publishing are described in [`../../docs/ci-cd.md`](../../docs/ci-cd.md).

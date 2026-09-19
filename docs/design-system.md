@@ -77,4 +77,4 @@ Nav bento tiles pair each item with a `motif` (`ring | bracket | cross | chevron
 
 ## Social glyphs
 
-`components/social-icons.tsx` — hand-drawn brand glyphs (Instagram, LinkedIn, X, YouTube, Discord), all `currentColor` so they adapt to theme text color. Each accepts a `ref` (React 19 ref-as-prop) so the nav can run GSAP hover timelines on the SVG element itself.
+`components/social-icons.tsx` — hand-drawn glyphs (Instagram, LinkedIn, GitHub, WhatsApp, Discord), all `currentColor` so they adapt to theme text color. Each accepts a `ref` (React 19 ref-as-prop) so the nav can run GSAP hover timelines on the SVG element itself. The current menu selects Instagram, LinkedIn, and Discord through `data/nav.ts`.

@@ -1,0 +1,81 @@
+# CMS and Admin Workspace
+
+`/admin` is the internal editorial workspace for MGM Laboratory. It owns public content, media, submissions, site settings, and delegated editor accounts. It is deliberately outside the public navigation. This guide records the boundary between the browser, the Next.js app, and the NestJS API so future changes do not accidentally expose the administrator passphrase or bypass RBAC.
+
+## Entry points and data flow
+
+1. `/admin/login` accepts either the environment `ADMIN_PASSPHRASE` (the superadmin) or an active delegated editor passphrase. The browser posts only to `apps/web/src/app/api/admin/login/route.ts`.
+2. A successful login writes a signed, HTTP-only, `SameSite=Lax` `mgm_admin_session` cookie, valid for 12 hours. The token contains an account id, session version, issued time, and HMAC; it is not a bearer copy of the passphrase.
+3. Every `/api/admin/**` Next route handler validates that cookie with `requireAdminPermission()` or `requireSuperadmin()` before it forwards the request to the API. `cmsApi()` adds `x-cms-passphrase` server-side, so the secret never reaches browser code.
+4. The Nest API owns validation, persistence, media storage, and public/admin response shaping. Public pages fetch its published endpoints; admin lists use the `/admin` collection endpoints so editors can see drafts.
+
+`getAdminSession()` rechecks a delegated editor's account on every request. Disabling an account, changing its permission set, or changing its passphrase increments its `sessionVersion` and invalidates existing sessions without waiting 12 hours. The superadmin is the one environment-backed account and is trusted from the signed cookie after the passphrase gate.
+
+## Roles and permissions
+
+Only the superadmin can create, edit, or delete delegated administrators. Delegated accounts have an active flag, optional expiry, and page-by-page permissions. The vocabulary comes from `packages/shared/src/schemas/admin-permissions.ts`:
+
+| Page id             | Workspace                 | Allowed actions     |
+| ------------------- | ------------------------- | ------------------- |
+| `articles`          | Articles                  | read, write, delete |
+| `publications`      | Publications              | read, write, delete |
+| `members`           | Member directory          | read, write, delete |
+| `projects`          | Projects                  | read, write, delete |
+| `research`          | Research initiatives      | read, write, delete |
+| `careers`           | Openings and applications | read, write, delete |
+| `contact`           | Contact settings          | read, write, delete |
+| `contact-inquiries` | Contact inbox             | read only           |
+| `events`            | Events and registrations  | read, write, delete |
+| `home`              | Homepage settings         | read, write, delete |
+| `other`             | Other settings namespace  | read, write, delete |
+
+Permissions are rank-expanded: granting `write` also grants `read`; granting `delete` grants all three. Contact inquiries are intentionally read-only for delegated accounts even though the API supports state changes through the superadmin path. If a new collection is added, update the shared page-id list, API validation, Next proxy gates, and the admin studio together; drift between those layers has already caused rejected admin creation requests.
+
+## Editorial collections
+
+The workspace is composed in `apps/web/src/components/admin/member-cms-studio.tsx`. Its main collections are Articles, Projects, Publications, Research, Member, Careers, Contact Inquiries, Events, and Settings (Home and Contact Settings), plus superadmin-only Admin Management.
+
+The API stores each collection as a slug-keyed JSONB `data` record. Prisma defines the current tables in `apps/api/prisma/schema.prisma`: `CmsMember`, `CmsArticle`, `CmsPublication`, `CmsProject`, `CmsResearchInitiative`, `CmsJobPosting`, `CmsJobApplication`, `CmsEvent`, `CmsEventRegistration`, `CmsContactInquiry`, `CmsAdmin`, and the singleton `CmsHomeContent` and `CmsContactSettings` records. `PrismaService.onModuleInit()` creates these tables idempotently as an operational safety net; schema migrations remain the durable migration record.
+
+| Collection        | Public path                             | Notable admin capability                                                            |
+| ----------------- | --------------------------------------- | ----------------------------------------------------------------------------------- |
+| Members           | `/member`, `/member/[slug]`             | profile photo crop/upload and structured profile fields                             |
+| Articles          | `/articles`, `/articles/[slug]`         | BlockNote body and cover uploads                                                    |
+| Publications      | `/publications`, `/publications/[slug]` | paper PDF, author photos, citations, preview metadata                               |
+| Projects          | `/projects`, `/projects/[slug]`         | contributor photos, gallery media, MP4/WebM demo video                              |
+| Research          | `/research`, `/research/[slug]`         | initiative detail, linked outcomes, cover upload                                    |
+| Careers           | `/careers`, detail, apply               | openings, BlockNote detail, application inbox and CV files                          |
+| Events            | `/events`, `/events/[slug]`             | event media, registrations, calendar export, map-link resolution                    |
+| Contact inquiries | `/contact`                              | inbox state and bulk actions; the original inquiry is persisted before mail is sent |
+| Home              | `/`                                     | homepage video/settings singleton                                                   |
+| Contact settings  | `/contact`                              | addresses, map location, and mail routing strategy                                  |
+
+The careers workflow has additional validation, upload constraints, and inbox behavior; read [`careers-cms.md`](careers-cms.md) before modifying it. Contact settings control mail routing, which is detailed in [`mail-system.md`](mail-system.md).
+
+## Media and upload rules
+
+The API's `StorageService` writes to AWS S3 or an S3-compatible bucket. It gives uploaded objects immutable cache headers and serves private/public CMS files through short-lived signed-download redirects. The object bucket must be configured with `AWS_S3_BUCKET`; `AWS_ENDPOINT_URL` and `AWS_S3_FORCE_PATH_STYLE` support Railway or another compatible provider.
+
+Large bodies must be streamed through the Next proxy, not parsed into `request.formData()` or JSON first. The established paths use raw PDF/video bodies or streamed multipart forwarding:
+
+- publication papers: `CMS_MAX_PAPER_BYTES`, default 200 MB;
+- project videos: `CMS_MAX_VIDEO_BYTES`, default 500 MB, MP4 or WebM;
+- job CVs: `CMS_MAX_CV_BYTES`, default 100 MB, PDF/DOC/DOCX;
+- contact attachments: 25 MB hard limit.
+
+When adding a media type, enforce the byte limit at the API, preserve the stream through the Next route handler, validate the file type, and ensure deletion cleans up the object as well as the JSON record.
+
+## Content seeding and failure behavior
+
+Several public collections have seed helpers in `apps/web/src/lib/*-cms*-seed.ts`. They initialize legacy/static source data only when needed so the public site retains content during a fresh CMS rollout. Do not call an admin feed from a public page just to make seeding convenient: drafts and protected fields must not be sent to an account without the corresponding `read` permission.
+
+Public CMS helpers should fail softly to a safe static/default value where one exists (for example, contact settings fall back to `DEFAULT_CONTACT_SETTINGS`). Admin mutations should surface API validation errors rather than silently accepting malformed content.
+
+## Change checklist
+
+1. Add or change the shared Zod schema first when the browser and API exchange a record shape.
+2. Update the API controller/service, Prisma schema/migration, and idempotent startup table list when persistence changes.
+3. Add the gated Next `/api/admin/**` proxy and the matching public proxy/media route.
+4. Gate data loading in `app/admin/page.tsx`; the server must not preload a restricted draft feed merely because the client hides its tab.
+5. Update the admin studio, public route helpers, this document, and the relevant collection-specific guide.
+6. Verify a least-privilege delegated account, revoked/expired account behavior, upload limits, and public draft invisibility in addition to the superadmin path.

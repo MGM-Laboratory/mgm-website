@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MGM Laboratory Web
 
-## Getting Started
+The public MGM Laboratory site and its internal CMS workspace. It is a Next.js 16.3.4 App Router application using React 19, Tailwind v4, GSAP, and `next-themes`; it lives beside the NestJS API in this pnpm monorepo.
 
-First, run the development server:
+Read [`../../CLAUDE.md`](../../CLAUDE.md) before changing the app. In particular, this Next version has conventions that differ from older releases: consult the relevant bundled guide in `node_modules/next/dist/docs/` before writing Next-specific code. The design source of truth is [`../../DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md).
+
+## Local development
+
+From the repository root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp apps/web/.env.example apps/web/.env
+pnpm dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The site runs at `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL` and `CMS_API_URL` to the API (`http://localhost:4000/api` locally); `ADMIN_PASSPHRASE` must match the API when using `/admin`. `docker compose up` starts the complete local stack including Postgres.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Useful root commands:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm lint
+pnpm typecheck
+pnpm build
+pnpm --filter web test:e2e
+```
 
-## Learn More
+Keep the development server running while working on the UI and verify changes in a browser. [`../../docs/testing-verification.md`](../../docs/testing-verification.md) records the expected Playwright and manual checks.
 
-To learn more about Next.js, take a look at the following resources:
+## Application map
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Public routes: homepage, About, Members, Careers, Contact, Articles, Events, four Focus pages, Projects, Publications, Research, and the three remaining `PageBand` stubs (`/media`, `/privacy-policy`, `/terms-of-services`). Dynamic detail and application routes sit under their collections.
+- `/admin` and `/admin/login`: the internal editorial workspace. It uses signed HTTP-only sessions, per-collection RBAC, and Next route handlers that proxy CMS requests to the API; it is not part of the public navigation. See [`../../docs/cms-admin.md`](../../docs/cms-admin.md).
+- `src/components/`: page sections, CMS views, full-screen navigation, route-transition curtain, and the admin workspace.
+- `src/data/`: static homepage/focus/navigation content. CMS-backed public content has matching helpers in `src/lib/` and API proxy routes under `src/app/api/`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The complete public-page inventory is in [`../../docs/project-overview.md`](../../docs/project-overview.md); architecture and ownership boundaries are in [`../../docs/architecture.md`](../../docs/architecture.md).
 
-## Deploy on Vercel
+## Design and animation constraints
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Everything must work in light and dark themes and under `prefers-reduced-motion`. GSAP owns any transform it animates: never add a static Tailwind `transform`, `translate-*`, `rotate-*`, or `scale-*` class to the same element. The detailed patterns and established failure modes are in [`../../docs/animation-system.md`](../../docs/animation-system.md). The navigation menu and route curtain each have their own specifications in [`../../docs/navigation-menu.md`](../../docs/navigation-menu.md) and [`../../docs/page-transition.md`](../../docs/page-transition.md).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+`next.config.ts` uses standalone output so `Dockerfile` can build a compact non-root runtime image from the monorepo root. Railway deploys the production web service from merged `main` changes. See [`../../docs/ci-cd.md`](../../docs/ci-cd.md) for the pull-request, Docker, preview, and production flow.

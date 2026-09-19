@@ -1,6 +1,6 @@
 # CI/CD
 
-Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud, pre-commit.ci, and a status comment. `main` is protected: PRs need every required check green to merge; repo admins can bypass for direct pushes.
+Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud, pre-commit.ci, and a status comment. `main` is protected: every change uses the branch → PR → required checks → `/merge` flow; an administrative bypass exists but is not routine practice.
 
 ## GitHub Actions workflows
 
@@ -86,7 +86,7 @@ gh release create v1.0.0 --title "v1.0.0" --generate-notes --target main
 
 ## SonarCloud
 
-Wired via SonarCloud's own GitHub App (Automatic Analysis), project `MGM-Laboratory_mgm-website2` — posts its own "SonarCloud Code Analysis" check on every push/PR with no workflow file needed.
+Wired via SonarCloud's own GitHub App (Automatic Analysis), project `MGM-Laboratory_mgm-website3` — posts its own "SonarCloud Code Analysis" check on every push/PR with no workflow file needed.
 
 ## Security-scanner suppressions
 
@@ -154,7 +154,7 @@ The Railway MCP tools are also available in agent sessions (`list-projects`, `de
 
 ## Governance
 
-`main` requires a PR + every required status check to merge; repo admins can bypass (Settings → Rules → Rulesets). External contributors go through the full PR flow described in `CONTRIBUTING.md`; the owner/agent workflow of committing and pushing directly to `main` for routine work is unaffected.
+`main` requires a PR + every required status check to merge. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`; do not use the administrative bypass for routine work.
 
 ### Known issue: the ruleset's required-check names keep getting reset
 
@@ -204,4 +204,4 @@ After migrating to this repo, `/check`, `/preview`, `/merge`, and `/close` were 
 
 ## Historical: /merge post-merge dispatch fix verified (2026-09-15)
 
-A second live `/merge` run (this note) confirmed the dispatch-based post-merge verification (see "Merging" above) actually works: `ci.yaml` and `docker-publish.yml` were dispatched against this merge commit and the report correctly labeled them as dispatched rather than claiming a result it never checked.
+A second live `/merge` run (this note) confirmed the dispatch-based post-merge verification (see "Merging" above) actually works: `ci.yaml` and `publish-docker-image-latest.yml` were dispatched against this merge commit and the report correctly labeled them as dispatched rather than claiming a result it never checked.
