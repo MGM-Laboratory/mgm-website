@@ -43,6 +43,26 @@ export function fadeUpOnScroll(
     { opacity: 0, y },
     { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger },
   );
+  // A `once: true` ScrollTrigger's onEnter only fires on an actual forward
+  // crossing of `start` - it does not fire retroactively. If this section
+  // mounts already scrolled past that point (e.g. a client-side navigation
+  // whose data-fetched content, and this reveal along with it, renders a
+  // few commits after the route change, by which time the visitor has
+  // already scrolled down - or simply landing on a page and immediately
+  // flicking straight to the bottom), no crossing ever happens and the
+  // timeline silently never plays, leaving the section stuck at its
+  // opacity:0 "from" state forever. ScrollTrigger's own progress/isActive
+  // still reflect the true current scroll position regardless of whether
+  // that crossing event fired, so checking progress right after creation
+  // and jumping straight to the resolved end state catches this up without
+  // an entrance animation that would look disconnected in time anyway.
+  if (tl.scrollTrigger && tl.scrollTrigger.progress > 0) {
+    tl.progress(1);
+    // Defensive redundancy, not a substitute for the line above: setting
+    // the DOM values directly guarantees the resolved end state even if
+    // something about this timeline's own internals didn't fully apply it.
+    gsap.set(targets, { opacity: 1, y: 0 });
+  }
   return tl;
 }
 
