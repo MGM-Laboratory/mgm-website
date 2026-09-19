@@ -469,7 +469,7 @@ export function PdfViewerDialog({
           </p>
         </div>
 
-        <div className="order-3 flex w-full shrink-0 items-center justify-center gap-1 sm:order-none sm:w-auto sm:justify-start">
+        <div className="flex w-full shrink-0 items-center justify-center gap-1 sm:w-auto sm:justify-start">
           <button
             aria-label="Previous page"
             className={toolbarButton}
@@ -505,7 +505,7 @@ export function PdfViewerDialog({
           </button>
         </div>
 
-        <div className="order-4 flex w-full shrink-0 items-center justify-center gap-1 sm:order-none sm:w-auto sm:justify-start">
+        <div className="flex w-full shrink-0 items-center justify-center gap-1 sm:w-auto sm:justify-start">
           <button aria-label="Zoom out" className={toolbarButton} onClick={zoomOut} type="button">
             <MagnifyingGlassMinus size={16} />
           </button>
