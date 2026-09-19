@@ -198,38 +198,54 @@ export function BauhausField() {
     const root = rootRef.current;
     if (!root) return;
 
-    const shapeEls = gsap.utils.toArray<HTMLElement>(".bauhaus-shape", root);
-    const reduced = !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
+    // The shapes themselves are `hidden lg:block` (see the className below) -
+    // scope the entrance timeline, idle loops, and parallax listener to the
+    // same breakpoint with gsap.matchMedia() instead of setting them up
+    // unconditionally. `display: none` doesn't stop GSAP from computing
+    // transforms on hidden elements, so without this every mobile/tablet
+    // visit still paid for the scroll-triggered entrance, the continuous
+    // idle-loop tweens, and a mousemove-driven parallax listener for shapes
+    // nobody can see. matchMedia also means a resize across the breakpoint
+    // (rotating a tablet, resizing a desktop window) is handled for free -
+    // GSAP reverts and re-runs the callback itself.
+    const mm = gsap.matchMedia();
 
-    const rotateOf = (el: Element) => Number((el as HTMLElement).dataset.rotate ?? 0);
+    mm.add("(min-width: 1024px)", () => {
+      const shapeEls = gsap.utils.toArray<HTMLElement>(".bauhaus-shape", root);
+      const reduced = !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
 
-    if (reduced) {
-      shapeEls.forEach((el) => gsap.set(el, { opacity: 1, scale: 1, rotate: rotateOf(el) }));
-      return;
-    }
+      const rotateOf = (el: Element) => Number((el as HTMLElement).dataset.rotate ?? 0);
 
-    gsap.set(shapeEls, { opacity: 0, scale: 0.3, rotate: (i, el) => rotateOf(el) });
-    const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 90%", once: true } });
-    tl.to(shapeEls, {
-      opacity: 1,
-      scale: 1,
-      duration: 0.7,
-      ease: "back.out(1.8)",
-      stagger: { each: 0.03, from: "random" },
+      if (reduced) {
+        shapeEls.forEach((el) => gsap.set(el, { opacity: 1, scale: 1, rotate: rotateOf(el) }));
+        return;
+      }
+
+      gsap.set(shapeEls, { opacity: 0, scale: 0.3, rotate: (i, el) => rotateOf(el) });
+      const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 90%", once: true } });
+      tl.to(shapeEls, {
+        opacity: 1,
+        scale: 1,
+        duration: 0.7,
+        ease: "back.out(1.8)",
+        stagger: { each: 0.03, from: "random" },
+      });
+
+      let idleLoops: gsap.core.Tween[] = [];
+      tl.eventCallback("onComplete", () => {
+        idleLoops = startIdleLoops(shapeEls);
+      });
+
+      const removeParallax = setupParallax(root, { duration: 0.9, xStrength: 14, yStrength: 10 });
+
+      return () => {
+        tl.kill();
+        idleLoops.forEach((loop) => loop.kill());
+        removeParallax();
+      };
     });
 
-    let idleLoops: gsap.core.Tween[] = [];
-    tl.eventCallback("onComplete", () => {
-      idleLoops = startIdleLoops(shapeEls);
-    });
-
-    const removeParallax = setupParallax(root, { duration: 0.9, xStrength: 14, yStrength: 10 });
-
-    return () => {
-      tl.kill();
-      idleLoops.forEach((loop) => loop.kill());
-      removeParallax();
-    };
+    return () => mm.revert();
   }, []);
 
   return (
