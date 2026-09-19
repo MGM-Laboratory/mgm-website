@@ -133,7 +133,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </article>
 
         {others.length ? (
-          <section className="mx-auto w-full max-w-[1200px] px-6 pb-40 sm:px-[55px]">
+          <section className="mx-auto w-full max-w-[1200px] px-6 pb-40 sm:px-10 lg:px-[55px]">
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <h2 className="font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
                 Other articles
