@@ -35,13 +35,23 @@ function BackToTop() {
     if (!button) return;
     const d = reducedMotion() ? 0 : 1;
     gsap.set(button, { autoAlpha: 0, y: 12 });
-    const trigger = ScrollTrigger.create({
-      trigger: button.closest("footer"),
-      start: "top bottom",
-      onEnter: () => gsap.to(button, { autoAlpha: 1, y: 0, duration: 0.4 * d }),
-      onLeaveBack: () => gsap.to(button, { autoAlpha: 0, y: 12, duration: 0.3 * d }),
-    });
-    return () => trigger.kill();
+    // A bare ScrollTrigger.create() is the same forbidden shape as a
+    // tween-level trigger (see docs/animation-system.md gotcha #4): GSAP
+    // 3.15.0 throws inside its internal refresh when one is created after
+    // >=4 other ScrollTriggers already exist on a page loaded already
+    // scrolled down - exactly what every client-side navigation does, since
+    // this footer (and this effect) remounts on every page. Wrapping the
+    // same config in an (empty) timeline makes it timeline-level instead;
+    // onEnter/onLeaveBack behave identically either way.
+    const trigger = gsap.timeline({
+      scrollTrigger: {
+        trigger: button.closest("footer"),
+        start: "top bottom",
+        onEnter: () => gsap.to(button, { autoAlpha: 1, y: 0, duration: 0.4 * d }),
+        onLeaveBack: () => gsap.to(button, { autoAlpha: 0, y: 12, duration: 0.3 * d }),
+      },
+    }).scrollTrigger;
+    return () => trigger?.kill();
   }, []);
 
   function scrollToTop() {
