@@ -29,6 +29,20 @@
   text-transform: uppercase;
   font-weight: 600;
   font-size: clamp(1.25rem, 1.4vw + 1rem, 2.25rem);
+  text-align: center;
+}
+
+/* Below the desktop breakpoint (matches Tailwind's `lg:`), the row no
+   longer has room for the longest titles on one line — let them wrap
+   instead of hard-clipping against .item's overflow:hidden. The marquee
+   reveal (.marquee/.inner/.part) is untouched, so this only affects the
+   at-rest label. */
+@media (max-width: 1023px) {
+  .itemLink {
+    white-space: normal;
+    line-height: 1.15;
+    padding: 0.5rem 1rem;
+  }
 }
 
 .marquee {
