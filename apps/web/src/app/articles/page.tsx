@@ -96,7 +96,7 @@ export default async function ArticlesPage({
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
       <main className="flex-1">
-        <section className="mx-auto w-full max-w-[1200px] px-[55px] pt-24 pb-20">
+        <section className="mx-auto w-full max-w-[1200px] px-6 sm:px-[55px] pt-24 pb-20">
           <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-blue uppercase">
             Editorial
           </p>
@@ -113,7 +113,7 @@ export default async function ArticlesPage({
         </section>
 
         <section
-          className="mx-auto w-full max-w-[1200px] scroll-mt-24 px-[55px] pb-40"
+          className="mx-auto w-full max-w-[1200px] scroll-mt-24 px-6 sm:px-[55px] pb-40"
           id="articles"
         >
           {searching ? (
