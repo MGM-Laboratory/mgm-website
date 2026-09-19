@@ -50,7 +50,7 @@ One reusable workflow matrixed over both images, plus thin caller workflows, inv
 - **`publish-docker-image-latest.yml`** — caller, triggers on push to `main` + `workflow_dispatch`. Calls the image workflow with `tag: latest`, using the local `./...` reference.
 - **`publish-docker-image-staging.yml`** — caller, triggers on any pull request (`branches: ["*"]`) + `workflow_dispatch`. Calls the image workflow with `tag: pr-<PR number>` (falls back to the run number under `workflow_dispatch`, which has no PR number), using the same local `./...` reference. GitHub resolves that local reusable-workflow reference from the same commit as the caller, so the first PR introducing these files can invoke `publish-docker-image.yml` and future in-PR edits to the reusable workflow are picked up automatically.
 
-Version-tag-triggered releases (pushing `v*.*.*`) aren't wired up here — the original single-file workflow supported it, this one doesn't yet. Add a third caller workflow if that's needed again.
+Version-tag-triggered releases (pushing `v*.*.*`) aren't wired up here — the original single-file workflow supported it, this one doesn't yet. Add a third caller workflow if that's needed again. See "Releases" below for how releases are actually cut today (manually, no automation).
 
 **Docker Hub credentials live at the GitHub org level** (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` variables/secrets) — nothing is stored per-repo, so new repos in the org inherit them automatically.
 
@@ -70,6 +70,19 @@ gh run watch -R MGM-Laboratory/mgm-website <id>
 gh workflow run ci.yaml -R MGM-Laboratory/mgm-website --ref main
 cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer https://token.actions.githubusercontent.com docker.io/labmgm/website-api:latest
 ```
+
+## Releases
+
+Entirely manual — no workflow watches for or reacts to a `v*.*.*` tag (see the note above). To cut one:
+
+```bash
+git checkout main && git pull origin main
+git tag -a v1.0.0 -m "v1.0.0" <commit-sha-or-omit-for-current-HEAD>
+git push origin v1.0.0
+gh release create v1.0.0 --title "v1.0.0" --generate-notes --target main
+```
+
+`--generate-notes` builds the changelog from merged PR titles since the previous tag (or from the beginning of history, for the first release). Before tagging, confirm CI is green and production is healthy on the exact commit being tagged (`gh run list --branch main --limit 5`, then `curl` both the web and api health endpoints) — a release should represent something already verified working, not just "whatever main happens to be." v1.0.0 was cut this way from the tip of `main` after PR #48 merged.
 
 ## SonarCloud
 
