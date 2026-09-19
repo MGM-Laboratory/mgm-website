@@ -106,7 +106,7 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
       <main className="flex-1">
-        <article className="mx-auto w-full max-w-[1200px] px-[55px] pt-[91px] pb-16">
+        <article className="mx-auto w-full max-w-[1200px] px-6 pt-[91px] pb-16 sm:px-10 lg:px-[55px]">
           <header>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <Link
@@ -230,7 +230,7 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
         </article>
 
         {others.length ? (
-          <section className="mx-auto w-full max-w-[1200px] px-[55px] pb-40">
+          <section className="mx-auto w-full max-w-[1200px] px-6 pb-40 sm:px-10 lg:px-[55px]">
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <h2 className="font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
                 Related publications
