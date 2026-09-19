@@ -22,7 +22,7 @@ export function SiteHeader() {
       <LogoMark />
 
       <div className="flex items-center gap-2 sm:gap-4">
-        <ThemeToggle className="size-8" />
+        <ThemeToggle className="size-11 lg:size-8" />
         <NavMenu />
       </div>
     </header>

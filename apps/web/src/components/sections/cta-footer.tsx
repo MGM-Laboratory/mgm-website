@@ -35,13 +35,23 @@ function BackToTop() {
     if (!button) return;
     const d = reducedMotion() ? 0 : 1;
     gsap.set(button, { autoAlpha: 0, y: 12 });
-    const trigger = ScrollTrigger.create({
-      trigger: button.closest("footer"),
-      start: "top bottom",
-      onEnter: () => gsap.to(button, { autoAlpha: 1, y: 0, duration: 0.4 * d }),
-      onLeaveBack: () => gsap.to(button, { autoAlpha: 0, y: 12, duration: 0.3 * d }),
-    });
-    return () => trigger.kill();
+    // A bare ScrollTrigger.create() is the same forbidden shape as a
+    // tween-level trigger (see docs/animation-system.md gotcha #4): GSAP
+    // 3.15.0 throws inside its internal refresh when one is created after
+    // >=4 other ScrollTriggers already exist on a page loaded already
+    // scrolled down - exactly what every client-side navigation does, since
+    // this footer (and this effect) remounts on every page. Wrapping the
+    // same config in an (empty) timeline makes it timeline-level instead;
+    // onEnter/onLeaveBack behave identically either way.
+    const trigger = gsap.timeline({
+      scrollTrigger: {
+        trigger: button.closest("footer"),
+        start: "top bottom",
+        onEnter: () => gsap.to(button, { autoAlpha: 1, y: 0, duration: 0.4 * d }),
+        onLeaveBack: () => gsap.to(button, { autoAlpha: 0, y: 12, duration: 0.3 * d }),
+      },
+    }).scrollTrigger;
+    return () => trigger?.kill();
   }, []);
 
   function scrollToTop() {
@@ -93,7 +103,7 @@ export function CtaFooter() {
 
   return (
     <footer ref={rootRef} className="relative overflow-hidden bg-background text-foreground">
-      <div className="footer-reveal mx-auto grid max-w-5xl gap-10 px-6 py-14 opacity-0 sm:grid-cols-2 sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-end lg:px-16">
+      <div className="footer-reveal mx-auto grid max-w-5xl gap-10 px-6 py-14 opacity-0 sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-end lg:px-16">
         <div>
           <Image src="/logo.svg" alt="MGM Laboratory" width={32} height={32} />
           <p className="mt-4 font-display text-xl font-semibold tracking-tight">
@@ -173,7 +183,7 @@ export function CtaFooter() {
         </div>
       </div>
 
-      <div className="footer-reveal mx-auto flex max-w-5xl flex-col items-center gap-3 px-6 py-6 text-xs text-foreground/70 opacity-0 sm:flex-row sm:justify-between sm:px-10 lg:px-16">
+      <div className="footer-reveal mx-auto flex max-w-5xl flex-col items-center gap-3 pt-6 pr-6 pb-20 pl-6 text-xs text-foreground/70 opacity-0 sm:flex-row sm:justify-between sm:pt-6 sm:pr-24 sm:pb-6 sm:pl-10 lg:px-16">
         <p>© {year} MGM Laboratory. All rights reserved.</p>
         <div className="flex gap-5">
           {LEGAL_LINKS.map((link) => (

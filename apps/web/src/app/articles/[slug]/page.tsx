@@ -74,7 +74,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
       <main className="flex-1">
         <article className="mx-auto max-w-[1200px] pt-[91px] pb-16">
-          <header className="text-center">
+          <header className="px-6 text-center sm:px-10 lg:px-0">
             <p className="text-base text-[#b2b2b5]">{formatArticleDate(article.date)}</p>
             <h1 className="mt-[19px] font-display text-[clamp(2rem,4vw,3rem)] leading-[1.05] font-semibold tracking-[-0.02em] text-[#313131] dark:text-[#f0f0ee]">
               {article.title}
@@ -99,7 +99,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </header>
 
           {coverUrl ? (
-            <div className="mt-[58px] overflow-hidden rounded-[24px]">
+            <div className="mx-6 mt-[58px] overflow-hidden rounded-[24px] sm:mx-10 lg:mx-0">
               {/* CMS media stays a plain image: the cover is either bundled
                   seed art or a signed CMS asset, both outside the image loader. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -107,7 +107,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </div>
           ) : null}
 
-          <div className="mt-[58px] grid grid-cols-[128px_minmax(0,1fr)] gap-x-[111px] px-[55px] max-lg:grid-cols-1 max-lg:gap-x-0">
+          <div className="mt-[58px] grid grid-cols-[128px_minmax(0,1fr)] gap-x-[111px] px-6 sm:px-10 lg:px-[55px] max-lg:grid-cols-1 max-lg:gap-x-0 max-lg:gap-y-8">
             {authors.length ? (
               <aside className="min-w-0">
                 <p className="text-[11px] font-medium tracking-[0.12em] text-[#a7a7a7] uppercase">
@@ -133,7 +133,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </article>
 
         {others.length ? (
-          <section className="mx-auto w-full max-w-[1200px] px-[55px] pb-40">
+          <section className="mx-auto w-full max-w-[1200px] px-6 pb-40 sm:px-10 lg:px-[55px]">
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <h2 className="font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
                 Other articles

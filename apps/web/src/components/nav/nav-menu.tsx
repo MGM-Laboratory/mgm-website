@@ -554,7 +554,7 @@ export function NavMenu() {
           shown once there's actually room beside the panel for it. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed top-16 bottom-0 left-0 z-40 hidden items-center justify-center lg:right-[460px] lg:flex"
+        className="pointer-events-none fixed top-16 bottom-0 left-0 z-40 hidden items-center justify-center md:right-[420px] md:flex lg:right-[460px]"
       >
         <ShardLogo className="nav-logo size-56" />
       </div>

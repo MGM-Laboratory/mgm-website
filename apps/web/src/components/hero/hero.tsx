@@ -598,7 +598,7 @@ export function Hero() {
   return (
     <div
       ref={rootRef}
-      className="hero relative flex flex-1 flex-col justify-center bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
+      className="hero relative flex flex-1 flex-col justify-center overflow-hidden bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
     >
       {/* Ambient background motifs — pure whitespace flourish, idle-floating */}
       <Dot className="bg-motif reveal-hidden opacity-0 absolute top-[10%] left-[5%] size-3 text-brand-yellow sm:size-4" />

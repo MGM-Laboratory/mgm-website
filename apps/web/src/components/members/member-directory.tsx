@@ -381,7 +381,7 @@ export function MemberDirectory({
               value={query}
               onChange={(event) => updateQuery(event.target.value)}
               placeholder="Try “JavaScript”, “Flutter”, “XR”, or a name"
-              className="min-w-0 flex-1 bg-transparent px-3 text-base text-[var(--ink)] placeholder:text-[var(--ink-3)] focus:outline-none dark:text-white dark:placeholder:text-white/40 sm:text-lg"
+              className="min-w-0 flex-1 bg-transparent px-3 text-base text-[var(--ink)] placeholder:text-[var(--ink-3)] focus:outline-none placeholder-shown:truncate dark:text-white dark:placeholder:text-white/40 sm:text-lg"
             />
             {query ? (
               <button

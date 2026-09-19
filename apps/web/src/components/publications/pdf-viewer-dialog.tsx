@@ -454,7 +454,7 @@ export function PdfViewerDialog({
       className="fixed inset-0 z-[130] flex flex-col bg-[#0e1116] motion-safe:animate-[pdf-viewer-in_150ms_ease-out]"
       role="dialog"
     >
-      <header className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-[#0e1116]/95 px-3 py-2 sm:px-4">
+      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/10 bg-[#0e1116]/95 px-3 py-2 sm:flex-nowrap sm:px-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             aria-label="Close PDF viewer"
@@ -469,7 +469,7 @@ export function PdfViewerDialog({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex w-full shrink-0 items-center justify-center gap-1 sm:w-auto sm:justify-start">
           <button
             aria-label="Previous page"
             className={toolbarButton}
@@ -505,7 +505,7 @@ export function PdfViewerDialog({
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex w-full shrink-0 items-center justify-center gap-1 sm:w-auto sm:justify-start">
           <button aria-label="Zoom out" className={toolbarButton} onClick={zoomOut} type="button">
             <MagnifyingGlassMinus size={16} />
           </button>

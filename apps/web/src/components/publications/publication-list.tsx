@@ -69,7 +69,7 @@ export function PublicationList({ records }: { records: CmsPublicationRecord[] }
           />
           <input
             aria-label="Search publications"
-            className="h-11 w-full rounded-xl border border-[var(--line-strong)] bg-[var(--surface)] pl-10 pr-4 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-3)] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-white/35"
+            className="h-11 w-full rounded-xl border border-[var(--line-strong)] bg-[var(--surface)] pl-10 pr-4 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-3)] placeholder-shown:truncate focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-white/35"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search titles, authors, keywords…"
             value={query}
