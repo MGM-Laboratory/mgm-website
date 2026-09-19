@@ -11,6 +11,7 @@ import { ArrowDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { setupParallax } from "@/lib/parallax";
+import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
 
@@ -349,6 +350,19 @@ function buildEntranceTimeline(
 }
 
 export function Hero() {
+  // Captured synchronously during the first render, not read fresh inside
+  // the fonts.ready callback below: by the time that promise resolves, the
+  // root layout's own boot-tracking effect has long since fired (it isn't
+  // a descendant of this component, so effect ordering wouldn't otherwise
+  // protect it), which would make this always read as "already booted."
+  // Reading it now, during render — before any effect in the tree, root
+  // layout included, has had a chance to run — is what actually
+  // distinguishes a fresh visit from an internal navigation back here.
+  const skipEntranceForInternalNavRef = useRef<boolean | null>(null);
+  if (skipEntranceForInternalNavRef.current === null) {
+    skipEntranceForInternalNavRef.current = hasAppAlreadyBooted();
+  }
+
   const rootRef = useRef<HTMLDivElement>(null);
   const row1Ref = useRef<HTMLDivElement>(null);
   const row2Ref = useRef<HTMLDivElement>(null);
@@ -449,6 +463,10 @@ export function Hero() {
     // so this read is reliable. Don't bother animating an entrance the user
     // isn't even looking at.
     const startedScrolled = window.scrollY > 40;
+    // Navigating back to "/" from elsewhere in the app, rather than a fresh
+    // visit or a reload — see the ref's own comment above for why this has
+    // to be captured during render, not read here.
+    const cameFromInternalNav = skipEntranceForInternalNavRef.current === true;
 
     // The user can scroll away at any point — the entrance timeline below
     // keeps playing regardless, entirely decoupled from scroll position.
@@ -501,7 +519,7 @@ export function Hero() {
             const { reduced } = context.conditions as { reduced: boolean };
             const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
 
-            if (reduced || startedScrolled) {
+            if (reduced || startedScrolled || cameFromInternalNav) {
               gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
               gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
                 opacity: 1,
