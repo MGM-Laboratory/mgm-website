@@ -26,7 +26,19 @@ Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/we
 
 ## Docs
 
-Start with [`docs/project-overview.md`](docs/project-overview.md), then [`docs/architecture.md`](docs/architecture.md). The full index is in [`CLAUDE.md`](CLAUDE.md).
+Start with [`CLAUDE.md`](CLAUDE.md): it is the maintained handoff memory and reading order for contributors and coding agents. The principal references are [`docs/project-overview.md`](docs/project-overview.md), [`docs/architecture.md`](docs/architecture.md), and [`docs/cms-admin.md`](docs/cms-admin.md). Design, animation, verification, CI/CD, mail, and collection-specific guides live in [`docs/`](docs/).
+
+## Local development
+
+Requires Node 22 and pnpm 11.3.0.
+
+```bash
+pnpm install
+pnpm dev:web # http://localhost:3000
+pnpm dev:api # http://localhost:4000
+```
+
+Copy the workspace examples to local `.env` files before using the API or `/admin`; `docker compose up` starts Postgres, web, and API together. Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm format:check` before opening a PR. All changes use the branch → PR → required checks → `/merge` workflow in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Contributing
 

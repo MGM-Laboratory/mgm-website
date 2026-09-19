@@ -19,16 +19,15 @@ The owner has twice insisted, in escalating terms, that commits must not mention
 
 Other standing rules:
 
-- **Granular commits**: one discrete working change per commit; push to `origin main` immediately after each commit — the owner wants a large, granular history, not a few big batched commits.
+- **Granular commits**: one discrete working change per commit; push immediately after each commit (to the feature branch — see below for why it's no longer `origin main` directly) — the owner wants a large, granular history, not a few big batched commits.
 - Only commit when the user has asked or it's clearly part of the ongoing task they're driving.
 - Do not push new commits to the `legacy` remote — it's a frozen backup.
 
-### Two paths to `main` since the 2026-09-15 CI/CD build-out
+### `main` requires a PR — for everyone, including the owner/agent
 
-`main` now has a branch-protection ruleset requiring a PR + every required check for anyone to merge — but repo admins bypass it. In practice that means:
+`main` has a branch-protection ruleset requiring a PR + every required check to merge. The ruleset technically allows repo admins to bypass it with a direct push, but **as of 2026-09-15 the actual, established practice is not to** — the owner explicitly moved the owner/agent workflow to the same branch → PR → `/merge` path external contributors use (see `CONTRIBUTING.md`), just without needing a fork. A prior version of this doc described the owner/agent as keeping a direct-`git push origin main` workflow; that's stale — don't attempt a direct push to `main` on the strength of that old claim. In practice, every single change across many sessions since (dozens of PRs, up through #49 as of this writing) has gone through branch → commit → push → open PR → wait for every check green → confirm `CLEAN`/`MERGEABLE` → comment `/merge`, with **no exceptions for size** — even a one-line README fix or a docs-only change goes through the full flow. `/merge` itself is documented in `docs/ci-cd.md`.
 
-- **External contributors** go through `CONTRIBUTING.md`'s full fork → branch → PR flow, and need CI/security/e2e/Sonar/Harness all green before a maintainer merges.
-- **The owner (and this agent, working as the owner)** keeps the granular-commit, direct-`git push origin main` workflow described above, unchanged. The ruleset's bypass exists specifically so this doesn't have to change.
+Still unchanged: **granular commits** (one discrete working change per commit, push immediately after each) and **never merge a PR unless the user explicitly asks for it in that moment** — `/merge` ships to production in about 30 seconds, so that instruction is never assumed from context alone.
 
 ## Known loose ends
 

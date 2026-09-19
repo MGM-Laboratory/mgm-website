@@ -1,6 +1,6 @@
 # CI/CD
 
-Every push to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud, pre-commit.ci, and a status comment. `main` is protected: PRs need every required check green to merge; repo admins can bypass for direct pushes.
+Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, the Docker build/publish/sign pipeline, and Railway auto-deploy. Every PR additionally gets all of that plus SonarCloud, pre-commit.ci, and a status comment. `main` is protected: every change uses the branch → PR → required checks → `/merge` flow; an administrative bypass exists but is not routine practice.
 
 ## GitHub Actions workflows
 
@@ -50,7 +50,7 @@ One reusable workflow matrixed over both images, plus thin caller workflows, inv
 - **`publish-docker-image-latest.yml`** — caller, triggers on push to `main` + `workflow_dispatch`. Calls the image workflow with `tag: latest`, using the local `./...` reference.
 - **`publish-docker-image-staging.yml`** — caller, triggers on any pull request (`branches: ["*"]`) + `workflow_dispatch`. Calls the image workflow with `tag: pr-<PR number>` (falls back to the run number under `workflow_dispatch`, which has no PR number), using the same local `./...` reference. GitHub resolves that local reusable-workflow reference from the same commit as the caller, so the first PR introducing these files can invoke `publish-docker-image.yml` and future in-PR edits to the reusable workflow are picked up automatically.
 
-Version-tag-triggered releases (pushing `v*.*.*`) aren't wired up here — the original single-file workflow supported it, this one doesn't yet. Add a third caller workflow if that's needed again.
+Version-tag-triggered releases (pushing `v*.*.*`) aren't wired up here — the original single-file workflow supported it, this one doesn't yet. Add a third caller workflow if that's needed again. See "Releases" below for how releases are actually cut today (manually, no automation).
 
 **Docker Hub credentials live at the GitHub org level** (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` variables/secrets) — nothing is stored per-repo, so new repos in the org inherit them automatically.
 
@@ -71,9 +71,22 @@ gh workflow run ci.yaml -R MGM-Laboratory/mgm-website --ref main
 cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer https://token.actions.githubusercontent.com docker.io/labmgm/website-api:latest
 ```
 
+## Releases
+
+Entirely manual — no workflow watches for or reacts to a `v*.*.*` tag (see the note above). To cut one:
+
+```bash
+git checkout main && git pull origin main
+git tag -a v1.0.0 -m "v1.0.0" <commit-sha-or-omit-for-current-HEAD>
+git push origin v1.0.0
+gh release create v1.0.0 --title "v1.0.0" --generate-notes --target main
+```
+
+`--generate-notes` builds the changelog from merged PR titles since the previous tag (or from the beginning of history, for the first release). Before tagging, confirm CI is green and production is healthy on the exact commit being tagged (`gh run list --branch main --limit 5`, then `curl` both the web and api health endpoints) — a release should represent something already verified working, not just "whatever main happens to be." v1.0.0 was cut this way from the tip of `main` after PR #48 merged.
+
 ## SonarCloud
 
-Wired via SonarCloud's own GitHub App (Automatic Analysis), project `MGM-Laboratory_mgm-website2` — posts its own "SonarCloud Code Analysis" check on every push/PR with no workflow file needed.
+Wired via SonarCloud's own GitHub App (Automatic Analysis), project `MGM-Laboratory_mgm-website3` — posts its own "SonarCloud Code Analysis" check on every push/PR with no workflow file needed.
 
 ## Security-scanner suppressions
 
@@ -141,7 +154,7 @@ The Railway MCP tools are also available in agent sessions (`list-projects`, `de
 
 ## Governance
 
-`main` requires a PR + every required status check to merge; repo admins can bypass (Settings → Rules → Rulesets). External contributors go through the full PR flow described in `CONTRIBUTING.md`; the owner/agent workflow of committing and pushing directly to `main` for routine work is unaffected.
+`main` requires a PR + every required status check to merge. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`; do not use the administrative bypass for routine work.
 
 ### Known issue: the ruleset's required-check names keep getting reset
 
@@ -191,4 +204,4 @@ After migrating to this repo, `/check`, `/preview`, `/merge`, and `/close` were 
 
 ## Historical: /merge post-merge dispatch fix verified (2026-09-15)
 
-A second live `/merge` run (this note) confirmed the dispatch-based post-merge verification (see "Merging" above) actually works: `ci.yaml` and `docker-publish.yml` were dispatched against this merge commit and the report correctly labeled them as dispatched rather than claiming a result it never checked.
+A second live `/merge` run (this note) confirmed the dispatch-based post-merge verification (see "Merging" above) actually works: `ci.yaml` and `publish-docker-image-latest.yml` were dispatched against this merge commit and the report correctly labeled them as dispatched rather than claiming a result it never checked.

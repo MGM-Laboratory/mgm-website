@@ -39,7 +39,7 @@ Each row: number + label + trailing icon (ArrowUpRight for links, ChevronDown fo
 
 - **"Let's Talk"** — `EmailReveal` with `hi@labmgm.org` (from `data/nav.ts`; do not hardcode). Hover opens an upward dropdown (`bottom-full`, since it sits at the panel bottom): "Copy email" (clipboard write → Check icon + "Copied!" for ~1.8s) and "Open in Mail app" (`mailto:`). 150ms delayed close on mouseleave, cancelled on re-enter.
 - **Malang (ID) WIB clock** — hydration-safe (`"--:--"` SSR placeholder, `Intl.DateTimeFormat` with `timeZone: "Asia/Jakarta"` in effect, 30s updates).
-- **Socials** — icon-only (Instagram, X, YouTube, LinkedIn, Discord; placeholder hrefs), each with its own GSAP wiggle on hover (rotate -14 → rotate 14 + scale 1.25 + its brand accent color → settle, `back.out(3)`). Icons adapt to theme via `currentColor`.
+- **Socials** — icon-only Instagram, LinkedIn, and Discord links from `data/nav.ts` (all real URLs), each with its own GSAP wiggle on hover (rotate -14 → rotate 14 + scale 1.25 + its brand accent color → settle, `back.out(3)`). Icons adapt to theme via `currentColor`.
 - **Legal row** — real links to `/privacy-policy` and `/terms-of-services`.
 
 ## Sizing (the no-scroll guarantee)

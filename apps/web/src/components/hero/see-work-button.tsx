@@ -5,6 +5,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 
 // Every shape's whole trajectory is hand-tuned and fixed, not randomized.
@@ -124,7 +125,11 @@ function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
 }
 
-export function SeeWorkButton() {
+export function SeeWorkButton({
+  animationClassName = "hero-cta",
+}: {
+  animationClassName?: string;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const flairRefs = useRef<(HTMLDivElement | null)[]>([]);
   const masterTimeline = useRef<gsap.core.Timeline | null>(null);
@@ -211,7 +216,10 @@ export function SeeWorkButton() {
   return (
     <div
       ref={wrapRef}
-      className="hero-cta reveal-hidden relative mt-10 inline-flex opacity-0 sm:mt-14"
+      className={cn(
+        animationClassName,
+        "reveal-hidden relative mt-10 inline-flex opacity-0 sm:mt-14",
+      )}
     >
       {/* Hidden at rest — repositioned onto the gap between the two words
           right as it opens, then each shape rises in front of the button
