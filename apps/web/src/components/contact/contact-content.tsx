@@ -64,7 +64,7 @@ export function ContactContent({ settings }: Readonly<{ settings: ContactSetting
         <section className="relative overflow-hidden bg-[var(--surface-muted)]">
           <div
             ref={heroRef}
-            className="relative mx-auto w-full max-w-[1200px] px-[55px] pt-24 pb-20"
+            className="relative mx-auto w-full max-w-[1200px] px-6 pt-24 pb-20 sm:px-[55px]"
           >
             <noscript>
               <style>{".hero-reveal{opacity:1 !important}"}</style>
@@ -72,7 +72,7 @@ export function ContactContent({ settings }: Readonly<{ settings: ContactSetting
             <FlairShape
               kind="arcs"
               tone="green"
-              className="pointer-events-none absolute -top-10 -right-10 size-72 opacity-25 sm:size-96 dark:opacity-35"
+              className="pointer-events-none absolute -top-10 -right-24 size-44 opacity-25 sm:-right-10 sm:size-72 md:size-96 dark:opacity-35"
             />
             <div className="relative max-w-3xl">
               <p className="hero-reveal font-mono text-xs font-bold tracking-[0.16em] text-brand-green uppercase opacity-0">
@@ -90,7 +90,7 @@ export function ContactContent({ settings }: Readonly<{ settings: ContactSetting
         </section>
 
         <section ref={rootRef} className="bg-background">
-          <div className="mx-auto w-full max-w-[1200px] px-[55px] pt-16 pb-24">
+          <div className="mx-auto w-full max-w-[1200px] px-6 pt-16 pb-24 sm:px-[55px]">
             <noscript>
               <style>{".reveal-card,.reveal-field{opacity:1 !important}"}</style>
             </noscript>
