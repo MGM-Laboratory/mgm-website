@@ -56,7 +56,7 @@ export function ProjectSearchBox({ initialQuery = "" }: { initialQuery?: string 
       />
       <input
         aria-label="Search projects"
-        className="h-12 w-full truncate rounded-full border border-[var(--line)] bg-white pl-11 pr-11 text-[15px] text-[var(--ink)] shadow-[var(--shadow-1)] outline-none transition placeholder:text-[var(--ink-4)] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-white/30"
+        className="h-12 w-full rounded-full border border-[var(--line)] bg-white pl-11 pr-11 text-[15px] text-[var(--ink)] shadow-[var(--shadow-1)] outline-none transition placeholder:text-[var(--ink-4)] placeholder-shown:truncate focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-white/30"
         onChange={(event) => change(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
