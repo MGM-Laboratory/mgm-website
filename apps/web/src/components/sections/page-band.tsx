@@ -22,11 +22,11 @@ export function PageBand({
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">
       <main className="flex flex-1 flex-col">
         <section className="relative overflow-hidden bg-[var(--surface-muted)]">
-          <div className="relative mx-auto w-full max-w-[1200px] px-[55px] pt-24 pb-20">
+          <div className="relative mx-auto w-full max-w-[1200px] px-6 pt-24 pb-20 sm:px-[55px]">
             <FlairShape
               kind={motif}
               tone={tone}
-              className="pointer-events-none absolute -top-10 -right-10 size-64 opacity-25 sm:size-80 dark:opacity-35"
+              className="pointer-events-none absolute -top-10 -right-24 size-40 opacity-25 sm:-right-10 sm:size-64 md:size-80 dark:opacity-35"
             />
             <div className="relative max-w-3xl">
               <p className="text-sm font-semibold tracking-wide text-brand-blue uppercase">
