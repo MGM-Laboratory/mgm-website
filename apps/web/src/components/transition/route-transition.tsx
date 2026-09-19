@@ -25,22 +25,29 @@ import { LogoMark } from "@/components/hero/shapes";
  * mark — the same scale is used on both the cover-in and reveal-out.
  *
  * LOGO_PIVOT is the actual coverage mechanism, and it matters more than the
- * multiplier: scaling from the mark's own center pivots on a point that
- * sits in the empty space between its three shards, so growing from center
- * mostly reveals more of that empty gap, not more solid white — no
- * multiplier fixes that. LOGO_PIVOT instead re-centers the scale transform
- * on a point deep inside one shard's solid fill (found empirically — see
- * the PR description for the verification method: render the mark alone at
- * a candidate pivot and scale, then sample element-under-pointer at all
- * four viewport corners plus center across several aspect ratios). Scaling
- * from a true interior point is a "zoom into a point" operation: every
- * other point in the mark recedes from view as scale grows, so sufficient
- * scale is *guaranteed* to fill the viewport with solid color, regardless of
- * aspect ratio — confirmed at 8x for standard viewports but not for an
- * ultrawide (2560×1080) until 12x, which is why the multiplier below is 12,
- * not 8. Because scale=1 (idle) makes any transform-origin a no-op, this
- * off-center pivot never visibly affects the centered idle mark — it only
- * matters while giant.
+ * multiplier: scaling from an arbitrary point mostly reveals more of
+ * whatever's immediately around that point, so a pivot sitting in the empty
+ * gap between the mark's three shards just shows more gap as it grows — no
+ * multiplier fixes that. LOGO_PIVOT instead sits on a point confirmed to be
+ * inside solid fill (found empirically: render the mark alone at a
+ * candidate pivot and scale, then sample element-under-pointer at all four
+ * viewport corners plus center across several aspect ratios and scales).
+ *
+ * "Inside solid fill" isn't the whole story, though: dead center (50%,50%)
+ * *is* white but sits close enough to a shard's edge that coverage was
+ * non-monotonic (passed at one scale, failed at a larger one — the corner's
+ * mapped-back point crossed the nearby edge as scale grew, which a truly
+ * interior point can never do, since larger scale only pulls that mapped
+ * point closer to the pivot). LOGO_PIVOT was chosen by additionally
+ * requiring coverage to hold at *every* scale in an increasing range, which
+ * rules out near-edge points like that one. Scaling from a genuine interior
+ * point is a "zoom into a point" operation: sufficient scale is guaranteed
+ * to fill the viewport with solid color regardless of aspect ratio —
+ * confirmed for GIANT_SCALE_MULTIPLIER at 20 across seven aspect ratios,
+ * including narrow ones (a tall mobile viewport's far corner needed 18x;
+ * wide ones cover comfortably below 10x). Because scale=1 (idle) makes any
+ * transform-origin a no-op, this pivot never visibly affects the centered
+ * idle mark — it only matters while giant.
  *
  * Scope: this only ever engages for client-side navigations triggered by an
  * in-app link click (see the capture-phase click listener below) or a
@@ -50,23 +57,30 @@ import { LogoMark } from "@/components/hero/shapes";
  * again, which is a strictly worse outcome than skipping the boot moment.
  */
 
-const WHITE_FADE_DURATION = 0.3;
-const GIANT_SETTLE_DURATION = 0.12;
-const GIANT_HOLD_DELAY = 0.1;
-const SHRINK_DURATION = 0.7;
+const WHITE_FADE_IN_DURATION = 0.1;
+const WHITE_FADE_OUT_DURATION = 0.06;
+const GIANT_SETTLE_DURATION = 0.06;
+const SHRINK_DURATION = 0.4;
 const SHRINK_FROM_ROTATION = -18;
-const GROW_DURATION = 0.4;
+const GROW_DURATION = 0.18;
 const GROW_TO_ROTATION = 18;
-const FADE_OUT_DURATION = 0.22;
+const FADE_OUT_DURATION = 0.08;
 const GIANT_SCALE_MARGIN = 1.15;
-// See LOGO_PIVOT above: 12x the "just covers the viewport" scale, verified
-// empirically to fully cover every sampled corner across five aspect ratios
-// (8x left the corners of an ultrawide viewport uncovered).
-const GIANT_SCALE_MULTIPLIER = 12;
-// A point inside the left leg's solid stroke, expressed as a percentage of
-// the mark's own viewBox (57.5 86.0265 660 660) — see the multiplier
-// comment above for how this was found and verified.
-const LOGO_PIVOT = "30% 27%";
+// Guarantees the idle mark is actually visible for a beat before reversing,
+// even when the destination resolves almost instantly (a fast dev server or
+// a fully static route can otherwise make coverAnimDone and routeReady flip
+// true back-to-back, revealing before the idle mark ever really registers).
+const MIN_STAY_MS = 500;
+// See LOGO_PIVOT above: 20x the "just covers the viewport" scale, verified
+// empirically to fully cover every sampled corner across seven aspect
+// ratios (a tall mobile viewport needed 18x; this leaves headroom above
+// that for real-world variance in the measured logo size).
+const GIANT_SCALE_MULTIPLIER = 20;
+// A point near the mark's own center — close to the middle of the logo, but
+// nudged up from dead-center to land on a genuinely interior point rather
+// than the edge dead-center sits on (see the comment above). Expressed as a
+// percentage of the mark's own viewBox (57.5 86.0265 660 660).
+const LOGO_PIVOT = "50% 44%";
 const CEILING_MS = 8000;
 // Time-based, not tied to the pathname-change effect: if the destination is
 // slow enough that even its loading.tsx shell hasn't arrived yet,
@@ -78,6 +92,7 @@ const HOLD_DELAY_MS = 600;
 type PendingState = {
   active: boolean;
   coverAnimDone: boolean;
+  coverAnimDoneAt: number | null;
   routeReady: boolean;
   revealed: boolean;
   holdRequested: boolean;
@@ -86,12 +101,14 @@ type PendingState = {
   observer: MutationObserver | null;
   ceilingTimer: ReturnType<typeof setTimeout> | null;
   holdTimer: ReturnType<typeof setTimeout> | null;
+  minStayTimer: ReturnType<typeof setTimeout> | null;
 };
 
 function freshPendingState(): PendingState {
   return {
     active: false,
     coverAnimDone: false,
+    coverAnimDoneAt: null,
     routeReady: false,
     revealed: false,
     holdRequested: false,
@@ -100,6 +117,7 @@ function freshPendingState(): PendingState {
     observer: null,
     ceilingTimer: null,
     holdTimer: null,
+    minStayTimer: null,
   };
 }
 
@@ -161,10 +179,17 @@ export function RouteTransition() {
     }
   }
 
+  function clearMinStayTimer() {
+    if (pendingRef.current.minStayTimer) {
+      clearTimeout(pendingRef.current.minStayTimer);
+      pendingRef.current.minStayTimer = null;
+    }
+  }
+
   // Requesting a hold and actually starting its tween are separate: the
   // shrink-in timeline may still be mid-flight (a fast dev server, or a
   // route whose loading.tsx sentinel appears within the first ~100ms, can
-  // both request a hold well before the ~0.9s cover-in finishes). Starting
+  // both request a hold well before the cover-in timeline finishes). Starting
   // a competing `scale` tween on the same element while the shrink is still
   // running is the exact hover-vs-entrance race documented in
   // docs/animation-system.md gotcha #3 — the two tweens fight over `scale`
@@ -189,9 +214,18 @@ export function RouteTransition() {
 
   function maybeReveal() {
     const state = pendingRef.current;
-    if (state.coverAnimDone && state.routeReady && !state.revealed) {
+    if (!state.coverAnimDone || !state.routeReady || state.revealed) return;
+    const elapsed = state.coverAnimDoneAt ? Date.now() - state.coverAnimDoneAt : MIN_STAY_MS;
+    const remaining = MIN_STAY_MS - elapsed;
+    if (remaining <= 0) {
       startReveal();
+      return;
     }
+    clearMinStayTimer();
+    state.minStayTimer = setTimeout(() => {
+      pendingRef.current.minStayTimer = null;
+      maybeReveal();
+    }, remaining);
   }
 
   function startReveal() {
@@ -199,6 +233,7 @@ export function RouteTransition() {
     state.revealed = true;
     clearCeiling();
     clearHoldTimer();
+    clearMinStayTimer();
     state.observer?.disconnect();
     state.observer = null;
     holdTweenRef.current?.kill();
@@ -234,7 +269,7 @@ export function RouteTransition() {
       ease: "power2.in",
     });
     tl.to(overlayRef.current, { autoAlpha: 0, duration: FADE_OUT_DURATION, ease: "power1.in" });
-    tl.to(whiteRef.current, { autoAlpha: 0, duration: WHITE_FADE_DURATION, ease: "power2.in" });
+    tl.to(whiteRef.current, { autoAlpha: 0, duration: WHITE_FADE_OUT_DURATION, ease: "power2.in" });
   }
 
   function watchForRouteReady() {
@@ -309,18 +344,23 @@ export function RouteTransition() {
     const tl = gsap.timeline({
       onComplete: () => {
         pendingRef.current.coverAnimDone = true;
+        pendingRef.current.coverAnimDoneAt = Date.now();
         engageHoldIfNeeded();
         maybeReveal();
       },
     });
     // The white wash fades in first — the current page visibly bleaches to
     // white — then the blue backdrop + giant mark appear on top of it.
-    tl.to(whiteRef.current, { autoAlpha: 1, duration: WHITE_FADE_DURATION, ease: "power2.out" }, 0);
-    tl.set(overlayRef.current, { autoAlpha: 1 }, WHITE_FADE_DURATION);
+    tl.to(
+      whiteRef.current,
+      { autoAlpha: 1, duration: WHITE_FADE_IN_DURATION, ease: "power2.out" },
+      0,
+    );
+    tl.set(overlayRef.current, { autoAlpha: 1 }, WHITE_FADE_IN_DURATION);
     tl.to(
       logoRef.current,
       { scale: giantScale, duration: GIANT_SETTLE_DURATION },
-      WHITE_FADE_DURATION,
+      WHITE_FADE_IN_DURATION,
     );
     tl.to(
       logoRef.current,
@@ -330,7 +370,7 @@ export function RouteTransition() {
         duration: SHRINK_DURATION,
         ease: "power3.out",
       },
-      WHITE_FADE_DURATION + GIANT_SETTLE_DURATION + GIANT_HOLD_DELAY,
+      WHITE_FADE_IN_DURATION + GIANT_SETTLE_DURATION,
     );
 
     router.push(href);
@@ -344,6 +384,7 @@ export function RouteTransition() {
       ...freshPendingState(),
       active: true,
       coverAnimDone: true,
+      coverAnimDoneAt: Date.now(),
       isPopstate: true,
     };
 
@@ -408,6 +449,7 @@ export function RouteTransition() {
     () => () => {
       clearCeiling();
       clearHoldTimer();
+      clearMinStayTimer();
       pendingRef.current.observer?.disconnect();
       holdTweenRef.current?.kill();
     },
