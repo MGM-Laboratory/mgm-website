@@ -343,7 +343,8 @@ function buildEntranceTimeline(
       "arrow+=0.8",
     )
     // Outro — "& Mobile Laboratory", the logo assembling, tagline, and the last flourishes
-    .addLabel("outro", "+=0.02")
+    // Start the closing text on the exact frame the arrowhead settles.
+    .addLabel("outro")
     .set(".line-mobile", { opacity: 1 }, "outro")
     .fromTo(
       mobileSplit.chars,
