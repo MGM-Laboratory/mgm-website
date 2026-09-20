@@ -13,6 +13,17 @@ Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/we
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MGM-Laboratory/mgm-website/badge)](https://securityscorecards.dev/viewer/?uri=github.com/MGM-Laboratory/mgm-website)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/MGM-Laboratory/mgm-website/main.svg)](https://results.pre-commit.ci/latest/github/MGM-Laboratory/mgm-website/main)
 
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![Turbo](https://img.shields.io/badge/Turbo-monorepo-EF4444?logo=turborepo&logoColor=white)](https://turbo.build)
+[![NestJS](https://img.shields.io/badge/NestJS-api-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com)
+[![Railway](https://img.shields.io/badge/Railway-deployed-0B0D0E?logo=railway&logoColor=white)](https://railway.com)
+
+[![Last commit](https://img.shields.io/github/last-commit/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website/commits/main)
+[![Repo size](https://img.shields.io/github/repo-size/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website)
+
 <img width="1454" src=".github/screenshots/1.png" />
 <img width="1454" src=".github/screenshots/2.png" />
 <img width="1454" src=".github/screenshots/3.png" />
