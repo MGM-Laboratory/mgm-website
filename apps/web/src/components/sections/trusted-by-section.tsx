@@ -46,6 +46,8 @@ function LogoImage({
   if (partner.logoDark) {
     return (
       <span className="relative block h-full">
+        {/* Partner marks are original SVG assets with intrinsic dimensions. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={partner.logo}
           alt={partner.name}
@@ -55,6 +57,7 @@ function LogoImage({
           draggable={false}
           className={cn(LOGO_IMG_CLASS, lift, "dark:hidden", className)}
         />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={partner.logoDark}
           alt=""
@@ -69,6 +72,8 @@ function LogoImage({
     );
   }
   return (
+    // Original partner SVG; no raster optimization is needed.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={partner.logo}
       alt={partner.name}
