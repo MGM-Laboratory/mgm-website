@@ -57,6 +57,11 @@ The job uses `vale-cli/vale-action` with `reporter: github-check` so it posts a 
 
 That diff scoping is why `EmDash` can safely sit at `error` on day one, even though the docs tree already had roughly 380 pre-existing em-dashes across 17 files (written before the house style was consistently enforced by hand): untouched lines never enter a PR's diff, so the backlog doesn't block unrelated work. Only a genuinely new em-dash, in a line the PR actually adds or edits, fails the check. `SemicolonSplice` stays `warning` because semicolons are a "should avoid," not a hard "never," per the house style, so it annotates without failing the check either way.
 
+Two rules from the bundled styles are turned off in `.vale.ini` because they misfired against this repo's own content on the very first run:
+
+- **`Vale.Spelling`**: the base style's spell checker, `error` by default, flags any word outside its small built-in English dictionary. It failed on ordinary technical terms in this repo's own docs, `reviewdog`, `tokenizer`, `vendored`, plus possessives like `repo's` and `PR's`. A generic dictionary isn't a good fit for a repo full of tool names and jargon. A dedicated spellchecker with a real technical vocabulary (`cspell`, for example) would be a better fit if typo-catching is wanted later.
+- **`Google.EmDash`**: only checks the spacing around a dash (`error`, message "Don't put a space before or after a dash"), which is redundant once `MGM.EmDash` already bans the character outright. Leaving both on just double-reports the same match.
+
 ### Docker image workflows
 
 One reusable workflow matrixed over both images, plus thin caller workflows, invoked with a `tag` input rather than duplicating build logic per trigger:
