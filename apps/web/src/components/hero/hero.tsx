@@ -302,7 +302,7 @@ function buildEntranceTimeline(
     .fromTo(
       ".arrow-connector [data-part='arrow-path']",
       { drawSVG: "0%" },
-      { drawSVG: "100%", duration: 0.55, ease: "power2.inOut" },
+      { drawSVG: "100%", duration: 0.733, ease: "power2.inOut" },
       "arrow",
     )
     .fromTo(
@@ -325,7 +325,7 @@ function buildEntranceTimeline(
           start: 0,
           end: 1,
         },
-        duration: 0.55,
+        duration: 0.733,
         ease: "power2.inOut",
       },
       "arrow",
@@ -334,13 +334,13 @@ function buildEntranceTimeline(
     .to(
       ".arrow-connector [data-part='arrow-spark']",
       { opacity: 0, ease: "power1.in", duration: 0.14 },
-      "arrow+=0.41",
+      "arrow+=0.72",
     )
     .fromTo(
       ".arrow-connector [data-part='arrow-head']",
       { opacity: 0 },
       { opacity: 1, duration: 0.12 },
-      "arrow+=0.49",
+      "arrow+=0.8",
     )
     // Outro — "& Mobile Laboratory", the logo assembling, tagline, and the last flourishes
     .addLabel("outro", "+=0.02")
@@ -348,7 +348,7 @@ function buildEntranceTimeline(
     .fromTo(
       mobileSplit.chars,
       { opacity: 0, y: 50, rotateX: -90, transformOrigin: "50% 100%" },
-      { opacity: 1, y: 0, rotateX: 0, duration: 0.36, ease: "back.out(1.8)", stagger: 0.014 },
+      { opacity: 1, y: 0, rotateX: 0, duration: 0.72, ease: "back.out(1.8)", stagger: 0.028 },
       "outro",
     )
     .fromTo(
