@@ -29,17 +29,10 @@ jobs:
           reporter: github-check
           fail_on_error: true
           level: warning
-          separator: "\n"
-          files: |
-            README.md
-            AGENTS.md
-            CLAUDE.md
-            DESIGN_SYSTEM.md
-            CODE_OF_CONDUCT.md
-            CONTRIBUTING.md
-            GOVERNANCE.md
-            SECURITY.md
-            .github/pull_request_template.md
-            apps/api/README.md
-            apps/web/README.md
-            docs
+          # A newline separator looks tidier as a multi-line `files:` block,
+          # but @actions/core's getInput() trims all whitespace (including
+          # newlines) from every input by default, so a "\n" separator comes
+          # through as "" at runtime and vale-action silently falls back to
+          # scanning the whole working directory. Comma survives the trim.
+          separator: ","
+          files: "README.md,AGENTS.md,CLAUDE.md,DESIGN_SYSTEM.md,CODE_OF_CONDUCT.md,CONTRIBUTING.md,GOVERNANCE.md,SECURITY.md,.github/pull_request_template.md,apps/api/README.md,apps/web/README.md,docs"
