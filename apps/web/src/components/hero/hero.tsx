@@ -591,134 +591,150 @@ export function Hero() {
     let mediaSplit: SplitText | undefined;
     let gameSplit: SplitText | undefined;
     let mobileSplit: SplitText | undefined;
+    let setupFrame: number | undefined;
     const mm = gsap.matchMedia();
 
     document.fonts.ready
       .then(() => {
         if (cancelled) return;
 
-        mediaSplit = SplitText.create(".line-media", { type: "chars", charsClass: "media-char" });
-        gameSplit = SplitText.create(".line-game", { type: "chars", charsClass: "game-char" });
-        mobileSplit = SplitText.create(".line-mobile", {
-          type: "words, chars",
-          charsClass: "mobile-char",
-        });
+        // Next's App Router enables React Strict Mode in development. Its
+        // probe mounts, cleans up, and mounts effects again; deferring setup
+        // one frame lets the probe cleanup cancel the first pass before any
+        // SplitText or entrance tween can paint.
+        setupFrame = requestAnimationFrame(() => {
+          setupFrame = undefined;
+          if (cancelled) return;
 
-        mm.add(
-          {
-            reduced: "(prefers-reduced-motion: reduce)",
-            full: "(prefers-reduced-motion: no-preference)",
-            compact: "(max-width: 879px)",
-          },
-          (context) => {
-            const { compact, reduced } = context.conditions as {
-              compact: boolean;
-              reduced: boolean;
-            };
-            const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
+          mediaSplit = SplitText.create(root.querySelector(".line-media")!, {
+            type: "chars",
+            charsClass: "media-char",
+          });
+          gameSplit = SplitText.create(root.querySelector(".line-game")!, {
+            type: "chars",
+            charsClass: "game-char",
+          });
+          mobileSplit = SplitText.create(root.querySelector(".line-mobile")!, {
+            type: "words, chars",
+            charsClass: "mobile-char",
+          });
 
-            if (compact) {
-              const compactLogoShards = gsap.utils.selector(root)(
-                ".compact-hero-logo [data-part^='shard-']",
-              );
+          mm.add(
+            {
+              reduced: "(prefers-reduced-motion: reduce)",
+              full: "(prefers-reduced-motion: no-preference)",
+              compact: "(max-width: 879px)",
+            },
+            (context) => {
+              const { compact, reduced } = context.conditions as {
+                compact: boolean;
+                reduced: boolean;
+              };
+              const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
+
+              if (compact) {
+                const compactLogoShards = gsap.utils.selector(root)(
+                  ".compact-hero-logo [data-part^='shard-']",
+                );
+
+                if (reduced || startedScrolled || cameFromInternalNav) {
+                  gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+                  gsap.set(compactLogoShards, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+                  reveal(false);
+                  return;
+                }
+
+                const tl = buildCompactEntranceTimeline(root);
+                const logo = gsap.utils.selector(root)(".compact-hero-logo");
+                const idleLoop = gsap.to(logo, {
+                  y: -5,
+                  duration: 1.8,
+                  ease: "sine.inOut",
+                  yoyo: true,
+                  repeat: -1,
+                });
+
+                tl.eventCallback("onComplete", () => reveal(true));
+
+                return () => {
+                  tl.kill();
+                  idleLoop.kill();
+                };
+              }
+
+              const idleContext = gsap.context(() => {}, root);
+              let idleLoops: gsap.core.Animation[] = [];
+              let removeParallax = () => {};
+              let observer: IntersectionObserver | undefined;
+              let visible = true;
+              const pauseWhenHidden = () => {
+                idleLoops.forEach((loop) => loop.paused(!visible || document.hidden));
+              };
+              const startIdle = () =>
+                idleContext.add(() => {
+                  idleLoops = startIdleLoops(root);
+                  removeParallax = setupParallax(root);
+                  observer = new IntersectionObserver(([entry]) => {
+                    visible = entry.isIntersecting;
+                    pauseWhenHidden();
+                  });
+                  observer.observe(root);
+                  document.addEventListener("visibilitychange", pauseWhenHidden);
+                });
+              const stopIdle = () => {
+                observer?.disconnect();
+                document.removeEventListener("visibilitychange", pauseWhenHidden);
+                removeParallax();
+                idleContext.revert();
+              };
 
               if (reduced || startedScrolled || cameFromInternalNav) {
                 gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                gsap.set(compactLogoShards, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+                gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
+                  opacity: 1,
+                  x: 0,
+                  y: 0,
+                  rotate: 0,
+                  rotateX: 0,
+                  scale: 1,
+                });
+                gsap.set(".line-game", { scaleX: 1 });
+                gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
+                gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
+                gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
+                gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
                 reveal(false);
-                return;
+                if (!reduced) startIdle();
+                return stopIdle;
               }
 
-              const tl = buildCompactEntranceTimeline(root);
-              const logo = gsap.utils.selector(root)(".compact-hero-logo");
-              const idleLoop = gsap.to(logo, {
-                y: -5,
-                duration: 1.8,
-                ease: "sine.inOut",
-                yoyo: true,
-                repeat: -1,
+              const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
+              tl.eventCallback("onComplete", () => {
+                startIdle();
+                reveal(true);
               });
 
-              tl.eventCallback("onComplete", () => reveal(true));
+              if (process.env.NODE_ENV !== "production") {
+                Object.assign(window, {
+                  __heroTl: tl,
+                  __heroReplay: () => {
+                    idleLoops.forEach((loop) => loop.kill());
+                    idleLoops = [];
+                    stopIdle();
+                    gsap.set(".scroll-indicator", { opacity: 0, y: 14 });
+                    tl.restart();
+                  },
+                });
+              }
 
               return () => {
                 tl.kill();
-                idleLoop.kill();
+                stopIdle();
               };
-            }
-
-            const idleContext = gsap.context(() => {}, root);
-            let idleLoops: gsap.core.Animation[] = [];
-            let removeParallax = () => {};
-            let observer: IntersectionObserver | undefined;
-            let visible = true;
-            const pauseWhenHidden = () => {
-              idleLoops.forEach((loop) => loop.paused(!visible || document.hidden));
-            };
-            const startIdle = () =>
-              idleContext.add(() => {
-                idleLoops = startIdleLoops(root);
-                removeParallax = setupParallax(root);
-                observer = new IntersectionObserver(([entry]) => {
-                  visible = entry.isIntersecting;
-                  pauseWhenHidden();
-                });
-                observer.observe(root);
-                document.addEventListener("visibilitychange", pauseWhenHidden);
-              });
-            const stopIdle = () => {
-              observer?.disconnect();
-              document.removeEventListener("visibilitychange", pauseWhenHidden);
-              removeParallax();
-              idleContext.revert();
-            };
-
-            if (reduced || startedScrolled || cameFromInternalNav) {
-              gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-              gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
-                opacity: 1,
-                x: 0,
-                y: 0,
-                rotate: 0,
-                rotateX: 0,
-                scale: 1,
-              });
-              gsap.set(".line-game", { scaleX: 1 });
-              gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
-              gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
-              gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
-              gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
-              reveal(false);
-              if (!reduced) startIdle();
-              return stopIdle;
-            }
-
-            const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
-            tl.eventCallback("onComplete", () => {
-              startIdle();
-              reveal(true);
-            });
-
-            if (process.env.NODE_ENV !== "production") {
-              Object.assign(window, {
-                __heroTl: tl,
-                __heroReplay: () => {
-                  idleLoops.forEach((loop) => loop.kill());
-                  idleLoops = [];
-                  stopIdle();
-                  gsap.set(".scroll-indicator", { opacity: 0, y: 14 });
-                  tl.restart();
-                },
-              });
-            }
-
-            return () => {
-              tl.kill();
-              stopIdle();
-            };
-          },
-          root,
-        );
+            },
+            root,
+          );
+        });
       })
       .catch((err) => {
         console.error("Hero entrance setup failed; revealing scroll indicator.", err);
@@ -738,6 +754,7 @@ export function Hero() {
 
     return () => {
       cancelled = true;
+      if (setupFrame !== undefined) cancelAnimationFrame(setupFrame);
       if (failSafeTimer) clearTimeout(failSafeTimer);
       window.removeEventListener("keydown", onKeydown);
       mm.revert();
