@@ -35,6 +35,21 @@ export function setupParallax(
     }
   }
 
-  window.addEventListener("mousemove", onMove);
-  return () => window.removeEventListener("mousemove", onMove);
+  function reset() {
+    setters.forEach(({ x, y }) => {
+      x(0);
+      y(0);
+    });
+  }
+
+  window.addEventListener("mousemove", onMove, { passive: true });
+  document.documentElement.addEventListener("mouseleave", reset);
+  return () => {
+    window.removeEventListener("mousemove", onMove);
+    document.documentElement.removeEventListener("mouseleave", reset);
+    setters.forEach(({ x, y }) => {
+      x.tween.kill();
+      y.tween.kill();
+    });
+  };
 }
