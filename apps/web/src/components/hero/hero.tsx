@@ -390,6 +390,10 @@ function buildEntranceTimeline(
       "-=0.3",
     );
 
+  // Keep the choreography and overlap intact while shortening every reveal,
+  // including the small gaps between rows. Idle loops start only after this
+  // accelerated entrance has completed.
+  tl.timeScale(1.35);
   return tl;
 }
 
@@ -435,6 +439,7 @@ function buildCompactEntranceTimeline(root: HTMLDivElement) {
       "-=0.25",
     );
 
+  tl.timeScale(1.25);
   return tl;
 }
 

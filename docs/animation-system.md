@@ -88,7 +88,7 @@ Gotcha #4 says to use a timeline-level `scrollTrigger`, not a tween-level one â€
 
 ## Homepage ambient interactions
 
-- Desktop entrance: the arrow starts immediately after the blue leaves finish, draws in 0.55s, and hands off to the closing line after a 0.02s pause. Closing characters use 0.36s duration and 0.014s stagger.
+- Desktop entrance: the arrow starts immediately after the blue leaves finish, draws in 0.55s, and hands off to the closing line after a 0.02s pause. Closing characters use 0.36s duration and 0.014s stagger. The completed desktop timeline runs at 1.35x and the compact timeline at 1.25x, preserving the overlap choreography while shortening every reveal.
 - After entrance (or an internal return), the X rotates clockwise in eased 90-degree steps with 2.8s rests. The red star sways, background motifs float, and headline wrappers share the shape parallax. Wrappers keep pointer translation separate from entrance/idle transforms. Idle loops pause offscreen and in hidden tabs; reduced motion skips them.
 - The hero allows vertical overflow and keeps its corner ring inside the viewport, so the ring bridges into the process section without clipping.
 - The mosaic has a continuous middle row with irregular upper/lower gaps. It moves exactly one 18-tile copy width and renders enough copies for the viewport, including ultrawide screens and reduced motion.
