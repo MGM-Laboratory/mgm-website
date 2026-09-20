@@ -28,6 +28,7 @@ jobs:
         with:
           reporter: github-check
           fail_on_error: true
+          level: warning
           separator: "\n"
           files: |
             README.md
