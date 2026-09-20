@@ -183,6 +183,17 @@ railway redeploy --service web --from-source --yes   # force pull latest commit
 
 The Railway MCP tools are also available in agent sessions (`list-projects`, `describe-environment`, `list-deployments`, `get-logs`, …). Note: the `RAILWAY_TOKEN` secret used by the preview pipeline is a **project token** (scoped to `mgm-company-profile`, not the full account) — it can create/delete environments and services within this project via the public GraphQL API, but account-level queries like `me` fail for it by design.
 
+### Uptime monitoring
+
+A self-hosted [Gatus](https://github.com/twin/gatus) instance at `status.labmgm.org` watches the live site alongside the rest of the company's internal services, under the endpoint key `core_mgm-website`. It's separate infrastructure, not part of this repo or its CI, so there's nothing here to run or configure. The README's uptime badges read Gatus's own badge endpoints directly:
+
+```
+https://status.labmgm.org/api/v1/endpoints/core_mgm-website/health/badge.svg
+https://status.labmgm.org/api/v1/endpoints/core_mgm-website/uptimes/30d/badge.svg
+```
+
+Gatus also serves a shields.io-compatible variant (`.../health/badge.shields`, a `{schemaVersion, label, message, color}` JSON blob) if a future badge needs to visually match the shields.io ones above instead of Gatus's own native SVG style.
+
 ## Governance
 
 `main` requires a PR + every required status check to merge. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`; do not use the administrative bypass for routine work.

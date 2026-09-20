@@ -12,6 +12,8 @@ Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/we
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=MGM-Laboratory_mgm-website3&metric=alert_status)](https://sonarcloud.io/project/overview?id=MGM-Laboratory_mgm-website3)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MGM-Laboratory/mgm-website/badge)](https://securityscorecards.dev/viewer/?uri=github.com/MGM-Laboratory/mgm-website)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/MGM-Laboratory/mgm-website/main.svg)](https://results.pre-commit.ci/latest/github/MGM-Laboratory/mgm-website/main)
+[![Uptime](https://status.labmgm.org/api/v1/endpoints/core_mgm-website/health/badge.svg)](https://status.labmgm.org)
+[![Uptime (30d)](https://status.labmgm.org/api/v1/endpoints/core_mgm-website/uptimes/30d/badge.svg)](https://status.labmgm.org)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
