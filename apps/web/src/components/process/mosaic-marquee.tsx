@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -45,9 +45,9 @@ function mulberry32(seed: number) {
   };
 }
 
-// The skyline silhouette from the reference: two uneven clusters (a wide
-// one, a narrow one) separated by a gap, each stepping up from a short
-// bottom row to a taller middle row to a short top row.
+// A continuous middle spine connects the uneven skyline, including the
+// repeat seam. Scattered upper/lower gaps preserve the open composition;
+// no column can ever contain three vertically empty cells.
 const COLS = 18;
 const MASK: [row: number, col: number][] = [
   // top row
@@ -68,11 +68,15 @@ const MASK: [row: number, col: number][] = [
   [1, 7],
   [1, 8],
   [1, 9],
+  [1, 0],
+  [1, 10],
   [1, 11],
   [1, 12],
   [1, 13],
   [1, 14],
   [1, 15],
+  [1, 16],
+  [1, 17],
   // bottom row
   [2, 0],
   [2, 1],
@@ -142,6 +146,7 @@ function buildMosaic(): Tile[] {
 
 const MOSAIC = buildMosaic();
 const TILE_PX = 76;
+const COPY_WIDTH = COLS * TILE_PX;
 
 function MosaicCopy() {
   return (
@@ -167,6 +172,17 @@ function MosaicCopy() {
 export function MosaicMarquee() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const [copies, setCopies] = useState(2);
+
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const resize = new ResizeObserver(() => {
+      setCopies(Math.max(2, Math.ceil(wrap.clientWidth / COPY_WIDTH) + 1));
+    });
+    resize.observe(wrap);
+    return () => resize.disconnect();
+  }, []);
 
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
@@ -187,13 +203,11 @@ export function MosaicMarquee() {
     });
     tl.fromTo(wrap, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
     tl.eventCallback("onComplete", () => {
-      // Endless sideways drift — the track is two copies of the same
-      // layout side by side, so sliding exactly one copy-width (-50%)
-      // loops with no visible seam. The tiles themselves stay still —
-      // only the strip as a whole moves.
+      // Move exactly one copy, independent of how many copies are needed
+      // to cover an ultrawide viewport.
       idleLoops.push(
         gsap.to(track, {
-          xPercent: -50,
+          x: -COPY_WIDTH,
           duration: 42,
           ease: "none",
           repeat: -1,
@@ -204,14 +218,20 @@ export function MosaicMarquee() {
     return () => {
       tl.kill();
       idleLoops.forEach((l) => l.kill());
+      gsap.set(track, { clearProps: "transform" });
     };
   }, []);
 
   return (
-    <div ref={wrapRef} className="mosaic-strip reveal-hidden w-full overflow-hidden opacity-0">
+    <div
+      ref={wrapRef}
+      aria-hidden="true"
+      className="mosaic-strip reveal-hidden w-full overflow-hidden opacity-0"
+    >
       <div ref={trackRef} className="flex w-fit">
-        <MosaicCopy />
-        <MosaicCopy />
+        {Array.from({ length: copies }, (_, index) => (
+          <MosaicCopy key={index} />
+        ))}
       </div>
     </div>
   );
