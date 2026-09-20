@@ -27,7 +27,16 @@ jobs:
         uses: vale-cli/vale-action@518a9136acc6e6668ce7c00d367051e0941e87ff # v3.0.0
         with:
           reporter: github-check
-          fail_on_error: true
+          # reviewdog's own github-check reporter only has PR context (and
+          # therefore only ever honors filter_mode: added) on pull_request
+          # events. On push/workflow_dispatch it has no PR to diff against,
+          # so it unconditionally falls back to scanning every configured
+          # file in full (reviewdog/reviewdog cmd/reviewdog/main.go: `if
+          # !isPR { opt.filterMode = filter.ModeNoFilter }`). Gating
+          # fail_on_error to pull_request keeps that full-repo scan from
+          # ever failing the job against the pre-existing dash backlog on
+          # a push to main or a manual dispatch.
+          fail_on_error: ${{ github.event_name == 'pull_request' }}
           level: warning
           # A newline separator looks tidier as a multi-line `files:` block,
           # but @actions/core's getInput() trims all whitespace (including

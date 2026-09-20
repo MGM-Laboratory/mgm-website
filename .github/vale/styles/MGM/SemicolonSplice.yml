@@ -1,6 +1,0 @@
-extends: existence
-message: "Avoid joining independent clauses with a semicolon. Split into two sentences, or use a connector like 'and' or 'because'."
-level: warning
-nonword: true
-raw:
-  - ";"
