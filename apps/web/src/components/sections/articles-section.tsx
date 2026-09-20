@@ -1,7 +1,7 @@
 "use client";
 
-import { ImageIcon } from "lucide-react";
 import Link from "next/link";
+import { ArticleCover } from "@/components/articles/article-cover";
 
 import { articleCoverUrl, type CmsArticleRecord } from "@/lib/article-cms";
 import { useArticleRecords } from "@/hooks/use-article-records";
@@ -32,18 +32,7 @@ export function ArticlesSection({ initialRecords = [] }: { initialRecords?: CmsA
               href={`/articles/${record.slug}`}
               title={record.article.title}
             >
-              {cover ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt=""
-                  className="block aspect-[4/3] w-full rounded-xl object-cover transition group-hover:opacity-90"
-                  src={cover}
-                />
-              ) : (
-                <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-[var(--surface-muted)]">
-                  <ImageIcon className="size-10 text-foreground/25" strokeWidth={1.5} />
-                </div>
-              )}
+              <ArticleCover src={cover} className="aspect-[4/3] rounded-xl" />
               {record.article.categories[0] ? (
                 <p className="mt-3 text-xs font-medium tracking-wide text-foreground/45 uppercase">
                   {record.article.categories[0]}
