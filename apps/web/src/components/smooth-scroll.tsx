@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
+import { InteractiveBackground } from "@/components/interactive-background";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -86,13 +87,16 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   if (isAdminRoute) return <>{children}</>;
 
   return (
-    <div id="smooth-wrapper">
-      {/* Offsets every page's content below the fixed SiteHeader — the
+    <>
+      <InteractiveBackground />
+      <div id="smooth-wrapper">
+        {/* Offsets every page's content below the fixed SiteHeader — the
           header lives outside this wrapper (see layout.tsx) so it stays
           pinned to the viewport instead of moving with the scroll transform. */}
-      <div id="smooth-content" style={{ paddingTop: SITE_HEADER_HEIGHT }}>
-        {children}
+        <div id="smooth-content" style={{ paddingTop: SITE_HEADER_HEIGHT }}>
+          {children}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
