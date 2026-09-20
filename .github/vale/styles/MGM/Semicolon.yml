@@ -1,0 +1,6 @@
+extends: existence
+message: "This flags every semicolon, not just clause splices. If it's joining two independent clauses, split into two sentences or use a connector like 'and' or 'because'. If it's a list separator, leave it."
+level: warning
+nonword: true
+raw:
+  - ";"

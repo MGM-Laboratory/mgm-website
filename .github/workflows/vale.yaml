@@ -1,0 +1,47 @@
+name: Vale
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vale-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  vale:
+    name: Vale prose lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Vale
+        uses: vale-cli/vale-action@518a9136acc6e6668ce7c00d367051e0941e87ff # v3.0.0
+        with:
+          reporter: github-check
+          # reviewdog's own github-check reporter only has PR context (and
+          # therefore only ever honors filter_mode: added) on pull_request
+          # events. On push/workflow_dispatch it has no PR to diff against,
+          # so it unconditionally falls back to scanning every configured
+          # file in full (reviewdog/reviewdog cmd/reviewdog/main.go: `if
+          # !isPR { opt.filterMode = filter.ModeNoFilter }`). Gating
+          # fail_on_error to pull_request keeps that full-repo scan from
+          # ever failing the job against the pre-existing dash backlog on
+          # a push to main or a manual dispatch.
+          fail_on_error: ${{ github.event_name == 'pull_request' }}
+          level: warning
+          # A newline separator looks tidier as a multi-line `files:` block,
+          # but @actions/core's getInput() trims all whitespace (including
+          # newlines) from every input by default, so a "\n" separator comes
+          # through as "" at runtime and vale-action silently falls back to
+          # scanning the whole working directory. Comma survives the trim.
+          separator: ","
+          files: "README.md,AGENTS.md,CLAUDE.md,DESIGN_SYSTEM.md,CODE_OF_CONDUCT.md,CONTRIBUTING.md,GOVERNANCE.md,SECURITY.md,.github/pull_request_template.md,apps/api/README.md,apps/web/README.md,docs"

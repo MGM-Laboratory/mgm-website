@@ -10,6 +10,7 @@ Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` trigger
 | `security.yaml`                                    | push/PR to `main`, weekly, dispatch                  | CodeQL (JS/TS), dependency review (PRs only, fails on new high/critical advisories), gitleaks secret scan (OSS CLI, not the licensed Action — see `.gitleaksignore`), Trivy filesystem scan, weekly OSSF Scorecard — all upload SARIF to the Security tab |
 | `e2e.yaml`                                         | push/PR to `main`, dispatch                          | Playwright: chromium/firefox/webkit/mobile-chrome/mobile-safari on ubuntu, plus one Windows and one macOS job. Visual-regression baselines only on the primary ubuntu+chromium project                                                                    |
 | `lighthouse.yaml`                                  | PR to `main`, dispatch                               | Lighthouse CI performance/accessibility/SEO/best-practices budget on `/`, `/about`, `/contact`                                                                                                                                                            |
+| `vale.yaml`                                        | push/PR to `main`, dispatch                          | Prose lint over the repo's hand-written Markdown (Vale + the Google style package + a custom `MGM` style). See "Prose linting (Vale)" below                                                                                                               |
 | `publish-docker-image-latest.yml` / `-staging.yml` | push to `main` (latest) / any PR (staging), dispatch | Thin callers that invoke the `publish-docker-image.yml` reusable workflow (matrix over api/web) — build, push, Trivy scan, SBOM + attestation, keyless cosign signing. See "Docker image workflows" below                                                 |
 | `detect-changes.yml`                               | `workflow_call` only                                 | Reusable: reports whether a push/PR touched anything outside docs/license paths. See "Skipping CI on docs-only changes" below                                                                                                                             |
 | `pr-bot.yml`                                       | `workflow_run` (CI/Security/E2E)                     | Upserts one PR comment (as "ren-automation") summarizing every check-run + commit status for that SHA                                                                                                                                                     |
@@ -41,6 +42,36 @@ Safety notes:
 - `detect-changes.yml` only attempts the actual diff on `push`/`pull_request` — every other trigger (`workflow_dispatch`, the weekly `schedule` on `security.yaml`) reports `code=true` unconditionally, so a manual re-run or the `/merge` post-merge verification dispatch (see below) is never silently skipped.
 - A job skipped via `if:` reports conclusion `skipped`, and GitHub's required-status-checks treat a skipped required check as passing — this is why gating with `if:` on the downstream job is safe, whereas putting `paths-ignore` on the workflow's own `on:` trigger would **not** be (the check would never run at all, and a required check that never runs blocks the PR forever). Don't swap this for `paths-ignore` without changing that.
 - CodeRabbit and SonarCloud are separate GitHub Apps, not workflow files in this repo, so they're unaffected by this and keep reviewing every PR (including docs-only ones) as before.
+
+<!-- vale Google.Headings = NO -->
+
+### Prose linting (Vale)
+
+<!-- vale Google.Headings = YES -->
+
+`vale.yaml` runs [Vale](https://vale.sh) over the repo's hand-written Markdown, not the generated or vendored kind: `README.md`, `AGENTS.md`, `CLAUDE.md`, `DESIGN_SYSTEM.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `GOVERNANCE.md`, `SECURITY.md`, `.github/pull_request_template.md`, `apps/api/README.md`, `apps/web/README.md`, and everything under `docs/`. `apps/web/AGENTS.md` and `apps/web/CLAUDE.md` are deliberately excluded: `next dev` regenerates the first, and the second is a one-line include.
+
+The `.vale.ini` at the repo root wires three style sources together:
+
+- **`Vale`**: the base style bundled with the command-line tool itself, no download needed.
+- **`Google`**: the Google developer-documentation style package, fetched via `vale sync` (the `Packages = Google` line) on every run.
+- **`MGM`** (`.github/vale/styles/MGM/`): a small custom style that encodes this repo's own writing rules. `EmDash.yml` flags any em-dash. `Semicolon.yml` flags every semicolon, since Vale's `existence`/`raw` checks can't actually parse clause boundaries to tell a real splice from a legitimate list separator, and the message says so rather than overclaiming precision it doesn't have. Vale's Markdown tokenizer already skips fenced code blocks and inline code spans, so neither rule fires on code samples.
+
+The job uses `vale-cli/vale-action` with `reporter: github-check` so it posts a dedicated check on both `push` and `pull_request` (reviewdog's PR-only reporters need a pull request to attach to, and `github-check` doesn't). The action's `filter_mode` defaults to `added`, meaning reviewdog only reports and fails on lines actually introduced or changed in the diff, but that only holds on `pull_request` events. reviewdog's own `github-check` handling (`cmd/reviewdog/main.go`) checks whether the triggering event carries PR context, and if it doesn't (`push`, `workflow_dispatch`) it unconditionally overrides `filter_mode` to `nofilter` and scans every configured file in full, regardless of what the action's own inputs say. `fail_on_error: ${{ github.event_name == 'pull_request' }}` keeps that full-repo fallback from ever actually failing the job: it stays a strict, diff-scoped `error`-level gate on PRs, and a non-failing informational pass everywhere else.
+
+That diff scoping is why `EmDash` can safely sit at `error` on day one, even though the docs tree already had roughly 380 pre-existing em-dashes across 17 files (written before the house style was consistently enforced by hand): untouched lines never enter a PR's diff, so the backlog doesn't block unrelated work. Only a genuinely new em-dash, in a line the PR actually adds or edits, fails the check. `Semicolon` stays `warning` because semicolons are a "should avoid," not a hard "never," per the house style, so it annotates without failing the check either way.
+
+`.vale.ini` turns off a few rules from the bundled styles because they misfired against this repo's own content on the very first run:
+
+- **`Vale.Spelling`**: the base style's spell checker, `error` by default, flags any word outside its small built-in English dictionary. It failed on ordinary technical terms in this repo's own docs, `reviewdog`, `tokenizer`, `vendored`, plus possessives like `repo's` and `PR's`. A generic dictionary isn't a good fit for a repo full of tool names and jargon. A dedicated spellchecker with a real technical vocabulary (`cspell`, for example) would be a better fit if the team wants real typo-catching later.
+- **`Google.EmDash`**: only checks the spacing around a dash (`error`, message "Don't put a space before or after a dash"), which is redundant once `MGM.EmDash` already bans the character outright. Leaving both on just double-reports the same match.
+- **`Google.Parens`** ("Use parentheses judiciously"): this repo's docs lean heavily on parenthetical asides as a deliberate, established voice, visible throughout this very file. Turned off globally rather than fighting an existing convention for a suggestion-level nit.
+
+`Google.Headings` is also turned off for one specific heading, this section's own, via inline Vale markup (`<!-- vale Google.Headings = NO -->` / `= YES` around it) rather than a global `.vale.ini` line: its built-in exceptions list doesn't know the product name "Vale," so it reads "Prose linting (Vale)" as two capitalized words and flags it for title-case capitalization. "Vale" is a proper noun here, same as "Docker" or "Kubernetes," which are already in that list.
+
+**Gotcha: `separator: "\n"` on a multi-line `files:` list silently disables the file scoping.** `@actions/core`'s `getInput()` trims all whitespace, including newlines, from every input by default. A `"\n"` separator therefore arrives as `""` at runtime, `vale-action` can't split the `files:` list on it, and it falls back to scanning the whole working directory instead of the curated `files:` list (Vale still respects `.gitignore`, so this doesn't pull in `node_modules`, but it does pull in every other first-party Markdown file, including the two deliberately excluded ones). The job's own check run posts a `warning` annotation describing the invalid path when this happens. `files:` is a single comma-separated string with `separator: ","` instead: commas survive the trim.
+
+**Gotcha: the separate `vale` check can show `failure` even when the `Vale prose lint` job passes.** `vale-action` posts two independent things: the Actions job's own pass/fail (correct, and the one that actually gates a PR), and a second, separately named GitHub Check Run (`vale`) that `reviewdog` creates itself to carry the inline annotations. On a `pull_request` run, when `fail_on_error` is on and Vale finds at least one `error`-level alert anywhere in the full (non-diff-filtered) scan of the configured `files:`, `vale-action` also sets reviewdog's `-level=error`. Once `-level` is non-empty, reviewdog stops grading that second check by each annotation's own severity and instead marks it `failure` the moment there's any annotation at all in the diff, even a `suggestion`-level Google nit, because the backlog of pre-existing `MGM.EmDash` errors elsewhere in those files (the same ~380-dash backlog mentioned in the preceding section) is enough to flip that global switch on almost every run. `level: warning` on the action's `with:` block pins reviewdog's own conclusion logic to its per-annotation-severity path instead, so `vale` shows `neutral` for suggestions/warnings and only the job's own `Vale prose lint` status is the real gate. Don't remove `level: warning` without also finishing the backlog cleanup, or the `vale` check goes back to crying wolf on every docs PR.
 
 ### Docker image workflows
 
@@ -151,6 +182,17 @@ railway redeploy --service web --from-source --yes   # force pull latest commit
 ```
 
 The Railway MCP tools are also available in agent sessions (`list-projects`, `describe-environment`, `list-deployments`, `get-logs`, …). Note: the `RAILWAY_TOKEN` secret used by the preview pipeline is a **project token** (scoped to `mgm-company-profile`, not the full account) — it can create/delete environments and services within this project via the public GraphQL API, but account-level queries like `me` fail for it by design.
+
+### Uptime monitoring
+
+A self-hosted [Gatus](https://github.com/twin/gatus) instance at `status.labmgm.org` watches the live site (`labmgm.org`) alongside the rest of the company's internal services, under the endpoint key `core_mgm-website`. It's separate infrastructure, not part of this repo or its CI, so there's nothing here to run or configure. The README's "Status" section reads Gatus's own badge endpoints directly and links each one to that endpoint's detail page (`status.labmgm.org/endpoints/core_mgm-website`):
+
+```
+https://status.labmgm.org/api/v1/endpoints/core_mgm-website/health/badge.svg
+https://status.labmgm.org/api/v1/endpoints/core_mgm-website/uptimes/30d/badge.svg
+```
+
+Gatus also exposes a response-time badge (`.../response-times/:duration/badge.svg`, color-coded by threshold) and a shields.io-compatible variant of the health badge (`.../health/badge.shields`, a `{schemaVersion, label, message, color}` JSON blob) for a future badge that needs to visually match the shields.io ones in the README's badge rows instead of Gatus's own native SVG style. Neither is wired up yet.
 
 ## Governance
 
