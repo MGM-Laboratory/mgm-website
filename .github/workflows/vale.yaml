@@ -1,0 +1,44 @@
+name: Vale
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vale-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  vale:
+    name: Vale prose lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Vale
+        uses: vale-cli/vale-action@518a9136acc6e6668ce7c00d367051e0941e87ff # v3.0.0
+        with:
+          reporter: github-check
+          fail_on_error: true
+          separator: "\n"
+          files: |
+            README.md
+            AGENTS.md
+            CLAUDE.md
+            DESIGN_SYSTEM.md
+            CODE_OF_CONDUCT.md
+            CONTRIBUTING.md
+            GOVERNANCE.md
+            SECURITY.md
+            .github/pull_request_template.md
+            apps/api/README.md
+            apps/web/README.md
+            docs
