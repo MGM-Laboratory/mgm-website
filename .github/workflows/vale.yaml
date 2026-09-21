@@ -27,16 +27,19 @@ jobs:
         uses: vale-cli/vale-action@518a9136acc6e6668ce7c00d367051e0941e87ff # v3.0.0
         with:
           reporter: github-check
-          # reviewdog's own github-check reporter only has PR context (and
-          # therefore only ever honors filter_mode: added) on pull_request
-          # events. On push/workflow_dispatch it has no PR to diff against,
-          # so it unconditionally falls back to scanning every configured
-          # file in full (reviewdog/reviewdog cmd/reviewdog/main.go: `if
-          # !isPR { opt.filterMode = filter.ModeNoFilter }`). Gating
-          # fail_on_error to pull_request keeps that full-repo scan from
-          # ever failing the job against the pre-existing dash backlog on
-          # a push to main or a manual dispatch.
-          fail_on_error: ${{ github.event_name == 'pull_request' }}
+          # nofilter: check every configured file in full on every run, not just
+          # lines touched by a PR's diff (the default filter_mode: added would
+          # let a pre-existing violation elsewhere in a touched file slip past).
+          # This only became safe to turn on once the pre-existing dash backlog
+          # was fully cleaned out; before that, fail_on_error was gated to
+          # pull_request events specifically to keep this same full-file scan
+          # from failing every push to main against that backlog (reviewdog
+          # forces nofilter on push/workflow_dispatch regardless of this
+          # setting anyway, since it has no PR to diff against on those
+          # events: reviewdog/reviewdog cmd/reviewdog/main.go, `if !isPR {
+          # opt.filterMode = filter.ModeNoFilter }`).
+          filter_mode: nofilter
+          fail_on_error: true
           level: warning
           # A newline separator looks tidier as a multi-line `files:` block,
           # but @actions/core's getInput() trims all whitespace (including
