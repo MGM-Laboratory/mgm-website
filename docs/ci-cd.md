@@ -228,6 +228,21 @@ Fetch the _current_ ruleset first and edit only the `context` fields: don't reus
 
 **Update (2026-09-17):** `ci`, `e2e`, and `lighthouse` were missing the explicit job `name:` the naming convention calls for (see above), which is the other half of why the "Actual job name" column read as bare ids. `chore/ci-workflow-naming-convention` (PR #22) added `name:` to all three, matching the exact strings the ruleset already required (`Lint, typecheck, test & build`, `Playwright (<os>, <project>)`, `Lighthouse CI budget`), so the table above is now itself the stale side, and these three rows should no longer need the fix recipe unless the ruleset gets reset again. That reset risk is still open (the root cause above is unchanged), so re-check with the same commands if `N of N required status checks are expected` comes back.
 
+**Update (2026-09-21):** every required check on the `main-protection` ruleset is now pinned to its actual source app via `integration_id`, not left on the default "Any source." "Any source" means a same-named status or check run posted by anything, not just the app that's actually supposed to produce it, would satisfy that required check: pinning closes that. `security/snyk (MGM Laboratory)` is the one check left unpinned: it's posted from a user account (`shirasakaren`), not a GitHub App, and `integration_id` pinning only applies to Apps, so it has nothing to pin to until that integration moves behind a proper App installation.
+
+**Hard rule going forward: treat the ruleset as something you edit deliberately, never as a casual re-save.** The recurring reset problem above came from exactly that: the Settings → Rules web UI resubmitting the whole form, stale pre-filled values included, on every save. Prefer a direct API read-modify-write (`gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743`, edit only the field that needs to change, `PUT` the corrected payload back) over clicking through the web UI. Whenever a new check gets added to the required list, pin it to its real source immediately rather than leaving "Any source": look up the producing app first (`gh api repos/MGM-Laboratory/mgm-website/commits/<sha>/check-runs --jq '.check_runs[] | "\(.name) \(.app.slug) \(.app.id)"'` for Checks API entries, the equivalent `.../statuses` endpoint for legacy commit statuses), then set `integration_id` to that app's id, either through the web UI's source dropdown or the API. Current app ids for this repo's checks:
+
+| App                                                               | `integration_id` |
+| ----------------------------------------------------------------- | ---------------- |
+| GitHub Actions                                                    | 15368            |
+| GitHub Advanced Security (CodeQL, Trivy, and gitleaks check-runs) | 57789            |
+| SonarCloud                                                        | 12526            |
+| Codecov                                                           | 254              |
+| DeepSource                                                        | 16372            |
+| pre-commit.ci                                                     | 68672            |
+| GitGuardian                                                       | 46505            |
+| Semgrep                                                           | 4965759          |
+
 ## Local
 
 `docker compose up` runs Postgres 17 + api (4000) + web (3000) with vars from `.env` / `.env.example`. `DOCKERHUB_NAMESPACE` in `.env.example` is the compose image namespace, but CI uses repo-level GitHub vars instead.
