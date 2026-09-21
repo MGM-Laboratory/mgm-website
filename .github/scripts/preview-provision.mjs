@@ -1,13 +1,12 @@
 // Job A of the preview pipeline — no PR code involved, safe to hold secrets.
-// Ensures a "preview-pr-<n>" environment exists (creating a fresh one, forked
-// from production, on the first /preview for a PR — reused on every repeat),
-// makes sure it has its own bucket and public domains, and overrides the
-// vars that were copied as literal (not reference) values from production so
-// the preview never touches prod's bucket credentials.
+// Creates an empty environment and explicitly configures its four services.
+// No production config, credentials, database, or cache is cloned.
 import { randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
+import { invalidatePreviewAnnouncement } from "./preview-credentials.mjs";
 import {
   API_SERVICE_ID,
+  assertPreviewEnvironment,
   POSTGRES_SERVICE_ID,
   REDIS_SERVICE_ID,
   WEB_SERVICE_ID,
@@ -31,6 +30,7 @@ const prNumber = process.env.PR_NUMBER;
 const outputFile = process.env.GITHUB_OUTPUT;
 
 const name = previewEnvironmentName(prNumber);
+await invalidatePreviewAnnouncement(process.env.BOT_TOKEN, process.env.REPO, prNumber);
 // This is the actual superadmin secret used by both applications. Rotate it
 // for every /preview invocation, including a re-run against an existing
 // environment, so a preview credential cannot be reused indefinitely.
@@ -43,6 +43,76 @@ if (isNew) {
   environment = await createPreviewEnvironment(token, name);
 } else {
   console.log(`Reusing existing environment ${name} (${environment.id})`);
+}
+await assertPreviewEnvironment(token, prNumber, environment.id);
+
+const oldApiVars = await getVariables(token, environment.id, API_SERVICE_ID);
+if (!isNew && oldApiVars.PREVIEW_ISOLATION_VERSION !== "2") {
+  throw new Error(
+    "This legacy preview predates isolation v2. Close its PR to tear it down before recreating the preview.",
+  );
+}
+if (isNew) {
+  const postgresPassword = randomBytes(24).toString("base64url");
+  const redisPassword = randomBytes(24).toString("base64url");
+  for (const [serviceId, image, startCommand] of [
+    [API_SERVICE_ID, "busybox:latest", null],
+    [WEB_SERVICE_ID, "busybox:latest", null],
+    [POSTGRES_SERVICE_ID, "postgres:17-alpine", null],
+    [
+      REDIS_SERVICE_ID,
+      "redis:7-alpine",
+      "sh -c 'exec redis-server --appendonly yes --requirepass \"$REDIS_PASSWORD\"'",
+    ],
+  ]) {
+    await updateServiceInstance(token, serviceId, environment.id, {
+      source: { image },
+      startCommand,
+    });
+  }
+  await setVariables(
+    token,
+    environment.id,
+    POSTGRES_SERVICE_ID,
+    {
+      POSTGRES_USER: "postgres",
+      POSTGRES_DB: "preview",
+      POSTGRES_PASSWORD: postgresPassword,
+      PGUSER: "postgres",
+      PGDATABASE: "preview",
+      PGPASSWORD: postgresPassword,
+      PGPORT: "5432",
+      PGDATA: "/var/lib/postgresql/data/pgdata",
+      PGHOST: "${{RAILWAY_PRIVATE_DOMAIN}}",
+      DATABASE_URL:
+        "postgresql://postgres:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/preview",
+    },
+    true,
+    true,
+  );
+  await setVariables(
+    token,
+    environment.id,
+    REDIS_SERVICE_ID,
+    {
+      REDIS_PASSWORD: redisPassword,
+      REDISPASSWORD: redisPassword,
+      REDISUSER: "default",
+      REDISPORT: "6379",
+      REDISHOST: "${{RAILWAY_PRIVATE_DOMAIN}}",
+      REDIS_URL: "redis://default:${{REDIS_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:6379",
+    },
+    true,
+    true,
+  );
+  await setVariables(
+    token,
+    environment.id,
+    API_SERVICE_ID,
+    { PREVIEW_ISOLATION_VERSION: "2" },
+    true,
+    true,
+  );
 }
 
 let instances = await listServiceInstances(token, environment.id);
@@ -119,13 +189,13 @@ async function waitForFirstDeploy(serviceId, label) {
   while (Date.now() < deadline) {
     const current = await listServiceInstances(token, environment.id);
     const instance = current.find((i) => i.serviceId === serviceId);
-    if (instance?.hasEverDeployed) {
+    if (instance?.latestDeployment?.status === "SUCCESS") {
       console.log(`${label} is up.`);
       return;
     }
     await new Promise((r) => setTimeout(r, 5000));
   }
-  console.log(`${label} did not report deployed within 3 minutes — continuing anyway.`);
+  throw new Error(`${label} did not deploy successfully within 3 minutes`);
 }
 await waitForFirstDeploy(POSTGRES_SERVICE_ID, "Postgres");
 await waitForFirstDeploy(REDIS_SERVICE_ID, "Redis");
@@ -160,13 +230,35 @@ const existingApiVars = await getVariables(token, environment.id, API_SERVICE_ID
 // the preview api gets rejected by CORS and the site renders empty. Confirmed
 // live against a running preview.
 let apiVars = {
+  PREVIEW_ISOLATION_VERSION: "2",
+  PORT: "4000",
   NODE_ENV: "production",
   CORS_ORIGIN: `https://${webDomain}`,
+  PUBLIC_WEB_URL: `https://${webDomain}`,
+  DATABASE_URL: "${{Postgres.DATABASE_URL}}",
+  REDIS_URL: "${{Redis.REDIS_URL}}",
+  RESEND_API_KEY: "",
+  SMTP_HOST: "",
+  SMTP_USER: "",
+  SMTP_PASSWORD: "",
+  SES_FROM_EMAIL: "",
   ADMIN_PASSPHRASE: superadminPassphrase,
 };
 
-if (existingApiVars.AWS_S3_BUCKET) {
+if (
+  existingApiVars.AWS_S3_BUCKET &&
+  existingApiVars.PREVIEW_STORAGE_ENVIRONMENT_ID === environment.id
+) {
   console.log(`Reusing existing bucket ${existingApiVars.AWS_S3_BUCKET} for this environment.`);
+  for (const key of [
+    "PREVIEW_STORAGE_ENVIRONMENT_ID",
+    "AWS_S3_BUCKET",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_ENDPOINT_URL",
+    "AWS_REGION",
+  ])
+    apiVars[key] = existingApiVars[key];
 } else {
   const bucketName = `preview-pr-${prNumber}-${randomBytes(4).toString("hex")}`.slice(0, 63);
   console.log(`Creating bucket ${bucketName}...`);
@@ -192,6 +284,7 @@ if (existingApiVars.AWS_S3_BUCKET) {
   // storage backend, and forcing it on here for no reason risks a request-
   // signing mismatch that just looks like a bad credential.
   Object.assign(apiVars, {
+    PREVIEW_STORAGE_ENVIRONMENT_ID: environment.id,
     AWS_S3_BUCKET: creds.bucketName ?? bucketName,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
@@ -200,10 +293,21 @@ if (existingApiVars.AWS_S3_BUCKET) {
   });
 }
 
-await setVariables(token, environment.id, API_SERVICE_ID, apiVars);
-await setVariables(token, environment.id, WEB_SERVICE_ID, {
-  ADMIN_PASSPHRASE: superadminPassphrase,
-});
+await setVariables(token, environment.id, API_SERVICE_ID, apiVars, true, true);
+await setVariables(
+  token,
+  environment.id,
+  WEB_SERVICE_ID,
+  {
+    PORT: "3000",
+    NODE_ENV: "production",
+    ADMIN_PASSPHRASE: superadminPassphrase,
+    CMS_API_URL: `https://${apiDomain}/api`,
+    NEXT_PUBLIC_API_URL: `https://${apiDomain}/api`,
+  },
+  true,
+  true,
+);
 
 // admin_passphrase deliberately never leaves this process: this repo is
 // public, and GitHub Actions job outputs (unlike step-local variables) are

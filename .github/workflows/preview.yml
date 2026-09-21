@@ -13,6 +13,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   # Job A — no PR code touched, safe to hold Railway secrets. Provisions (or
@@ -26,8 +27,10 @@ jobs:
       web_domain: ${{ steps.provision.outputs.web_domain }}
     steps:
       - name: Validate pr_number
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
         run: |
-          if ! [[ "${{ github.event.inputs.pr_number }}" =~ ^[0-9]+$ ]]; then
+          if ! [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
             echo "::error::pr_number must be a plain integer"
             exit 1
           fi
@@ -35,10 +38,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Validate preview target
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const {data: pr} = await github.rest.pulls.get({...context.repo, pull_number: Number(process.env.PR_NUMBER)});
+            if (pr.state !== 'open' || pr.base.ref !== 'main') throw new Error('Preview requires an open PR targeting main');
+
+      - name: Generate a bot token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          permission-pull-requests: write
+
       - name: Provision preview environment
         id: provision
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          BOT_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.inputs.pr_number }}
         run: node .github/scripts/preview-provision.mjs
 
@@ -67,6 +89,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.pr.outputs.sha }}
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0

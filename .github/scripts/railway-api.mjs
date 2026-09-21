@@ -28,7 +28,15 @@ export const POSTGRES_SERVICE_ID = "702df22d-7432-4a04-a52d-53fab670e59c";
 export const REDIS_SERVICE_ID = "ea85a601-8ce9-4e3b-965b-1fb83c4accb9";
 
 export function previewEnvironmentName(prNumber) {
+  if (!/^[1-9]\d*$/.test(String(prNumber))) throw new Error("Invalid preview PR number");
   return `preview-pr-${prNumber}`;
+}
+
+export async function assertPreviewEnvironment(token, prNumber, environmentId) {
+  if (!environmentId || environmentId === PRODUCTION_ENVIRONMENT_ID)
+    throw new Error("Refusing to operate on production or an unspecified environment");
+  const environment = await findEnvironmentByName(token, previewEnvironmentName(prNumber));
+  if (environment?.id !== environmentId) throw new Error("Environment does not belong to this PR");
 }
 
 export async function findEnvironmentByName(token, name) {
@@ -73,7 +81,6 @@ export async function createPreviewEnvironment(token, name) {
       input: {
         projectId: PROJECT_ID,
         name,
-        sourceEnvironmentId: PRODUCTION_ENVIRONMENT_ID,
         ephemeral: true,
         skipInitialDeploys: true,
       },
@@ -194,7 +201,14 @@ export async function generateServiceDomain(token, serviceId, environmentId, tar
   return data.serviceDomainCreate.domain;
 }
 
-export async function setVariables(token, environmentId, serviceId, variables, skipDeploys = true) {
+export async function setVariables(
+  token,
+  environmentId,
+  serviceId,
+  variables,
+  skipDeploys = true,
+  replace = false,
+) {
   await railway(
     token,
     `mutation($input: VariableCollectionUpsertInput!) {
@@ -206,7 +220,7 @@ export async function setVariables(token, environmentId, serviceId, variables, s
         environmentId,
         serviceId,
         variables,
-        replace: false, // merge into the duplicated environment's existing vars
+        replace,
         skipDeploys,
       },
     },
