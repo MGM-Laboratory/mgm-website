@@ -2,11 +2,19 @@ name: PR Status Comment
 
 on:
   workflow_run:
-    workflows: ["CI", "Security", "E2E", "Harness"]
+    workflows:
+      [
+        "CI",
+        "Security",
+        "E2E",
+        "Lighthouse",
+        "Vale",
+        "Publish Docker Images (staging)",
+        "PR Review Signal",
+      ]
     types: [completed]
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: pr-status-${{ github.event.workflow_run.head_sha }}
@@ -19,9 +27,12 @@ jobs:
     # executes the version of this file on the default branch, regardless of
     # which PR/fork triggered the upstream run, so this job never runs
     # untrusted workflow code.
-    if: contains(fromJSON('["pull_request", "pull_request_target"]'), github.event.workflow_run.event)
+    if: github.event.workflow_run.event == 'pull_request'
     name: Post check-run status comment
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,7 +47,7 @@ jobs:
               repo: context.repo.repo,
               commit_sha: context.payload.workflow_run.head_sha,
             });
-            const open = prs.find((p) => p.state === "open");
+            const open = prs.find((p) => p.state === "open" && p.base.ref === "main" && p.head.sha === context.payload.workflow_run.head_sha);
             core.setOutput("number", open ? String(open.number) : "");
 
       - name: Generate a bot token
@@ -46,6 +57,7 @@ jobs:
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          permission-pull-requests: write
 
       - name: Post status comment
         if: steps.pr.outputs.number != ''
@@ -55,3 +67,29 @@ jobs:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: node .github/scripts/pr-status-comment.mjs
+
+  review:
+    name: Reply to LGTM reviews
+    if: github.event.workflow_run.event == 'pull_request_review' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout trusted automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Generate a bot token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          permission-pull-requests: write
+      - name: Reply using reviews from the API
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BOT_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: node .github/scripts/pr-review-replies.mjs

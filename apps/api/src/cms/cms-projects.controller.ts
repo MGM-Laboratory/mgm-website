@@ -156,7 +156,7 @@ const projectRecordSchema = z.object({
   project: projectSchema,
   body: z.array(blockSchema),
 });
-const bootstrapSchema = z.object({ records: z.array(projectRecordSchema).min(1).max(200) });
+const bootstrapSchema = z.object({ records: z.array(projectRecordSchema).min(1).max(500) });
 const saveProjectSchema = projectRecordSchema.extend({
   sourceSlug: z.string().min(1).optional(),
 });

@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
   actions: write
 
 concurrency:
@@ -14,12 +16,17 @@ concurrency:
 
 jobs:
   dispatch:
-    if: github.event.issue.pull_request != null
+    if: >-
+      github.event.issue.pull_request != null &&
+      github.event.comment.user.type != 'Bot' &&
+      (startsWith(github.event.comment.body, '/') || contains(github.event.comment.body, 'lgtm'))
     name: Handle PR comment command
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Generate a bot token
         id: app-token
@@ -27,6 +34,7 @@ jobs:
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          permission-pull-requests: write
 
       # COMMENT_BODY is untrusted, attacker-controlled text — it only ever
       # reaches this job as a Node environment variable (process.env), never
@@ -40,4 +48,5 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
           COMMENT_ASSOCIATION: ${{ github.event.comment.author_association }}
+          COMMENT_ID: ${{ github.event.comment.id }}
         run: node .github/scripts/pr-command.mjs
