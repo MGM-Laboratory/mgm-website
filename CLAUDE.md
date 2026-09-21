@@ -4,32 +4,32 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 
 ## If you're new here, read in this order
 
-1. `DESIGN_SYSTEM.md` (repo root) — brand philosophy, color tokens, typography, iconography. **The design source of truth.**
-2. `docs/project-overview.md` — what the site is, all pages, content status.
-3. `docs/architecture.md` — monorepo layout, component/data map, routing.
-4. `docs/cms-admin.md` — CMS collections, the `/admin` workspace, signed sessions, RBAC, API proxy boundaries, and media storage.
-5. `docs/animation-system.md` — GSAP setup, conventions, and the **gotchas that have already cost days** (read before touching any animation).
-6. `docs/navigation-menu.md` — the full-screen nav menu system spec.
-7. `docs/page-transition.md` — the full-screen navigation curtain played on every internal route change, and the related homepage-entrance-skip behavior.
-8. `docs/careers-cms.md` — job postings, application uploads, and the careers inbox.
-9. `docs/mail-system.md` — the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config** — Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
-10. `docs/ci-cd.md` — GitHub Actions + Docker Hub + Railway wiring.
-11. `docs/testing-verification.md` — how work is verified here (Playwright + dev server).
-12. `docs/repo-history.md` — the 2026-09-12 migration and why git rules are strict.
+1. `DESIGN_SYSTEM.md` (repo root): brand philosophy, color tokens, typography, iconography. **The design source of truth.**
+2. `docs/project-overview.md`: what the site is, all pages, content status.
+3. `docs/architecture.md`: monorepo layout, component/data map, routing.
+4. `docs/cms-admin.md`: CMS collections, the `/admin` workspace, signed sessions, RBAC, API proxy boundaries, and media storage.
+5. `docs/animation-system.md`: GSAP setup, conventions, and the **gotchas that have already cost days** (read before touching any animation).
+6. `docs/navigation-menu.md`: the full-screen nav menu system spec.
+7. `docs/page-transition.md`: the full-screen navigation curtain played on every internal route change, and the related homepage-entrance-skip behavior.
+8. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
+9. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
+10. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
+11. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
+12. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
 
-## ⚠️ Next.js 16 — not the Next.js in your training data
+## ⚠️ Next.js 16: not the Next.js in your training data
 
-This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). APIs and conventions differ from older versions. `apps/web/AGENTS.md` (auto-managed by `next dev` — don't edit it) points at the bundled guides: **before writing any Next-specific code, read the relevant guide in `apps/web/node_modules/next/dist/docs/`** (resolve from the file's directory — in this monorepo `next` is not hoisted to the root).
+This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). APIs and conventions differ from older versions. `apps/web/AGENTS.md` (auto-managed by `next dev`, so don't edit it) points at the bundled guides: **before writing any Next-specific code, read the relevant guide in `apps/web/node_modules/next/dist/docs/`** (resolve from the file's directory, since in this monorepo `next` is not hoisted to the root).
 
-## Hard rules (user-enforced — do not bend)
+## Hard rules (user-enforced, do not bend)
 
-1. **Git identity & attribution.** Commit as whatever identity `git config user.name`/`user.email` resolves to in this working copy — no repo-local override, and never impersonate another contributor's identity. **Never mention Claude, ChatGPT, or any AI agent anywhere in a commit message, trailer, PR description, or code comment — no `Co-Authored-By`, no "generated with", nothing.** The user once rewrote the entire 109-commit history over this. Details: `docs/repo-history.md`.
+1. **Git identity & attribution.** Commit as whatever identity `git config user.name`/`user.email` resolves to in this working copy: no repo-local override, and never impersonate another contributor's identity. **Never mention Claude, ChatGPT, or any AI agent anywhere in a commit message, trailer, PR description, or code comment: no `Co-Authored-By`, no "generated with", nothing.** The user once rewrote the entire 109-commit history over this. Details: `docs/repo-history.md`.
 2. **Granular commits and PR flow.** One discrete working change per commit; push it to the working branch immediately, open a PR to `main`, and wait for every required check to pass. Do **not** push directly to `main`; only `/merge` performs the merge, and only when the user explicitly requests it.
 3. **Keep the dev server running** at `http://localhost:3000` at all times (`pnpm dev:web`). Check it responds before and after changes (`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000`).
 4. **Verify before declaring done.** Interact with the result in a real browser (Playwright screenshots + interaction scripts; see `docs/testing-verification.md`), then `open http://localhost:3000`. Fixing a bug = reproducing it first, then re-testing the fix under the same conditions.
 5. **Design discipline.** Use the `DESIGN_SYSTEM.md` tokens, not ad-hoc colors. Everything must be theme-aware (light/dark via `.dark` class) and reduced-motion safe (`prefers-reduced-motion`).
-6. **Never let a static CSS class set `transform`/`translate-*`/`rotate-*`/`scale-*` on an element GSAP also animates** — GSAP stacks onto it instead of replacing it. This bug has shipped twice. See `docs/animation-system.md` §Gotchas.
-7. **Never merge a PR unless the user explicitly asks for it in that moment** — and even then, double-check that's really what they want before acting; a merge ships to production within ~30s (see "CI/CD at a glance"). This repo merges by commenting `/merge` on the PR (see `docs/ci-cd.md` § Merging), never GitHub's own merge button or the API's merge endpoint directly — `/merge` re-checks readiness, uses a merge commit (not squash), deletes the branch safely, tears down the preview environment, and verifies the post-merge deploy; going around it skips all of that.
+6. **Never let a static CSS class set `transform`/`translate-*`/`rotate-*`/`scale-*` on an element GSAP also animates.** GSAP stacks onto it instead of replacing it. This bug has shipped twice. See `docs/animation-system.md` §Gotchas.
+7. **Never merge a PR unless the user explicitly asks for it in that moment.** Even then, double-check that's really what they want before acting; a merge ships to production within ~30s (see "CI/CD at a glance"). This repo merges by commenting `/merge` on the PR (see `docs/ci-cd.md` § Merging), never GitHub's own merge button or the API's merge endpoint directly: `/merge` re-checks readiness, uses a merge commit (not squash), deletes the branch safely, tears down the preview environment, and verifies the post-merge deploy; going around it skips all of that.
 
 ## Commands
 
@@ -39,7 +39,7 @@ This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). AP
 | `pnpm build`                                 | Turbo build all workspaces                                                 |
 | `pnpm lint`                                  | ESLint (web) + oxlint (api)                                                |
 | `pnpm typecheck`                             | `next typegen && tsc --noEmit` (web), `tsc --noEmit` (api)                 |
-| `pnpm test`                                  | vitest (api only — web has no test script)                                 |
+| `pnpm test`                                  | vitest (api only, web has no test script)                                  |
 | `pnpm format` / `pnpm format:check`          | Prettier over the repo (also runs on staged files via husky + lint-staged) |
 | `docker compose up`                          | Local Postgres + api + web stack (see `.env.example`)                      |
 | `gh run watch`                               | Follow a GitHub Actions run on the new repo                                |
