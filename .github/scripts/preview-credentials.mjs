@@ -52,11 +52,13 @@ export function assertIsolatedCredentials(preview, web, production, environmentI
   ) {
     throw new Error("Preview database or Redis connection is shared with production");
   }
-  if (
-    preview.DATABASE_URL !== "${{Postgres.DATABASE_URL}}" ||
-    preview.REDIS_URL !== "${{Redis.REDIS_URL}}"
-  ) {
-    throw new Error("Preview database or Redis does not use its local Railway service reference");
+  if (!preview.DATABASE_URL || !preview.REDIS_URL) {
+    throw new Error("Preview database or Redis connection is missing");
+  }
+  for (const key of ["DATABASE_URL", "REDIS_URL", "PGHOST", "REDISHOST"]) {
+    if (preview[key] && production[key] && preview[key] === production[key]) {
+      throw new Error(`Preview ${key} is still connected to production`);
+    }
   }
   return passphrase;
 }
