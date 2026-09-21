@@ -19,9 +19,21 @@ jobs:
 
   build:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.docker_api == 'true' || needs.changes.outputs.docker_web == 'true'
     uses: ./.github/workflows/publish-docker-image.yml
     with:
       # workflow_dispatch has no PR number, so fall back to the run number.
       tag: pr-${{ github.event.pull_request.number || github.run_number }}
     secrets: inherit
+
+  gate:
+    name: Docker staging gate
+    if: always()
+    needs: [changes, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require selected checks
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const jobs = JSON.parse(process.env.RESULTS); if (jobs.changes.result !== "success" || Object.values(jobs).some(j => !["success", "skipped"].includes(j.result))) process.exit(1)'

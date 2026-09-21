@@ -20,10 +20,10 @@ jobs:
     name: Detect Changes
     uses: ./.github/workflows/detect-changes.yml
 
-  ci:
-    name: Lint, typecheck, test & build
+  api:
+    name: API lint, types, tests and build
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -59,20 +59,14 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Format check
-        run: pnpm format:check
-
       - name: Lint
-        run: pnpm lint
+        run: pnpm turbo run lint --filter=api...
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm turbo run typecheck --filter=api...
 
       - name: Test with coverage
         run: pnpm --filter api test:cov
-
-      - name: Test PR automation
-        run: node --test .github/scripts/*.test.mjs
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
@@ -83,4 +77,58 @@ jobs:
           fail_ci_if_error: false
 
       - name: Build
-        run: pnpm build
+        run: pnpm turbo run build --filter=api...
+
+  web:
+    name: Web lint, types and build
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify web and shared dependencies
+        run: pnpm turbo run lint typecheck build --filter=web...
+
+  hygiene:
+    name: Formatting and automation tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install formatting tools
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Format check
+        run: pnpm format:check
+      - name: Test automation and workflow policy
+        run: node --test .github/scripts/*.test.mjs
+
+  ci:
+    name: Lint, typecheck, test & build
+    if: always()
+    needs: [changes, hygiene, api, web]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all selected checks to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const jobs = JSON.parse(process.env.RESULTS); if (jobs.changes.result !== "success" || Object.values(jobs).some(j => !["success", "skipped"].includes(j.result))) process.exit(1)'

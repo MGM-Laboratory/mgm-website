@@ -14,10 +14,17 @@ concurrency:
 permissions:
   contents: read
   checks: write
+  pull-requests: read
 
 jobs:
+  changes:
+    name: Detect Changes
+    uses: ./.github/workflows/detect-changes.yml
+
   vale:
     name: Vale prose lint
+    needs: changes
+    if: needs.changes.outputs.prose == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,7 +33,7 @@ jobs:
       - name: Vale
         uses: vale-cli/vale-action@518a9136acc6e6668ce7c00d367051e0941e87ff # v3.0.0
         with:
-          reporter: github-check
+          reporter: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'local' || 'github-check' }}
           # nofilter: check every configured file in full on every run, not just
           # lines touched by a PR's diff (the default filter_mode: added would
           # let a pre-existing violation elsewhere in a touched file slip past).
@@ -52,3 +59,15 @@ jobs:
           # scanning the whole working directory. Comma survives the trim.
           separator: ","
           files: "README.md,AGENTS.md,CLAUDE.md,DESIGN_SYSTEM.md,CODE_OF_CONDUCT.md,CONTRIBUTING.md,GOVERNANCE.md,SECURITY.md,.github/pull_request_template.md,apps/api/README.md,apps/web/README.md,docs"
+
+  gate:
+    name: Prose gate
+    if: always()
+    needs: [changes, vale]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require selected checks
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const jobs = JSON.parse(process.env.RESULTS); if (jobs.changes.result !== "success" || Object.values(jobs).some(j => !["success", "skipped"].includes(j.result))) process.exit(1)'

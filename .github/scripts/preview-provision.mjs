@@ -1,6 +1,8 @@
 // Job A of the preview pipeline — no PR code involved, safe to hold secrets.
-// Creates an empty environment and explicitly configures its four services.
-// No production config, credentials, database, or cache is cloned.
+// Creates a topology-only fork of production, then replaces every runtime
+// credential and connection with preview-owned values before deploying code.
+// Environment duplication carries service topology/settings, not database or
+// Redis data; the copied production variables are replaced before app deploy.
 import { randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { invalidatePreviewAnnouncement } from "./preview-credentials.mjs";
@@ -14,6 +16,7 @@ import {
   createBucket,
   createPreviewEnvironment,
   createVolume,
+  deleteEnvironment,
   deployServiceInstance,
   findEnvironmentByName,
   generateServiceDomain,
@@ -37,7 +40,7 @@ await invalidatePreviewAnnouncement(process.env.BOT_TOKEN, process.env.REPO, prN
 const superadminPassphrase = randomBytes(18).toString("base64url");
 
 let environment = await findEnvironmentByName(token, name);
-const isNew = !environment;
+let isNew = !environment;
 if (isNew) {
   console.log(`Creating environment ${name}...`);
   environment = await createPreviewEnvironment(token, name);
@@ -48,72 +51,73 @@ await assertPreviewEnvironment(token, prNumber, environment.id);
 
 const oldApiVars = await getVariables(token, environment.id, API_SERVICE_ID);
 if (!isNew && oldApiVars.PREVIEW_ISOLATION_VERSION !== "2") {
-  throw new Error(
-    "This legacy preview predates isolation v2. Close its PR to tear it down before recreating the preview.",
-  );
-}
-if (isNew) {
-  const postgresPassword = randomBytes(24).toString("base64url");
-  const redisPassword = randomBytes(24).toString("base64url");
-  for (const [serviceId, image, startCommand] of [
-    [API_SERVICE_ID, "busybox:latest", null],
-    [WEB_SERVICE_ID, "busybox:latest", null],
-    [POSTGRES_SERVICE_ID, "postgres:17-alpine", null],
-    [
-      REDIS_SERVICE_ID,
-      "redis:7-alpine",
-      "sh -c 'exec redis-server --appendonly yes --requirepass \"$REDIS_PASSWORD\"'",
-    ],
-  ]) {
-    await updateServiceInstance(token, serviceId, environment.id, {
-      source: { image },
-      startCommand,
-    });
-  }
-  await setVariables(
-    token,
-    environment.id,
-    POSTGRES_SERVICE_ID,
-    {
-      POSTGRES_USER: "postgres",
-      POSTGRES_DB: "preview",
-      POSTGRES_PASSWORD: postgresPassword,
-      PGUSER: "postgres",
-      PGDATABASE: "preview",
-      PGPASSWORD: postgresPassword,
-      PGPORT: "5432",
-      PGDATA: "/var/lib/postgresql/data/pgdata",
-      PGHOST: "${{RAILWAY_PRIVATE_DOMAIN}}",
-      DATABASE_URL:
-        "postgresql://postgres:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/preview",
-    },
-    true,
-    true,
-  );
-  await setVariables(
-    token,
-    environment.id,
-    REDIS_SERVICE_ID,
-    {
-      REDIS_PASSWORD: redisPassword,
-      REDISPASSWORD: redisPassword,
-      REDISUSER: "default",
-      REDISPORT: "6379",
-      REDISHOST: "${{RAILWAY_PRIVATE_DOMAIN}}",
-      REDIS_URL: "redis://default:${{REDIS_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:6379",
-    },
-    true,
-    true,
-  );
-  await setVariables(
-    token,
-    environment.id,
+  // A failed v2 attempt could have left an empty environment behind. It is
+  // safe to remove only that exact PR-named environment, then recreate it
+  // from the production topology. Never delete an environment with the
+  // production id (assertPreviewEnvironment has already guarded this).
+  const existingInstances = await listServiceInstances(token, environment.id);
+  const requiredServiceIds = new Set([
     API_SERVICE_ID,
-    { PREVIEW_ISOLATION_VERSION: "2" },
-    true,
-    true,
-  );
+    WEB_SERVICE_ID,
+    POSTGRES_SERVICE_ID,
+    REDIS_SERVICE_ID,
+  ]);
+  const hasTopology =
+    requiredServiceIds.size ===
+    existingInstances.filter((instance) => requiredServiceIds.has(instance.serviceId)).length;
+  if (!hasTopology) {
+    console.log(`Removing incomplete preview environment ${name} before recreation...`);
+    await deleteEnvironment(token, environment.id);
+    environment = await createPreviewEnvironment(token, name);
+    await assertPreviewEnvironment(token, prNumber, environment.id);
+    isNew = true;
+  } else {
+    throw new Error(
+      "This legacy preview predates isolation v2. Close its PR to tear it down before recreating the preview.",
+    );
+  }
 }
+
+// Replace the cloned database/cache credentials before either application is
+// deployed. These references resolve only inside this Railway environment;
+// they cannot point at production's private host or credentials.
+const postgresPassword = randomBytes(24).toString("base64url");
+const redisPassword = randomBytes(24).toString("base64url");
+await setVariables(
+  token,
+  environment.id,
+  POSTGRES_SERVICE_ID,
+  {
+    POSTGRES_USER: "postgres",
+    POSTGRES_DB: "preview",
+    POSTGRES_PASSWORD: postgresPassword,
+    PGUSER: "postgres",
+    PGDATABASE: "preview",
+    PGPASSWORD: postgresPassword,
+    PGPORT: "5432",
+    PGDATA: "/var/lib/postgresql/data/pgdata",
+    PGHOST: "${{RAILWAY_PRIVATE_DOMAIN}}",
+    DATABASE_URL:
+      "postgresql://postgres:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/preview",
+  },
+  true,
+  true,
+);
+await setVariables(
+  token,
+  environment.id,
+  REDIS_SERVICE_ID,
+  {
+    REDIS_PASSWORD: redisPassword,
+    REDISPASSWORD: redisPassword,
+    REDISUSER: "default",
+    REDISPORT: "6379",
+    REDISHOST: "${{RAILWAY_PRIVATE_DOMAIN}}",
+    REDIS_URL: "redis://default:${{REDIS_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:6379",
+  },
+  true,
+  true,
+);
 
 let instances = await listServiceInstances(token, environment.id);
 const apiInstance = instances.find((i) => i.serviceId === API_SERVICE_ID);

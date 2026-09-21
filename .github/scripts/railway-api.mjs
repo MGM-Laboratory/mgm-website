@@ -81,6 +81,7 @@ export async function createPreviewEnvironment(token, name) {
       input: {
         projectId: PROJECT_ID,
         name,
+        sourceEnvironmentId: PRODUCTION_ENVIRONMENT_ID,
         ephemeral: true,
         skipInitialDeploys: true,
       },

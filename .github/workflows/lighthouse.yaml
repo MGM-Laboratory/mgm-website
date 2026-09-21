@@ -21,7 +21,7 @@ jobs:
   lighthouse:
     name: Lighthouse CI budget
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.lighthouse == 'true'
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_API_URL: http://localhost:4000/api
@@ -46,3 +46,15 @@ jobs:
 
       - name: Run Lighthouse CI
         run: pnpm dlx @lhci/cli@0.15.x autorun --config=.lighthouserc.json
+
+  gate:
+    name: Lighthouse gate
+    if: always()
+    needs: [changes, lighthouse]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require selected checks
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const jobs = JSON.parse(process.env.RESULTS); if (jobs.changes.result !== "success" || Object.values(jobs).some(j => !["success", "skipped"].includes(j.result))) process.exit(1)'

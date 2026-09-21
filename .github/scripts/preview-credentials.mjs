@@ -43,6 +43,21 @@ export function assertIsolatedCredentials(preview, web, production, environmentI
   ) {
     throw new Error("Preview storage is not isolated from production");
   }
+  // The preview app must resolve its own Railway services, never a copied
+  // production URL. Keep these checks explicit so a future variable rename
+  // cannot silently reconnect the preview to production's database/cache.
+  if (
+    preview.DATABASE_URL === production.DATABASE_URL ||
+    preview.REDIS_URL === production.REDIS_URL
+  ) {
+    throw new Error("Preview database or Redis connection is shared with production");
+  }
+  if (
+    preview.DATABASE_URL !== "${{Postgres.DATABASE_URL}}" ||
+    preview.REDIS_URL !== "${{Redis.REDIS_URL}}"
+  ) {
+    throw new Error("Preview database or Redis does not use its local Railway service reference");
+  }
   return passphrase;
 }
 

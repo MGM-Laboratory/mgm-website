@@ -47,7 +47,21 @@ if (pr.mergeable === null) {
 }
 
 const checks = await collectChecks(token, repo, pr.head.sha);
-const rules = await gh(`/repos/${repo}/rules/branches/${encodeURIComponent(pr.base.ref)}`);
+let rules = [];
+try {
+  // Ruleset inspection requires repository administration:read, which is
+  // intentionally granted only to the installation token. The default
+  // workflow token is still used for all ordinary PR reads and the merge.
+  rules = await ghRequest(
+    botToken,
+    `/repos/${repo}/rules/branches/${encodeURIComponent(pr.base.ref)}`,
+  );
+} catch (error) {
+  // GitHub's merge endpoint remains the final authority. If an installation
+  // is not granted administration:read, don't turn an otherwise valid merge
+  // into a deadlock; it will return the protected-branch reason on failure.
+  console.warn(`Could not read branch ruleset; GitHub will enforce it on merge: ${error.message}`);
+}
 const required = rules
   .filter((rule) => rule.type === "required_status_checks")
   .flatMap((rule) => rule.parameters.required_status_checks);
