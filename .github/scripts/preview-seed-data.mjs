@@ -61,6 +61,7 @@ const RESOURCES = [
   { key: "members", label: "Members", path: "/api/cms/members" },
   { key: "projects", label: "Projects", path: "/api/cms/projects" },
   { key: "research", label: "Research initiatives", path: "/api/cms/research" },
+  { key: "events", label: "Events", path: "/api/cms/events" },
 ];
 
 async function json(url, opts) {
