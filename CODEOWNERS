@@ -1,5 +1,4 @@
 # Default owner for everything in the repo, unless a later match overrides it.
-# Keep multiple human maintainers here so a PR author can always receive a
-# code-owner approval from another person.
+# Route every code-owner review request to the repository owner.
 # Automated review services are advisory and must not be approval gates.
-* @shirasakaren @SyafaHadyan @muhammadIdhamMaarif
+* @shirasakaren
