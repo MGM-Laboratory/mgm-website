@@ -108,6 +108,11 @@ jobs:
 
   hygiene:
     name: Formatting and automation tests
+    # Format check runs unconditionally: prettier --check . covers the whole
+    # repo, not just automation scripts, so it needs to catch a formatting
+    # regression in any workspace regardless of scope. Only the automation
+    # test step below is scoped to the `automation` output.
+    needs: changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -126,6 +131,7 @@ jobs:
       - name: Format check
         run: pnpm format:check
       - name: Test automation and workflow policy
+        if: needs.changes.outputs.automation == 'true'
         run: node --test .github/scripts/*.test.mjs
 
   ci:
