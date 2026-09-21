@@ -52,7 +52,7 @@ When a hover timeline and a scroll entrance (or idle loop) animate the **same pr
 
 ### 4. ScrollTrigger: use timeline-level triggers, not tween-level
 
-GSAP 3.15.0 throws inside ScrollTrigger's internal refresh when a **tween-level** `scrollTrigger` is created after ≥4 other ScrollTriggers exist on a page that loaded already scrolled down (e.g. reload mid-page). `fadeUpOnScroll` deliberately builds a timeline with a timeline-level trigger (`gsap.timeline({ scrollTrigger: {...} })`). Don't regress to `gsap.fromTo(el, {...}, { scrollTrigger })` on this codebase.
+GSAP 3.15.0 throws inside ScrollTrigger's internal refresh when a **tween-level** `scrollTrigger` is created after ≥4 other ScrollTriggers exist on a page that loaded already scrolled down (for example, reload mid-page). `fadeUpOnScroll` deliberately builds a timeline with a timeline-level trigger (`gsap.timeline({ scrollTrigger: {...} })`). Don't regress to `gsap.fromTo(el, {...}, { scrollTrigger })` on this codebase.
 
 ### 5. SSR flash prevention (server HTML has no JS)
 

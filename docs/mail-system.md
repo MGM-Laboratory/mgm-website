@@ -47,7 +47,7 @@ Both modes are pure overhead-avoidance when unset (the default): no limit config
 
 ## Admin surface (`apps/api/src/cms/cms-contact-settings.*`)
 
-Singleton settings row (`CmsContactSettings`, fixed slug `"contact"`), cached 600s, normalized through `contactSettingsSchema` on every read (falls back to `DEFAULT_CONTACT_SETTINGS` wholesale if the stored record fails validation):
+Singleton settings row (`CmsContactSettings`, fixed slug `"contact"`), cached for 600 seconds, normalized through `contactSettingsSchema` on every read (falls back to `DEFAULT_CONTACT_SETTINGS` wholesale if the stored record fails validation):
 
 - `GET /api/cms/contact-settings`: public, no auth. Returns `{ record }`: `emails[]`, `address`, `lat`/`lng`, `mailStrategy`, `mailProviderOrder`, `mailProviderWeights`, `mailProviderLimits`.
 - `GET /api/cms/contact-settings/mail-provider-status`: admin (`x-cms-passphrase`). Returns `{configured, dailyRemaining?, longRemaining?, ...}` per provider plus `fromEmailConfigured`, never credentials, and limits come from the saved settings server-side (not caller input).

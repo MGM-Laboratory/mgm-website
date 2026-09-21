@@ -15,11 +15,11 @@ No SVG masking or clip-path: coverage is pure `transform-origin` + `scale` on a 
 
 ## Sequence and timing
 
-| Phase  | Function             | Duration           | What happens                                                                                                                                                        |
-| ------ | -------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cover  | `startCover`         | 0.56s total        | White wash fades in (0.1s, `power2.out`); logo set to giant scale + settles (0.06s, default ease); logo shrinks giant→idle scale/rotation (0.4s, `power3.out`)      |
-| Hold   | `engageHoldIfNeeded` | until `routeReady` | A breathing yoyo (`scale: 1.08`, 0.9 seconds, `sine.inOut`, `repeat: -1`): see the timing note below                                                                |
-| Reveal | `startReveal`        | 0.67s total        | Logo grows to giant scale + rotates (0.22s, `power4.in`, accelerating); blue overlay fades out (0.1s, `power3.in`); white wash fades out last (0.35s, `sine.inOut`) |
+| Phase  | Function             | Duration           | What happens                                                                                                                                                           |
+| ------ | -------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cover  | `startCover`         | 0.56 s total       | White wash fades in (0.1 s, `power2.out`); logo set to giant scale + settles (0.06 s, default ease); logo shrinks giant→idle scale/rotation (0.4 s, `power3.out`)      |
+| Hold   | `engageHoldIfNeeded` | until `routeReady` | A breathing yoyo (`scale: 1.08`, 0.9 seconds, `sine.inOut`, `repeat: -1`): see the timing note below                                                                   |
+| Reveal | `startReveal`        | 0.67 s total       | Logo grows to giant scale + rotates (0.22 s, `power4.in`, accelerating); blue overlay fades out (0.1 s, `power3.in`); white wash fades out last (0.35 s, `sine.inOut`) |
 
 `router.push(href)` fires immediately once the cover timeline is built. Navigation and the cover animation happen concurrently, not sequentially.
 
