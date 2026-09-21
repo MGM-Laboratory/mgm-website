@@ -12,6 +12,11 @@ import type { CmsMemberRecord } from "@/lib/member-cms";
 
 type Filter = "All" | MemberDivision;
 
+// Read by member-profile.tsx to send "All members" back to the exact
+// filtered/searched view a visitor came from, instead of a bare "/member"
+// that silently drops their division filter and search query.
+export const MEMBER_LIST_RETURN_KEY = "member-directory:return-url";
+
 const FILTER_VALUES = [
   "All",
   "Professors",
@@ -485,6 +490,12 @@ export function MemberDirectory({
                   <article key={member.slug} className="member-card min-w-0 py-1">
                     <Link
                       href={`/member/${member.slug}`}
+                      onClick={() => {
+                        sessionStorage.setItem(
+                          MEMBER_LIST_RETURN_KEY,
+                          `${window.location.pathname}${window.location.search}`,
+                        );
+                      }}
                       className="group/member relative z-0 block focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-4 focus-visible:outline-none hover:z-10 dark:focus-visible:ring-offset-[#15181e]"
                     >
                       <div

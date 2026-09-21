@@ -25,9 +25,11 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { GithubGlyph, LinkedinGlyph, WhatsappGlyph } from "@/components/social-icons";
+import { MEMBER_LIST_RETURN_KEY } from "@/components/members/member-directory";
 import type { Member } from "@/data/members";
 import { useMemberRecords } from "@/hooks/use-member-records";
 import type { CmsMemberProfile, CmsMemberRecord } from "@/lib/member-cms";
@@ -595,6 +597,11 @@ export function MemberProfile({
   const effectiveMember = override?.member ?? member;
   const cmsProfile = override?.profile;
   const now = useCurrentMonth();
+  const allMembersHref = useSyncExternalStore(
+    () => () => {},
+    () => sessionStorage.getItem(MEMBER_LIST_RETURN_KEY) ?? "/member",
+    () => "/member",
+  );
   useLayoutEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -658,7 +665,7 @@ export function MemberProfile({
     <main ref={root} className="px-5 pb-20 pt-28 sm:px-8 sm:pt-32 lg:px-12 lg:pb-28">
       <div className="mx-auto max-w-[1280px]">
         <Link
-          href="/member"
+          href={allMembersHref}
           className="profile-reveal inline-flex items-center gap-2 text-sm font-medium text-[var(--ink-2)] transition-colors hover:text-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:text-white/65 dark:hover:text-brand-blue"
         >
           <ArrowLeft size={18} strokeWidth={2.25} />
