@@ -60,7 +60,9 @@ export function thankYouBody(pr, contributors, { preview = false } = {}) {
   return [
     preview ? "## Merge thank-you preview (no merge performed)" : "## 🎉 Thank you, contributors!",
     "",
-    `Thank you ${contributors.logins.map((login) => `@${login}`).join(" ")} for contributing to MGM Website! 🙌`,
+    contributors.logins.length
+      ? `Thank you ${contributors.logins.map((login) => `@${login}`).join(" ")} for contributing to MGM Website! 🙌`
+      : "Thank you for contributing to MGM Website! 🙌",
     contributors.unlinked.length
       ? `Also credited in the commits: ${contributors.unlinked.map(escapeText).join(", ")}. These authors have no linked GitHub account to tag.`
       : "",
