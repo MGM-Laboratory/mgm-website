@@ -11,19 +11,22 @@ concurrency:
   group: e2e-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  pull-requests: read
+permissions: {}
 
 jobs:
   changes:
     name: Detect Changes
     uses: ./.github/workflows/detect-changes.yml
+    permissions:
+      contents: read
+      pull-requests: read
 
   e2e:
     name: Playwright (${{ matrix.os }}, ${{ matrix.project }})
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.e2e == 'true'
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -87,3 +90,15 @@ jobs:
           path: apps/web/e2e/**/*-actual.png
           if-no-files-found: ignore
           retention-days: 14
+
+  gate:
+    name: E2E gate
+    if: always()
+    needs: [changes, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require selected checks
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const jobs = JSON.parse(process.env.RESULTS); if (jobs.changes.result !== "success" || Object.values(jobs).some(j => !["success", "skipped"].includes(j.result))) process.exit(1)'

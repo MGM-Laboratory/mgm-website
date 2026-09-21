@@ -14,19 +14,20 @@ concurrency:
   group: security-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  pull-requests: read
+permissions: {}
 
 jobs:
   changes:
     name: Detect Changes
     uses: ./.github/workflows/detect-changes.yml
+    permissions:
+      contents: read
+      pull-requests: read
 
   codeql:
     name: CodeQL
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.codeql == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,7 +50,7 @@ jobs:
   dependency-review:
     name: Dependency review
     needs: changes
-    if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
+    if: needs.changes.outputs.dependencies == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -62,7 +63,7 @@ jobs:
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
-          comment-summary-in-pr: on-failure
+          comment-summary-in-pr: never
 
   # Deliberately NOT gated on `changes`: a secret can be pasted into a
   # markdown file just as easily as into source, so this has to scan
@@ -97,7 +98,7 @@ jobs:
   trivy-fs:
     name: Trivy filesystem scan
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.trivy == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -124,7 +125,7 @@ jobs:
 
   scorecard:
     name: OSSF Scorecard
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -147,3 +148,15 @@ jobs:
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           sarif_file: scorecard-results.sarif
+
+  gate:
+    name: Security gate
+    if: always()
+    needs: [changes, codeql, dependency-review, secret-scan, trivy-fs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require selected checks
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const jobs = JSON.parse(process.env.RESULTS); if (jobs.changes.result !== "success" || Object.values(jobs).some(j => !["success", "skipped"].includes(j.result))) process.exit(1)'

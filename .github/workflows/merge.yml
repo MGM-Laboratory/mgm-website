@@ -13,6 +13,7 @@ concurrency:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
   checks: read
   statuses: read
@@ -45,7 +46,8 @@ jobs:
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
-          permission-issues: write
+          permission-pull-requests: write
+          permission-administration: read
 
       - name: Check readiness, merge, clean up, verify production
         env:

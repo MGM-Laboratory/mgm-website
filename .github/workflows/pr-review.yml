@@ -1,0 +1,16 @@
+name: PR Review Signal
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions: {}
+
+jobs:
+  signal:
+    name: Signal submitted review
+    if: github.event.pull_request.base.ref == 'main' && github.event.review.user.type != 'Bot' && contains(github.event.review.body, 'lgtm')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Signal
+        run: echo 'Review received. The default-branch workflow will read it through the GitHub API.'

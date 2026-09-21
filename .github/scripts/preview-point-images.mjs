@@ -11,6 +11,7 @@
 // its retries — whichever comes first.
 import {
   API_SERVICE_ID,
+  assertPreviewEnvironment,
   WEB_SERVICE_ID,
   deployServiceInstance,
   deploymentLogs,
@@ -29,6 +30,7 @@ const botToken = process.env.BOT_TOKEN;
 const repo = process.env.REPO;
 const prNumber = process.env.PR_NUMBER;
 const runUrl = process.env.RUN_URL;
+await assertPreviewEnvironment(token, prNumber, environmentId);
 
 const MAX_ATTEMPTS = 4; // 1 initial deploy + up to 3 automatic retries
 const CHECK_INTERVAL_MS = 60_000;
