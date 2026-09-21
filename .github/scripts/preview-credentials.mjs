@@ -70,7 +70,19 @@ export function assertIsolatedCredentials(preview, web, production, environmentI
   return passphrase;
 }
 
+// The domains come from the provision job's outputs, not from a commenter,
+// but asserting the shape costs nothing and guarantees a misconfigured
+// dispatch can never make these fetches hit an arbitrary host.
+const RAILWAY_DOMAIN = /^[a-z0-9-]+\.up\.railway\.app$/i;
+function assertRailwayDomain(label, domain) {
+  if (!RAILWAY_DOMAIN.test(domain ?? "")) {
+    throw new Error(`Refusing to verify against a non-Railway ${label} domain: ${domain}`);
+  }
+}
+
 export async function verifySuperadmin(apiDomain, webDomain, passphrase) {
+  assertRailwayDomain("api", apiDomain);
+  assertRailwayDomain("web", webDomain);
   const api = await fetch(`https://${apiDomain}/api/cms/admins`, {
     headers: { "x-cms-passphrase": passphrase },
     redirect: "error",

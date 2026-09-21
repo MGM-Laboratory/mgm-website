@@ -62,7 +62,7 @@ test("superadmin verification checks both real login and the superadmin-only rou
       });
     return Response.json({ records: [] });
   });
-  await verifySuperadmin("api.example", "web.example", "fresh");
+  await verifySuperadmin("preview-api.up.railway.app", "preview-web.up.railway.app", "fresh");
   assert.equal(requests.length, 3);
   assert.equal(requests[0].options.headers["x-cms-passphrase"], "fresh");
   assert.equal(requests[2].options.headers.Cookie, "mgm_admin_session=superadmin.1.time.signature");
@@ -81,7 +81,21 @@ test("a successful managed-admin login is never announced as superadmin", async 
       : Response.json({ records: [] }),
   );
   await assert.rejects(
-    verifySuperadmin("api.example", "web.example", "admin"),
+    verifySuperadmin("preview-api.up.railway.app", "preview-web.up.railway.app", "admin"),
     /superadmin session/,
+  );
+});
+
+test("non-Railway domains are refused before any network call", async (t) => {
+  t.mock.method(globalThis, "fetch", () => {
+    throw new Error("Network must not be called");
+  });
+  await assert.rejects(
+    verifySuperadmin("api.example.com", "preview-web.up.railway.app", "fresh"),
+    /non-Railway api domain/,
+  );
+  await assert.rejects(
+    verifySuperadmin("preview-api.up.railway.app", "https://web.example.com", "fresh"),
+    /non-Railway web domain/,
   );
 });
