@@ -35,9 +35,16 @@ export function assertIsolatedCredentials(preview, web, production, environmentI
       "Preview superadmin credentials are missing, unsynchronized, or shared with production",
     );
   }
+  // Empty preview keys must not slip through: a missing credential here would
+  // silently fall back to whatever the S3 client resolves on its own, which
+  // is exactly how a preview ends up talking to production storage.
   if (
     preview.PREVIEW_STORAGE_ENVIRONMENT_ID !== environmentId ||
     !preview.AWS_S3_BUCKET ||
+    !preview.AWS_ACCESS_KEY_ID ||
+    !preview.AWS_SECRET_ACCESS_KEY ||
+    !production.AWS_S3_BUCKET ||
+    !production.AWS_ACCESS_KEY_ID ||
     preview.AWS_S3_BUCKET === production.AWS_S3_BUCKET ||
     preview.AWS_ACCESS_KEY_ID === production.AWS_ACCESS_KEY_ID
   ) {

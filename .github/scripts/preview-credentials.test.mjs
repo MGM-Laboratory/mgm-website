@@ -26,6 +26,7 @@ test("only a synchronized preview credential with isolated storage can be announ
     ADMIN_PASSPHRASE: "fresh",
     AWS_S3_BUCKET: "preview",
     AWS_ACCESS_KEY_ID: "preview-key",
+    AWS_SECRET_ACCESS_KEY: "preview-secret",
     PREVIEW_STORAGE_ENVIRONMENT_ID: "preview-id",
     DATABASE_URL: "${{Postgres.DATABASE_URL}}",
     REDIS_URL: "${{Redis.REDIS_URL}}",
@@ -35,6 +36,7 @@ test("only a synchronized preview credential with isolated storage can be announ
     { ADMIN_PASSPHRASE: "production" },
     { AWS_S3_BUCKET: "prod" },
     { AWS_ACCESS_KEY_ID: "prod-key" },
+    { AWS_SECRET_ACCESS_KEY: undefined },
     { PREVIEW_STORAGE_ENVIRONMENT_ID: "other-id" },
   ]) {
     assert.throws(() =>
