@@ -49,6 +49,12 @@ test("only a synchronized preview credential with isolated storage can be announ
 });
 
 test("superadmin verification checks both real login and the superadmin-only route", async (t) => {
+  process.env.API_DOMAIN = "preview-api.up.railway.app";
+  process.env.WEB_DOMAIN = "preview-web.up.railway.app";
+  t.after(() => {
+    delete process.env.API_DOMAIN;
+    delete process.env.WEB_DOMAIN;
+  });
   const requests = [];
   t.mock.method(globalThis, "fetch", async (url, options) => {
     requests.push({ url, options });
@@ -62,13 +68,19 @@ test("superadmin verification checks both real login and the superadmin-only rou
       });
     return Response.json({ records: [] });
   });
-  await verifySuperadmin("preview-api.up.railway.app", "preview-web.up.railway.app", "fresh");
+  await verifySuperadmin("fresh");
   assert.equal(requests.length, 3);
   assert.equal(requests[0].options.headers["x-cms-passphrase"], "fresh");
   assert.equal(requests[2].options.headers.Cookie, "mgm_admin_session=superadmin.1.time.signature");
 });
 
 test("a successful managed-admin login is never announced as superadmin", async (t) => {
+  process.env.API_DOMAIN = "preview-api.up.railway.app";
+  process.env.WEB_DOMAIN = "preview-web.up.railway.app";
+  t.after(() => {
+    delete process.env.API_DOMAIN;
+    delete process.env.WEB_DOMAIN;
+  });
   t.mock.method(globalThis, "fetch", async (url) =>
     url.endsWith("/login")
       ? new Response(null, {
@@ -80,22 +92,22 @@ test("a successful managed-admin login is never announced as superadmin", async 
         })
       : Response.json({ records: [] }),
   );
-  await assert.rejects(
-    verifySuperadmin("preview-api.up.railway.app", "preview-web.up.railway.app", "admin"),
-    /superadmin session/,
-  );
+  await assert.rejects(verifySuperadmin("admin"), /superadmin session/);
 });
 
 test("non-Railway domains are refused before any network call", async (t) => {
   t.mock.method(globalThis, "fetch", () => {
     throw new Error("Network must not be called");
   });
-  await assert.rejects(
-    verifySuperadmin("api.example.com", "preview-web.up.railway.app", "fresh"),
-    /non-Railway api domain/,
-  );
-  await assert.rejects(
-    verifySuperadmin("preview-api.up.railway.app", "https://web.example.com", "fresh"),
-    /non-Railway web domain/,
-  );
+  process.env.API_DOMAIN = "api.example.com";
+  process.env.WEB_DOMAIN = "preview-web.up.railway.app";
+  t.after(() => {
+    delete process.env.API_DOMAIN;
+    delete process.env.WEB_DOMAIN;
+  });
+  await assert.rejects(verifySuperadmin("fresh"), /non-Railway api domain/);
+
+  process.env.API_DOMAIN = "preview-api.up.railway.app";
+  process.env.WEB_DOMAIN = "https://web.example.com";
+  await assert.rejects(verifySuperadmin("fresh"), /non-Railway web domain/);
 });

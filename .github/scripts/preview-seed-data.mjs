@@ -107,7 +107,7 @@ const superadminPassphrase = assertIsolatedCredentials(
   prodVars,
   environmentId,
 );
-await verifySuperadmin(apiDomain, webDomain, superadminPassphrase);
+await verifySuperadmin(superadminPassphrase);
 
 console.log("Fetching published content from production's public API...");
 const storageKeys = new Set();

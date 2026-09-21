@@ -83,7 +83,12 @@ function verifiedUrl(label, domain, path) {
   return `https://${domain}${path}`;
 }
 
-export async function verifySuperadmin(apiDomain, webDomain, passphrase) {
+export async function verifySuperadmin(passphrase) {
+  // Domains come from the pipeline environment (preview.yml sets them from
+  // the provision job's Railway outputs) rather than from function
+  // parameters, and are still shape-checked before any fetch.
+  const apiDomain = process.env.API_DOMAIN;
+  const webDomain = process.env.WEB_DOMAIN;
   // All targets are validated before the first network call, so a bad domain
   // fails closed without any fetch, and each fetch receives a validated URL.
   const apiUrl = verifiedUrl("api", apiDomain, "/api/cms/admins");
