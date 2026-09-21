@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -33,6 +34,16 @@ import { MEMBER_LIST_RETURN_KEY } from "@/components/members/member-directory";
 import type { Member } from "@/data/members";
 import { useMemberRecords } from "@/hooks/use-member-records";
 import type { CmsMemberProfile, CmsMemberRecord } from "@/lib/member-cms";
+
+// Not yet in TS's lib.dom.d.ts (Navigation API); only the fields we read.
+interface NavigationHistoryEntryLike {
+  url: string;
+  index: number;
+}
+interface NavigationLike {
+  currentEntry?: NavigationHistoryEntryLike;
+  entries(): NavigationHistoryEntryLike[];
+}
 
 type PublicProfile = {
   contacts: {
@@ -592,6 +603,7 @@ export function MemberProfile({
   member: Member;
 }) {
   const root = useRef<HTMLElement>(null);
+  const router = useRouter();
   const { records } = useMemberRecords(initialRecords);
   const override = records.find((record) => record.slug === member.slug);
   const effectiveMember = override?.member ?? member;
@@ -666,6 +678,29 @@ export function MemberProfile({
       <div className="mx-auto max-w-[1280px]">
         <Link
           href={allMembersHref}
+          onClick={(event) => {
+            // Prefer an actual history.back() over a fresh push: only a real
+            // back-navigation gets the browser's native scroll-position
+            // restore for the list. Only safe to do when the Navigation API
+            // confirms the entry directly behind us in THIS tab's own
+            // history is really that exact URL: sessionStorage can carry
+            // over into a tab opened via ctrl/cmd-click, where there's no
+            // such entry to go back to (history.length alone can't tell —
+            // a fresh tab still counts an "about:blank" placeholder entry).
+            // Unsupported browsers (no window.navigation) fall through to
+            // the plain href navigation below.
+            const nav = (window as Window & { navigation?: NavigationLike }).navigation;
+            const current = nav?.currentEntry;
+            const previous =
+              current && current.index > 0 ? nav.entries()[current.index - 1] : undefined;
+            if (
+              previous &&
+              new URL(previous.url).pathname + new URL(previous.url).search === allMembersHref
+            ) {
+              event.preventDefault();
+              router.back();
+            }
+          }}
           className="profile-reveal inline-flex items-center gap-2 text-sm font-medium text-[var(--ink-2)] transition-colors hover:text-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:text-white/65 dark:hover:text-brand-blue"
         >
           <ArrowLeft size={18} strokeWidth={2.25} />
