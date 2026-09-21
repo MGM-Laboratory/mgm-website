@@ -1,5 +1,6 @@
 import { ghRequest } from "./gh-api.mjs";
 import { codeowners } from "./codeowners.mjs";
+import { isLgtm, LGTM_GIF, upsertComment } from "./pr-comments.mjs";
 
 const actionsToken = process.env.GITHUB_TOKEN; // default token — actions:write only
 const botToken = process.env.BOT_TOKEN; // ren-automation installation token — comments only
@@ -20,14 +21,19 @@ const reply = (text) =>
   });
 
 const normalized = body.toLowerCase();
-const isLgtm = /^(?:\s|[*_`~#>])*lgtm(?:[!?.\s*_`~]*)$/i.test(body);
 
 // Bare "lgtm" is deliberately harmless — it's the single most common
 // throwaway phrase in code review, so it only ever posts a GIF. The actual
 // merge-and-ship action lives behind the explicit /merge command below so a
 // casual "lgtm" left in conversation can never ship anything to production.
-if (isLgtm) {
-  await reply("![lgtm](https://media.giphy.com/media/bXUbgRzNwKSg3iJYrJ/giphy.gif)");
+if (isLgtm(body)) {
+  await upsertComment(
+    botToken,
+    repo,
+    prNumber,
+    `<!-- ren-automation:lgtm:comment-${process.env.COMMENT_ID} -->`,
+    LGTM_GIF,
+  );
   process.exit(0);
 }
 

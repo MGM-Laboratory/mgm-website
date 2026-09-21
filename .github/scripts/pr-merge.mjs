@@ -7,9 +7,11 @@
 // do we touch the branch, the preview environment, or start watching
 // production, so a failure partway through never leaves the PR merged with
 // no record of what happened next.
-import { collectChecks, collectPullRequestContributorLogins, ghRequest } from "./gh-api.mjs";
+import { collectChecks, ghRequest } from "./gh-api.mjs";
+import { collectContributors, thankYouBody } from "./pr-contributors.mjs";
+import { replyReliably } from "./pr-comments.mjs";
 import { codeowners } from "./codeowners.mjs";
-import { factTable, footer, heading, mentionAll, statusTable } from "./format.mjs";
+import { footer, heading, mentionAll, statusTable } from "./format.mjs";
 import {
   API_SERVICE_ID,
   PRODUCTION_ENVIRONMENT_ID,
@@ -26,24 +28,9 @@ const prNumber = process.env.PR_NUMBER;
 const runUrl = process.env.RUN_URL;
 
 const PASS_STATES = new Set(["success", "skipped", "neutral"]);
-const PENDING_STATES = new Set(["pending", "in_progress", "queued"]);
-
 const gh = (path, opts) => ghRequest(token, path, opts);
-// Posting the status comment is a courtesy, not the point of /merge — a
-// transient failure here (e.g. the bot app's token rejected mid-run) must
-// never abort readiness checks or the merge itself, so this swallows its
-// own errors instead of throwing.
-const reply = async (body) => {
-  try {
-    return await ghRequest(botToken, `/repos/${repo}/issues/${prNumber}/comments`, {
-      method: "POST",
-      body: JSON.stringify({ body }),
-    });
-  } catch (err) {
-    console.warn(`Could not post PR comment: ${err.message}`);
-    return null;
-  }
-};
+const reply = (body, phase = "readiness") =>
+  replyReliably(botToken, token, repo, prNumber, `<!-- ren-automation:merge:${phase} -->`, body);
 
 let pr = await gh(`/repos/${repo}/pulls/${prNumber}`);
 
@@ -60,14 +47,35 @@ if (pr.mergeable === null) {
 }
 
 const checks = await collectChecks(token, repo, pr.head.sha);
-const failing = checks.filter((c) => !PASS_STATES.has(c.state) && !PENDING_STATES.has(c.state));
-const pending = checks.filter((c) => PENDING_STATES.has(c.state));
+const rules = await gh(`/repos/${repo}/rules/branches/${encodeURIComponent(pr.base.ref)}`);
+const required = rules
+  .filter((rule) => rule.type === "required_status_checks")
+  .flatMap((rule) => rule.parameters.required_status_checks);
+const unsatisfied = required.filter(
+  (rule) =>
+    !checks.some(
+      (check) =>
+        check.name === rule.context &&
+        (!rule.integration_id || check.appId === rule.integration_id) &&
+        PASS_STATES.has(check.state),
+    ),
+);
 
 const blockers = [];
 if (!checks.length) blockers.push("No checks have reported against this commit yet.");
-if (failing.length) blockers.push(`${failing.length} check(s) are failing.`);
-if (pending.length) blockers.push(`${pending.length} check(s) are still running.`);
+if (unsatisfied.length)
+  blockers.push(
+    `Required checks missing, running, or failing: ${unsatisfied.map((r) => r.context).join(", ")}.`,
+  );
 if (pr.mergeable === false) blockers.push("This PR has merge conflicts with `main`.");
+if (pr.mergeable === null) blockers.push("GitHub has not finished computing merge readiness.");
+if (pr.draft) blockers.push("This PR is still a draft.");
+if (pr.base.ref !== "main")
+  blockers.push("Only pull requests targeting main can be merged by this command.");
+if (["blocked", "behind", "unknown"].includes(pr.mergeable_state))
+  blockers.push(
+    `GitHub reports ${pr.mergeable_state}: check approvals, unresolved reviews, signatures, and whether the branch is up to date.`,
+  );
 
 if (blockers.length) {
   await reply(
@@ -90,17 +98,7 @@ if (blockers.length) {
   process.exit(0);
 }
 
-// The PR author is not necessarily the only person whose work is being
-// merged. Fetch every commit before the merge so the thank-you message tags
-// all GitHub-linked contributors, including co-authors who pushed commits.
-const commits = [];
-for (let page = 1; ; page++) {
-  const batch = await gh(`/repos/${repo}/pulls/${prNumber}/commits?per_page=100&page=${page}`);
-  commits.push(...batch);
-  if (batch.length < 100) break;
-}
-const contributors = collectPullRequestContributorLogins(commits, pr.user?.login);
-const contributorMentions = mentionAll(contributors);
+const contributors = await collectContributors(token, repo, pr);
 
 // Captured before merging so the post-merge watcher can tell a genuinely new
 // production deployment apart from the previous one still showing "SUCCESS".
@@ -110,41 +108,29 @@ const baselineDeploymentId = {
   [WEB_SERVICE_ID]: baseline.find((i) => i.serviceId === WEB_SERVICE_ID)?.latestDeployment?.id,
 };
 
-console.log("Ready to merge — posting the thank-you comment.");
-
-const stats = factTable([
-  ["Commits", pr.commits],
-  ["Files changed", pr.changed_files],
-  ["Lines", `+${pr.additions} / -${pr.deletions}`],
-]);
-
 await reply(
-  [
-    heading("🎉 Thank you, contributors!", 2),
-    "",
-    contributorMentions
-      ? `A huge thank-you to ${contributorMentions} for this work. Everything checks out and **${pr.title}** is merging into \`main\` now. 🙌`
-      : `Everything checks out and **${pr.title}** is merging into \`main\` now. Thank you for the contribution! 🙌`,
-    "",
-    stats,
-    "",
-    statusTable(checks.map((c) => ({ label: c.name, state: c.state, link: c.url }))),
-    "",
-    "![lgtm](https://media.giphy.com/media/bXUbgRzNwKSg3iJYrJ/giphy.gif)",
-    "",
-    footer(),
-  ].join("\n"),
+  `Required checks passed for \`${pr.head.sha.slice(0, 7)}\`. Asking GitHub to merge PR #${prNumber}.`,
 );
-
-const mergeResult = await gh(`/repos/${repo}/pulls/${prNumber}/merge`, {
-  method: "PUT",
-  body: JSON.stringify({
-    merge_method: "merge",
-    commit_title: `${pr.title} (#${prNumber})`,
-  }),
-});
+let mergeResult;
+try {
+  mergeResult = await gh(`/repos/${repo}/pulls/${prNumber}/merge`, {
+    method: "PUT",
+    body: JSON.stringify({
+      merge_method: "merge",
+      sha: pr.head.sha,
+      commit_title: `${pr.title} (#${prNumber})`,
+    }),
+  });
+  if (!mergeResult.merged) throw new Error(mergeResult.message ?? "GitHub did not merge the PR");
+} catch (error) {
+  await reply(
+    `GitHub refused the merge: ${error.message}\n\nResolve the blocker and run \`/merge\` again.`,
+  );
+  throw error;
+}
 const mergeSha = mergeResult.sha;
 console.log(`Merged as ${mergeSha}.`);
+await reply(thankYouBody(pr, contributors), "thanks");
 
 // Branch deletion: only when it's genuinely ours to delete and nothing else
 // still needs it.
@@ -186,6 +172,7 @@ try {
 
 await reply(
   [heading("🧹 Cleanup", 3), "", `- ${branchNote}`, `- ${previewNote}`, "", footer()].join("\n"),
+  "cleanup",
 );
 
 // Post-merge production verification. Railway's own deploy is triggered by
@@ -207,6 +194,9 @@ await reply(
 console.log("Dispatching CI and Docker publish against the merge commit...");
 const DISPATCHED_WORKFLOWS = [
   { file: "ci.yaml", label: "CI" },
+  { file: "security.yaml", label: "Security" },
+  { file: "e2e.yaml", label: "E2E" },
+  { file: "vale.yaml", label: "Vale" },
   { file: "publish-docker-image-latest.yml", label: "Publish Docker Images (latest)" },
 ];
 const dispatched = await Promise.all(
@@ -287,6 +277,7 @@ await reply(
     "",
     footer(),
   ].join("\n"),
+  "production",
 );
 
 if (anyFailed) {
