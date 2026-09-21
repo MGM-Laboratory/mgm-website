@@ -50,32 +50,30 @@ if (isNew) {
 await assertPreviewEnvironment(token, prNumber, environment.id);
 
 const oldApiVars = await getVariables(token, environment.id, API_SERVICE_ID);
-if (!isNew && oldApiVars.PREVIEW_ISOLATION_VERSION !== "2") {
-  // A failed v2 attempt could have left an empty environment behind. It is
-  // safe to remove only that exact PR-named environment, then recreate it
-  // from the production topology. Never delete an environment with the
-  // production id (assertPreviewEnvironment has already guarded this).
-  const existingInstances = await listServiceInstances(token, environment.id);
-  const requiredServiceIds = new Set([
-    API_SERVICE_ID,
-    WEB_SERVICE_ID,
-    POSTGRES_SERVICE_ID,
-    REDIS_SERVICE_ID,
-  ]);
-  const hasTopology =
-    requiredServiceIds.size ===
-    existingInstances.filter((instance) => requiredServiceIds.has(instance.serviceId)).length;
-  if (!hasTopology) {
-    console.log(`Removing incomplete preview environment ${name} before recreation...`);
-    await deleteEnvironment(token, environment.id);
-    environment = await createPreviewEnvironment(token, name);
-    await assertPreviewEnvironment(token, prNumber, environment.id);
-    isNew = true;
-  } else {
-    throw new Error(
-      "This legacy preview predates isolation v2. Close its PR to tear it down before recreating the preview.",
-    );
-  }
+// A failed attempt can leave stale variables behind even when the service
+// topology was never created. Check topology first, before trusting the
+// marker, and recover only the exact PR-named environment. Never delete an
+// environment with the production id (the assertion above guards this).
+const existingInstances = await listServiceInstances(token, environment.id);
+const requiredServiceIds = new Set([
+  API_SERVICE_ID,
+  WEB_SERVICE_ID,
+  POSTGRES_SERVICE_ID,
+  REDIS_SERVICE_ID,
+]);
+const hasTopology =
+  requiredServiceIds.size ===
+  existingInstances.filter((instance) => requiredServiceIds.has(instance.serviceId)).length;
+if (!isNew && !hasTopology) {
+  console.log(`Removing incomplete preview environment ${name} before recreation...`);
+  await deleteEnvironment(token, environment.id);
+  environment = await createPreviewEnvironment(token, name);
+  await assertPreviewEnvironment(token, prNumber, environment.id);
+  isNew = true;
+} else if (!isNew && oldApiVars.PREVIEW_ISOLATION_VERSION !== "2") {
+  throw new Error(
+    "This legacy preview predates isolation v2. Close its PR to tear it down before recreating the preview.",
+  );
 }
 
 // Replace the cloned database/cache credentials before either application is
