@@ -40,6 +40,10 @@ jobs:
           # opt.filterMode = filter.ModeNoFilter }`).
           filter_mode: nofilter
           fail_on_error: true
+          # The full configured corpus has hundreds of non-blocking
+          # suggestions and warnings. Posting all of them exceeds GitHub's
+          # 65,535-character check-output limit, so send only the gate level.
+          min_alert_level: error
           level: warning
           # A newline separator looks tidier as a multi-line `files:` block,
           # but @actions/core's getInput() trims all whitespace (including
