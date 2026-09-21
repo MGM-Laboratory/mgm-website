@@ -220,7 +220,11 @@ Gatus also exposes a response-time badge (`.../response-times/:duration/badge.sv
 
 ## Governance
 
-`main` requires an up-to-date PR, signed commits, resolved review threads, and the selected first-party gates below. Approving reviews are welcome but deliberately not required: GitHub blocks a PR author from approving their own pull request, so a required approval would leave every single-maintainer change permanently unmergeable. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`; do not use an administrative bypass for routine work.
+`main` requires an up-to-date PR, signed commits, resolved review threads, and the selected first-party gates below.
+
+Pull request reviews: 0 approvals are numerically required, but the ruleset separately requires a Code Owner review, resolved via `CODEOWNERS` (currently `* @shirasakaren`, every file routes to the same owner). Combined with "require approval of the most recent reviewable push," the approval has to come from someone other than whoever pushed last, so self-push-then-approve doesn't satisfy it, and pushing new commits dismisses any stale prior approval. This doesn't create the single-maintainer deadlock a numeric approval requirement would (GitHub blocks a PR author from approving their own pull request): the code owner is a distinct identity from the usual PR author, so a real approval is always obtainable. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`. Do not use an administrative bypass for routine work.
+
+The ruleset also allows all three merge strategies (merge commit, squash, rebase) at the GitHub level, but `/merge`'s own automation always merges with a merge commit specifically (see "Merging" below). The broader allowance only matters for a manual merge through GitHub's own UI.
 
 The `main-protection` ruleset (id `23450743`) deliberately requires only stable, repository-owned checks rather than every check reported by installed apps. This keeps the branch rule strict without allowing an unrelated or renamed third-party check to block every merge:
 
