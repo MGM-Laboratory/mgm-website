@@ -49,17 +49,17 @@ if (pr.mergeable === null) {
 const checks = await collectChecks(token, repo, pr.head.sha);
 let rules = [];
 try {
-  // Ruleset inspection requires repository administration:read, which is
-  // intentionally granted only to the installation token. The default
-  // workflow token is still used for all ordinary PR reads and the merge.
+  // Ruleset inspection needs repository administration:read, which the
+  // ren-automation installation does not grant, so this usually fails and
+  // warns. That's fine: GitHub's merge endpoint remains the final authority
+  // and will return the protected-branch reason if a required check is
+  // missing, so the pre-check below only ever gets the richer detail when
+  // the token happens to have the permission.
   rules = await ghRequest(
     botToken,
     `/repos/${repo}/rules/branches/${encodeURIComponent(pr.base.ref)}`,
   );
 } catch (error) {
-  // GitHub's merge endpoint remains the final authority. If an installation
-  // is not granted administration:read, don't turn an otherwise valid merge
-  // into a deadlock; it will return the protected-branch reason on failure.
   console.warn(`Could not read branch ruleset; GitHub will enforce it on merge: ${error.message}`);
 }
 const required = rules
