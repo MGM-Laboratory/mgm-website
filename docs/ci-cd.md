@@ -156,7 +156,7 @@ The Railway MCP tools are also available in agent sessions (`list-projects`, `de
 
 `main` requires a PR + every required status check to merge. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`; do not use the administrative bypass for routine work.
 
-Reviews are encouraged but not merge-blocking. `CODEOWNERS` lists multiple human maintainers so review requests always reach people other than the PR author. Automated review services, including CodeRabbit, remain advisory and must never be configured as required approvals or required status checks. This keeps CI, security, signature, and test gates intact without allowing a stalled bot review to block a healthy PR.
+Reviews are optional. `CODEOWNERS` lists several human maintainers, so review requests can reach a person other than the PR author. Automated review services, including CodeRabbit, remain advisory. Do not configure them as required approvals or required status checks. This keeps CI, security, signature, and test gates intact while preventing a stalled bot from blocking a healthy PR.
 
 ### Known issue: the ruleset's required-check names keep getting reset
 
