@@ -49,7 +49,7 @@ Maintainers, or anyone listed in `CODEOWNERS`, can also run:
 
 - **`/check`**: re-runs the latest CI run for the PR's current commit.
 - **`/preview`**: builds the PR's code into Docker images and deploys a throwaway Railway environment (web + api + Postgres + Redis + bucket) seeded with sanitized public production content, then comments the preview URL and its freshly rotated Railway superadmin password. The deploy is watched strictly (checked every minute, retried automatically on a crash, escalated to CODEOWNERS after 10 minutes without giving up, capped at 1 hour) with progress posted to the PR throughout. Torn down automatically when the PR closes, or safe to re-run any time.
-- **`/merge`**: checks that every required check is green and there are no conflicts, thanks and tags every GitHub-linked contributor from the PR's commits, merges with a merge commit, deletes the branch if it's safe to, tears down the PR's preview environment, and confirms the resulting production deploy actually succeeds before calling it done. If anything's not ready, it says what and does nothing else.
+- **`/merge`**: checks that every required check is green and there are no conflicts, merges with a merge commit, then thanks and tags every GitHub-linked contributor from the PR's commits, deletes the branch if it's safe to, tears down the PR's preview environment, and confirms the resulting production deploy actually succeeds before calling it done. If anything's not ready, it says what and does nothing else.
 - **`/close`**: closes the PR without merging it. The branch is left alone (nothing is deleted), but any preview environment running for the PR is torn down immediately rather than left sitting around.
 
 ## Commit messages
