@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArticleBody } from "@/components/articles/article-body";
+import { ArticleCover } from "@/components/articles/article-cover";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import {
   articleCoverUrl,
@@ -152,18 +153,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   href={`/articles/${other.slug}`}
                   key={other.slug}
                 >
-                  {articleCoverUrl(other.article.coverKey) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      alt=""
-                      className="block w-full aspect-[370/230] object-cover transition group-hover:opacity-90"
-                      src={articleCoverUrl(other.article.coverKey)}
-                    />
-                  ) : (
-                    <div className="grid aspect-[370/230] w-full place-items-center bg-[var(--surface-muted)] text-[var(--ink-3)]">
-                      <span className="font-display text-2xl font-semibold">MGM</span>
-                    </div>
-                  )}
+                  <ArticleCover src={articleCoverUrl(other.article.coverKey)} />
                   <h3 className="mt-[25px] font-display text-[1.5rem] leading-snug font-medium text-[#919191] transition group-hover:text-[#0e1116] dark:text-[#8b8f9a] dark:group-hover:text-white">
                     {other.article.title}
                   </h3>

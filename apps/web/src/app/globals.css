@@ -69,6 +69,67 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+.article-cover-image {
+  transition:
+    transform 650ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 450ms ease;
+}
+
+.article-cover-tint {
+  background: var(--brand-blue);
+  opacity: 0;
+  transition: opacity 450ms ease;
+}
+
+.article-cover-arrow {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 300ms ease,
+    transform 450ms ease;
+}
+
+a:focus-visible .article-cover-image {
+  transform: scale(1.045);
+  filter: saturate(1.12) contrast(1.04);
+}
+
+a:focus-visible .article-cover-tint {
+  opacity: 0.08;
+}
+a:focus-visible .article-cover-arrow {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a:hover .article-cover-image {
+    transform: scale(1.045);
+    filter: saturate(1.12) contrast(1.04);
+  }
+  a:hover .article-cover-tint {
+    opacity: 0.08;
+  }
+  a:hover .article-cover-arrow {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .article-cover-image,
+  .article-cover-tint,
+  .article-cover-arrow {
+    transition: none;
+  }
+  a:is(:hover, :focus-visible) .article-cover-image {
+    transform: none;
+  }
+  .article-cover-arrow {
+    transform: none;
+  }
+}
+
 /* Hero reveal — see /src/components/hero. Split characters need
    display:inline-block for GSAP's transforms to apply per-letter. */
 .media-char,

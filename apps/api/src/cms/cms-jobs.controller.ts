@@ -82,7 +82,7 @@ const applySchema = z
     phoneNumber: z
       .string()
       .trim()
-      .regex(/^[0-9][0-9 ()\-]{5,19}$/),
+      .regex(/^[0-9][0-9 ()-]{5,19}$/),
     nim: z.string().trim().max(30).optional().or(z.literal("")),
     faculty: z.string().trim().max(120).optional().or(z.literal("")),
     motivation: z.string().trim().min(10).max(8000),
@@ -135,6 +135,8 @@ const CV_MIME_TYPES: Record<string, string> = {
 /** The original filename is display-only; strip anything path-shaped. */
 function sanitizeFilename(name: string) {
   const cleaned = name
+    // Control characters are intentionally removed from uploaded filenames.
+    // eslint-disable-next-line no-control-regex
     .replace(/[/\\\u0000-\u001f\u007f]/g, "")
     .trim()
     .slice(0, 255);

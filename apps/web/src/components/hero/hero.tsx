@@ -55,27 +55,28 @@ const shapeHeightClass = "h-[clamp(4rem,8vw,6.5rem)]";
 
 const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
 
-function startIdleLoops(): gsap.core.Animation[] {
+function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
+  const q = gsap.utils.selector(root);
   const loops: gsap.core.Animation[] = [];
 
   // A small number of clear, long-running motions preserves the hero's
   // energy without continuously repainting every decorative element.
   loops.push(
-    gsap.to(".shape-circle-yellow", {
+    gsap.to(q(".shape-circle-yellow"), {
       y: -6,
       duration: 1.6,
       ease: "sine.inOut",
       yoyo: true,
       repeat: -1,
     }),
-    gsap.to(".shape-square", {
+    gsap.to(q("div.shape-square"), {
       rotate: 6,
       duration: 2.2,
       ease: "sine.inOut",
       yoyo: true,
       repeat: -1,
     }),
-    gsap.to(".hero-logo", {
+    gsap.to(q(".hero-logo"), {
       scale: 1.05,
       transformOrigin: "50% 50%",
       duration: 2.6,
@@ -83,14 +84,57 @@ function startIdleLoops(): gsap.core.Animation[] {
       yoyo: true,
       repeat: -1,
     }),
-    gsap.to(".corner-pattern", {
-      rotate: 360,
-      duration: 44,
-      ease: "none",
+    gsap.to(q(".corner-pattern"), {
+      y: -8,
+      duration: 3.8,
+      ease: "sine.inOut",
+      yoyo: true,
       repeat: -1,
       transformOrigin: "50% 50%",
     }),
   );
+
+  // A full turn contains four distinct clockwise quarter-turns. Repeating
+  // at 360 degrees is visually seamless without accumulating rotation.
+  const turns = gsap.timeline({ repeat: -1 });
+  for (let quarter = 1; quarter <= 4; quarter++) {
+    turns.to(
+      q("div.shape-x"),
+      {
+        rotation: quarter * 90,
+        duration: 1.1,
+        ease: "sine.inOut",
+      },
+      "+=2.8",
+    );
+  }
+  loops.push(turns);
+  loops.push(
+    gsap.fromTo(
+      q(".fans-motif-wrap"),
+      { rotation: -5 },
+      {
+        rotation: 5,
+        duration: 2.4,
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: true,
+      },
+    ),
+  );
+  q(".bg-motif").forEach((motif, index) => {
+    loops.push(
+      gsap.to(motif, {
+        x: index % 2 ? 5 : -4,
+        y: index % 2 ? -7 : 6,
+        rotation: index % 2 ? 10 : -8,
+        duration: 2.8 + index * 0.35,
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: true,
+      }),
+    );
+  });
 
   return loops;
 }
@@ -153,7 +197,7 @@ function buildEntranceTimeline(
     )
     // Row 1 shapes — each with its own entrance personality
     .fromTo(
-      ".shape-square",
+      "div.shape-square",
       { opacity: 0, scale: 0, rotate: -14 },
       { opacity: 1, scale: 1, rotate: 0, duration: 0.4, ease: "back.out(2.6)" },
       "media+=0.35",
@@ -175,7 +219,7 @@ function buildEntranceTimeline(
       "<",
     )
     .fromTo(
-      ".shape-triangle",
+      "div.shape-triangle",
       { opacity: 0, scale: 0, rotate: -140 },
       { opacity: 1, scale: 1, rotate: 0, duration: 0.5, ease: "back.out(2)" },
       "-=0.3",
@@ -187,7 +231,7 @@ function buildEntranceTimeline(
       "-=0.25",
     )
     .fromTo(
-      ".shape-x",
+      "div.shape-x",
       { opacity: 0, scale: 0, rotate: -50 },
       { opacity: 1, scale: 1, rotate: 0, duration: 0.3, ease: "back.out(3.2)" },
       "-=0.15",
@@ -253,12 +297,12 @@ function buildEntranceTimeline(
       "-=0.25",
     )
     // Arrow — a spark draws the line as it travels, then a simple arrowhead lands
-    .addLabel("arrow", "+=0.2")
+    .addLabel("arrow")
     .fromTo(".hero-arrow-wrap", { opacity: 0 }, { opacity: 1, duration: 0.2 }, "arrow")
     .fromTo(
       ".arrow-connector [data-part='arrow-path']",
       { drawSVG: "0%" },
-      { drawSVG: "100%", duration: 1, ease: "power2.inOut" },
+      { drawSVG: "100%", duration: 0.733, ease: "power2.inOut" },
       "arrow",
     )
     .fromTo(
@@ -281,7 +325,7 @@ function buildEntranceTimeline(
           start: 0,
           end: 1,
         },
-        duration: 1,
+        duration: 0.733,
         ease: "power2.inOut",
       },
       "arrow",
@@ -289,22 +333,23 @@ function buildEntranceTimeline(
     // ...staying fully visible until 75% of the way along, then fading out.
     .to(
       ".arrow-connector [data-part='arrow-spark']",
-      { opacity: 0, ease: "power1.in", duration: 0.25 },
-      "arrow+=0.75",
+      { opacity: 0, ease: "power1.in", duration: 0.14 },
+      "arrow+=0.72",
     )
     .fromTo(
       ".arrow-connector [data-part='arrow-head']",
       { opacity: 0 },
-      { opacity: 1, duration: 0.2 },
-      "-=0.1",
+      { opacity: 1, duration: 0.12 },
+      "arrow+=0.8",
     )
     // Outro — "& Mobile Laboratory", the logo assembling, tagline, and the last flourishes
-    .addLabel("outro", "+=0.15")
+    // Start the closing text on the exact frame the arrowhead settles.
+    .addLabel("outro")
     .set(".line-mobile", { opacity: 1 }, "outro")
     .fromTo(
       mobileSplit.chars,
       { opacity: 0, y: 50, rotateX: -90, transformOrigin: "50% 100%" },
-      { opacity: 1, y: 0, rotateX: 0, duration: 0.55, ease: "back.out(1.8)", stagger: 0.022 },
+      { opacity: 1, y: 0, rotateX: 0, duration: 0.72, ease: "back.out(1.8)", stagger: 0.028 },
       "outro",
     )
     .fromTo(
@@ -346,6 +391,10 @@ function buildEntranceTimeline(
       "-=0.3",
     );
 
+  // Keep the choreography and overlap intact while shortening every reveal,
+  // including the small gaps between rows. Idle loops start only after this
+  // accelerated entrance has completed.
+  tl.timeScale(1.35);
   return tl;
 }
 
@@ -391,6 +440,7 @@ function buildCompactEntranceTimeline(root: HTMLDivElement) {
       "-=0.25",
     );
 
+  tl.timeScale(1.25);
   return tl;
 }
 
@@ -542,110 +592,163 @@ export function Hero() {
     let mediaSplit: SplitText | undefined;
     let gameSplit: SplitText | undefined;
     let mobileSplit: SplitText | undefined;
+    let setupFrame: number | undefined;
     const mm = gsap.matchMedia();
 
     document.fonts.ready
       .then(() => {
         if (cancelled) return;
 
-        mediaSplit = SplitText.create(".line-media", { type: "chars", charsClass: "media-char" });
-        gameSplit = SplitText.create(".line-game", { type: "chars", charsClass: "game-char" });
-        mobileSplit = SplitText.create(".line-mobile", {
-          type: "words, chars",
-          charsClass: "mobile-char",
-        });
+        // Next's App Router enables React Strict Mode in development. Its
+        // probe mounts, cleans up, and mounts effects again; deferring setup
+        // one frame lets the probe cleanup cancel the first pass before any
+        // SplitText or entrance tween can paint.
+        setupFrame = requestAnimationFrame(() => {
+          setupFrame = undefined;
+          if (cancelled) return;
 
-        mm.add(
-          {
-            reduced: "(prefers-reduced-motion: reduce)",
-            full: "(prefers-reduced-motion: no-preference)",
-            compact: "(max-width: 879px)",
-          },
-          (context) => {
-            const { compact, reduced } = context.conditions as {
-              compact: boolean;
-              reduced: boolean;
-            };
-            const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
-
-            if (compact) {
-              const compactLogoShards = gsap.utils.selector(root)(
-                ".compact-hero-logo [data-part^='shard-']",
-              );
-
-              if (reduced || startedScrolled || cameFromInternalNav) {
-                gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                gsap.set(compactLogoShards, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                reveal(false);
-                return;
-              }
-
-              const tl = buildCompactEntranceTimeline(root);
-              const logo = gsap.utils.selector(root)(".compact-hero-logo");
-              const idleLoop = gsap.to(logo, {
-                y: -5,
-                duration: 1.8,
-                ease: "sine.inOut",
-                yoyo: true,
-                repeat: -1,
-              });
-
-              tl.eventCallback("onComplete", () => reveal(true));
-
-              return () => {
-                tl.kill();
-                idleLoop.kill();
-              };
-            }
-
-            if (reduced || startedScrolled || cameFromInternalNav) {
-              gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-              gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
-                opacity: 1,
-                x: 0,
-                y: 0,
-                rotate: 0,
-                rotateX: 0,
-                scale: 1,
-              });
-              gsap.set(".line-game", { scaleX: 1 });
-              gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
-              gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
-              gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
-              gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
-              reveal(false);
-              return;
-            }
-
-            const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
-            let idleLoops: gsap.core.Animation[] = [];
-
-            tl.eventCallback("onComplete", () => {
-              idleLoops = startIdleLoops();
-              reveal(true);
+          try {
+            mediaSplit = SplitText.create(root.querySelector(".line-media")!, {
+              type: "chars",
+              charsClass: "media-char",
+            });
+            gameSplit = SplitText.create(root.querySelector(".line-game")!, {
+              type: "chars",
+              charsClass: "game-char",
+            });
+            mobileSplit = SplitText.create(root.querySelector(".line-mobile")!, {
+              type: "words, chars",
+              charsClass: "mobile-char",
             });
 
-            const removeParallax = setupParallax(root);
+            mm.add(
+              {
+                reduced: "(prefers-reduced-motion: reduce)",
+                full: "(prefers-reduced-motion: no-preference)",
+                compact: "(max-width: 879px)",
+              },
+              (context) => {
+                const { compact, reduced } = context.conditions as {
+                  compact: boolean;
+                  reduced: boolean;
+                };
+                const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
 
-            if (process.env.NODE_ENV !== "production") {
-              Object.assign(window, {
-                __heroTl: tl,
-                __heroReplay: () => {
-                  idleLoops.forEach((loop) => loop.kill());
-                  idleLoops = [];
-                  gsap.set(".scroll-indicator", { opacity: 0, y: 14 });
-                  tl.restart();
-                },
-              });
-            }
+                if (compact) {
+                  const compactLogoShards = gsap.utils.selector(root)(
+                    ".compact-hero-logo [data-part^='shard-']",
+                  );
 
-            return () => {
-              tl.kill();
-              idleLoops.forEach((loop) => loop.kill());
-              removeParallax();
-            };
-          },
-        );
+                  if (reduced || startedScrolled || cameFromInternalNav) {
+                    gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+                    gsap.set(compactLogoShards, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+                    reveal(false);
+                    return;
+                  }
+
+                  const tl = buildCompactEntranceTimeline(root);
+                  const logo = gsap.utils.selector(root)(".compact-hero-logo");
+                  const idleLoop = gsap.to(logo, {
+                    y: -5,
+                    duration: 1.8,
+                    ease: "sine.inOut",
+                    yoyo: true,
+                    repeat: -1,
+                  });
+
+                  tl.eventCallback("onComplete", () => reveal(true));
+
+                  return () => {
+                    tl.kill();
+                    idleLoop.kill();
+                  };
+                }
+
+                const idleContext = gsap.context(() => {}, root);
+                let idleLoops: gsap.core.Animation[] = [];
+                let removeParallax = () => {};
+                let observer: IntersectionObserver | undefined;
+                let visible = true;
+                const pauseWhenHidden = () => {
+                  idleLoops.forEach((loop) => loop.paused(!visible || document.hidden));
+                };
+                const startIdle = () =>
+                  idleContext.add(() => {
+                    idleLoops = startIdleLoops(root);
+                    removeParallax = setupParallax(root);
+                    observer = new IntersectionObserver(([entry]) => {
+                      visible = entry.isIntersecting;
+                      pauseWhenHidden();
+                    });
+                    observer.observe(root);
+                    document.addEventListener("visibilitychange", pauseWhenHidden);
+                  });
+                const stopIdle = () => {
+                  observer?.disconnect();
+                  document.removeEventListener("visibilitychange", pauseWhenHidden);
+                  removeParallax();
+                  idleContext.revert();
+                };
+
+                if (reduced || startedScrolled || cameFromInternalNav) {
+                  gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+                  gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
+                    opacity: 1,
+                    x: 0,
+                    y: 0,
+                    rotate: 0,
+                    rotateX: 0,
+                    scale: 1,
+                  });
+                  gsap.set(".line-game", { scaleX: 1 });
+                  gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
+                  gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
+                  gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
+                  gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
+                  gsap.set(".corner-pattern", { opacity: 0.6 });
+                  reveal(false);
+                  if (!reduced) startIdle();
+                  return stopIdle;
+                }
+
+                const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
+                tl.eventCallback("onComplete", () => {
+                  startIdle();
+                  reveal(true);
+                });
+
+                if (process.env.NODE_ENV !== "production") {
+                  Object.assign(window, {
+                    __heroTl: tl,
+                    __heroReplay: () => {
+                      idleLoops.forEach((loop) => loop.kill());
+                      idleLoops = [];
+                      stopIdle();
+                      gsap.set(".scroll-indicator", { opacity: 0, y: 14 });
+                      tl.restart();
+                    },
+                  });
+                }
+
+                return () => {
+                  tl.kill();
+                  stopIdle();
+                };
+              },
+              root,
+            );
+          } catch (err) {
+            console.error("Hero entrance setup failed; revealing all hero content.", err);
+            const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
+            const splitChars = [mediaSplit, gameSplit, mobileSplit].flatMap(
+              (split) => split?.chars ?? [],
+            );
+
+            gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
+            gsap.set(splitChars, { opacity: 1, x: 0, y: 0, rotate: 0, rotateX: 0, scale: 1 });
+            reveal(false);
+          }
+        });
       })
       .catch((err) => {
         console.error("Hero entrance setup failed; revealing scroll indicator.", err);
@@ -665,6 +768,7 @@ export function Hero() {
 
     return () => {
       cancelled = true;
+      if (setupFrame !== undefined) cancelAnimationFrame(setupFrame);
       if (failSafeTimer) clearTimeout(failSafeTimer);
       window.removeEventListener("keydown", onKeydown);
       mm.revert();
@@ -677,7 +781,7 @@ export function Hero() {
   return (
     <div
       ref={rootRef}
-      className="hero relative flex flex-1 flex-col justify-center overflow-hidden bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
+      className="hero relative flex flex-1 flex-col justify-center bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
     >
       {/* Ambient background motifs — pure whitespace flourish, idle-floating */}
       <Dot className="bg-motif reveal-hidden absolute top-[10%] left-[5%] hidden size-3 opacity-0 text-brand-yellow min-[880px]:block min-[880px]:size-4" />
@@ -700,7 +804,11 @@ export function Hero() {
       >
         {/* Row 1 — Media, */}
         <div ref={row1Ref} className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
-          <span className={cn("line-media [perspective:500px]", headline)}>Media,</span>
+          <div className="parallax-el" data-depth="0.35">
+            <span className={cn("line-media inline-block [perspective:500px]", headline)}>
+              Media,
+            </span>
+          </div>
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             <div className="parallax-el" data-depth="0.7">
               <div className={`shape-square reveal-hidden opacity-0 ${shapeBoxClass}`}>
@@ -768,19 +876,23 @@ export function Hero() {
                 </div>
               </div>
             </div>
-            <span className={cn("line-game", headline)}>Game,</span>
+            <div className="parallax-el" data-depth="0.4">
+              <span className={cn("line-game inline-block", headline)}>Game,</span>
+            </div>
           </div>
 
           <div
             ref={row3Ref}
             className="mt-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-4 sm:mt-4"
           >
-            <span
-              ref={mobileTextRef}
-              className={cn("line-mobile text-right [perspective:600px]", headline)}
-            >
-              &amp; Mobile Laboratory
-            </span>
+            <div className="parallax-el" data-depth="0.3">
+              <span
+                ref={mobileTextRef}
+                className={cn("line-mobile inline-block text-right [perspective:600px]", headline)}
+              >
+                &amp; Mobile Laboratory
+              </span>
+            </div>
             <div className="parallax-el" data-depth="0.4">
               <LogoMark className={`hero-logo ${shapeBoxClass}`} />
             </div>
@@ -803,7 +915,7 @@ export function Hero() {
         <SeeWorkButton animationClassName="compact-hero-cta" />
       </div>
 
-      <div className="corner-pattern reveal-hidden pointer-events-none absolute -right-6 -bottom-6 z-10 hidden opacity-0 min-[880px]:block dark:hidden">
+      <div className="corner-pattern reveal-hidden pointer-events-none absolute right-6 -bottom-6 z-10 hidden opacity-0 min-[880px]:block">
         <svg width="120" height="120" viewBox="0 0 100 100" aria-hidden>
           <circle cx="50" cy="50" r="40" fill="none" stroke="var(--brand-blue)" strokeWidth="20" />
         </svg>

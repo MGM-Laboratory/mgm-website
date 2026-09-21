@@ -175,7 +175,7 @@ function Band({
   const j3 = useRef<RapierRigidBody>(null!);
   const card = useRef<RapierRigidBody>(null!);
 
-  const vec = new THREE.Vector3();
+  const vec = useMemo(() => new THREE.Vector3(), []);
   const ang = new THREE.Vector3();
   const rot = new THREE.Vector3();
   const dir = new THREE.Vector3();

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArticleCover } from "@/components/articles/article-cover";
 
 import { ArticleSearchBox } from "@/components/articles/article-search-box";
 import {
@@ -143,20 +144,7 @@ export default async function ArticlesPage({
                         href={`/articles/${result.slug}`}
                         key={result.slug}
                       >
-                        {coverUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            alt=""
-                            className="block w-full aspect-[370/230] object-cover transition group-hover:opacity-90"
-                            src={coverUrl}
-                          />
-                        ) : (
-                          <div className="grid aspect-[370/230] w-full place-items-center bg-[var(--surface-muted)]">
-                            <span className="font-display text-3xl font-semibold text-[var(--ink-3)]">
-                              MGM
-                            </span>
-                          </div>
-                        )}
+                        <ArticleCover src={coverUrl} />
                         {result.categories.length ? (
                           <div className="mt-6 flex flex-wrap gap-x-[9px] gap-y-1">
                             {result.categories.map((category) => (
@@ -217,20 +205,7 @@ export default async function ArticlesPage({
                     href={`/articles/${record.slug}`}
                     key={record.slug}
                   >
-                    {coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        alt=""
-                        className="block w-full aspect-[370/230] object-cover transition group-hover:opacity-90"
-                        src={coverUrl}
-                      />
-                    ) : (
-                      <div className="grid aspect-[370/230] w-full place-items-center bg-[var(--surface-muted)]">
-                        <span className="font-display text-3xl font-semibold text-[var(--ink-3)]">
-                          MGM
-                        </span>
-                      </div>
-                    )}
+                    <ArticleCover src={coverUrl} />
                     {record.article.categories.length ? (
                       <div className="mt-6 flex flex-wrap gap-x-[9px] gap-y-1">
                         {record.article.categories.map((category) => (

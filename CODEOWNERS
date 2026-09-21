@@ -1,2 +1,4 @@
 # Default owner for everything in the repo, unless a later match overrides it.
+# Route every code-owner review request to the repository owner.
+# Automated review services are advisory and must not be approval gates.
 * @shirasakaren

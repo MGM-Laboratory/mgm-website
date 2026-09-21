@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArticleCover } from "@/components/articles/article-cover";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 
@@ -400,22 +401,7 @@ export default async function ResearchPage() {
                         const tile = (
                           <div className="flex h-full w-56 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition hover:border-brand-red/50 dark:border-white/10 dark:bg-white/[0.02]">
                             {type === "article" ? (
-                              cover ? (
-                                // The cover is CMS media, outside the image loader.
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  alt=""
-                                  className="block w-full aspect-[16/9] object-cover"
-                                  src={cover}
-                                />
-                              ) : (
-                                <PatternTile
-                                  bg="canvas"
-                                  className="block w-full aspect-[16/9]"
-                                  fg={tones[type]}
-                                  kind={patterns[type]}
-                                />
-                              )
+                              <ArticleCover src={cover} className="aspect-[16/9]" />
                             ) : type === "project" ? (
                               <PatternTile
                                 bg="canvas"
