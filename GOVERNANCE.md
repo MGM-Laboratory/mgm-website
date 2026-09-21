@@ -10,4 +10,4 @@ MGM Laboratory's website is currently maintained by a single maintainer, who has
 
 ## Becoming a maintainer
 
-There's no fixed process yet — this project is small. Consistent, high-quality contributions over time are the path; reach out at **hi@labmgm.org** if you're interested in taking on more responsibility.
+There's no fixed process yet because this project is small. Consistent, high-quality contributions over time are the path; reach out at **hi@labmgm.org** if you're interested in taking on more responsibility.
