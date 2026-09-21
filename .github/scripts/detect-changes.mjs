@@ -15,7 +15,20 @@ if (eventName === "pull_request") {
   force = changed.length >= 3000 || changed.length !== event.pull_request.changed_files;
   files = changed.flatMap((file) => [file.filename, file.previous_filename].filter(Boolean));
 } else if (eventName === "push") {
-  if (!/^[0-9a-f]{40}$/.test(event.before) || /^0+$/.test(event.before)) force = true;
+  // event.before can be a dangling SHA (force-push, recreated ref), and a
+  // merely well-formed non-zero SHA doesn't mean git can diff against it.
+  // Verify the commit is actually reachable in the full clone first; when it
+  // isn't, force every scope on rather than let `git diff` fail the job.
+  let beforeReachable = false;
+  if (/^[0-9a-f]{40}$/.test(event.before) && !/^0+$/.test(event.before)) {
+    try {
+      execFileSync("git", ["cat-file", "-e", `${event.before}^{commit}`], { stdio: "ignore" });
+      beforeReachable = true;
+    } catch {
+      beforeReachable = false;
+    }
+  }
+  if (!beforeReachable) force = true;
   else
     files = execFileSync(
       "git",
