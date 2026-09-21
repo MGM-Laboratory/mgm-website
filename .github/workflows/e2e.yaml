@@ -11,19 +11,22 @@ concurrency:
   group: e2e-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  pull-requests: read
+permissions: {}
 
 jobs:
   changes:
     name: Detect Changes
     uses: ./.github/workflows/detect-changes.yml
+    permissions:
+      contents: read
+      pull-requests: read
 
   e2e:
     name: Playwright (${{ matrix.os }}, ${{ matrix.project }})
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
