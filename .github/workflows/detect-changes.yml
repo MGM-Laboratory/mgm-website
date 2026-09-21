@@ -3,9 +3,39 @@ name: Detect Changes
 on:
   workflow_call:
     outputs:
-      code:
-        description: Whether any changed file falls outside docs/license paths.
-        value: ${{ jobs.detect.outputs.code }}
+      api:
+        description: Whether the api workload is affected.
+        value: ${{ jobs.detect.outputs.api }}
+      web:
+        description: Whether the web workload is affected.
+        value: ${{ jobs.detect.outputs.web }}
+      e2e:
+        description: Whether the e2e workload is affected.
+        value: ${{ jobs.detect.outputs.e2e }}
+      lighthouse:
+        description: Whether the lighthouse workload is affected.
+        value: ${{ jobs.detect.outputs.lighthouse }}
+      prose:
+        description: Whether the prose workload is affected.
+        value: ${{ jobs.detect.outputs.prose }}
+      dependencies:
+        description: Whether the dependencies workload is affected.
+        value: ${{ jobs.detect.outputs.dependencies }}
+      codeql:
+        description: Whether the codeql workload is affected.
+        value: ${{ jobs.detect.outputs.codeql }}
+      trivy:
+        description: Whether the trivy workload is affected.
+        value: ${{ jobs.detect.outputs.trivy }}
+      docker_api:
+        description: Whether the docker_api workload is affected.
+        value: ${{ jobs.detect.outputs.docker_api }}
+      docker_web:
+        description: Whether the docker_web workload is affected.
+        value: ${{ jobs.detect.outputs.docker_web }}
+      automation:
+        description: Whether the automation workload is affected.
+        value: ${{ jobs.detect.outputs.automation }}
 
 permissions:
   contents: read
@@ -13,39 +43,28 @@ permissions:
 
 jobs:
   detect:
-    name: Detect docs-only changes
+    name: Detect affected workloads
     runs-on: ubuntu-latest
     outputs:
-      code: ${{ steps.decide.outputs.code }}
+      api: ${{ steps.scope.outputs.api }}
+      web: ${{ steps.scope.outputs.web }}
+      e2e: ${{ steps.scope.outputs.e2e }}
+      lighthouse: ${{ steps.scope.outputs.lighthouse }}
+      prose: ${{ steps.scope.outputs.prose }}
+      dependencies: ${{ steps.scope.outputs.dependencies }}
+      codeql: ${{ steps.scope.outputs.codeql }}
+      trivy: ${{ steps.scope.outputs.trivy }}
+      docker_api: ${{ steps.scope.outputs.docker_api }}
+      docker_web: ${{ steps.scope.outputs.docker_web }}
+      automation: ${{ steps.scope.outputs.automation }}
     steps:
-      # Only push/pull_request carry a diffable base — other triggers
-      # (workflow_dispatch, schedule) always report code=true below so a
-      # manual run or the /merge post-merge verification dispatch never
-      # gets silently skipped.
       - name: Checkout
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 20
-
-      - name: Filter changed paths
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        id: filter
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        with:
-          predicate-quantifier: some-with-excludes
-          filters: |
-            code:
-              - "**"
-              - "!**/*.md"
-              - "!docs/**"
-              - "!LICENSE"
-
-      - name: Decide
-        id: decide
-        run: |
-          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "code=${{ steps.filter.outputs.code }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          fi
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify changed files
+        id: scope
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/detect-changes.mjs
