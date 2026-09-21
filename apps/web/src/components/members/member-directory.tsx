@@ -279,9 +279,7 @@ export function MemberDirectory({
   // Filter/search live in the URL, not component state, so a shared view
   // survives back-navigation, refresh, and can be bookmarked or sent as-is.
   const [{ division: filter, q: query }, setFilterState] = useQueryStates({
-    division: parseAsStringLiteral(FILTER_VALUES)
-      .withDefault("All")
-      .withOptions({ history: "push" }),
+    division: parseAsStringLiteral(FILTER_VALUES).withDefault("All"),
     q: parseAsString.withDefault("").withOptions({ throttleMs: 300 }),
   });
   const [profileSearchIndex, setProfileSearchIndex] = useState<Record<string, string>>({});
