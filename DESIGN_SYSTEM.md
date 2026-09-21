@@ -63,7 +63,7 @@ For high-contrast dark sections (testimonials, dramatic stats, big quote breaks)
 - Body text on white must use `--ink` (#0e1116) or `--ink-2` (#3b4150). `--ink-3` is for ≥14px helper text only. `--ink-4` is decoration / disabled, not for content.
 - `--brand-blue` (#3a6dc5) on white passes AA for normal text. ✅
 - `--brand-green` (#0f8657) on white passes AA. ✅
-- `--brand-red` (#f94141) on white **only passes AA Large**. Use it for ≥18px or ≥14px bold, or as a fill behind white text, never for body copy.
+- `--brand-red` (#f94141) on white **only passes AA Large**. Use it for ≥24px (18pt) or ≥18.5px bold (14pt bold), or as a fill behind white text, never for body copy.
 - `--brand-yellow` (#f7bf33) **never carries text on white.** Use yellow only as a fill, with `--ink` text on top.
 
 ### 2.4 Color don'ts
