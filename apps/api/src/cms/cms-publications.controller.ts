@@ -89,7 +89,7 @@ const publicationSchema = z.object({
     paperSize: z.number().int().nonnegative().max(1_073_741_824).optional(),
   }),
 });
-const bootstrapSchema = z.object({ records: z.array(publicationSchema).min(1).max(200) });
+const bootstrapSchema = z.object({ records: z.array(publicationSchema).min(1).max(500) });
 const savePublicationSchema = publicationSchema.extend({
   sourceSlug: z.string().min(1).optional(),
 });
