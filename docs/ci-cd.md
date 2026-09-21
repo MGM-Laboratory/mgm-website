@@ -156,8 +156,6 @@ The Railway MCP tools are also available in agent sessions (`list-projects`, `de
 
 `main` requires a PR + every required status check to merge. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`; do not use the administrative bypass for routine work.
 
-Reviews are optional. `CODEOWNERS` lists several human maintainers, so review requests can reach a person other than the PR author. Automated review services, including CodeRabbit, remain advisory. Do not configure them as required approvals or required status checks. This keeps CI, security, signature, and test gates intact while preventing a stalled bot from blocking a healthy PR.
-
 ### Known issue: the ruleset's required-check names keep getting reset
 
 The `main-protection` ruleset (id `23450743`) requires ~18 status checks by exact `context` name. Recurring symptom: a PR with every real check green still shows `mergeStateStatus: BLOCKED`, and `gh pr merge`/the `/merge` bot both fail with `N of 18 required status checks are expected`.
