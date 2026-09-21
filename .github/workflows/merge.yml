@@ -46,8 +46,12 @@ jobs:
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          # Deliberately no administration:read here: the ren-automation
+          # installation does not grant it, and requesting an ungranted
+          # permission makes this action hard-fail before anything runs. The
+          # ruleset read in pr-merge.mjs degrades to GitHub's own merge
+          # enforcement, which remains the final authority either way.
           permission-pull-requests: write
-          permission-administration: read
 
       - name: Check readiness, merge, clean up, verify production
         env:
