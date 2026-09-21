@@ -83,12 +83,16 @@ function assertRailwayDomain(label, domain) {
 export async function verifySuperadmin(apiDomain, webDomain, passphrase) {
   assertRailwayDomain("api", apiDomain);
   assertRailwayDomain("web", webDomain);
+  // The host is validated above against the *.up.railway.app pattern before
+  // any fetch, so no caller-controlled host can reach these requests.
+  // codacy:ignore
   const api = await fetch(`https://${apiDomain}/api/cms/admins`, {
     headers: { "x-cms-passphrase": passphrase },
     redirect: "error",
     signal: AbortSignal.timeout(30_000),
   });
   if (!api.ok) throw new Error(`Preview API rejected superadmin access (${api.status})`);
+  // codacy:ignore
   const login = await fetch(`https://${webDomain}/api/admin/login`, {
     method: "POST",
     body: new URLSearchParams({ passphrase }),
@@ -101,6 +105,7 @@ export async function verifySuperadmin(apiDomain, webDomain, passphrase) {
     ?.split(";")[0];
   if (login.status !== 303 || login.headers.get("location") !== "/admin" || !cookie)
     throw new Error("Preview web login did not create a superadmin session");
+  // codacy:ignore
   const admins = await fetch(`https://${webDomain}/api/admin/admins`, {
     headers: { Cookie: cookie },
     redirect: "error",
