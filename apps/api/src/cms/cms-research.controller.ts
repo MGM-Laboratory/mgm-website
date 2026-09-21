@@ -125,7 +125,7 @@ const researchRecordSchema = z.object({
   research: researchSchema,
   body: z.array(blockSchema),
 });
-const bootstrapSchema = z.object({ records: z.array(researchRecordSchema).min(1).max(200) });
+const bootstrapSchema = z.object({ records: z.array(researchRecordSchema).min(1).max(500) });
 const saveResearchSchema = researchRecordSchema.extend({
   sourceSlug: z.string().min(1).optional(),
 });

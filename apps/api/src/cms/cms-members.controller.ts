@@ -40,7 +40,7 @@ const memberSchema = z.object({
   }),
   profile: z.record(z.string(), z.unknown()),
 });
-const bootstrapSchema = z.object({ records: z.array(memberSchema).min(1).max(200) });
+const bootstrapSchema = z.object({ records: z.array(memberSchema).min(1).max(500) });
 const saveMemberSchema = memberSchema.extend({ sourceSlug: z.string().min(1).optional() });
 
 const imageSchema = z.object({ image: z.string().startsWith("data:image/") });
