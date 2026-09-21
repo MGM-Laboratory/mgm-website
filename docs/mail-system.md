@@ -57,7 +57,7 @@ Singleton settings row (`CmsContactSettings`, fixed slug `"contact"`), cached 60
 
 ## Contact form flow (`apps/api/src/contact/contact.service.ts`)
 
-`POST /api/contact` (throttled 5/min, tighter than the app default, since every submission also emails the _visitor's own_ address, i.e. it's a potential open relay if not rate-limited tightly):
+`POST /api/contact` (throttled 5/min, tighter than the app default, since every submission also emails the _visitor's own_ address, that is, it's a potential open relay if not rate-limited tightly):
 
 1. **Persists the inquiry unconditionally first** (before any mail attempt): a mail-provider outage can never lose a submission, only delay its notification.
 2. Builds the admin-notification HTML (with 7-day signed download links for any attachments).

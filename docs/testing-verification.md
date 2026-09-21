@@ -5,7 +5,7 @@
 ## Playwright methodology (proven patterns from this codebase)
 
 - **SSR / flash checks**: a browser context with `javaScriptEnabled: false` shows exactly what server HTML renders, used to prove the nav menu's reload-flash fix (nothing of the closed panel may be visible pre-hydration).
-- **Computed styles**: sample `getComputedStyle(el).transform/opacity` before/after interactions to verify GSAP end states, e.g. confirming the Our Work panel actually moved (it had silently no-op'd once).
+- **Computed styles**: sample `getComputedStyle(el).transform/opacity` before/after interactions to verify GSAP end states, for example confirming the Our Work panel actually moved (it had silently no-op'd once).
 - **Animation-timing races**: drive `page.mouse.move()` directly (no `hover()` sugar) to hit precise mid-animation windows, e.g. hovering a Core Competencies card immediately after the section scrolls into view.
 - **Stress tests**: repeat a race repro many times (12× single-card, then 4 cards × 5 timing windows × many runs). The Core Competencies race only showed intermittently; a single pass proves nothing.
 - **Emulation**: `reducedMotion: "reduce"` (all reduced-motion paths: mount state, hover/unhover swaps, no snap-to-hovered on mount) and `colorScheme: "dark"` (menu text visibility was a real bug once).

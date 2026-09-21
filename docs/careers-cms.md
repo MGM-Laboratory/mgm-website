@@ -17,7 +17,7 @@ Public: `GET /api/cms/jobs` (open roles, BlockNote documents stripped because th
 
 Admin (all `x-cms-passphrase`): `GET /api/cms/jobs/admin`, `PUT /api/cms/jobs/:slug`, `DELETE /api/cms/jobs/:slug`, `POST /api/cms/jobs/:slug/media`, `GET /api/cms/jobs/applications` (deliberately uncached because unread counts must not stale), `GET /api/cms/jobs/applications/:slug` (returns `{ record, cvUrl }` with a 15-minute signed URL), `PUT /api/cms/jobs/applications/:slug/state` (`{ read?, status? }`), `POST /api/cms/jobs/applications/bulk` (`{ ids, action }` where action is `archive | unarchive | markRead | markUnread | delete`; deletes also remove the CV from storage).
 
-The apply route validates fields with friendly 400s (unlike the admin validation paths, which keep the existing 500-on-ZodError convention). CVs: PDF/DOC/DOCX by mimetype, size-capped by `CMS_MAX_CV_BYTES` (default 100 MB) read straight from `process.env`, S3 key `cv-<uuid>.<ext>`. The original filename is sanitized and kept for display only.
+The apply route validates fields with friendly 400-level responses (unlike the admin validation paths, which keep the existing 500-on-ZodError convention). CVs: PDF/DOC/DOCX by mimetype, size-capped by `CMS_MAX_CV_BYTES` (default 100 MB) read straight from `process.env`, S3 key `cv-<uuid>.<ext>`. The original filename is sanitized and kept for display only.
 
 Reserved slugs: `admin`, `feed`, `media`, `applications`. A job can never claim one.
 

@@ -32,13 +32,13 @@ Each row: number + label + trailing icon (ArrowUpRight for links, ChevronDown fo
 
 ## Dropdowns (bento cards, title-only: descriptions were removed by request)
 
-- **Focus**: 2×2 flip cards (`[perspective:900px]` outer, preserve-3d inner, back pre-rotated 180°): front = brand-color fill + oversized `CompetencyMotifShape` corner decoration (`stroke rgba(255,255,255,0.32)`) + title; hover flips to back = smaller watermark motif + title + "Explore" pill. Mirrors the homepage competency cards' motifs/colors.
+- **Focus**: 2×2 flip cards (`[perspective:900px]` outer, `preserve-3d` inner, back pre-rotated 180°): front = brand-color fill + oversized `CompetencyMotifShape` corner decoration (`stroke rgba(255,255,255,0.32)`) + title; hover flips to back = smaller watermark motif + title + "Explore" pill. Mirrors the homepage competency cards' motifs/colors.
 - **Our Work**: deliberately _different_ mechanic: front = title + `FlairShape` pattern-tile watermark (`opacity-20`, brand tone); hover = link lifts `y:-4` + shadow AND an accent panel slides up from the bottom (`gsap.set(panel,{yPercent:100})` on mount, required because it mounts inside a height-0 clip; gotcha #6) showing title + "View" pill, while the watermark pops in (`scale 0.85 rotate -6 → identity`, `back.out(1.6)`). No z-10 on the front title (gotcha #7).
 
 ## Bottom block
 
-- **"Let's Talk"**: `EmailReveal` with `hi@labmgm.org` (from `data/nav.ts`; do not hardcode). Hover opens an upward dropdown (`bottom-full`, since it sits at the panel bottom): "Copy email" (clipboard write → Check icon + "Copied!" for ~1.8s) and "Open in Mail app" (`mailto:`). 150ms delayed close on mouseleave, cancelled on re-enter.
-- **Malang (ID) WIB clock**: hydration-safe (`"--:--"` SSR placeholder, `Intl.DateTimeFormat` with `timeZone: "Asia/Jakarta"` in effect, 30s updates).
+- **"Let's Talk"**: `EmailReveal` with `hi@labmgm.org` (from `data/nav.ts`; do not hardcode). Hover opens an upward dropdown (`bottom-full`, since it sits at the panel bottom): "Copy email" (clipboard write → Check icon + "Copied!" for about 1.8 seconds) and "Open in Mail app" (`mailto:`). 150 ms delayed close on mouseleave, cancelled on re-enter.
+- **Malang (ID) WIB clock**: hydration-safe (`"--:--"` SSR placeholder, `Intl.DateTimeFormat` with `timeZone: "Asia/Jakarta"` in effect, updates every 30 seconds).
 - **Socials**: icon-only Instagram, LinkedIn, and Discord links from `data/nav.ts` (all real URLs), each with its own GSAP wiggle on hover (rotate -14 → rotate 14 + scale 1.25 + its brand accent color → settle, `back.out(3)`). Icons adapt to theme via `currentColor`.
 - **Legal row**: real links to `/privacy-policy` and `/terms-of-services`.
 

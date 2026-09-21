@@ -133,7 +133,13 @@ A modular, slightly compressed scale. All values use `rem` (1rem = 16px).
 - **One display per page.** Only the hero (or top of the route) uses `display-xl` or `display-2xl`. Inner sections start at `h1` or smaller.
 - **Never two headings adjacent without a body line, eyebrow, or rule between them.**
 - **Headings use `--ink`. Body uses `--ink` or `--ink-2`. Helper uses `--ink-3`. That's it.**
+
+<!-- vale Google.Quotes = NO -->
+
 - **Color in headings is a deliberate one-word highlight**, not a whole sentence. Example: _"Build the ~~quiet~~ **<span style="color:#f94141">loud</span>** internet."_, and only on hero or major moments.
+
+<!-- vale Google.Quotes = YES -->
+
 - **Long-form paragraphs cap at 68 characters per line** (~`max-w-prose` / `max-w-[640px]`).
 - **Numbers in dashboards** use `font-feature-settings: "tnum"` so columns align.
 
