@@ -31,6 +31,10 @@ const prNumber = process.env.PR_NUMBER;
 const outputFile = process.env.GITHUB_OUTPUT;
 
 const name = previewEnvironmentName(prNumber);
+// This is the actual superadmin secret used by both applications. Rotate it
+// for every /preview invocation, including a re-run against an existing
+// environment, so a preview credential cannot be reused indefinitely.
+const superadminPassphrase = randomBytes(18).toString("base64url");
 
 let environment = await findEnvironmentByName(token, name);
 const isNew = !environment;
@@ -155,12 +159,14 @@ const existingApiVars = await getVariables(token, environment.id, API_SERVICE_ID
 // a reference — left alone, every browser fetch from the preview web app to
 // the preview api gets rejected by CORS and the site renders empty. Confirmed
 // live against a running preview.
-let apiVars = { NODE_ENV: "production", CORS_ORIGIN: `https://${webDomain}` };
+let apiVars = {
+  NODE_ENV: "production",
+  CORS_ORIGIN: `https://${webDomain}`,
+  ADMIN_PASSPHRASE: superadminPassphrase,
+};
 
 if (existingApiVars.AWS_S3_BUCKET) {
   console.log(`Reusing existing bucket ${existingApiVars.AWS_S3_BUCKET} for this environment.`);
-  apiVars.ADMIN_PASSPHRASE =
-    existingApiVars.ADMIN_PASSPHRASE ?? randomBytes(18).toString("base64url");
 } else {
   const bucketName = `preview-pr-${prNumber}-${randomBytes(4).toString("hex")}`.slice(0, 63);
   console.log(`Creating bucket ${bucketName}...`);
@@ -181,7 +187,6 @@ if (existingApiVars.AWS_S3_BUCKET) {
     }
   }
 
-  apiVars.ADMIN_PASSPHRASE = randomBytes(18).toString("base64url");
   // Deliberately not setting AWS_S3_FORCE_PATH_STYLE — production leaves it
   // unset (defaults to false in env.validation.ts) against the same
   // storage backend, and forcing it on here for no reason risks a request-
@@ -197,7 +202,7 @@ if (existingApiVars.AWS_S3_BUCKET) {
 
 await setVariables(token, environment.id, API_SERVICE_ID, apiVars);
 await setVariables(token, environment.id, WEB_SERVICE_ID, {
-  ADMIN_PASSPHRASE: apiVars.ADMIN_PASSPHRASE,
+  ADMIN_PASSPHRASE: superadminPassphrase,
 });
 
 // admin_passphrase deliberately never leaves this process: this repo is

@@ -20,12 +20,13 @@ const reply = (text) =>
   });
 
 const normalized = body.toLowerCase();
+const isLgtm = /^(?:\s|[*_`~#>])*lgtm(?:[!?.\s*_`~]*)$/i.test(body);
 
 // Bare "lgtm" is deliberately harmless — it's the single most common
 // throwaway phrase in code review, so it only ever posts a GIF. The actual
 // merge-and-ship action lives behind the explicit /merge command below so a
 // casual "lgtm" left in conversation can never ship anything to production.
-if (normalized === "lgtm") {
+if (isLgtm) {
   await reply("![lgtm](https://media.giphy.com/media/bXUbgRzNwKSg3iJYrJ/giphy.gif)");
   process.exit(0);
 }

@@ -7,7 +7,7 @@
 // do we touch the branch, the preview environment, or start watching
 // production, so a failure partway through never leaves the PR merged with
 // no record of what happened next.
-import { collectChecks, ghRequest } from "./gh-api.mjs";
+import { collectChecks, collectPullRequestContributorLogins, ghRequest } from "./gh-api.mjs";
 import { codeowners } from "./codeowners.mjs";
 import { factTable, footer, heading, mentionAll, statusTable } from "./format.mjs";
 import {
@@ -90,6 +90,18 @@ if (blockers.length) {
   process.exit(0);
 }
 
+// The PR author is not necessarily the only person whose work is being
+// merged. Fetch every commit before the merge so the thank-you message tags
+// all GitHub-linked contributors, including co-authors who pushed commits.
+const commits = [];
+for (let page = 1; ; page++) {
+  const batch = await gh(`/repos/${repo}/pulls/${prNumber}/commits?per_page=100&page=${page}`);
+  commits.push(...batch);
+  if (batch.length < 100) break;
+}
+const contributors = collectPullRequestContributorLogins(commits, pr.user?.login);
+const contributorMentions = mentionAll(contributors);
+
 // Captured before merging so the post-merge watcher can tell a genuinely new
 // production deployment apart from the previous one still showing "SUCCESS".
 const baseline = await listServiceInstances(railwayToken, PRODUCTION_ENVIRONMENT_ID);
@@ -108,9 +120,11 @@ const stats = factTable([
 
 await reply(
   [
-    heading(`🎉 Thanks for the contribution, @${pr.user.login}!`, 2),
+    heading("🎉 Thank you, contributors!", 2),
     "",
-    `Everything checks out and this is good to go — merging **${pr.title}** into \`main\` now. Really appreciate you putting time into MGM Website, this kind of contribution is exactly what keeps the lab's site moving. 🙌`,
+    contributorMentions
+      ? `A huge thank-you to ${contributorMentions} for this work. Everything checks out and **${pr.title}** is merging into \`main\` now. 🙌`
+      : `Everything checks out and **${pr.title}** is merging into \`main\` now. Thank you for the contribution! 🙌`,
     "",
     stats,
     "",

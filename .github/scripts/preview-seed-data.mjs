@@ -223,18 +223,11 @@ async function worker() {
 }
 await Promise.all(Array.from({ length: Math.min(CONCURRENCY, keys.length) }, worker));
 
-console.log("Minting a fresh superadmin...");
-const ALL_PAGES = ["articles", "publications", "members", "projects", "research", "careers"];
-const adminBody = await json(`https://${apiDomain}/api/cms/admins`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json", "x-cms-passphrase": previewVars.ADMIN_PASSPHRASE },
-  body: JSON.stringify({
-    name: `PR #${prNumber} preview`,
-    passphrase: "generate",
-    permissions: Object.fromEntries(ALL_PAGES.map((p) => [p, ["read", "write", "delete"]])),
-  }),
-});
-const generatedPassphrase = adminBody.generatedPassphrase;
+// preview-provision rotates this Railway variable before the preview image is
+// deployed. It is the application's real superadmin credential, unlike the
+// separate managed-admin records exposed by /cms/admins.
+const superadminPassphrase = previewVars.ADMIN_PASSPHRASE;
+if (!superadminPassphrase) throw new Error("Preview ADMIN_PASSPHRASE is missing");
 
 const seededTable = RESOURCES.map((r) => `| ${r.label} | ${seedCounts[r.key] ?? 0} |`).join("\n");
 
@@ -257,8 +250,8 @@ const commentBody = [
   "",
   `Storage objects copied: **${copied}**${skipped ? ` (${skipped} skipped — see run logs)` : ""}.`,
   "",
-  heading("🔑 Superadmin login (this preview only)", 3),
-  factTable([["Passphrase", `\`${generatedPassphrase}\``]]),
+  heading("🔑 Superadmin password (this preview only)", 3),
+  factTable([["Password", `\`${superadminPassphrase}\``]]),
   "",
   "> Generated fresh for this preview — not a production credential, and not stored anywhere else. Torn down automatically when this PR closes (or when a maintainer runs `/merge`).",
   "",

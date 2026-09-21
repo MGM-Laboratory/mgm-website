@@ -71,6 +71,9 @@ jobs:
       - name: Test with coverage
         run: pnpm --filter api test:cov
 
+      - name: Test PR automation
+        run: node --test .github/scripts/*.test.mjs
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
         with:

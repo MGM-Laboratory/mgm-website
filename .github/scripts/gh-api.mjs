@@ -45,3 +45,22 @@ export async function collectChecks(token, repo, sha) {
   }
   return items;
 }
+
+// GitHub links a commit's author and committer independently. A PR can have
+// several people contributing commits, so use both identities and retain the
+// PR author as a fallback for contributions made with an unlinked email.
+// Bot accounts are deliberately omitted from the human thank-you message.
+export function collectPullRequestContributorLogins(commits, prAuthorLogin) {
+  const logins = new Map();
+  const add = (login) => {
+    if (!login || login.endsWith("[bot]")) return;
+    logins.set(login.toLowerCase(), login);
+  };
+
+  for (const commit of commits) {
+    add(commit.author?.login);
+    add(commit.committer?.login);
+  }
+  add(prAuthorLogin);
+  return [...logins.values()];
+}

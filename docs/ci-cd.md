@@ -14,7 +14,7 @@ Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` trigger
 | `publish-docker-image-latest.yml` / `-staging.yml` | push to `main` (latest) / any PR (staging), dispatch | Thin callers that invoke the `publish-docker-image.yml` reusable workflow (matrix over api/web): build, push, Trivy scan, SBOM + attestation, keyless cosign signing. See "Docker image workflows" below                                                |
 | `detect-changes.yml`                               | `workflow_call` only                                 | Reusable: reports whether a push/PR touched anything outside docs/license paths. See "Skipping CI on docs-only changes" below                                                                                                                           |
 | `pr-bot.yml`                                       | `workflow_run` (CI/Security/E2E)                     | Upserts one PR comment (as "ren-automation") summarizing every check-run + commit status for that SHA                                                                                                                                                   |
-| `pr-commands.yml`                                  | PR comment created                                   | `LGTM` → GIF, for anyone, no side effects. `/check`, `/preview`, `/merge`, `/close`, gated to OWNER/MEMBER/COLLABORATOR or anyone listed in `CODEOWNERS`                                                                                                |
+| `pr-commands.yml`                                  | PR comment created or review submitted               | `LGTM` → GIF, for anyone, no side effects. `/check`, `/preview`, `/merge`, `/close`, gated to OWNER/MEMBER/COLLABORATOR or anyone listed in `CODEOWNERS`                                                                                                |
 | `preview.yml`                                      | `workflow_dispatch` (from `/preview`)                | See "Preview environments" below                                                                                                                                                                                                                        |
 | `merge.yml`                                        | `workflow_dispatch` (from `/merge`)                  | See "Merging (`/merge`)" below                                                                                                                                                                                                                          |
 | `close.yml`                                        | `workflow_dispatch` (from `/close`)                  | See "Closing (`/close`)" below                                                                                                                                                                                                                          |
@@ -130,10 +130,10 @@ Known false positives get suppressed at the source (an inline comment next to th
 
 Commenting `/preview` on a PR (maintainers/collaborators only) deploys a throwaway copy of the full stack:
 
-1. **provision** (secrets, no PR code): forks a `preview-pr-<n>` Railway environment from `production` (`environmentCreate` with `sourceEnvironmentId`, which clones service/database topology without copying any data), generates api/web domains, creates a dedicated bucket, overrides the vars that came over as literal values rather than references (bucket credentials, admin passphrase).
+1. **provision** (secrets, no PR code): forks a `preview-pr-<n>` Railway environment from `production` (`environmentCreate` with `sourceEnvironmentId`, which clones service/database topology without copying any data), generates api/web domains, creates a dedicated bucket, overrides the vars that came over as literal values rather than references (bucket credentials and a fresh `ADMIN_PASSPHRASE` for the actual superadmin).
 2. **build** (no secrets, runs the PR's own code): builds both Docker images from the PR head.
 3. **push-and-deploy** (secrets): pushes the images Job 2 built to Docker Hub, points the preview environment's services at them (scoped to that environment only, verified this never affects production), then watches both deployments strictly: checked every minute, up to 3 automatic retries with the crash's log excerpt posted to the PR on each one, a one-time CODEOWNERS-mention comment if it's still not up after 10 minutes (without giving up), and a hard 1 hour ceiling. A single upserted status comment tracks the live state throughout.
-4. **seed-and-announce** (secrets): seeds published content into the preview by reading production's own public `/api/cms/*` endpoints (drafts and admin-only fields are already filtered server-side there: no database credential is used for either environment) and POSTing it to the preview api's `/bootstrap` endpoints, copies only the bucket objects actually referenced, mints a fresh superadmin via the preview api, comments the links + a seeded-content table + credentials on the PR.
+4. **seed-and-announce** (secrets): seeds published content into the preview by reading production's own public `/api/cms/*` endpoints (drafts and admin-only fields are already filtered server-side there: no database credential is used for either environment) and POSTing it to the preview api's `/bootstrap` endpoints, copies only the bucket objects actually referenced, then comments the links, seeded-content table, and freshly rotated Railway superadmin password on the PR.
 
 `CmsAdmin` (password hashes) and `CmsJobApplication` (applicant PII/CVs) have no public endpoint and are never read. Torn down automatically on PR close (or on `/merge`), with a daily reaper as a backstop.
 
@@ -144,7 +144,7 @@ Commenting `/preview` on a PR (maintainers/collaborators only) deploys a throwaw
 Commenting `/merge` on a PR (maintainers/CODEOWNERS only) runs `merge.yml`, entirely API-driven, no PR code is ever checked out:
 
 1. Checks every check-run and commit status against the PR's head commit, plus GitHub's own `mergeable` flag. Anything failing, still running, or a merge conflict → replies with what's blocking it and stops. Nothing is changed.
-2. If everything's green: posts one combined comment thanking the contributor by name (with a small stats table and the check results), then the LGTM GIF.
+2. If everything's green: posts one combined comment thanking and tagging every GitHub-linked contributor represented in the PR commits (with a small stats table and the check results), then the LGTM GIF.
 3. Merges with a merge commit (not squash: this repo keeps granular history, see `docs/repo-history.md`).
 4. Deletes the head branch only if it's genuinely safe: same repo (not a fork), not the default branch, and no other open PR still points at it.
 5. Tears down that PR's `preview-pr-<n>` Railway environment if one exists: the lookup is asserted against the production environment id first, so it can never touch the real deployment.
@@ -196,37 +196,16 @@ Gatus also exposes a response-time badge (`.../response-times/:duration/badge.sv
 
 ## Governance
 
-`main` requires a PR + every required status check to merge. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`; do not use the administrative bypass for routine work.
+`main` requires an up-to-date PR, one approving review, signed commits, and the selected first-party gates below. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`; do not use an administrative bypass for routine work.
 
-### Known issue: the ruleset's required-check names keep getting reset
+The `main-protection` ruleset (id `23450743`) deliberately requires only stable, repository-owned checks rather than every check reported by installed apps. This keeps the branch rule strict without allowing an unrelated or renamed third-party check to block every merge:
 
-The `main-protection` ruleset (id `23450743`) requires ~18 status checks by exact `context` name. Recurring symptom: a PR with every real check green still shows `mergeStateStatus: BLOCKED`, and `gh pr merge`/the `/merge` bot both fail with `N of 18 required status checks are expected`.
+- CI: `Lint, typecheck, test & build`
+- Security: `Secret scan (gitleaks)`, `CodeQL`, `Dependency review`, and `Trivy filesystem scan`
+- Browser coverage: every `Playwright (<os>, <project>)` matrix job
+- Quality: `Lighthouse CI budget` and `Vale prose lint`
 
-**Root cause (confirmed 2026-09-16):** GitHub user `SyafaHadyan` (id `107655102`) has repeatedly re-saved the ruleset, `gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743/history` showed 20+ edits from this account in a single day, each time reverting the required-check `context` values back to stale/renamed names that don't match this repo's actual job names:
-
-| Required (stale)                    | Actual job name         |
-| ----------------------------------- | ----------------------- |
-| `Playwright (<os>, <browser>)` (×7) | `e2e (<os>, <browser>)` |
-| `Lint, typecheck, test & build`     | `ci`                    |
-| `Lighthouse CI budget`              | `lighthouse`            |
-
-This is almost certainly the GitHub Settings → Rules web UI re-submitting the whole form (including untouched, pre-filled stale check names) on every save, not an automation or workflow file: no committed config drives this ruleset. It is **not** the repo's own `/merge`/`/check` automation (that's a separate GitHub App, `ren-automation`, confirmed by a different, much-less-frequent actor id in the history).
-
-**Fix, every time it recurs:**
-
-```bash
-# 1. Compare required names against the real ones:
-gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743 | jq '.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context'
-gh pr checks <n>   # the real job names
-
-# 2. PUT back the same ruleset with only the context values corrected
-# (full payload + one-liner: see the ruleset-reversion memory)
-gh api --method PUT repos/MGM-Laboratory/mgm-website/rulesets/23450743 --input corrected-ruleset.json
-```
-
-Fetch the _current_ ruleset first and edit only the `context` fields: don't reuse an old saved payload verbatim, since other settings may have changed too. This has now recurred at least 3 times (2026-09-15 twice, 2026-09-16 once); re-fixing via API is a workaround, not a durable solution: the actual fix is either restricting who can edit rulesets (repo Settings → Rulesets → bypass/edit permissions) or getting `SyafaHadyan` to stop re-saving the branch protection page without updating the check names first.
-
-**Update (2026-09-17):** `ci`, `e2e`, and `lighthouse` were missing the explicit job `name:` the naming convention calls for (see above), which is the other half of why the "Actual job name" column read as bare ids. `chore/ci-workflow-naming-convention` (PR #22) added `name:` to all three, matching the exact strings the ruleset already required (`Lint, typecheck, test & build`, `Playwright (<os>, <project>)`, `Lighthouse CI budget`), so the table above is now itself the stale side, and these three rows should no longer need the fix recipe unless the ruleset gets reset again. That reset risk is still open (the root cause above is unchanged), so re-check with the same commands if `N of N required status checks are expected` comes back.
+All other workflows still run on their explicit triggers: staging Docker builds validate PR images, production Docker publishing runs after `main` changes, scheduled security and cleanup workflows run independently, and external apps may report their own checks. They are not merge requirements because their availability and check names are outside this repository's control.
 
 ## Local
 
