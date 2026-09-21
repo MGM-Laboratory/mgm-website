@@ -72,28 +72,30 @@ export function assertIsolatedCredentials(preview, web, production, environmentI
 
 // The domains come from the provision job's outputs, not from a commenter,
 // but asserting the shape costs nothing and guarantees a misconfigured
-// dispatch can never make these fetches hit an arbitrary host.
+// dispatch can never make these fetches hit an arbitrary host. The fetch
+// call sites receive the URL this validator returns — never the raw caller
+// input — so a taint-tracking analyzer sees a validated value at the sink.
 const RAILWAY_DOMAIN = /^[a-z0-9-]+\.up\.railway\.app$/i;
-function assertRailwayDomain(label, domain) {
+function verifiedUrl(label, domain, path) {
   if (!RAILWAY_DOMAIN.test(domain ?? "")) {
     throw new Error(`Refusing to verify against a non-Railway ${label} domain: ${domain}`);
   }
+  return `https://${domain}${path}`;
 }
 
 export async function verifySuperadmin(apiDomain, webDomain, passphrase) {
-  assertRailwayDomain("api", apiDomain);
-  assertRailwayDomain("web", webDomain);
-  // The host is validated above against the *.up.railway.app pattern before
-  // any fetch, so no caller-controlled host can reach these requests.
-  // codacy:ignore
-  const api = await fetch(`https://${apiDomain}/api/cms/admins`, {
+  // All targets are validated before the first network call, so a bad domain
+  // fails closed without any fetch, and each fetch receives a validated URL.
+  const apiUrl = verifiedUrl("api", apiDomain, "/api/cms/admins");
+  const loginUrl = verifiedUrl("web", webDomain, "/api/admin/login");
+  const adminsUrl = verifiedUrl("web", webDomain, "/api/admin/admins");
+  const api = await fetch(apiUrl, {
     headers: { "x-cms-passphrase": passphrase },
     redirect: "error",
     signal: AbortSignal.timeout(30_000),
   });
   if (!api.ok) throw new Error(`Preview API rejected superadmin access (${api.status})`);
-  // codacy:ignore
-  const login = await fetch(`https://${webDomain}/api/admin/login`, {
+  const login = await fetch(loginUrl, {
     method: "POST",
     body: new URLSearchParams({ passphrase }),
     redirect: "manual",
@@ -105,8 +107,7 @@ export async function verifySuperadmin(apiDomain, webDomain, passphrase) {
     ?.split(";")[0];
   if (login.status !== 303 || login.headers.get("location") !== "/admin" || !cookie)
     throw new Error("Preview web login did not create a superadmin session");
-  // codacy:ignore
-  const admins = await fetch(`https://${webDomain}/api/admin/admins`, {
+  const admins = await fetch(adminsUrl, {
     headers: { Cookie: cookie },
     redirect: "error",
     signal: AbortSignal.timeout(30_000),
