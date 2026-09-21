@@ -64,9 +64,20 @@ const requiredServiceIds = new Set([
 const hasTopology =
   requiredServiceIds.size ===
   existingInstances.filter((instance) => requiredServiceIds.has(instance.serviceId)).length;
+
+async function waitForEnvironmentDeletion(environmentName) {
+  const deadline = Date.now() + 2 * 60 * 1000;
+  while (Date.now() < deadline) {
+    if (!(await findEnvironmentByName(token, environmentName))) return;
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+  throw new Error(`Railway did not finish deleting ${environmentName} within 2 minutes`);
+}
+
 if (!isNew && !hasTopology) {
   console.log(`Removing incomplete preview environment ${name} before recreation...`);
   await deleteEnvironment(token, environment.id);
+  await waitForEnvironmentDeletion(name);
   environment = await createPreviewEnvironment(token, name);
   await assertPreviewEnvironment(token, prNumber, environment.id);
   isNew = true;
