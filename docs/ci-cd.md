@@ -229,7 +229,7 @@ All other workflows still run on their explicit triggers: staging Docker builds 
 
 ## Historical: PR automation live verification (2026-09-21)
 
-After the contributor-thanks, review-LGTM, and preview-isolation work (PR #75), the full automation surface was exercised end-to-end against a real PR: `/preview` twice in a row (a fresh provision, then a re-run that reused the deployed environment without rotating its database passwords), an emoji-decorated `LGTM` comment, a submitted `LGTM` review, and finally `/merge` itself, which landed this note, tagged every GitHub-linked contributor in the thank-you comment, and watched the production deployment come up.
+After the contributor-thanks, review-LGTM, and preview-isolation work (PR #75), the automation surface was exercised end-to-end: `/preview` twice in a row on PR #78 (a fresh provision, then a re-run that reused the deployed environment without rotating its database passwords, with all 209 articles seeding after the bootstrap caps were raised), an emoji-decorated `LGTM` conversation comment and a submitted `LGTM` review each received their GIF reply, and closing PR #78 tore the preview environment down automatically. This note itself landed via `/merge`, which tagged every GitHub-linked contributor in the thank-you comment and watched the production deployment come up.
 
 ## Historical: the workflow-rename incident (2026-09-12)
 
