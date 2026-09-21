@@ -1,7 +1,13 @@
 import { ghPaginate, ghRequest } from "./gh-api.mjs";
 
 export const LGTM_GIF = "![LGTM](https://media.giphy.com/media/bXUbgRzNwKSg3iJYrJ/giphy.gif)";
-export const isLgtm = (body) => /^\s*(?:\*\*|__)?lgtm[!.]?(?:\*\*|__)?\s*$/i.test(body ?? "");
+// A bare "lgtm" — with the light formatting reviewers actually use (bold,
+// underscores, a quote prefix, trailing punctuation or a common emoji), but
+// nothing else: no surrounding prose, no fenced code, no command on the side.
+export const isLgtm = (body) =>
+  /^\s*(?:>\s*)?(?:\*\*|__)?lgtm[!.]?(?:\*\*|__)?(?:\s*(?:👍|👌|🚀|👏|✅|🙌|❤️|💯|🙏))*\s*$/iu.test(
+    body ?? "",
+  );
 export const isBotComment = (comment) =>
   ["ren-automation[bot]", "github-actions[bot]"].includes(comment.user?.login);
 

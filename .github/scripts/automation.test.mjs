@@ -5,7 +5,15 @@ import { collectContributors, thankYouBody } from "./pr-contributors.mjs";
 import { isLgtm, upsertComment } from "./pr-comments.mjs";
 
 test("LGTM accepts comments and formatted reviews without interpreting conversation as a command", () => {
-  for (const body of ["LGTM", "lgtm!", "  **LGTM**\n", "__lgtm.__"])
+  for (const body of [
+    "LGTM",
+    "lgtm!",
+    "  **LGTM**\n",
+    "__lgtm.__",
+    "LGTM 👍",
+    "> LGTM",
+    "lgtm 🚀 👏",
+  ])
     assert.equal(isLgtm(body), true);
   for (const body of [null, "LGTM /merge", "not LGTM", "```LGTM```", "LGTM\n/merge"])
     assert.equal(isLgtm(body), false);
