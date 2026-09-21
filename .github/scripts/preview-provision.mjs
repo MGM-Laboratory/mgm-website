@@ -74,24 +74,57 @@ async function waitForEnvironmentDeletion(environmentName) {
   throw new Error(`Railway did not finish deleting ${environmentName} within 2 minutes`);
 }
 
-if (!isNew && !hasTopology) {
-  console.log(`Removing incomplete preview environment ${name} before recreation...`);
+async function recreate(label) {
+  console.log(`Recreating ${name}: ${label}`);
   await deleteEnvironment(token, environment.id);
   await waitForEnvironmentDeletion(name);
   environment = await createPreviewEnvironment(token, name);
   await assertPreviewEnvironment(token, prNumber, environment.id);
   isNew = true;
+}
+
+if (!isNew && !hasTopology) {
+  await recreate("the service topology was never created");
 } else if (!isNew && oldApiVars.PREVIEW_ISOLATION_VERSION !== "2") {
-  throw new Error(
-    "This legacy preview predates isolation v2. Close its PR to tear it down before recreating the preview.",
+  await recreate(
+    "it predates isolation v2, so its credentials are not guaranteed to be preview-owned",
   );
+} else if (!isNew) {
+  // A re-run of the old rotation flow left the variables and the running
+  // database disagreeing on the password (confirmed live: "password
+  // authentication failed for user postgres"), which no in-place edit can
+  // repair — the real password only lives inside the volume. Recreate the
+  // environment so a fresh Postgres initializes with a fresh, consistent
+  // password, and the seed job repopulates the content afterwards.
+  const priorApi = existingInstances.find((i) => i.serviceId === API_SERVICE_ID);
+  const apiStatus = priorApi?.latestDeployment?.status;
+  if (apiStatus && apiStatus !== "SUCCESS") {
+    await recreate(
+      `its api deployment ended ${apiStatus}, which a failed prior attempt left unrecoverable in place`,
+    );
+  }
 }
 
 // Replace the cloned database/cache credentials before either application is
 // deployed. These references resolve only inside this Railway environment;
 // they cannot point at production's private host or credentials.
-const postgresPassword = randomBytes(24).toString("base64url");
-const redisPassword = randomBytes(24).toString("base64url");
+//
+// Passwords are generated only for a genuinely new environment. Rotating them
+// on a re-run breaks the services that are already deployed: Postgres never
+// re-initializes an existing data directory, so the running database keeps
+// the old password while the api is handed the new one — confirmed live, the
+// api crash-looped with "password authentication failed for user postgres"
+// after a /preview re-run. Reusing the current values instead keeps the
+// variables and the running services consistent.
+const postgresVars = isNew ? {} : await getVariables(token, environment.id, POSTGRES_SERVICE_ID);
+const redisVars = isNew ? {} : await getVariables(token, environment.id, REDIS_SERVICE_ID);
+const postgresPassword = postgresVars.POSTGRES_PASSWORD ?? randomBytes(24).toString("base64url");
+const redisPassword = redisVars.REDIS_PASSWORD ?? randomBytes(24).toString("base64url");
+if (!isNew) {
+  console.log(
+    "Reusing the existing Postgres/Redis passwords so the deployed services stay consistent.",
+  );
+}
 await setVariables(
   token,
   environment.id,
