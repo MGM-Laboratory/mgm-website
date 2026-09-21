@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Search, Star, X } from "lucide-react";
+import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { type Member, type MemberDivision } from "@/data/members";
@@ -10,6 +11,20 @@ import { useMemberRecords } from "@/hooks/use-member-records";
 import type { CmsMemberRecord } from "@/lib/member-cms";
 
 type Filter = "All" | MemberDivision;
+
+const FILTER_VALUES = [
+  "All",
+  "Professors",
+  "Website",
+  "Mobile",
+  "HCI/UX",
+  "Game & XR",
+  "IT & Infrastructure",
+  "Public Relations",
+  "Media",
+  "Curriculum",
+  "Human Resource",
+] as const satisfies readonly Filter[];
 
 const STOP_WORDS = new Set([
   "a",
@@ -261,8 +276,14 @@ export function MemberDirectory({
   const searchAnchor = useRef<HTMLDivElement>(null);
   const searchSurface = useRef<HTMLDivElement>(null);
   const shouldResetDirectoryScroll = useRef(false);
-  const [filter, setFilter] = useState<Filter>("All");
-  const [query, setQuery] = useState("");
+  // Filter/search live in the URL, not component state, so a shared view
+  // survives back-navigation, refresh, and can be bookmarked or sent as-is.
+  const [{ division: filter, q: query }, setFilterState] = useQueryStates({
+    division: parseAsStringLiteral(FILTER_VALUES)
+      .withDefault("All")
+      .withOptions({ history: "push" }),
+    q: parseAsString.withDefault("").withOptions({ throttleMs: 300 }),
+  });
   const [profileSearchIndex, setProfileSearchIndex] = useState<Record<string, string>>({});
   const [scrollResetVersion, setScrollResetVersion] = useState(0);
   const deferredQuery = useDeferredValue(query);
@@ -339,11 +360,15 @@ export function MemberDirectory({
   };
   const updateFilter = (nextFilter: Filter) => {
     requestScrollReset();
-    setFilter(nextFilter);
+    void setFilterState({ division: nextFilter });
   };
   const updateQuery = (nextQuery: string) => {
     requestScrollReset();
-    setQuery(nextQuery);
+    void setFilterState({ q: nextQuery });
+  };
+  const resetAll = () => {
+    requestScrollReset();
+    void setFilterState({ division: "All", q: "" });
   };
 
   return (
@@ -539,10 +564,7 @@ export function MemberDirectory({
                   </p>
                   <button
                     type="button"
-                    onClick={() => {
-                      updateFilter("All");
-                      updateQuery("");
-                    }}
+                    onClick={resetAll}
                     className="mt-5 font-medium text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
                   >
                     View every member
