@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Search, Star, X } from "lucide-react";
-import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
+import { debounce, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { type Member, type MemberDivision } from "@/data/members";
@@ -280,7 +280,7 @@ export function MemberDirectory({
   // survives back-navigation, refresh, and can be bookmarked or sent as-is.
   const [{ division: filter, q: query }, setFilterState] = useQueryStates({
     division: parseAsStringLiteral(FILTER_VALUES).withDefault("All"),
-    q: parseAsString.withDefault("").withOptions({ throttleMs: 300 }),
+    q: parseAsString.withDefault("").withOptions({ limitUrlUpdates: debounce(300) }),
   });
   const [profileSearchIndex, setProfileSearchIndex] = useState<Record<string, string>>({});
   const [scrollResetVersion, setScrollResetVersion] = useState(0);
