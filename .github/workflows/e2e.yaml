@@ -24,7 +24,15 @@ jobs:
   e2e:
     name: Playwright (${{ matrix.os }}, ${{ matrix.project }})
     needs: changes
-    if: needs.changes.outputs.e2e == 'true'
+    # No job-level `if:` here on purpose: a skipped matrix job never expands
+    # its matrix, so GitHub posts a single check-run under the raw,
+    # unexpanded name template instead of one per (os, project) combination.
+    # The ruleset requires each expanded name individually, so that
+    # mismatch would leave those 7 checks permanently unsatisfiable on a
+    # docs-only PR. Gating every step instead keeps the job (and its
+    # matrix) always running, so the right names always get posted, just
+    # near-instant and effectively a no-op when e2e-relevant files didn't
+    # change.
     permissions:
       contents: read
     strategy:
@@ -51,32 +59,39 @@ jobs:
       CI: true
     steps:
       - name: Checkout
+        if: needs.changes.outputs.e2e == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup pnpm
+        if: needs.changes.outputs.e2e == 'true'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
+        if: needs.changes.outputs.e2e == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install dependencies
+        if: needs.changes.outputs.e2e == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
+        if: needs.changes.outputs.e2e == 'true'
         run: pnpm --filter web exec playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project == 'mobile-safari' && 'webkit' || matrix.project }}
 
       - name: Build web
+        if: needs.changes.outputs.e2e == 'true'
         run: pnpm turbo run build --filter=web
 
       - name: Run Playwright tests
+        if: needs.changes.outputs.e2e == 'true'
         run: pnpm --filter web exec playwright test --project=${{ matrix.project }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ !cancelled() }}
+        if: ${{ needs.changes.outputs.e2e == 'true' && !cancelled() }}
         with:
           name: playwright-report-${{ matrix.os }}-${{ matrix.project }}
           path: apps/web/playwright-report/
@@ -84,7 +99,7 @@ jobs:
 
       - name: Upload updated snapshots (only produced on mismatch/missing)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ !cancelled() && matrix.project == 'chromium' && matrix.os == 'ubuntu-latest' }}
+        if: ${{ needs.changes.outputs.e2e == 'true' && !cancelled() && matrix.project == 'chromium' && matrix.os == 'ubuntu-latest' }}
         with:
           name: visual-snapshots-actual
           path: apps/web/e2e/**/*-actual.png

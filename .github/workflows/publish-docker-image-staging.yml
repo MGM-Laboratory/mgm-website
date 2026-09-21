@@ -19,11 +19,17 @@ jobs:
 
   build:
     needs: changes
-    if: needs.changes.outputs.docker_api == 'true' || needs.changes.outputs.docker_web == 'true'
+    # Always invoked, never gated at the job level: a skipped job calling a
+    # reusable workflow never evaluates that workflow's jobs, so GitHub
+    # posts a single check-run named after this job's own id ("build")
+    # instead of the reusable workflow's matrix-expanded names ("Build,
+    # scan & push API/Web image"). The `run` input carries the actual skip
+    # decision down to that workflow's steps instead.
     uses: ./.github/workflows/publish-docker-image.yml
     with:
       # workflow_dispatch has no PR number, so fall back to the run number.
       tag: pr-${{ github.event.pull_request.number || github.run_number }}
+      run: ${{ needs.changes.outputs.docker_api == 'true' || needs.changes.outputs.docker_web == 'true' }}
     secrets: inherit
 
   gate:
