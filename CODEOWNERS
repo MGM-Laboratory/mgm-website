@@ -1,2 +1,4 @@
 # Default owner for everything in the repo, unless a later match overrides it.
-* @shirasakaren
+# This human team keeps code-owner review satisfiable when an individual member
+# authors a pull request.
+* @MGM-Laboratory/mgm-website-team
