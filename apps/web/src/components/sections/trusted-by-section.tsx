@@ -184,8 +184,10 @@ const POPUP_MARGIN_PX = 16;
 
 // Constant px/sec instead of a flat duration, so the loop feels equally
 // fast regardless of the track's actual measured width (which changes
-// across breakpoints as the inter-logo gap changes).
-const MARQUEE_SPEED_PX_PER_SEC = 150;
+// across breakpoints as the inter-logo gap changes). 100 px/sec was tuned
+// down from 150 after the strip read as rushing past (issue #59); any
+// faster and the logos blur into a streak instead of reading individually.
+const MARQUEE_SPEED_PX_PER_SEC = 100;
 
 export function TrustedBySection({
   compact = false,
