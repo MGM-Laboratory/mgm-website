@@ -222,7 +222,11 @@ export function BauhausField() {
       }
 
       gsap.set(shapeEls, { opacity: 0, scale: 0.3, rotate: (i, el) => rotateOf(el) });
-      const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 90%", once: true } });
+      // `once: false` + kill-on-complete instead of `once: true`: identical
+      // visible behavior without the refresh-loop self-kill that crashes
+      // when several triggers mount on a page already scrolled down (see
+      // killTriggerOnComplete in lib/scroll-reveal.ts).
+      const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 90%", once: false } });
       tl.to(shapeEls, {
         opacity: 1,
         scale: 1,
@@ -233,6 +237,7 @@ export function BauhausField() {
 
       let idleLoops: gsap.core.Tween[] = [];
       tl.eventCallback("onComplete", () => {
+        tl.scrollTrigger?.kill();
         idleLoops = startIdleLoops(shapeEls);
       });
 
