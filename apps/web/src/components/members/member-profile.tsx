@@ -31,8 +31,10 @@ import {
 
 import { GithubGlyph, LinkedinGlyph, WhatsappGlyph } from "@/components/social-icons";
 import { MEMBER_LIST_RETURN_KEY } from "@/components/members/member-directory";
+import { PhotoSkeleton } from "@/components/ui/skeleton";
 import type { Member } from "@/data/members";
 import { useMemberRecords } from "@/hooks/use-member-records";
+import { usePhotoLoadState } from "@/hooks/use-photo-load-state";
 import type { CmsMemberProfile, CmsMemberRecord } from "@/lib/member-cms";
 
 // Not yet in TS's lib.dom.d.ts (Navigation API); only the fields we read.
@@ -352,21 +354,39 @@ function ProfilePortrait({
     .slice(0, 2)
     .map((part) => part[0])
     .join("");
+  const imageRef = useRef<HTMLImageElement>(null);
+  const photo = usePhotoLoadState(photoKey, imageRef);
+  // A missing upload and a failed one both fall back to initials, which sit
+  // under the skeleton so they never flash before the photo paints.
+  const showPhoto = Boolean(photoKey) && photo.status !== "error";
+  const loadingPhoto = showPhoto && photo.status === "loading";
   return (
     <div className="profile-portrait relative aspect-[4/5] overflow-hidden bg-brand-blue-50 dark:bg-[#1b2944]">
-      <div
-        aria-hidden="true"
-        className={`absolute -right-[22%] -top-[12%] size-[74%] rounded-full ${ACCENT_COLORS[member.accent]}`}
-      />
-      <div
-        aria-hidden="true"
-        className="absolute bottom-0 left-0 size-[37%] border-l-[22px] border-t-[22px] border-white/70 dark:border-white/10"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute right-0 top-0 h-[58%] w-[22%] bg-[var(--ink)]/90 dark:bg-white/15"
-      />
-      {photoKey ? (
+      {/* The frame's shapes belong behind the photo, so they stay out of the
+          frame while the skeleton pulses down to half opacity over them. */}
+      {loadingPhoto ? null : (
+        <>
+          <div
+            aria-hidden="true"
+            className={`absolute -right-[22%] -top-[12%] size-[74%] rounded-full ${ACCENT_COLORS[member.accent]}`}
+          />
+          <div
+            aria-hidden="true"
+            className="absolute bottom-0 left-0 size-[37%] border-l-[22px] border-t-[22px] border-white/70 dark:border-white/10"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute right-0 top-0 h-[58%] w-[22%] bg-[var(--ink)]/90 dark:bg-white/15"
+          />
+        </>
+      )}
+      {showPhoto ? null : (
+        <span className="absolute inset-x-0 bottom-12 text-center font-display text-8xl font-semibold tracking-tighter text-[var(--ink)]/80 dark:text-white/80">
+          {initials}
+        </span>
+      )}
+      {loadingPhoto ? <PhotoSkeleton /> : null}
+      {showPhoto ? (
         // Uploaded portraits resolve through a short-lived signed storage URL.
         // The browser can follow it directly; the Next image optimizer rejects it.
         <Image
@@ -374,8 +394,11 @@ function ProfilePortrait({
           alt={`Portrait of ${member.name}`}
           fill
           key={photoKey}
+          ref={imageRef}
           sizes="(max-width: 1023px) 100vw, 30vw"
           unoptimized
+          onLoad={photo.onLoad}
+          onError={photo.onError}
           className="object-cover"
           style={
             photoPosition
@@ -386,11 +409,7 @@ function ProfilePortrait({
               : undefined
           }
         />
-      ) : (
-        <span className="absolute inset-x-0 bottom-12 text-center font-display text-8xl font-semibold tracking-tighter text-[var(--ink)]/80 dark:text-white/80">
-          {initials}
-        </span>
-      )}
+      ) : null}
       <span className="absolute bottom-6 left-6 font-mono text-[11px] tracking-[0.16em] text-[var(--ink)]/55 uppercase dark:text-white/55">
         MGM Laboratory
       </span>
