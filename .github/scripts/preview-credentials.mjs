@@ -1,13 +1,21 @@
 import { ghPaginate, ghRequest } from "./gh-api.mjs";
-import { isBotComment, upsertComment } from "./pr-comments.mjs";
+import { isBotComment } from "./pr-comments.mjs";
 
 export const PREVIEW_READY_MARKER = "<!-- ren-automation:preview-ready -->";
 
 export async function invalidatePreviewAnnouncement(token, repo, prNumber) {
+  // Every /preview posts a fresh announcement, so each earlier one must be
+  // visibly retired: an upserted comment keeps its original position in the
+  // conversation and reads as stale, which is exactly the bug where a new
+  // deployment looked like it never announced anything. Replace the old
+  // bodies instead of deleting them so the history stays legible.
   const comments = await ghPaginate(token, `/repos/${repo}/issues/${prNumber}/comments`);
   for (const comment of comments) {
-    if (!isBotComment(comment) || comment.body?.includes(PREVIEW_READY_MARKER)) continue;
-    if (!comment.body?.includes(`Preview environment ready — PR #${prNumber}`)) continue;
+    if (!isBotComment(comment)) continue;
+    const isReady =
+      comment.body?.includes(PREVIEW_READY_MARKER) ||
+      comment.body?.includes(`Preview environment ready — PR #${prNumber}`);
+    if (!isReady) continue;
     await ghRequest(token, `/repos/${repo}/issues/comments/${comment.id}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -15,13 +23,6 @@ export async function invalidatePreviewAnnouncement(token, repo, prNumber) {
       }),
     });
   }
-  await upsertComment(
-    token,
-    repo,
-    prNumber,
-    PREVIEW_READY_MARKER,
-    "## Preview is rebuilding\n\nThe previous password is being rotated. A verified superadmin password will appear here when deployment completes.",
-  );
 }
 
 export function assertIsolatedCredentials(preview, web, production, environmentId) {
