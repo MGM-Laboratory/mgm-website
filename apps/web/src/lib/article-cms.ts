@@ -94,11 +94,11 @@ export function articleCoverUrl(coverKey?: string) {
   return `/api/articles-cms/media/${encodeURIComponent(coverKey)}`;
 }
 
-/** Formats an ISO date the way the article template does: "Sabtu, 31 Agustus 2024". */
+/** Formats an ISO date the way the article template does: "Saturday, August 31, 2024". */
 export function formatArticleDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return value;
-  return new Date(year, month - 1, day).toLocaleDateString("id-ID", {
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",

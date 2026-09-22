@@ -493,7 +493,7 @@ export function JobApplicationForm({
           </button>
           <p className="mt-3 text-center text-xs text-[var(--ink-4)]">
             Applications close on{" "}
-            {new Date(`${job.deadline}T00:00:00Z`).toLocaleDateString("id-ID", {
+            {new Date(`${job.deadline}T00:00:00Z`).toLocaleDateString("en-US", {
               day: "numeric",
               month: "long",
               year: "numeric",
