@@ -282,7 +282,13 @@ export function CoreCompetenciesSection() {
                 >
                   <div
                     className={cn(
-                      "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-6",
+                      // Mobile cards are half a phone wide (2-col grid):
+                      // the reduced padding plus the description being
+                      // hidden below sm leaves the Explore pill room to fit
+                      // without clipping, which is the bug in issue #74
+                      // (the button was pushed out of the card by text that
+                      // was too big and too long for that width).
+                      "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-4 sm:p-6",
                       CARD_BG[c.color],
                     )}
                   >
@@ -298,7 +304,7 @@ export function CoreCompetenciesSection() {
                       className="relative z-10 opacity-0"
                     >
                       <h3 className={cn("text-lg font-semibold", CARD_TEXT[c.color])}>{c.title}</h3>
-                      <p className={cn("mt-2 text-sm", CARD_TEXT_MUTED[c.color])}>
+                      <p className={cn("mt-2 hidden text-sm sm:block", CARD_TEXT_MUTED[c.color])}>
                         {c.description}
                       </p>
                       <Link
