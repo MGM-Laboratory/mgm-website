@@ -22,7 +22,7 @@ export function PageBand({
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">
       <main className="flex flex-1 flex-col">
         <section className="relative overflow-hidden bg-[var(--surface-muted)]">
-          <div className="relative mx-auto w-full max-w-[1200px] px-6 pt-24 pb-20 sm:px-[55px]">
+          <div className="relative mx-auto w-full max-w-[1200px] px-6 pt-24 pb-20 sm:px-10 lg:px-14">
             <FlairShape
               kind={motif}
               tone={tone}

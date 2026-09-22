@@ -19,7 +19,7 @@ export default function ArticleDetailLoading() {
 
           <Skeleton className="mt-[58px] aspect-[1200/482] w-full rounded-[24px]" />
 
-          <div className="mt-[58px] grid grid-cols-[128px_minmax(0,1fr)] gap-x-[111px] px-[55px] max-lg:grid-cols-1 max-lg:gap-x-0">
+          <div className="mt-[58px] grid grid-cols-[128px_minmax(0,1fr)] gap-x-[111px] px-6 sm:px-10 lg:px-14 max-lg:grid-cols-1 max-lg:gap-x-0">
             <div className="min-w-0">
               <Skeleton className="h-3 w-16" />
               <Skeleton className="mt-3 h-5 w-24" />

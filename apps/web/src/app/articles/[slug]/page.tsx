@@ -108,7 +108,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </div>
           ) : null}
 
-          <div className="mt-[58px] grid grid-cols-[128px_minmax(0,1fr)] gap-x-[111px] px-6 sm:px-10 lg:px-[55px] max-lg:grid-cols-1 max-lg:gap-x-0 max-lg:gap-y-8">
+          <div className="mt-[58px] grid grid-cols-[128px_minmax(0,1fr)] gap-x-[111px] px-6 sm:px-10 lg:px-14 max-lg:grid-cols-1 max-lg:gap-x-0 max-lg:gap-y-8">
             {authors.length ? (
               <aside className="min-w-0">
                 <p className="text-[11px] font-medium tracking-[0.12em] text-[#a7a7a7] uppercase">
@@ -134,7 +134,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </article>
 
         {others.length ? (
-          <section className="mx-auto w-full max-w-[1200px] px-6 pb-40 sm:px-10 lg:px-[55px]">
+          <section className="mx-auto w-full max-w-[1200px] px-6 pb-32 sm:px-10 lg:px-14">
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <h2 className="font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
                 Other articles
