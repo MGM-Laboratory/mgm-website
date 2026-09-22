@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Toaster } from "sonner";
 
 const ReactQueryDevtools =
@@ -37,7 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       forcedTheme={pathname.startsWith("/admin") ? "light" : undefined}
     >
       <QueryClientProvider client={queryClient}>
-        {children}
+        <NuqsAdapter>{children}</NuqsAdapter>
         <Toaster
           closeButton
           duration={4500}
