@@ -100,7 +100,7 @@ export function jobAcceptingApplications(job: JobDraft, now = todayUtc()) {
   return isOpenJob(job, now);
 }
 
-/** "Rabu, 31 Desember 2099" - the same id-ID long form articles use. */
+/** "Thursday, December 31, 2099" - the same en-US long form articles use. */
 export function formatJobDeadline(value: string) {
   return formatArticleDate(value);
 }
