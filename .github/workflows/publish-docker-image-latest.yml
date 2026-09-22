@@ -19,10 +19,12 @@ jobs:
 
   build:
     needs: changes
-    if: needs.changes.outputs.docker_api == 'true' || needs.changes.outputs.docker_web == 'true'
+    # See publish-docker-image-staging.yml for why this is never gated at
+    # the job level.
     uses: ./.github/workflows/publish-docker-image.yml
     with:
       tag: latest
+      run: ${{ needs.changes.outputs.docker_api == 'true' || needs.changes.outputs.docker_web == 'true' }}
     secrets: inherit
 
   gate:

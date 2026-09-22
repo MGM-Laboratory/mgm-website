@@ -235,6 +235,21 @@ The `main-protection` ruleset (id `23450743`) deliberately requires only stable,
 
 All other workflows still run on their explicit triggers: staging Docker builds validate PR images, production Docker publishing runs after `main` changes, scheduled security and cleanup workflows run independently, and external apps may report their own checks. They are not merge requirements because their availability and check names are outside this repository's control.
 
+**Update (2026-09-21):** all required checks on the `main-protection` ruleset except `security/snyk (MGM Laboratory)` are now pinned to their actual source app via `integration_id`, not left on the default "Any source." "Any source" means a same-named status or check run posted by anything, not just the app that's actually supposed to produce it, would satisfy that required check: pinning closes that. `security/snyk (MGM Laboratory)` is the one check left unpinned: it's posted from a user account (`shirasakaren`), not a GitHub App, and `integration_id` pinning only applies to Apps, so it has nothing to pin to until that integration moves behind a proper App installation.
+
+**Hard rule going forward: treat the ruleset as something you edit deliberately, never as a casual re-save.** The recurring reset problem above came from exactly that: the Settings → Rules web UI resubmitting the whole form, stale pre-filled values included, on every save. Prefer a direct API read-modify-write (`gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743`, edit only the field that needs to change, `PUT` the corrected payload back) over clicking through the web UI. Whenever a new check gets added to the required list, pin it to its real source immediately rather than leaving "Any source": look up the producing app first (`gh api repos/MGM-Laboratory/mgm-website/commits/<sha>/check-runs --jq '.check_runs[] | "\(.name) \(.app.slug) \(.app.id)"'` for Checks API entries). For a check run this gives the app id directly; the equivalent `.../statuses` endpoint for legacy commit statuses only returns `.creator` (a user or bot account, not an app), so map that provider to its app id independently (for example, `gh api apps/<slug>`) before pinning, and if the poster turns out to be a user account rather than an App, leave `integration_id` unset and record the exception here, the way `security/snyk` is documented above. Current app ids for this repo's checks:
+
+| App                                                      | `integration_id` |
+| -------------------------------------------------------- | ---------------- |
+| GitHub Actions                                           | 15368            |
+| GitHub Advanced Security (Trivy and gitleaks check-runs) | 57789            |
+| SonarCloud                                               | 12526            |
+| Codecov                                                  | 254              |
+| DeepSource                                               | 16372            |
+| pre-commit.ci                                            | 68672            |
+| GitGuardian                                              | 46505            |
+| Semgrep                                                  | 4965759          |
+
 ## Local
 
 `docker compose up` runs Postgres 17 + api (4000) + web (3000) with vars from `.env` / `.env.example`. `DOCKERHUB_NAMESPACE` in `.env.example` is the compose image namespace, but CI uses repo-level GitHub vars instead.
