@@ -35,7 +35,7 @@ import {
   getVariables,
   listServiceInstances,
 } from "./railway-api.mjs";
-import { upsertComment } from "./pr-comments.mjs";
+import { ghRequest } from "./gh-api.mjs";
 import {
   assertIsolatedCredentials,
   PREVIEW_READY_MARKER,
@@ -273,6 +273,13 @@ const commentBody = [
   footer(),
 ].join("\n");
 
-await upsertComment(botToken, repo, prNumber, PREVIEW_READY_MARKER, commentBody);
+// Post a fresh comment rather than upserting the previous announcement:
+// an upsert keeps the old comment's position in the conversation, so a new
+// deployment looked like it never announced anything. The provision step
+// already superseded every earlier ready comment.
+await ghRequest(botToken, `/repos/${repo}/issues/${prNumber}/comments`, {
+  method: "POST",
+  body: JSON.stringify({ body: `${PREVIEW_READY_MARKER}\n${commentBody}` }),
+});
 
 console.log("Preview ready, comment posted.");
