@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Search, Star, X } from "lucide-react";
+import { debounce, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { type Member, type MemberDivision } from "@/data/members";
@@ -10,6 +11,25 @@ import { useMemberRecords } from "@/hooks/use-member-records";
 import type { CmsMemberRecord } from "@/lib/member-cms";
 
 type Filter = "All" | MemberDivision;
+
+// Read by member-profile.tsx to send "All members" back to the exact
+// filtered/searched view a visitor came from, instead of a bare "/member"
+// that silently drops their division filter and search query.
+export const MEMBER_LIST_RETURN_KEY = "member-directory:return-url";
+
+const FILTER_VALUES = [
+  "All",
+  "Professors",
+  "Website",
+  "Mobile",
+  "HCI/UX",
+  "Game & XR",
+  "IT & Infrastructure",
+  "Public Relations",
+  "Media",
+  "Curriculum",
+  "Human Resource",
+] as const satisfies readonly Filter[];
 
 const STOP_WORDS = new Set([
   "a",
@@ -261,8 +281,12 @@ export function MemberDirectory({
   const searchAnchor = useRef<HTMLDivElement>(null);
   const searchSurface = useRef<HTMLDivElement>(null);
   const shouldResetDirectoryScroll = useRef(false);
-  const [filter, setFilter] = useState<Filter>("All");
-  const [query, setQuery] = useState("");
+  // Filter/search live in the URL, not component state, so a shared view
+  // survives back-navigation, refresh, and can be bookmarked or sent as-is.
+  const [{ division: filter, q: query }, setFilterState] = useQueryStates({
+    division: parseAsStringLiteral(FILTER_VALUES).withDefault("All"),
+    q: parseAsString.withDefault("").withOptions({ limitUrlUpdates: debounce(300) }),
+  });
   const [profileSearchIndex, setProfileSearchIndex] = useState<Record<string, string>>({});
   const [scrollResetVersion, setScrollResetVersion] = useState(0);
   const deferredQuery = useDeferredValue(query);
@@ -339,11 +363,15 @@ export function MemberDirectory({
   };
   const updateFilter = (nextFilter: Filter) => {
     requestScrollReset();
-    setFilter(nextFilter);
+    void setFilterState({ division: nextFilter });
   };
   const updateQuery = (nextQuery: string) => {
     requestScrollReset();
-    setQuery(nextQuery);
+    void setFilterState({ q: nextQuery });
+  };
+  const resetAll = () => {
+    requestScrollReset();
+    void setFilterState({ division: "All", q: "" });
   };
 
   return (
@@ -462,6 +490,12 @@ export function MemberDirectory({
                   <article key={member.slug} className="member-card min-w-0 py-1">
                     <Link
                       href={`/member/${member.slug}`}
+                      onClick={() => {
+                        sessionStorage.setItem(
+                          MEMBER_LIST_RETURN_KEY,
+                          `${window.location.pathname}${window.location.search}`,
+                        );
+                      }}
                       className="group/member relative z-0 block focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-4 focus-visible:outline-none hover:z-10 dark:focus-visible:ring-offset-[#15181e]"
                     >
                       <div
@@ -539,10 +573,7 @@ export function MemberDirectory({
                   </p>
                   <button
                     type="button"
-                    onClick={() => {
-                      updateFilter("All");
-                      updateQuery("");
-                    }}
+                    onClick={resetAll}
                     className="mt-5 font-medium text-brand-blue transition-colors hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:outline-none dark:hover:text-white"
                   >
                     View every member
