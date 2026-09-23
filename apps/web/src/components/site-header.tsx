@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/nav/logo-mark";
 import { NavMenu } from "@/components/nav/nav-menu";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
+import { waitForProjectReveal } from "@/lib/project-transition";
 import { waitForRouteReveal } from "@/lib/route-reveal";
 
 /** A single project's detail page, `/projects/<slug>` (not the index). */
@@ -69,7 +70,9 @@ function ProjectBackLink() {
     if (!link || !arrivedInternally) return;
     let cancelled = false;
     link.dataset.waiting = "";
-    void waitForRouteReveal().then(() => {
+    // Wait for whichever cover brought the page in: the route curtain or the
+    // project zoom (which holds its final frame until the page is ready).
+    void Promise.all([waitForRouteReveal(), waitForProjectReveal()]).then(() => {
       if (!cancelled) delete link.dataset.waiting;
     });
     return () => {
