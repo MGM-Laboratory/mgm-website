@@ -204,7 +204,9 @@ export function enterFrame(t: number, source: ZoomSource, view: View): ZoomFrame
     // The rim goes first, the centre last.
     fog: mix(FOG_CLEAR, FOG_SOLID, sineInOut(fit(t, 0.36, 0.97))),
     layer: sineInOut(fit(t, 0.1, 0.72)),
-    tint: sineInOut(fit(t, 0.12, 0.95)),
+    // Ends early: the header eases its colours over 0.5 s of its own, which
+    // trails the tint by about 0.3 s.
+    tint: sineInOut(fit(t, 0.08, 0.8)),
     alpha: 1,
   });
 }
@@ -217,7 +219,8 @@ export function exitFrame(t: number, source: ZoomSource, view: View): ZoomFrame 
     // The centre clears first, the rim last.
     fog: mix(FOG_SOLID, FOG_CLEAR, sineInOut(fit(t, 0.02, 0.62))),
     layer: 1 - sineInOut(fit(t, 0.22, 0.82)),
-    tint: sineInOut(fit(t, 0.05, 0.85)),
+    // Early for the header's own colour easing, as on the way in.
+    tint: sineInOut(fit(t, 0, 0.62)),
     alpha: 1 - fit(t, EXIT_LAND_AT, 1),
   });
 }

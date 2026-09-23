@@ -73,8 +73,10 @@ const PREPARE_MS = 300;
 const PAGE_READY_MS = 3000;
 // The route never committing at all: reveal whatever is there.
 const COMMIT_CEILING_MS = 8000;
-// Exit: how long the landing waits for the card's picture.
+// Exit: how long the landing waits for the card's picture, and for the
+// other covers on screen to be able to paint.
 const PICTURE_MS = 1500;
+const LIST_COVERS_MS = 1200;
 const REVEAL_SECONDS = 0.35;
 const ABORT_SECONDS = 0.2;
 const SWAP_SECONDS = 0.45;
@@ -161,6 +163,32 @@ function landingFrame(slug: string) {
   return document.querySelector<HTMLElement>(
     `a[data-project-transition][data-project-slug="${CSS.escape(slug)}"] [data-project-transition-frame]`,
   );
+}
+
+/** The card covers the list shows in the viewport right now. */
+function coversOnScreen(view: View) {
+  return [
+    ...document.querySelectorAll<HTMLImageElement>(
+      "a[data-project-transition] [data-project-transition-frame] img",
+    ),
+  ].filter((image) => {
+    const box = image.getBoundingClientRect();
+    return box.bottom > 0 && box.top < view.height && box.width > 0;
+  });
+}
+
+/** Resolves once an image has loaded (or failed) and decoded. */
+function settle(image: HTMLImageElement) {
+  // A lazy image the browser hasn't started yet: it is on screen, so ask now.
+  if (image.loading === "lazy") image.loading = "eager";
+  return new Promise<void>((resolve) => {
+    const decode = () => image.decode().then(resolve, resolve);
+    if (image.complete) decode();
+    else {
+      image.addEventListener("load", decode, { once: true });
+      image.addEventListener("error", () => resolve(), { once: true });
+    }
+  });
 }
 
 function releaseLanding() {
@@ -598,6 +626,10 @@ export class ProjectZoom {
     }
 
     const image = imageIn(frame, s.slug);
+    // The list shows at once on the way back (no intro to load behind), so
+    // the cover holds, briefly, until the covers on screen can paint:
+    // otherwise a list never seen this visit opens on empty frames.
+    const covers = withTimeout(Promise.all(coversOnScreen(run.view).map(settle)), LIST_COVERS_MS);
     const gl = this.forceDom ? null : await withTimeout(this.ensureGl(), PICTURE_MS);
     let prepared: PreparedPicture | null = null;
     if (gl && image) {
@@ -611,6 +643,7 @@ export class ProjectZoom {
     } else {
       discardWarm();
     }
+    await covers;
     if (!this.live(run)) {
       closePicture(prepared);
       return;
