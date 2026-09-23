@@ -415,7 +415,11 @@ export function ProjectCardCover({
             {/* CMS media is served through the storage proxy; next/image
                 cannot optimize it, so a plain img matches the rest of the
                 site. The WebGL stage switches it to eager loading once
-                it exists (stage/cover-engine.ts). */}
+                it exists (stage/cover-engine.ts). The first row is what the
+                list reveals with, so its covers load first; the rest yield
+                to the cover stage's script, which otherwise queued behind a
+                dozen lazy-loaded covers on a cold visit and missed the
+                reveal. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imageRef}
@@ -423,6 +427,7 @@ export function ProjectCardCover({
               alt={alt}
               loading="lazy"
               decoding="async"
+              fetchPriority={index < 2 ? "high" : "low"}
               className="h-full w-full object-cover will-change-transform"
             />
             {/* Edge motion blur for the DOM opening: a blurred copy masked
