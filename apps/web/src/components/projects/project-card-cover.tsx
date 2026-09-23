@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
 import { PatternTile, type PatternKind } from "@/components/process/pattern-tile";
+import { trackScrollIdle, whenScrollIdle } from "@/components/projects/stage/scroll-idle";
 import {
   FOCUS_HUNT_DELAY,
   FOCUS_HUNT_ONSET,
@@ -277,12 +278,23 @@ export function ProjectCardCover({
       });
     };
 
+    // A card the page scrolls under a resting cursor doesn't pull focus
+    // mid-scroll: the pull waits for the scroll to settle, and plays then
+    // if the pointer is still over the card.
+    const stopTracking = trackScrollIdle();
+    let cancelWait: (() => void) | null = null;
     const onEnter = () => {
-      if (ownedByStage()) return;
-      markBusy();
-      focusIn();
+      cancelWait?.();
+      cancelWait = whenScrollIdle(() => {
+        cancelWait = null;
+        if (ownedByStage()) return;
+        markBusy();
+        focusIn();
+      });
     };
     const onLeave = () => {
+      cancelWait?.();
+      cancelWait = null;
       blurOut();
       tiltX(0);
       tiltY(0);
@@ -307,6 +319,8 @@ export function ProjectCardCover({
       root.removeEventListener("mousemove", onMove);
       gsap.killTweensOf(img);
       settle?.kill();
+      cancelWait?.();
+      stopTracking();
       delete frame.dataset.domHover;
     };
   }, []);

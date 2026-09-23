@@ -22,6 +22,7 @@ import {
 } from "@/components/projects/stage/cover-textures";
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
 import { gridRevealState } from "@/components/projects/stage/grid-reveal-state";
+import { isScrollIdle, trackScrollIdle } from "@/components/projects/stage/scroll-idle";
 import { Spring } from "@/components/projects/stage/spring";
 import {
   FOCUS_HUNT_DELAY,
@@ -173,7 +174,10 @@ type Card = {
   time: number;
   hunt: "waiting" | "onset" | "done";
   focus: Spring;
-  // Hover.
+  // Hover. The pointer can be over the frame without a hover playing: a
+  // card the page scrolled under a resting cursor waits for the scroll to
+  // settle.
+  pointerInside: boolean;
   hovered: boolean;
   hoverTime: number;
   blurInLeft: number;
@@ -247,6 +251,7 @@ export class CoverEngine {
   private disposed = false;
   private offFrame: (() => void) | null = null;
   private readonly offCards: () => void;
+  private readonly offScrollIdle = trackScrollIdle();
   private readonly resizeObserver: ResizeObserver;
 
   constructor(callbacks: CoverEngineCallbacks) {
@@ -326,6 +331,7 @@ export class CoverEngine {
     this.disposed = true;
     this.offFrame?.();
     this.offCards();
+    this.offScrollIdle();
     this.resizeObserver.disconnect();
     window.removeEventListener("resize", this.onResize);
     document.removeEventListener("visibilitychange", this.onVisibility);
@@ -458,6 +464,7 @@ export class CoverEngine {
       time: 0,
       hunt: "waiting",
       focus: new Spring(...FOCUS_SPRING),
+      pointerInside: false,
       hovered: false,
       hoverTime: 0,
       blurInLeft: 0,
@@ -473,21 +480,26 @@ export class CoverEngine {
 
     // Hover follows the picture (the frame), like lusion; the DOM frame
     // still gets the events because the canvas above it ignores pointers.
-    const enter = () => {
-      if (card.state !== "attached") return;
-      card.hovered = true;
-      card.hoverTime = 0;
-      card.blurInLeft = HOVER_BLUR_SECONDS;
+    // Like lusion's idle check, a card the page scrolls under a resting
+    // cursor doesn't kick its hover mid-scroll: the frame loop starts it
+    // once the scroll settles, if the pointer is still there.
+    const aim = (event: MouseEvent) => {
+      const top = card.top + gridRevealState.y - window.scrollY;
+      card.pointerX = clamp((event.clientX - card.x) / card.width - 0.5, -0.5, 0.5);
+      card.pointerY = clamp((event.clientY - top) / card.height - 0.5, -0.5, 0.5);
+    };
+    const enter = (event: MouseEvent) => {
+      card.pointerInside = true;
+      aim(event);
+      if (isScrollIdle()) this.startHover(card);
     };
     const leave = () => {
+      card.pointerInside = false;
       card.hovered = false;
       card.blurInLeft = 0;
     };
     const move = (event: MouseEvent) => {
-      if (!card.hovered) return;
-      const top = card.top + gridRevealState.y - window.scrollY;
-      card.pointerX = clamp((event.clientX - card.x) / card.width - 0.5, -0.5, 0.5);
-      card.pointerY = clamp((event.clientY - top) / card.height - 0.5, -0.5, 0.5);
+      if (card.pointerInside) aim(event);
     };
     card.frame.addEventListener("mouseenter", enter);
     card.frame.addEventListener("mouseleave", leave);
@@ -498,6 +510,13 @@ export class CoverEngine {
       card.frame.removeEventListener("mousemove", move);
     };
     return card;
+  }
+
+  private startHover(card: Card) {
+    if (card.state !== "attached" || card.hovered) return;
+    card.hovered = true;
+    card.hoverTime = 0;
+    card.blurInLeft = HOVER_BLUR_SECONDS;
   }
 
   private destroyCard(card: Card) {
@@ -792,6 +811,7 @@ export class CoverEngine {
 
     // Nothing moving the covers: an on-screen takeover can't show.
     const still = moved === 0 && lens === 0 && this.bow.atRest;
+    const scrollIdle = isScrollIdle();
     const offset = revealY - scrollY;
     for (const card of this.cards.values()) {
       const top = card.top + offset;
@@ -880,7 +900,8 @@ export class CoverEngine {
         focus = Math.abs(card.focus.value);
       }
 
-      // Hover springs.
+      // Hover springs (a hover held back by a scroll starts once it settles).
+      if (card.pointerInside && !card.hovered && scrollIdle) this.startHover(card);
       const hovered = card.hovered;
       card.zoom.step(dt, hovered ? HOVER_ZOOM : 0);
       card.zoom.settle(1e-4);
@@ -978,6 +999,7 @@ export class CoverEngine {
           opening: card.opening,
           time: card.time,
           hovered: card.hovered,
+          pointerInside: card.pointerInside,
           visible: card.mesh?.visible ?? false,
           focus: card.uniforms?.u_focus.value ?? null,
           focusSpring: card.focus.value,
