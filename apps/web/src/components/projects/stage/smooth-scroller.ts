@@ -72,6 +72,11 @@ export async function startSmoothScroll(): Promise<() => void> {
   // stopped, Lenis also swallows wheel events, so nothing scrolls behind a
   // locked page; restarting re-syncs its target to the real position, and
   // resize() re-reads the page height in case it changed while locked.
+  // A stopped Lenis ignores scrollTo, so a programmatic scroll asked for
+  // while a lock is held (the hero arrow clicked while the list is still
+  // settling in) is kept and run as soon as the lock lets go instead of
+  // being silently lost. Only the latest request is kept.
+  let pending: (() => void) | null = null;
   if (isScrollLocked()) lenis.stop();
   const offLock = onScrollLockChange((locked) => {
     if (locked) {
@@ -79,6 +84,9 @@ export async function startSmoothScroll(): Promise<() => void> {
     } else {
       lenis.start();
       lenis.resize();
+      const run = pending;
+      pending = null;
+      run?.();
     }
   });
 
@@ -136,17 +144,24 @@ export async function startSmoothScroll(): Promise<() => void> {
   // for any scroll margin).
   const offScroller = setPageScroller(
     (target: PageScrollTarget, { duration = 1, offset = 0 }: PageScrollOptions) => {
-      const y =
-        typeof target === "number" ? target : target.getBoundingClientRect().top + window.scrollY;
-      lenis.scrollTo(Math.max(0, y + offset), {
-        duration: Math.max(duration, 0),
-        easing: easeInOutQuart,
-        immediate: duration <= 0,
-      });
+      // Resolved when it runs: a deferred request must aim at where its
+      // target is by then.
+      const run = () => {
+        const y =
+          typeof target === "number" ? target : target.getBoundingClientRect().top + window.scrollY;
+        lenis.scrollTo(Math.max(0, y + offset), {
+          duration: Math.max(duration, 0),
+          easing: easeInOutQuart,
+          immediate: duration <= 0,
+        });
+      };
+      if (lenis.isStopped) pending = run;
+      else run();
     },
   );
 
   return () => {
+    pending = null;
     window.removeEventListener("keydown", onKeyDown);
     offScroller();
     offFrame();

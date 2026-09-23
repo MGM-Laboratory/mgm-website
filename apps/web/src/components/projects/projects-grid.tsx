@@ -16,6 +16,7 @@ import {
 } from "@/components/projects/stage/stage-registry";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import { markGridRevealStarted, waitForProjectsIntro } from "@/lib/projects-intro";
+import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so the list's
 // hidden state is settled before first paint.
@@ -29,6 +30,7 @@ const STAGE_SETTLE_MS = 700;
 // tab time only.
 const INTRO_FAILSAFE_MS = 13_000;
 const RISE_PX = 28;
+const REVEAL_LOCK_OWNER = "projects-grid-reveal";
 
 /**
  * The full project index: every published project, two cards per row on
@@ -76,12 +78,18 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
     // there until the hero pins it back. Set from here only, never in the
     // server HTML: CSS can't undo inert, so the <noscript> visitors who
     // see the list must never get it.
+    // The page also stays scroll-locked until the list starts appearing:
+    // the hero lets go when its entrance ends, but the list can still wait
+    // up to STAGE_SETTLE_MS for the cover stage after that, and scrolling
+    // then only moved through blank space.
     const held: HTMLElement[] = [section];
     for (let el = section.closest("main")?.nextElementSibling; el; el = el.nextElementSibling) {
       if (el instanceof HTMLElement) held.push(el);
     }
     const hold = (on: boolean) => {
       for (const el of held) el.inert = on;
+      if (on) acquireScrollLock(REVEAL_LOCK_OWNER);
+      else releaseScrollLock(REVEAL_LOCK_OWNER);
     };
     hold(true);
 
@@ -152,7 +160,7 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
     return () => {
       cancelled = true;
       // A Strict Mode rehearsal unmount (or any teardown mid-intro) must
-      // never leave the list or the footer unreachable.
+      // never leave the list or the footer unreachable, or the page locked.
       hold(false);
       tween?.kill();
       for (const stop of stops) stop();
