@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -10,7 +10,12 @@ import { startHeroPlay } from "@/components/projects/hero-play";
 import { CompetencyMotifShape } from "@/components/sections/competency-motif";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { scrollPageTo } from "@/lib/page-scroll";
-import { beginProjectsIntro, finishProjectsIntro } from "@/lib/projects-intro";
+import { peekProjectReturn } from "@/lib/project-transition";
+import {
+  beginProjectsIntro,
+  finishProjectsIntro,
+  markGridRevealStarted,
+} from "@/lib/projects-intro";
 import { onReducedMotion } from "@/lib/reduced-motion";
 import { waitForRouteReveal } from "@/lib/route-reveal";
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
@@ -106,6 +111,11 @@ function countInkOffsets(count: number) {
  * The entrance plays alone: from mount until it completes, the page is held
  * at the top with scrolling locked and the project list waits
  * (lib/projects-intro.ts); the grid fades the list in once the intro ends.
+ *
+ * Coming back from a project through the zoom transition (a return note,
+ * lib/project-transition.ts), the page arrives as it was left: the hero is
+ * finished at once, nothing is locked and the list shows straight away,
+ * while the overlay zooms back out onto the project's card.
  */
 export function ProjectsHero({ count }: { count: number }) {
   const rootRef = useRef<HTMLElement>(null);
@@ -122,6 +132,11 @@ export function ProjectsHero({ count }: { count: number }) {
   if (skipEntranceForInternalNavRef.current === null) {
     skipEntranceForInternalNavRef.current = hasAppAlreadyBooted();
   }
+  // Also read during render: the overlay clears the note once it lands.
+  const [returning] = useState(() => {
+    const note = peekProjectReturn();
+    return Boolean(note && !note.restoreOnly);
+  });
 
   useIsomorphicLayoutEffect(() => {
     const root = rootRef.current;
@@ -142,7 +157,7 @@ export function ProjectsHero({ count }: { count: number }) {
     // over (see the intro below); any other visit makes sure the browser
     // has it back, since reloading a visit that held the page arrives
     // with the entry still set to "manual".
-    if ((reduced || count === 0) && history.scrollRestoration === "manual") {
+    if ((reduced || returning || count === 0) && history.scrollRestoration === "manual") {
       ScrollTrigger.clearScrollMemory("auto");
     }
     // The finished hero, as reduced motion shows it from the start.
@@ -161,6 +176,16 @@ export function ProjectsHero({ count }: { count: number }) {
       finishProjectsIntro();
       showFinal();
       return;
+    }
+    if (returning) {
+      // Back from a project: no intro, no lock, the list reveals at once
+      // (the grid sets its final state) and the idle play starts, parked
+      // while the overlay's scroll lock covers the page.
+      finishProjectsIntro();
+      markGridRevealStarted();
+      showFinal();
+      const stopReturnPlay = startHeroPlay(root, { slots: HERO_SLOTS, count });
+      return () => stopReturnPlay();
     }
 
     // Hide the pre-hydration state right away so nothing peeks through the
@@ -366,7 +391,7 @@ export function ProjectsHero({ count }: { count: number }) {
       stopPlay?.();
       arrowLink?.removeAttribute("tabindex");
     };
-  }, [count]);
+  }, [count, returning]);
 
   return (
     <section ref={rootRef} className="relative pt-[4em] pb-[clamp(2.5rem,7vh,5rem)] md:pt-[12vh]">

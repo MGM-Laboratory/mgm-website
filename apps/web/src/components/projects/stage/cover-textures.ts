@@ -9,6 +9,9 @@
  * 3:2 frame actually shows (object-cover, centred) plus a small margin
  * where the source has spare pixels, and downscaled to about its rendered
  * size times the capped DPR before upload.
+ *
+ * The project zoom overlay (components/transition/project-zoom-gl.ts)
+ * reads its covers through `whenLoaded` and `encodedSource` too.
  */
 
 /** Spare source pixels kept around the visible region (fraction of it). */
@@ -34,7 +37,7 @@ export type PreparedCover = {
   premultiplied: boolean;
 };
 
-async function whenLoaded(img: HTMLImageElement) {
+export async function whenLoaded(img: HTMLImageElement) {
   if (!img.complete) {
     await new Promise<void>((resolve) => {
       img.addEventListener("load", () => resolve(), { once: true });
@@ -60,7 +63,7 @@ async function whenLoaded(img: HTMLImageElement) {
  * already loaded them and the media route is immutable), so nothing is
  * downloaded twice. Falls back to the element if the request fails.
  */
-async function encodedSource(img: HTMLImageElement): Promise<Blob | HTMLImageElement> {
+export async function encodedSource(img: HTMLImageElement): Promise<Blob | HTMLImageElement> {
   // Only CMS media covers (lib/project-cms.ts projectMediaUrl) take this
   // path, requested under the media route's fixed prefix on this origin;
   // anything else (a /public fallback, a foreign URL) decodes from the

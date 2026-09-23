@@ -204,6 +204,13 @@ const EXPO_END = 1 - 2 ** -10;
 const expoOut = (x: number) => (x >= 1 ? 1 : (1 - 2 ** (-10 * x)) / EXPO_END);
 const expoOutRate = (x: number) => (x >= 1 ? 0 : (10 * Math.LN2 * 2 ** (-10 * x)) / EXPO_END);
 
+/**
+ * The card the project zoom overlay is landing on (coming back from its
+ * project): its cover stays hidden until the overlay swaps it in, so the
+ * stage neither takes it over nor draws it until the attribute goes.
+ */
+const isLanding = (card: Card) => card.frame.dataset.projectLanding !== undefined;
+
 function releaseCover(cover: PreparedCover | null) {
   if (!cover) return;
   if ("close" in cover.source) cover.source.close();
@@ -316,7 +323,9 @@ export class CoverEngine {
       if (card.state === "prepared") this.upload(card);
       // Once the list is showing (a stage that got ready late), the frame
       // loop decides when each card can be taken over.
-      if (card.state === "uploaded" && !gridRevealState.started) this.attach(card);
+      if (card.state === "uploaded" && !gridRevealState.started && !isLanding(card)) {
+        this.attach(card);
+      }
     }
     this.renderDirty = true;
     return true;
@@ -854,11 +863,18 @@ export class CoverEngine {
         this.loadCover(card);
       }
       if (card.state === "prepared" && !this.uploadedThisFrame) this.upload(card);
-      if (card.state === "uploaded") {
+      const landing = isLanding(card);
+      if (card.state === "uploaded" && !landing) {
         if (!revealed || !inRange) this.attach(card);
         else if (still) this.attachAtRest(card);
       }
       if (card.state !== "attached" || !card.mesh || !card.uniforms) {
+        card.inRange = inRange;
+        continue;
+      }
+      if (landing) {
+        if (card.mesh.visible) active = true;
+        card.mesh.visible = false;
         card.inRange = inRange;
         continue;
       }
