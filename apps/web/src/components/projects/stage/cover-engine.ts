@@ -420,6 +420,13 @@ export class CoverEngine {
   }
 
   private createCard(source: StageCard, image: HTMLImageElement): Card {
+    // Textures have to be ready before a card scrolls in, so every cover is
+    // fetched now instead of whenever native lazy loading gets to it (a
+    // lazy image far down the list also held a load slot waiting on a
+    // request the browser hadn't started). Only here, where the engine
+    // exists: the three.js chunk has landed, so this never competes with
+    // it, and touch/DOM visitors keep lazy loading.
+    image.loading = "eager";
     const card: Card = {
       source,
       frame: source.frame,

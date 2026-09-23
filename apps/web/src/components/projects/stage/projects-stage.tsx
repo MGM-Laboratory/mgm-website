@@ -6,7 +6,6 @@ import type { CoverEngine } from "@/components/projects/stage/cover-engine";
 import { startDomReaction } from "@/components/projects/stage/dom-reaction";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
 import {
-  getStageCards,
   getStageMode,
   onStageModeChange,
   resetStage,
@@ -94,11 +93,6 @@ export function ProjectsStage() {
       if (!fine || !supportsWebGL2()) {
         setStageMode("dom");
       } else {
-        // Textures have to be ready before a card scrolls in, so fetch
-        // every cover now instead of waiting for native lazy loading.
-        for (const card of getStageCards()) {
-          if (card.image) card.image.loading = "eager";
-        }
         import("@/components/projects/stage/cover-engine")
           .then(async ({ CoverEngine }) => {
             if (cancelled || getStageMode() === "dom") return;
@@ -130,10 +124,10 @@ export function ProjectsStage() {
       disposeEngine();
       stopScroll?.();
       stopReaction?.();
-      // Module state outlives this visit; the next one starts undecided
-      // (the covers' effects run before this host's on the next mount, so
-      // resetting here, not on mount, is what keeps them from reading a
-      // stale mode).
+      // Module state outlives this visit; the next one starts undecided.
+      // (On mount this host's layout effect runs before the covers',
+      // since it is their earlier sibling: the registry is still empty
+      // then, so nothing here may expect registered cards.)
       resetStage();
     };
   }, []);

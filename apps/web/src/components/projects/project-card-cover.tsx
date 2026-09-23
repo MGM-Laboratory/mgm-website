@@ -256,7 +256,8 @@ export function ProjectCardCover({
           <div ref={lensRef} className="relative h-full w-full">
             {/* CMS media is served through the storage proxy; next/image
                 cannot optimize it, so a plain img matches the rest of the
-                site. The WebGL stage switches it to eager loading. */}
+                site. The WebGL stage switches it to eager loading once
+                it exists (stage/cover-engine.ts). */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imageRef}
