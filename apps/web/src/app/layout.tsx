@@ -5,6 +5,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
 import { SmoothScroll } from "@/components/smooth-scroll";
+import { ProjectTransition } from "@/components/transition/project-transition";
 import { RouteTransition } from "@/components/transition/route-transition";
 import { AppBootTracker } from "@/components/app-boot-tracker";
 
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Providers>
           <AppBootTracker />
           <RouteTransition />
+          <ProjectTransition />
           <SiteHeader />
           <SmoothScroll>{children}</SmoothScroll>
         </Providers>
