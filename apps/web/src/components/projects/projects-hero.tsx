@@ -130,6 +130,8 @@ export function ProjectsHero({ count }: { count: number }) {
     const numberText = q(".projects-hero-number-text")[0];
     const arrow = q(".projects-hero-arrow");
     const arrowPath = q(".projects-hero-arrow-path");
+    const arrowShaft = q(".projects-hero-arrow-shaft");
+    const arrowArms = q(".projects-hero-arrow-arms");
 
     enteredRef.current = false;
     const reduced = !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -247,13 +249,23 @@ export function ProjectsHero({ count }: { count: number }) {
             },
             0.5,
           )
-          // The corner arrow fades in and draws itself from the top-left corner.
+          // The corner arrow fades in and draws itself from the top-left
+          // corner: the shaft runs down to the tip, then the head's arms
+          // spring out of it.
           .fromTo(arrow, { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.95)
           .fromTo(
-            arrowPath,
+            arrowShaft,
             { drawSVG: "0%" },
-            { drawSVG: "100%", duration: 0.75, ease: "power2.inOut" },
+            { drawSVG: "100%", duration: 0.45, ease: "power2.in" },
             0.95,
+          )
+          // Half the arms path is one arm's length, which (with the dash
+          // restarting per subpath) draws both arms in full.
+          .fromTo(
+            arrowArms,
+            { drawSVG: "0% 0%" },
+            { drawSVG: "0% 50%", duration: 0.35, ease: "power3.out" },
+            1.35,
           );
       });
     };
@@ -383,14 +395,22 @@ export function ProjectsHero({ count }: { count: number }) {
             viewBox="0 0 38 38"
             fill="none"
           >
-            <path
-              className="projects-hero-arrow-path"
-              d="m2 2 34 34m0 0V6.046M36 36H6.046"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            />
+            {/* The shaft is its own path: browsers restart the dash pattern
+                at every subpath, so DrawSVG could never zip the shaft into
+                the tip on one combined path. It stops just inside the
+                corner, so the arms alone draw the ink's outer edges. The
+                arms share one path (one antialiased union at the corner),
+                and each grows out of the tip as its own subpath. */}
+            <g stroke="currentColor" strokeLinecap="round" strokeWidth="2">
+              <path
+                className="projects-hero-arrow-path projects-hero-arrow-shaft"
+                d="M2 2 35.3 35.3"
+              />
+              <path
+                className="projects-hero-arrow-path projects-hero-arrow-arms"
+                d="M36 36V6.046M36 36H6.046"
+              />
+            </g>
           </svg>
         </a>
       </div>

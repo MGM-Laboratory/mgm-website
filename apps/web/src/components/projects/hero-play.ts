@@ -1,6 +1,13 @@
 import gsap from "gsap";
 
+import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
+
+import { scrollPageTo } from "@/lib/page-scroll";
 import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(DrawSVGPlugin);
+}
 
 /**
  * The /projects hero's idle and hover play ("Residents"): the word PROJECT
@@ -14,8 +21,11 @@ import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";
  * - Residents and the eye: shapes peek through the word's gaps and
  *   counters; the pupil tracks the cursor, glances at events and blinks
  *   (a hard landing makes it flinch).
- * - An idle director plays one beat at a time (peek, blink, breathe)
- *   while nobody is interacting.
+ * - The instruments: the count re-rolls with a drop; the arrow is pulled
+ *   toward a nearby cursor, winds up on hover, and fires (its shaft zips
+ *   into the tip and regrows) while the page scrolls to the list.
+ * - An idle director plays one beat at a time (peek, blink, breathe,
+ *   count) while nobody is interacting.
  *
  * One fixed-step spring solver on the GSAP ticker writes every physics
  * transform. It only runs while something moves: once everything is calm
@@ -58,6 +68,8 @@ const KR: SpringConfig = [150, 9];
 const KS: SpringConfig = [420, 15];
 // Weight: critically damped, so ink never over- or undershoots.
 const KW: SpringConfig = [120, 22];
+// The arrow's drift, in units of its own size.
+const KA: SpringConfig = [220, 14];
 
 const DT = 1 / 120;
 /** Gravity for hops, in em/s^2. */
@@ -73,6 +85,7 @@ const CALM_STEPS = 12;
 const REST_WEIGHT = 500;
 
 const clamp = (lo: number, hi: number, v: number) => Math.min(hi, Math.max(lo, v));
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
 const spring = (x = 0): Spring => ({ x, v: 0 });
 function step(s: Spring, [k, c]: SpringConfig, target: number) {
   s.v += (k * (target - s.x) - c * s.v) * DT;
@@ -142,6 +155,9 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   const numberWrap = root.querySelector<HTMLElement>(".projects-hero-number");
   const numberText = root.querySelector<HTMLElement>(".projects-hero-number-text");
   const roll = root.querySelector<HTMLElement>(".projects-hero-number-roll");
+  const arrowSvg = root.querySelector<SVGSVGElement>(".projects-hero-arrow");
+  const arrowShaft = root.querySelector<SVGPathElement>(".projects-hero-arrow-shaft");
+  if (!arrowSvg || !arrowShaft) return;
   if (!h1 || !look || !dilate || !pupil || !link || !numberWrap || !numberText || !roll) return;
   if (glyphEls.length !== slots.length) return;
   const residents: Resident[] = [
@@ -167,6 +183,22 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   let blinkTl: Beat = null;
   let dropTl: Beat = null;
   let dropCooldownUntil = 0;
+
+  // The arrow: a solver body in units of its own size. The link around it
+  // is never transformed; it is the hit area and the measuring box, so the
+  // magnet can't feed back on itself.
+  const arrow = {
+    x: spring(),
+    y: spring(),
+    s: spring(),
+    /** Centre and size, em in title coordinates (see measure()). */
+    cx: 0,
+    cy: 0,
+    size: 1,
+    hover: false,
+    held: false,
+  };
+
   let nextBeat: gsap.core.Tween | null = null;
   let glanceBack: gsap.core.Tween | null = null;
   let lastBeatId = "";
@@ -226,6 +258,13 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   // quickTo drives one real property, not the scale shorthand.
   const dilateX = gsap.quickTo(dilate, "scaleX", { duration: 0.5, ease: "back.out(2)" });
   const dilateY = gsap.quickTo(dilate, "scaleY", { duration: 0.5, ease: "back.out(2)" });
+  const putArrow = {
+    x: qs(arrowSvg, "x", "px"),
+    y: qs(arrowSvg, "y", "px"),
+    // quickSetter drives real properties, not the scale shorthand.
+    sx: qs(arrowSvg, "scaleX"),
+    sy: qs(arrowSvg, "scaleY"),
+  };
   const dilateTo = (scale: number) => {
     dilateX(scale);
     dilateY(scale);
@@ -317,18 +356,55 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     }
   }
 
+  function stepArrow() {
+    let tx = 0;
+    let ty = 0;
+    const ts = arrow.held ? -0.16 : arrow.hover ? -0.08 : 0;
+    // Wound up: cocked back up-left, against its own direction.
+    if (arrow.hover) tx = ty = -0.08;
+    if (pointer.inside && fine) {
+      // The magnet: within 2.5 sizes it leans toward the cursor.
+      const dx = (pointer.x - arrow.cx) / arrow.size;
+      const dy = (pointer.y - arrow.cy) / arrow.size;
+      const f = smoothstep(1 - Math.min(Math.hypot(dx, dy) / 2.5, 1));
+      tx += clamp(-0.3, 0.3, dx * 0.3 * f);
+      ty += clamp(-0.3, 0.3, dy * 0.3 * f);
+    }
+    if (tx !== 0 || ty !== 0 || ts !== 0) restTargets = false;
+    step(arrow.x, KA, tx);
+    step(arrow.y, KA, ty);
+    step(arrow.s, KS, ts);
+    return (
+      Math.abs(arrow.x.v) < 0.005 &&
+      Math.abs(arrow.x.x - tx) < 0.002 &&
+      Math.abs(arrow.y.v) < 0.005 &&
+      Math.abs(arrow.y.x - ty) < 0.002 &&
+      Math.abs(arrow.s.v) < 0.002 &&
+      Math.abs(arrow.s.x - ts) < 0.0005
+    );
+  }
+
+  function writeArrow() {
+    const px = arrow.size * E;
+    putArrow.x(arrow.x.x * px);
+    putArrow.y(arrow.y.x * px);
+    putArrow.sx(1 + arrow.s.x);
+    putArrow.sy(1 + arrow.s.x);
+  }
+
   function tick(_time: number, deltaMs: number) {
     // Clamped, so a hitch or a resumed tab never fires a huge step.
     acc += Math.min(deltaMs, 50) / 1000;
     while (acc >= DT) {
       acc -= DT;
       restTargets = true;
-      let allCalm = true;
+      let allCalm = stepArrow();
       glyphs.forEach((g, i) => {
         if (!stepGlyph(g, i)) allCalm = false;
       });
-      calm = allCalm && !held ? calm + 1 : 0;
+      calm = allCalm && !held && !arrow.held ? calm + 1 : 0;
     }
+    writeArrow();
     write();
     // A beat that drives the letters keeps the solver up until it ends;
     // a parked cursor keeps its pose asleep; only a true rest snaps.
@@ -357,7 +433,11 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       g.vy = 0;
       g.tide = 0;
     }
+    arrow.x = spring();
+    arrow.y = spring();
+    arrow.s = spring();
     write();
+    writeArrow();
     // Exact identity: no sub-pixel residue, and weight back to the class.
     for (const g of glyphs) {
       g.el.style.fontWeight = "";
@@ -367,6 +447,56 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
 
   function launch(g: Glyph, height: number) {
     g.vy = -Math.sqrt(2 * GRAVITY * height);
+  }
+
+  // ---- the arrow ----
+  /** Two nods down-right: "the list is down there". */
+  function nudgeArrow() {
+    for (const delay of [0, 0.3]) {
+      gsap.delayedCall(delay, () => {
+        arrow.x.v += 1.6;
+        arrow.y.v += 1.6;
+        wake();
+      });
+    }
+  }
+
+  function setHot(on: boolean) {
+    arrow.hover = on;
+    link!.toggleAttribute("data-hot", on);
+    wake();
+  }
+
+  /** Fires the arrow and scrolls the page to the list. */
+  function fire(e: MouseEvent) {
+    const list = document.getElementById("projects");
+    // No list on the page: leave the native link alone.
+    if (!list) return;
+    e.preventDefault();
+    lastInput = performance.now();
+    arrow.held = false;
+    arrow.x.v += 5;
+    arrow.y.v += 5;
+    arrow.s.v += 2;
+    wake();
+    // The shaft zips into the tip, then regrows as the arrow springs home.
+    // A fromTo baseline, so a double-click can't strand it half drawn.
+    gsap.killTweensOf(arrowShaft);
+    gsap
+      .timeline()
+      .fromTo(
+        arrowShaft,
+        { drawSVG: "0% 100%" },
+        { drawSVG: "100% 100%", duration: 0.16, ease: "power2.in" },
+      )
+      .to(arrowShaft, { drawSVG: "0% 100%", duration: 0.5, ease: "power3.out" }, "+=0.05");
+    glance(arrow.cx + arrow.size, arrow.cy + arrow.size, 1.2);
+    // Through the page's scroller (a JS smooth scroller would fight a
+    // direct window scroll); the offset honours the list's scroll margin.
+    const margin = parseFloat(getComputedStyle(list).scrollMarginTop) || 0;
+    gsap.delayedCall(0.12, () => {
+      if (alive) scrollPageTo(list, { duration: 1.1, offset: -margin });
+    });
   }
 
   // ---- the eye ----
@@ -520,18 +650,18 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
         )
         // The swell spills over into the count.
         .call(() => void dropCount(2), [], 1.15)
+        // ...and the arrow points on at the list.
+        .call(nudgeArrow, [], 1.35)
     );
   }
 
   /** The eye opens once the entrance is over, and looks at the arrow. */
   function openEye(): Beat {
-    const r = link!.getBoundingClientRect();
-    const h = h1!.getBoundingClientRect();
-    const arrow = { x: (r.left + r.width / 2 - h.left) / E, y: (r.top + r.height / 2 - h.top) / E };
     return gsap
       .timeline({ onInterrupt: () => dilateTo(1) })
       .call(() => dilateTo(1), [], 0.3)
-      .call(() => glance(arrow.x, arrow.y, 0.9), [], 0.9)
+      .call(() => glance(arrow.cx, arrow.cy, 0.9), [], 0.9)
+      .call(nudgeArrow, [], 1.05)
       .set({}, {}, 1.9);
   }
 
@@ -605,6 +735,9 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       wake();
     } else if (numberWrap!.contains(target)) {
       dropCount(4);
+    } else if (link!.contains(target)) {
+      arrow.held = true;
+      wake();
     } else if (e.pointerType !== "mouse") {
       // A tap anywhere else in the hero: the eye looks at it.
       const [x, y] = toLocal(e);
@@ -615,6 +748,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   }
 
   function onUp() {
+    arrow.held = false;
     if (held) {
       const g = held;
       held = null;
@@ -629,6 +763,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
 
   // A touch that turned into a scroll: let go without a launch.
   function onCancel() {
+    arrow.held = false;
     if (held) {
       held.held = false;
       held = null;
@@ -650,6 +785,9 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       held.held = false;
       held = null;
     }
+    arrow.held = false;
+    arrow.hover = false;
+    link!.removeAttribute("data-hot");
     pointer.inside = false;
     lookAt(null);
     sleep(true);
@@ -673,8 +811,17 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   function measure() {
     if (!alive) return;
     E = parseFloat(getComputedStyle(h1!).fontSize) || E;
+    // Transform-free boxes: the link and the title are never transformed.
+    const r = link!.getBoundingClientRect();
+    const h = h1!.getBoundingClientRect();
+    arrow.size = r.width / E || 1;
+    arrow.cx = (r.left + r.width / 2 - h.left) / E;
+    arrow.cy = (r.top + r.height / 2 - h.top) / E;
     // Positions are em, so only the px writes need refreshing.
-    if (!awake) write();
+    if (!awake) {
+      write();
+      writeArrow();
+    }
   }
 
   const offs: Array<() => void> = [];
@@ -695,7 +842,17 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     listen(numberWrap, "pointerenter", (e: PointerEvent) => {
       if (e.pointerType === "mouse") dropCount(4);
     });
+    listen(link, "pointerenter", (e: PointerEvent) => {
+      if (e.pointerType === "mouse") setHot(true);
+    });
+    listen(link, "pointerleave", () => setHot(false));
   }
+  // Keyboard users get the wind-up on focus, and Enter fires it.
+  listen(link, "focus", () => {
+    if (link.matches(":focus-visible")) setHot(true);
+  });
+  listen(link, "blur", () => setHot(false));
+  listen(link, "click", fire);
   listen(root, "pointerdown", onDown);
   listen(window, "pointerup", onUp);
   listen(window, "pointercancel", onCancel);
@@ -715,6 +872,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   ro.observe(h1);
   void document.fonts?.ready.then(measure);
 
+  measure();
   activeBeat = openEye();
   schedule(activeBeat?.duration() ?? 0, gsap.utils.random(2.5, 4));
   running = !covered && !document.hidden;
@@ -753,7 +911,9 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     offs.forEach((off) => off());
     // quickSetter writes are not recorded by the matchMedia context, so
     // clear them by hand. Transform only: the markup owns the pivots.
-    gsap.set([...glyphEls, ...residents.map((r) => r.el)], { clearProps: "transform" });
+    gsap.set([...glyphEls, ...residents.map((r) => r.el), arrowSvg], { clearProps: "transform" });
+    gsap.killTweensOf(arrowShaft);
+    gsap.set(arrowShaft, { drawSVG: "100%" });
     for (const el of glyphEls) el.style.fontWeight = "";
   };
 }
