@@ -143,6 +143,7 @@ const EXAMPLE_SERVICES = ["Concept", "UX Research", "Web Development"];
 function PreviewPanel({
   copy,
   ctaLabel,
+  fallbackServices,
   palette,
   services,
   title,
@@ -150,12 +151,18 @@ function PreviewPanel({
 }: {
   copy?: string;
   ctaLabel?: string;
+  fallbackServices?: string[];
   palette: ProjectPalette;
   services: string[];
   title: string;
   variant: "Light" | "Dark";
 }) {
-  const shownServices = services.length ? services : EXAMPLE_SERVICES;
+  // Placeholder rows (the page's fallback, or examples) render dimmed.
+  const shownServices = services.length
+    ? services
+    : fallbackServices?.length
+      ? fallbackServices
+      : EXAMPLE_SERVICES;
   return (
     <figure
       className="flex min-h-56 min-w-0 flex-col gap-4 rounded-xl bg-[var(--project-bg)] p-4 text-[var(--project-text)] ring-1 ring-black/[0.06] sm:p-5"
@@ -207,12 +214,15 @@ function PreviewPanel({
 export function ThemePreview({
   copy,
   ctaLabel,
+  fallbackServices,
   services,
   themeId,
   title,
 }: {
   copy?: string;
   ctaLabel?: string;
+  /** What the page lists while services is empty (the tech stack). */
+  fallbackServices?: string[];
   services: string[];
   themeId: ProjectThemeId;
   title: string;
@@ -223,6 +233,7 @@ export function ThemePreview({
       <PreviewPanel
         copy={copy}
         ctaLabel={ctaLabel}
+        fallbackServices={fallbackServices}
         palette={theme.light}
         services={services}
         title={title}
@@ -231,6 +242,7 @@ export function ThemePreview({
       <PreviewPanel
         copy={copy}
         ctaLabel={ctaLabel}
+        fallbackServices={fallbackServices}
         palette={theme.dark}
         services={services}
         title={title}

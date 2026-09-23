@@ -130,6 +130,7 @@ export function DetailPageFields({
           <ThemePreview
             copy={projectDescriptionParagraphs(draft)[0]}
             ctaLabel={ctaLabel.trim() && ctaUrl.trim() ? ctaLabel.trim() : undefined}
+            fallbackServices={draft.techStack.slice(0, limits.servicesMax)}
             services={services}
             themeId={themeId}
             title={draft.title.trim() || "Project title"}
@@ -240,7 +241,8 @@ export function DetailPageFields({
         hint={
           <>
             What the lab did, in a few words each. For example: &ldquo;Concept&rdquo;, &ldquo;UX
-            Research&rdquo;, &ldquo;Web Development&rdquo;.
+            Research&rdquo;, &ldquo;Web Development&rdquo;. Leave it empty and the page lists the
+            tech stack instead.
           </>
         }
         title="Services"
