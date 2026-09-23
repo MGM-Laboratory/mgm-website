@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import gsap from "gsap";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-import { PatternTile, type PatternKind } from "@/components/process/pattern-tile";
+import { ProjectCardCover } from "@/components/projects/project-card-cover";
+import { ProjectCardFooter } from "@/components/projects/project-card-footer";
 import {
   projectGalleryKeys,
   projectMediaUrl,
@@ -14,26 +12,24 @@ import {
 } from "@/lib/project-cms";
 import { cn } from "@/lib/utils";
 
-// SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring
-// and the title measurement happen before first paint.
-const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
-
-/** Deterministic fallback motif for the few records without a cover image. */
-const FALLBACK_PATTERNS: PatternKind[] = ["fans", "arcs", "circle", "plus"];
-
 /**
  * The public list card, modeled on lusion.co/projects: a forced 3:2 cover
- * with rounded corners, a one-line categories row, and a one-line title.
- * Hovering the card plays the "camera focus" blur on the cover, tilts the
- * image in 3D toward the cursor (the frame itself stays a flat 2D
- * rectangle), indents the footer text, and slides an arrow in from the
- * left. Hovering the title itself box-flips every character in 3D.
+ * (project-card-cover.tsx, drawn by the page's WebGL cover stage when it
+ * runs), then a one-line categories row and a one-line title
+ * (project-card-footer.tsx). Both halves hang their hover effects off this
+ * link root, which each finds from its own element (`closest("a")`).
+ *
+ * The link carries an explicit accessible name: the visual text is split
+ * into per-character pieces for its animations, which screen readers would
+ * otherwise read letter by letter.
  */
 export function ProjectCard({
   record,
+  index,
   className,
 }: {
   record: CmsProjectRecord;
+  index: number;
   className?: string;
 }) {
   const { project } = record;
@@ -43,266 +39,20 @@ export function ProjectCard({
   const categories = project.categories
     .map((category) => PROJECT_CATEGORY_LABELS[category])
     .filter(Boolean);
-  const fallbackPattern = FALLBACK_PATTERNS[record.slug.length % FALLBACK_PATTERNS.length];
-
-  // The rendered title — starts as the full title and gets trimmed with an
-  // ellipsis below when it does not fit on one line.
-  const [title, setTitle] = useState(project.title);
-  // Word groups keep the space between words as a real whitespace-pre span
-  // (magicui's approach): a bare space inside an inline-block char box
-  // collapses to zero width, which glued words together.
-  const titleWords = title.split(" ");
-
-  const rootRef = useRef<HTMLAnchorElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const titleRowRef = useRef<HTMLDivElement>(null);
-  const sizerRef = useRef<HTMLSpanElement>(null);
-  const flipActiveRef = useRef(false);
-
-  // The title must stay on one line: measure the real rendered width
-  // against an invisible sizer and trim with an ellipsis when it overflows.
-  useIsomorphicLayoutEffect(() => {
-    const row = titleRowRef.current;
-    const sizer = sizerRef.current;
-    if (!row || !sizer) return;
-
-    let cancelled = false;
-    const fit = () => {
-      const measure = (text: string) => {
-        sizer.textContent = text;
-        return sizer.offsetWidth;
-      };
-      if (measure(project.title) <= row.clientWidth + 1) {
-        setTitle(project.title);
-        return;
-      }
-      // Longest prefix whose ellipsized form still fits on one line.
-      let lo = 1;
-      let hi = project.title.length;
-      while (lo < hi) {
-        const mid = (lo + hi + 1) >> 1;
-        if (measure(`${project.title.slice(0, mid)}…`) <= row.clientWidth) lo = mid;
-        else hi = mid - 1;
-      }
-      setTitle(`${project.title.slice(0, lo)}…`);
-    };
-
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(row);
-    // Widths can change once the display font loads.
-    document.fonts.ready.then(() => {
-      if (!cancelled) fit();
-    });
-    return () => {
-      cancelled = true;
-      ro.disconnect();
-    };
-  }, [project.title]);
-
-  useIsomorphicLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    // Every hover effect is decorative; reduced motion keeps the card
-    // completely static.
-    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
-
-    const img = imageRef.current;
-    const titleRow = titleRowRef.current;
-    const icon = root.querySelector<HTMLElement>(".project-card-icon");
-    if (!titleRow || !icon) return;
-
-    // The indent/arrow travel distance is one em of the title row.
-    const em = () => parseFloat(getComputedStyle(titleRow).fontSize) || 28;
-
-    // Camera focus: blur in fast, then pull focus back to sharp. Built per
-    // enter from the current filter so re-hovering mid-blur stays smooth.
-    const focusIn = () => {
-      if (!img) return;
-      gsap.killTweensOf(img, "filter");
-      gsap
-        .timeline()
-        .fromTo(
-          img,
-          { filter: () => getComputedStyle(img).filter },
-          { filter: "blur(12px)", duration: 0.15, ease: "power1.in" },
-        )
-        .to(img, { filter: "blur(0px)", duration: 0.55, ease: "power3.out" });
-    };
-    // Leaving pulls the cover back to sharp instead of leaving it blurred:
-    // the image must end clear when the hover ends (and a mid-blur kill
-    // lands on blur(0) too), so every new hover replays the same cycle.
-    const blurOut = () => {
-      if (!img) return;
-      gsap.killTweensOf(img, "filter");
-      gsap.to(img, { filter: "blur(0px)", duration: 0.35, ease: "power2.out" });
-    };
-
-    // Slight 3D tilt of the image toward the cursor. Only the image
-    // rotates (inside the flat, rounded frame); quickTo keeps each axis
-    // independently smoothed.
-    let tilt: { x: gsap.QuickToFunc; y: gsap.QuickToFunc } | null = null;
-    if (img) {
-      gsap.set(img, { transformPerspective: 900 });
-      tilt = {
-        x: gsap.quickTo(img, "rotationX", { duration: 0.5, ease: "power2.out" }),
-        y: gsap.quickTo(img, "rotationY", { duration: 0.5, ease: "power2.out" }),
-      };
-    }
-
-    // Footer hover: the title indents one em and the arrow slides in from
-    // the left edge. .fromTo baselines (not .to) so reversing mid-animation
-    // can never strand a half-finished value.
-    const indent = gsap.timeline({ paused: true });
-    indent.fromTo(
-      [titleRow.querySelector(".project-card-title"), icon],
-      { x: 0 },
-      { x: () => em(), duration: 0.5, ease: "power3.out" },
-      0,
-    );
-
-    // Title hover: the magicui text-3d-flip — every character is a 3D box
-    // whose front face sits in the text plane and whose back face is
-    // pre-rotated -90deg on X; hovering rotates each box 90deg forward in
-    // a staggered wave and snaps all of them back at once. The container
-    // z-offset and the two face transforms mirror magicui's CharBox
-    // geometry exactly (translateZ offsets of ±0.5lh, no perspective);
-    // only the spring is approximated with a power2 ease.
-    const chars = () => gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow);
-    // Set once, never animated: the box hangs half a line behind its own
-    // plane, and the rotationX tweens below preserve this offset.
-    gsap.set(chars(), { z: () => -0.5 * parseFloat(getComputedStyle(titleRow).lineHeight) });
-    const flip = () => {
-      if (flipActiveRef.current) return;
-      flipActiveRef.current = true;
-      gsap
-        .timeline({
-          onComplete: () => {
-            flipActiveRef.current = false;
-          },
-        })
-        .to(chars(), { rotationX: 90, duration: 0.5, stagger: 0.05, ease: "power2.out" })
-        .add(() => gsap.set(chars(), { rotationX: 0 }));
-    };
-
-    const onEnter = () => {
-      focusIn();
-      indent.play();
-    };
-    const onLeave = () => {
-      blurOut();
-      indent.reverse();
-      if (tilt) {
-        tilt.x(0);
-        tilt.y(0);
-      }
-    };
-    const onMove = (event: MouseEvent) => {
-      if (!tilt) return;
-      const rect = root.getBoundingClientRect();
-      const px = (event.clientX - rect.left) / rect.width - 0.5;
-      const py = (event.clientY - rect.top) / rect.height - 0.5;
-      tilt.x(-py * 7);
-      tilt.y(px * 7);
-    };
-
-    root.addEventListener("mouseenter", onEnter);
-    root.addEventListener("mouseleave", onLeave);
-    root.addEventListener("mousemove", onMove);
-    titleRow.addEventListener("mouseenter", flip);
-
-    return () => {
-      root.removeEventListener("mouseenter", onEnter);
-      root.removeEventListener("mouseleave", onLeave);
-      root.removeEventListener("mousemove", onMove);
-      titleRow.removeEventListener("mouseenter", flip);
-      gsap.killTweensOf(
-        [img, icon, ...gsap.utils.toArray(".project-card-char", titleRow)].filter(
-          (target): target is object => Boolean(target),
-        ),
-      );
-      indent.kill();
-    };
-  }, []);
 
   return (
-    <Link ref={rootRef} href={`/projects/${record.slug}`} className={cn("group block", className)}>
-      <div className="aspect-[3/2] overflow-hidden rounded-[15px] bg-[var(--surface-muted)] dark:bg-white/[0.04]">
-        {coverUrl ? (
-          // CMS media is served through the storage proxy; next/image
-          // cannot optimize it, so a plain img matches the rest of the site.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
-            src={coverUrl}
-            alt={project.coverAlt || project.title}
-            loading="lazy"
-            className="h-full w-full object-cover will-change-transform"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <PatternTile
-              bg="canvas"
-              fg="blue"
-              kind={fallbackPattern}
-              className="h-[45%] w-auto opacity-60"
-            />
-          </div>
-        )}
-      </div>
-
-      <div className="mt-5">
-        {categories.length ? (
-          <p className="mb-3 truncate text-[clamp(0.6875rem,0.9vw,0.875rem)] font-medium tracking-[0.12em] text-[var(--ink-3)] uppercase dark:text-white/50">
-            {categories.join(" • ")}
-          </p>
-        ) : null}
-        <div
-          ref={titleRowRef}
-          className="relative overflow-hidden text-[clamp(1.5rem,3vw,3.5rem)] leading-[1.15em] whitespace-nowrap"
-        >
-          <span
-            aria-hidden="true"
-            className="project-card-icon absolute top-[0.15em] left-[-1em] inline-flex size-[0.8em] items-center justify-center text-[#0e1116] dark:text-white"
-          >
-            <ArrowRight className="size-full" strokeWidth={2} />
-          </span>
-          <span className="project-card-title relative inline-block font-display font-medium tracking-[-0.02em] text-[#0e1116] dark:text-white">
-            {titleWords.map((word, wordIndex) => (
-              <span className="inline-flex" key={wordIndex}>
-                {Array.from(word).map((char, charIndex) => (
-                  <span
-                    className="project-card-char relative inline-block [transform-style:preserve-3d]"
-                    key={`${wordIndex}-${charIndex}`}
-                  >
-                    <span
-                      className="inline-block [backface-visibility:hidden]"
-                      style={{ transform: "translateZ(0.5lh)" }}
-                    >
-                      {char}
-                    </span>
-                    <span
-                      className="absolute inset-0 inline-block [backface-visibility:hidden]"
-                      style={{ transform: "rotateX(-90deg) translateZ(0.5lh)" }}
-                    >
-                      {char}
-                    </span>
-                  </span>
-                ))}
-                {wordIndex < titleWords.length - 1 && <span className="whitespace-pre"> </span>}
-              </span>
-            ))}
-          </span>
-          {/* Invisible sizer mirroring the title typography, used by the
-              one-line truncation measurement above. */}
-          <span
-            ref={sizerRef}
-            aria-hidden="true"
-            className="pointer-events-none invisible absolute top-0 left-0 font-display font-medium tracking-[-0.02em] whitespace-nowrap"
-          />
-        </div>
-      </div>
+    <Link
+      href={`/projects/${record.slug}`}
+      aria-label={categories.length ? `${project.title} (${categories.join(", ")})` : project.title}
+      className={cn("group block", className)}
+    >
+      <ProjectCardCover
+        coverUrl={coverUrl}
+        alt={project.coverAlt || project.title}
+        slug={record.slug}
+        index={index}
+      />
+      <ProjectCardFooter title={project.title} categories={categories} />
     </Link>
   );
 }

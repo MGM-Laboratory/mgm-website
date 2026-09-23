@@ -21,8 +21,13 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       id="projects"
       className="grid scroll-mt-24 grid-cols-1 gap-x-7 gap-y-16 pb-28 md:grid-cols-2 md:gap-y-20 md:pb-36"
     >
-      {records.map((record) => (
-        <ProjectCard className="projects-grid-card" key={record.slug} record={record} />
+      {records.map((record, index) => (
+        <ProjectCard
+          className="projects-grid-card"
+          key={record.slug}
+          record={record}
+          index={index}
+        />
       ))}
     </section>
   );
