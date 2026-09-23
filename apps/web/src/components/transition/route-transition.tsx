@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import gsap from "gsap";
 
 import { LogoMark } from "@/components/hero/shapes";
+import { claimsProjectPopstate } from "@/lib/project-transition";
 import { markRouteCoverStarted, markRouteRevealDone } from "@/lib/route-reveal";
 
 /**
@@ -484,6 +485,12 @@ export function RouteTransition() {
 
     function onPopState() {
       if (window.location.pathname === shownPathnameRef.current) return;
+      // Back and forward between the project list and a project (or two
+      // projects) belong to the project zoom overlay, which covers the
+      // swap itself (project-transition.tsx). Clicks need no such check:
+      // the overlay's capture listener on window prevents the default
+      // before this one on document runs, and this one bails on that.
+      if (claimsProjectPopstate(shownPathnameRef.current, window.location.pathname)) return;
       startPopstateCover();
     }
 

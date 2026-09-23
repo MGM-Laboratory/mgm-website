@@ -8,6 +8,7 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { InteractiveBackground } from "@/components/interactive-background";
+import { consumeScrollResetSkip } from "@/lib/project-transition";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -69,11 +70,16 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   // of whatever native scrollY it happened to read while mounting), and on
   // exit it resets the still-live outgoing smoother — clearing the stale
   // transform on #smooth-content — before its deferred kill() tears it down.
+  //
+  // One exception: the project list, entered back from a project through
+  // the zoom transition, restores its own scroll position in its layout
+  // effects (which run before this one) and asks to keep it.
   useLayoutEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
+    if (consumeScrollResetSkip(pathname)) return;
     window.scrollTo(0, 0);
     ScrollSmoother.get()?.scrollTo(0, false);
     const content = document.getElementById("smooth-content");
