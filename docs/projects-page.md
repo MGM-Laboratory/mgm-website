@@ -118,6 +118,116 @@ The same opening in DOM form, for every card the stage doesn't draw: `clip-path:
 
 Reduced motion shows the final text, and a mid-visit switch finishes every running effect to its real text.
 
+## Project detail page (`/projects/[slug]`)
+
+Each project has a detail page modeled on lusion.co's project pages. Above 812 px it is a horizontal strip: the title block on the left, the media in a band to its right, and the next project waiting at the end. At 812 px and below it stacks vertically. Pulling past the end fills a bar and hands off to the next project. Constants come from lusion's own code and live captures (the research notes in the project's scratchpad). Where the page differs, this section says so.
+
+### Files
+
+| Area       | Files (under `apps/web/src/`)                                                                                                                            |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route      | `app/projects/[slug]/page.tsx` (metadata, viewport colour, the theme `<style>`), `lib/project-cms-server.ts` (`readProjectDetail`, one read per request) |
+| View model | `components/projects/detail/detail-data.ts` (fallbacks, resolved URLs, the next project)                                                                 |
+| Markup     | `components/projects/detail/project-detail.tsx`, `detail-media.tsx`, `detail-cta.tsx`, `project-detail.module.css`                                       |
+| Motion     | `components/projects/detail/detail-controller.ts` (scroll mapping, entrance, parallax, next project, DOM media), `detail-session.ts`, `detail-math.ts`   |
+| Around it  | `detail/stage/*` (the WebGL media stage), `detail/topography.tsx` (the background), the header's Back pill (`site-header.tsx`)                           |
+
+### Data and fallbacks
+
+The server page reads the record and the published feed once (`readProjectDetail`, wrapped in React `cache`), then builds the view model:
+
+- Title, then the description paragraphs. A record without a description shows its summary.
+- The CTA from `project.cta`. It is hidden when absent or unsafe.
+- Services from `project.services`, else the tech stack.
+- Links from `project.links`, then a linked demo video, then organisations and outputs with URLs. Every URL goes through `safeProjectHref`.
+- Credits from the contributors (name and role). Past six, the list collapses behind a "+N more" button.
+- Media from `projectMediaSections(project, record.mediaSizes)`. Older records derive theirs from the cover (full), the gallery (normal) and an uploaded demo video (full).
+- The next project is the following entry in list order, wrapping around.
+
+The BlockNote body isn't rendered. It stays in the record. Metadata uses the SEO fields first, then the title and the description or summary, with the cover as the Open Graph image. The browser's theme colour follows the project's light and dark backgrounds.
+
+### Theme
+
+The page renders `projectThemeCss(themeId)` in a plain `<style>`, plus `html, body { background: var(--project-bg) }`. The variables sit on `:root`, so the header can read them too. The page's own styles use only `--project-*` variables, never `dark:` utilities, and the light or dark variant follows the site's `.dark` class. The palette object for canvases (the stage, the background) follows the class live through `use-site-scheme.ts`.
+
+Small text in the accent colour (group headings, the scroll hint) uses 85% highlight mixed with the text colour. The raw highlight only guarantees 3:1, and this mix keeps every theme at 4.5:1 or better. The next project's resting title is its text colour at 55% over its background (at least 3.3:1 at 72 px).
+
+### Layout
+
+Horizontal, above 812 px (tablets included):
+
+- The em base is `clamp(1rem, 1vw, 1.5rem)`. Padding is lusion's `max(5vw, 40px)` by `clamp(30px, 4vw, 50px)`.
+- The meta block is `34em` wide at the left padding, centred on the viewport. Title `4.5em` Hanken Grotesk 500, line height 0.95. The description takes 60% of the block at `0.75em`. Services and Links sit in the right 40%.
+- The media band starts one vertical padding below the 64 px header. It ends `2 × padY + 1.1 × header-size` above the bottom, where lusion's scroll hint lives. Portrait tablets cap the band at 70vw, so a 16:9 item stays about a screen wide.
+- Normal items are the band's height, as wide as their aspect ratio, with a 20 px radius. Full items run the full viewport height, edge to edge, with no radius.
+- The first item starts at `48em`. Gaps are `5em`. The last item keeps a `10vw` margin, and the track ends with a `25vw` pad for the next project panel.
+- A long legacy meta block (many credits or outputs) shrinks its copy under the title, down to 72%, and pins under the header if it still doesn't fit. The title never changes size, because the next-project hand-off lands on it.
+
+Vertical, 812 px and below: document flow. The meta block on top, then the media full width with side padding, a 10 px radius and 50 px gaps. Full items drop the padding and the radius. The next project panel closes the page. Visitors without JavaScript get this layout at every width, with everything visible.
+
+### Scrolling
+
+The document scrolls natively, so the keyboard, the scrollbar, find-in-page and scroll restoration keep working.
+
+- In the horizontal layout the stage is `position: fixed` and a spacer gives the page the track's length. The track sits at `translateX(-scrollY)`, written in the frame loop's "scroll" phase, after Lenis. The WebGL stage reads the same value in the "render" phase.
+- Fine pointers with motion allowed get Lenis at lerp 0.2 (lusion's 12 per second ease). Wheel events are clamped to 200 px each, and sideways trackpad swipes scroll too (`gestureOrientation: "both"`).
+- Keys: arrows step 100 px, Page Up and Page Down one viewport, plus Space, Home and End. Focus landing inside the track scrolls its item into view. The next project link scrolls to the end.
+- Touch in the horizontal layout: vertical swipes pan the page natively (`touch-action: pan-y`), and a sideways drag moves the strip with lusion's release momentum.
+- A media size that arrives late, or a file that fails and leaves the layout, keeps the visible item where it is.
+
+### Entrance
+
+On a fresh load, after the route curtain or after the project zoom, the page waits for the display font (at most 1.5 s), `waitForRouteReveal()` and `waitForProjectReveal()`. Then it plays lusion's 1.5 s windows:
+
+- The title fades in and rises from the viewport centre into its slot (expo in-out, first 65%).
+- The description, CTA, credits, services and links each fade and rise 30 px in staggered windows (expo out).
+- The media fade in over the second half.
+- The page is locked (`"project-detail-entrance"`) until 75%.
+
+`markProjectPageReady(slug)` fires once the layout is measured and the first screen's media are decoded, or after 1.2 s. Before hydration the animated pieces are hidden only when motion is allowed (`motion-safe:opacity-0`, with a `<noscript>` override).
+
+### While scrolling
+
+- The meta pieces slide at lusion's fractions of the travel: title 1/2, description and credits 1/3, links 1/4, services 1/5. They fade out over the first quarter viewport. The CTA doesn't slide. Links take pointer events only while the block is visible.
+- "Scroll to explore" sits bottom right in the band under the media. It leaves after the first scroll of any kind (lusion only listens for the wheel, which strands it on touch tablets) and stays gone for the session.
+
+### Media
+
+- DOM `<img>` (width and height attributes, async decoding, the first two eager at high priority) and `<video muted loop playsInline preload="metadata">` with an optional poster.
+- The horizontal stage clips everything, so native lazy loading can't look ahead. Images within 2.5 viewports of the travel are switched to eager.
+- A video plays only while visible, in a visible tab, after the entrance has begun, and not during a hand-off. A pause and play button per video (shown on hover and focus, kept visible once paused) meets WCAG 2.2.2. Reduced motion doesn't autoplay: the poster shows and the button starts the video.
+- The WebGL stage (`detail/stage/*`) starts at once in the horizontal layout when motion is allowed. Items it draws hide their DOM frame with `visibility`, so videos keep decoding as its textures. A lost context, reduced motion switched on or the stacked layout hand the DOM media back.
+- The DOM fallback plays lusion's emerge in CSS: the frame's clip opens from `inset(20%)` to 0 while the picture settles from 1.667× to 1×, over 1 s of expo out, replaying on every re-entry. The highlight colour shows until the file loads, then crossfades to it. Scroll speed bends the frames a little (a lean plus lusion's arch, edges down and centre up) and they spring back to exactly nothing at rest.
+
+### Next project
+
+- The panel is a real link, with the accessible name `Next project: <title>`. In the horizontal layout it enters from the right over the last quarter viewport of travel and rests on the right 25%. The panel wears the next project's own palette, so the next world peeks in. lusion uses one neutral grey for every project.
+- The accumulator is lusion's. While the travel is at the end, frames with forward input (wheel, trackpad, sideways drag, pulling past the bottom on touch, and forward keys) raise it at 3 per second. Backward input drains it at 5 per second. Otherwise it decays at 0.2 per second. The bar shows it.
+- At 1, or on click or Enter, the hand-off plays for 1 s. The panel wipes over the screen (quint in-out) while the media fade over the first half and the meta over the first 30%. The title reaches full text colour over the last quarter. When stacked, a full-width panel rises from the bottom and the title travels to the title's slot. The click listener runs in the capture phase on `window`, before the route curtain's document listener, so the curtain never plays for it.
+- Then `router.push` runs, with a note for the next page (`detail-session.ts`). That page reads the note while rendering: its background is already the panel's colour and its title is already visible where the panel's title ended. Only the rest fades in.
+- Reduced motion keeps the plain link: no auto-advance, no wipe.
+
+### CTA
+
+lusion's anatomy in the project's button colours: a pill with a dot, an uppercase label and an arrow chip at scale 0. Hover floods the pill from the dot (the dot flies right and scales 26×), the label shifts 20% left and changes colour, and the chip scales in, all on `cubic-bezier(0.35, 0, 0, 1)`. Added here:
+
+- A magnetic pull of 22% toward the cursor, capped at 9 px (GSAP owns the link's transform).
+- A press that squeezes the pill to 0.97 and sends a highlight pulse out.
+- `:focus-visible` shows the hover state plus a ring.
+- External links open in a new tab.
+
+Side-list links grow an underline on hover and focus.
+
+### Deviations from lusion, and why
+
+- **Native scrolling** instead of a virtual scroll pane, so the keyboard, find-in-page, the scrollbar, and restoration work.
+- **Full items stay full on phones.** lusion keeps a padded, rounded box. Here "full" always means no padding.
+- **The band sits under the site's 64 px header**, and portrait tablets cap it at 70vw.
+- **The next panel wears the next project's colours**, and it is a link. lusion's panel is always the same grey and has no click.
+- **The scroll hint leaves on any scroll**, not only the wheel.
+- **Credits, a video pause button, focus rings and reduced motion** are additions. lusion has none of them.
+- **Hanken Grotesk 500** for titles instead of Aeonik 400 (DESIGN_SYSTEM.md).
+
 ## Verifying changes here
 
 Follow `docs/testing-verification.md`, plus these page-specific checks:
@@ -125,5 +235,6 @@ Follow `docs/testing-verification.md`, plus these page-specific checks:
 - In dev, `page.goto` waiting for `load` can return after the roughly 2 s intro has already finished. Observe the intro with `waitUntil: "commit"` and poll.
 - WebGL needs a real GPU in headless Chromium: launch with `--use-angle=metal --enable-gpu`. Software rendering (and CI) falls back to DOM covers by design.
 - CI's e2e runs without an API, so `/projects` only ever renders its empty state there. The card animations must be verified locally against the CMS data.
-- Useful dev-only probes: `window.__projectsStage` (mode, per-card state and uniforms, render count) and `window.__heroPlay` (solver state, current beat). Neither exists in production builds.
+- Useful dev-only probes: `window.__projectsStage` (mode, per-card state and uniforms, render count), `window.__heroPlay` (solver state, current beat) and `window.__projectDetail()` (a detail page's layout, entrance, travel, accumulator, hand-off and stage ownership). None of them exists in production builds.
+- Detail page scenarios: every width from 320 to 1920 px, in light and dark mode, including 820 and 1180 px touch tablets. The start, middle and end of the strip. The accumulator filled with the wheel, a touch pull and a click or Enter on the panel. Keyboard-only traversal. Reduced motion, no JS, a legacy record and a record whose media 404. A lost WebGL context must hand the DOM media back.
 - Scenarios worth repeating after any change: 10 reloads (half from deep in the page), internal navigation through the curtain, the nav menu opened during the intro, a slow scroll and a flick through the whole list and back, rapid hovers while scrolling, keyboard Tab and Enter from the hero arrow, reduced motion, dark mode, 390 px touch, no JS, and the navigation fuzzer.
