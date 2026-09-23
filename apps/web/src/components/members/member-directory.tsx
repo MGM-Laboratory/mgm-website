@@ -6,8 +6,10 @@ import { ArrowUpRight, Search, Star, X } from "lucide-react";
 import { debounce, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { PhotoSkeleton } from "@/components/ui/skeleton";
 import { type Member, type MemberDivision } from "@/data/members";
 import { useMemberRecords } from "@/hooks/use-member-records";
+import { usePhotoLoadState } from "@/hooks/use-photo-load-state";
 import type { CmsMemberRecord } from "@/lib/member-cms";
 
 type Filter = "All" | MemberDivision;
@@ -243,30 +245,45 @@ function Portrait({
     .slice(0, 2)
     .map((word) => word[0])
     .join("");
+  const imageRef = useRef<HTMLImageElement>(null);
+  const photo = usePhotoLoadState(photoKey, imageRef);
+  // A missing upload and a failed one both fall back to initials, which sit
+  // under the skeleton so they never flash before the photo paints.
+  const showPhoto = Boolean(photoKey) && photo.status !== "error";
+  const loadingPhoto = showPhoto && photo.status === "loading";
 
   return (
     <div
       className={`relative size-12 shrink-0 overflow-hidden rounded-xl border ${member.highlighted ? "border-brand-yellow ring-2 ring-brand-yellow/40" : "border-white/55"} ${CARD_SURFACES[index % CARD_SURFACES.length]}`}
     >
-      <div
-        aria-hidden="true"
-        className={`absolute -right-3 -bottom-3 size-8 rounded-full ${ACCENT_COLORS[member.accent]} opacity-90`}
-      />
-      {photoKey ? (
+      {/* The accent shape belongs behind the photo, so it stays out of the
+          frame while the skeleton pulses down to half opacity over it. */}
+      {loadingPhoto ? null : (
+        <div
+          aria-hidden="true"
+          className={`absolute -right-3 -bottom-3 size-8 rounded-full ${ACCENT_COLORS[member.accent]} opacity-90`}
+        />
+      )}
+      {showPhoto ? null : (
+        <span className="absolute inset-0 grid place-items-center font-display text-sm font-semibold tracking-tight text-[var(--ink)]/80 dark:text-white/80">
+          {initials}
+        </span>
+      )}
+      {loadingPhoto ? <PhotoSkeleton /> : null}
+      {showPhoto ? (
         <Image
           src={`/api/member-cms/media/${photoKey}`}
           alt=""
           fill
           key={photoKey}
+          ref={imageRef}
           sizes="48px"
           unoptimized
+          onLoad={photo.onLoad}
+          onError={photo.onError}
           className="object-cover transition-transform duration-500 ease-out group-hover/member:scale-105"
         />
-      ) : (
-        <span className="absolute inset-0 grid place-items-center font-display text-sm font-semibold tracking-tight text-[var(--ink)]/80 dark:text-white/80">
-          {initials}
-        </span>
-      )}
+      ) : null}
     </div>
   );
 }
