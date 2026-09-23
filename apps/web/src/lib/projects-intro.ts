@@ -30,6 +30,9 @@ const gridReveal: Signal = { done: true, waiters: [] };
 
 function open(signal: Signal) {
   signal.done = false;
+  // Waiters left from an earlier visit belong to effects that were cleaned
+  // up; dropping them lets that visit's page be collected.
+  signal.waiters = [];
 }
 
 function settle(signal: Signal) {

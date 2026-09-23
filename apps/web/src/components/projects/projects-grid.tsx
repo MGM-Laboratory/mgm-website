@@ -178,6 +178,10 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       hold(false);
       tween?.kill();
       for (const stop of stops) stop();
+      // Leaving before the reveal: settle the signal so the cards' pending
+      // waits (each already cancelled) resolve and let this page go,
+      // instead of holding it until some later visit reveals.
+      if (!reveal.started) markGridRevealStarted();
     };
   }, []);
 
