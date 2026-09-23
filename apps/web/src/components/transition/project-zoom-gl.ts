@@ -9,6 +9,7 @@ import {
   type ZoomRenderer,
   type ZoomSetup,
 } from "@/components/transition/project-zoom-frame";
+import { randomBetween } from "@/lib/random";
 
 /**
  * The project zoom's WebGL2 renderer: one perspective quad on a canvas
@@ -399,7 +400,7 @@ export class ZoomGl implements ZoomRenderer {
         : null);
     if (prepared) this.setPicture(prepared);
     this.setColors(fog, backdrop);
-    gl.uniform2f(this.uniforms.u_grainOffset, Math.random() * 64, Math.random() * 64);
+    gl.uniform2f(this.uniforms.u_grainOffset, randomBetween(0, 64), randomBetween(0, 64));
   }
 
   /**
