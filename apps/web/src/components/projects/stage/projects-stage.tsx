@@ -49,13 +49,18 @@ function supportsWebGL2() {
  *   intro, but the renderer is only created, the shader compiled and the
  *   first covers uploaded once the intro has finished, so the intro never
  *   hitches. The grid waits a short moment for that before revealing the
- *   list, and settles on the DOM covers if it takes longer.
+ *   list. If the stage is later than that (a slow network, slow covers),
+ *   the list reveals on time with DOM covers and the stage takes the cards
+ *   over one by one once it is ready: off screen, or on screen only at a
+ *   moment the swap can't show (cover-engine.ts attachAtRest).
  * - Fine pointer without WebGL2: DOM covers, still with smooth scrolling.
  * - Touch: DOM covers and native scrolling.
  * - Reduced motion: DOM covers, completely static.
  *
- * Whenever the mode ends up "dom" (including a lost WebGL context later),
- * the DOM scroll reaction takes over the cards' physical response.
+ * "dom" is final: touch, reduced motion, no WebGL2, a stage that failed to
+ * start, or a WebGL context lost later (the engine is then disposed and
+ * every card handed back). With motion allowed, the DOM scroll reaction
+ * runs throughout and moves every card the stage doesn't draw.
  * Renders nothing.
  */
 export function ProjectsStage() {
@@ -72,13 +77,12 @@ export function ProjectsStage() {
       engine?.dispose();
       engine = null;
     };
-    const fallBackToDom = () => {
-      disposeEngine();
-      if (motion && !stopReaction) stopReaction = startDomReaction();
-    };
     const offMode = onStageModeChange((mode) => {
-      if (mode === "dom") fallBackToDom();
+      if (mode === "dom") disposeEngine();
     });
+    // Skips the cards the stage draws, so it covers every mode, including a
+    // list that revealed before the stage was ready.
+    if (motion) stopReaction = startDomReaction();
 
     if (!motion) {
       setStageMode("dom");
@@ -115,8 +119,6 @@ export function ProjectsStage() {
           });
       }
     }
-
-    if (getStageMode() === "dom") fallBackToDom();
 
     return () => {
       cancelled = true;

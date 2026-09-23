@@ -547,7 +547,12 @@ export class CoverEngine {
     // ancestor, so take it back out; it is added again per frame.
     const offset = window.scrollY - gridRevealState.y;
     for (const card of this.cards.values()) {
+      // Measured flat: the DOM scroll reaction may be leaning the frame of
+      // a card the stage hasn't taken over yet, and that box is skewed.
+      const lean = card.frame.style.transform;
+      if (lean) card.frame.style.transform = "none";
       const frame = card.frame.getBoundingClientRect();
+      if (lean) card.frame.style.transform = lean;
       const link = card.root.getBoundingClientRect();
       card.x = frame.left;
       card.top = frame.top + offset;

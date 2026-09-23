@@ -7,15 +7,20 @@
  *   stage needs: the link root (hover source), the cover frame (the rect
  *   the stage draws into) and the DOM <img> (texture source, and the
  *   fallback render).
- * - The stage decides one page-wide mode: "gl" (WebGL draws the covers) or
- *   "dom" (no WebGL: reduced motion, touch, no WebGL2, context lost). While
- *   undecided the mode is "pending". Covers play their DOM reveal only in
- *   "dom" mode; in "gl" mode the stage owns the cover's reveal and hover.
- * - When the stage takes over a specific card it sets `data-stage="gl"` on
- *   that card's frame; the cover's markup hides its DOM <img> (visibility,
- *   never opacity: GSAP may own the img's inline opacity) and its frame
- *   background from that attribute. Removing the attribute (context loss)
- *   brings the DOM cover straight back.
+ * - The stage decides one page-wide mode: "gl" (the WebGL stage runs) or
+ *   "dom" (final: reduced motion, touch, no WebGL2, a failed start, a lost
+ *   context). While undecided the mode is "pending"; the list may reveal
+ *   in that state, and the stage can still start afterwards.
+ * - Ownership is per card, whatever the mode: when the stage takes over a
+ *   card it sets `data-stage="gl"` on that card's frame; the cover's markup
+ *   hides its DOM <img> (visibility, never opacity: GSAP may own the img's
+ *   inline opacity) and its frame background from that attribute, and the
+ *   stage then owns the card's opening and hover. Every card without the
+ *   attribute plays the DOM opening and hover. Removing the attribute
+ *   (context loss) brings the DOM cover straight back.
+ * - The DOM cover marks its frame `data-dom-opening` / `data-dom-hover`
+ *   while it is anywhere but at rest; the stage only takes a card over on
+ *   screen while neither is set.
  *
  * Module state persists across client-side navigation; the stage host
  * calls `resetStage()` when it mounts for a new visit.

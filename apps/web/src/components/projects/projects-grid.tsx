@@ -9,11 +9,7 @@ import {
   resetGridRevealState,
 } from "@/components/projects/stage/grid-reveal-state";
 import { ProjectsStage } from "@/components/projects/stage/projects-stage";
-import {
-  getStageMode,
-  setStageMode,
-  waitForStageMode,
-} from "@/components/projects/stage/stage-registry";
+import { getStageMode, waitForStageMode } from "@/components/projects/stage/stage-registry";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import { markGridRevealStarted, waitForProjectsIntro } from "@/lib/projects-intro";
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
@@ -22,8 +18,10 @@ import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 // hidden state is settled before first paint.
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
-// How long the reveal waits for the WebGL stage once the intro is over
-// before settling on the DOM covers instead.
+// How long the reveal waits for the WebGL stage once the intro is over,
+// so it can draw the first screen's openings. A later stage no longer
+// holds the list back: the list reveals with DOM covers and the stage
+// takes the cards over as it can (projects-stage.tsx).
 const STAGE_SETTLE_MS = 700;
 // Reveal the list even if the hero's intro never reports back (a hidden
 // list still reserves its full height as blank scrollable space). Visible
@@ -35,9 +33,9 @@ const REVEAL_LOCK_OWNER = "projects-grid-reveal";
 /**
  * The full project index: every published project, two cards per row on
  * desktop. While the hero's entrance plays, the list stays hidden; once it
- * ends, the page settles how covers render (the WebGL stage or the DOM
- * fallback) and the whole list fades and rises in while the covers on
- * screen play their opening. Further down, each card opens as it scrolls
+ * ends, the list gives the WebGL stage a short moment to get ready, then
+ * the whole list fades and rises in while the covers on screen play their
+ * opening (drawn by the stage, or by the DOM covers it hasn't taken). Further down, each card opens as it scrolls
  * into view (the stage or the DOM cover handles that per card).
  *
  * The list starts at `opacity-0` from the server (opacity only, so no
@@ -145,7 +143,6 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       if (getStageMode() === "pending") {
         await Promise.race([waitForStageMode(), delay(STAGE_SETTLE_MS)]);
         if (cancelled) return;
-        if (getStageMode() === "pending") setStageMode("dom");
       }
       reveal.started = true;
       hold(false);
