@@ -62,14 +62,15 @@ async function whenLoaded(img: HTMLImageElement) {
  */
 async function encodedSource(img: HTMLImageElement): Promise<Blob | HTMLImageElement> {
   try {
-    // Covers are same-origin (the CMS media proxy or /public); anything
-    // else decodes from the element, and the request's host always comes
-    // from the page itself, never from the image's URL.
-    const { origin, pathname, search } = new URL(img.currentSrc || img.src, window.location.href);
-    if (origin !== window.location.origin) return img;
-    const response = await fetch(`${window.location.origin}${pathname}${search}`, {
-      cache: "force-cache",
-    });
+    // Only CMS media covers (lib/project-cms.ts projectMediaUrl) take this
+    // path, requested under the media route's fixed prefix on this origin;
+    // anything else (a /public fallback, a foreign URL) decodes from the
+    // element instead.
+    const { origin, pathname } = new URL(img.currentSrc || img.src, window.location.href);
+    const mediaPrefix = "/api/projects-cms/media/";
+    if (origin !== window.location.origin || !pathname.startsWith(mediaPrefix)) return img;
+    const key = pathname.slice(mediaPrefix.length);
+    const response = await fetch(`/api/projects-cms/media/${key}`, { cache: "force-cache" });
     if (response.ok) return await response.blob();
   } catch {
     // Offline, blocked or opaque: decode from the element instead.
