@@ -16,6 +16,7 @@ The lusion constants below were read from lusion.co's own (unminified) bundle an
 | Card cover           | `components/projects/project-card-cover.tsx` (3:2 frame, DOM cover, DOM opening and hover)                                                                           |
 | Card text            | `components/projects/project-card-footer.tsx`, `components/projects/card-text/*` (scramble, drop, flip, ticker, triggers)                                            |
 | Cover stage          | `components/projects/stage/*` (`projects-stage.tsx` host, `cover-engine.ts`, `cover-shaders.ts`, `cover-textures.ts`, `smooth-scroller.ts`, `frame-loop.ts`, others) |
+| Project zoom         | `components/transition/project-transition.tsx`, `project-zoom*.ts`, `lib/project-transition.ts` (spec in `docs/page-transition.md`)                                  |
 
 ## Choreography: the intro, the lock, and the list reveal
 
@@ -31,6 +32,19 @@ On a fresh load (and after the page-transition curtain on internal navigation), 
 Failsafes: the hero and the grid each give up waiting after 13 s of **visible** time (a hidden tab freezes animation frames but not timers, so a wall-clock failsafe would release the list over an entrance nobody has seen yet). Unmounting mid-intro always releases the lock. Reduced motion and an empty list finish the intro at once and never lock.
 
 Pre-hydration: the hero pieces and the list start hidden in the server HTML only when motion is allowed (`motion-safe:opacity-0`), with a `<noscript>` override, so no-JS and reduced-motion visitors see everything at first paint. `inert` is set from JS only: CSS can't undo an SSR `inert`, which would break the no-JS path.
+
+### Return mode (back from a project)
+
+Going back from a project page through the project zoom (`docs/page-transition.md`, last section), the overlay leaves a return note (`setProjectReturn`, `lib/project-transition.ts`) before the list mounts. The list arrives as it was left, while the overlay zooms back out onto the project's card:
+
+- The hero, the grid and every card cover read the note **synchronously during their first render** (a lazy `useState` initializer), like the heroes read the boot flag: the overlay clears the note once it has landed, and each component keeps the mode it mounted with.
+- Hero: no intro, no lock, no scroll pinning, no entrance. It calls `finishProjectsIntro()` and `markGridRevealStarted()` itself, shows its final state and starts the idle play, which parks while the overlay's scroll lock is held.
+- Grid: the reveal state goes straight to started, opacity 1 and no rise, with no `inert` hold. In its layout effect it jumps the scroll (`window.scrollTo` with `behavior: "instant"`, never `scrollPageTo`: the smooth scroller is either missing or locked here) to the remembered position, or so the card's top sits at 25% of the viewport (lusion's rule) when there is none or it no longer shows at least half of the card below the header. The root layout's scroll reset runs after this effect, and the overlay has told it to stand down for `/projects` (`skipScrollReset`, consumed by `smooth-scroll.tsx`).
+- Card covers already on screen rest instead of arming their opening (the start frame would also set `data-dom-opening`, which keeps the stage from taking them over). They replay after they have been fully out of view, like any other.
+- The card being returned to renders `data-project-landing` on its frame, which hides the whole frame (`visibility`, its background included). The overlay removes the attribute when it rests on the card, then fades out over it. The card keeps an 8 s failsafe of its own.
+- Card text still plays as each footer is seen, so the landed card's title drops in as the overlay lets go.
+
+Under reduced motion the note carries `restoreOnly`: the list renders as it always does and only scrolls back to the card, again one frame later because a link's own navigation scrolls to the top after the layout effect.
 
 ## Hero
 
@@ -74,6 +88,10 @@ Ownership: the entrance owns the outer `.projects-hero-char` slots (`yPercent`, 
 - `"dom"`: final. Touch, reduced motion, no WebGL2, a failed start, a lost context, or reduced motion switched on mid-visit.
 
 Ownership is per card in every mode. The stage draws a cover only while its frame carries `data-stage="gl"`. The cover markup then hides the DOM `<img>` (`visibility`, never opacity) and the frame background. Every other card plays the DOM opening and hover. A slow stage never drops to DOM for the whole visit: it takes cards over progressively, off screen, or on screen only while the DOM cover rests and the page is still. The DOM cover rests at the same 1.026× overscan as the WebGL one, so that swap is invisible.
+
+A frame carrying `data-project-landing` (the card the project zoom is landing on, see return mode above) is neither taken over nor drawn by the stage until the attribute goes. The stage then takes it over at rest like any other card on screen.
+
+The card link carries the project zoom's hooks: `data-project-transition`, `data-project-slug` and `data-project-theme` (from `projectThemeId(record.project)`). The cover frame carries `data-project-transition-frame` and `data-overscan` (its rest zoom, 1.026), which tell the overlay where the picture is and how far it is zoomed. The homepage's featured projects section carries the same hooks on its "View project" link, with the image box as the frame.
 
 ### Smooth scroll and the frame loop
 
@@ -238,3 +256,4 @@ Follow `docs/testing-verification.md`, plus these page-specific checks:
 - Useful dev-only probes: `window.__projectsStage` (mode, per-card state and uniforms, render count), `window.__heroPlay` (solver state, current beat) and `window.__projectDetail()` (a detail page's layout, entrance, travel, accumulator, hand-off and stage ownership). None of them exists in production builds.
 - Detail page scenarios: every width from 320 to 1920 px, in light and dark mode, including 820 and 1180 px touch tablets. The start, middle and end of the strip. The accumulator filled with the wheel, a touch pull and a click or Enter on the panel. Keyboard-only traversal. Reduced motion, no JS, a legacy record and a record whose media 404. A lost WebGL context must hand the DOM media back.
 - Scenarios worth repeating after any change: 10 reloads (half from deep in the page), internal navigation through the curtain, the nav menu opened during the intro, a slow scroll and a flick through the whole list and back, rapid hovers while scrolling, keyboard Tab and Enter from the hero arrow, reduced motion, dark mode, 390 px touch, no JS, and the navigation fuzzer.
+- Project zoom scenarios: enter from a card high on the list and one deep down, back via the header pill and via browser back (the list lands where it was, the card's cover hidden until the overlay rests on it), a project to project back and forward (a colour crossfade, never the logo curtain), rapid double clicks, clicks during a zoom, reduced motion, dark mode, 390 px touch, the DOM fallback (`window.__projectTransition.forceDom(true)`), and a fuzzer mixing card clicks, the pill, back and forward. After each: nothing locked, no overlay, no `data-project-landing`, no inline `--project-*` on `<html>`, the list at opacity 1.

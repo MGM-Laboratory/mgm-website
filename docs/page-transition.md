@@ -53,6 +53,8 @@ Click interception is wired in a `useEffect` that **only runs under full motion*
 
 The capture-phase click handler bails out (lets the click through normally) on: `defaultPrevented`, a non-left-click, any modifier key held, no ancestor `<a href>`, a `target` other than `_self`/empty, a `download` attribute, an empty/`#`/`mailto:`/`tel:` href, a cross-origin URL, either side being under `/admin`, or navigating to the exact same pathname. A click while a transition is already in progress is dropped entirely (no queueing: the second click just does nothing).
 
+Two exceptions belong to the project zoom (see the last section). Project card clicks never reach this handler: the zoom's capture listener sits on `window`, runs first and prevents the default. Back and forward between `/projects` and a project, or between two projects, are skipped through `claimsProjectPopstate()` (`lib/project-transition.ts`) while the zoom layer is mounted and motion is allowed.
+
 Back/forward (`popstate`) covers the page too, except when the pathname doesn't change. Following a same-page fragment link (`<a href="#x">`), or going back from one, also fires `popstate`; covering for it would wait up to the 8-second ceiling for a route change that never comes, so `RouteTransition` compares against the pathname currently on screen and ignores those. In-page anchors that animate should still call `preventDefault` and scroll through `scrollPageTo` (`lib/page-scroll.ts`) so they cooperate with a page's smooth scroller.
 
 ## Skipping the homepage's entrance animation on internal navigation
@@ -74,3 +76,68 @@ The projects list hero needs the opposite treatment from the homepage: its entra
 - The same hero also owns the page's intro: from mount until the entrance completes, the page is locked at the top and the project list stays hidden, and the list then fades in (`lib/projects-intro.ts`). On internal navigation that lock is taken under the curtain and held through the reveal and the entrance. The full sequence, its failsafes and its ordering contract are in `docs/projects-page.md`.
 
 Because `RouteTransition` marks the cover started before `router.push`, a hero mounting at any point during the hold phase always sees the transition as in-flight; a hero that mounts only after the reveal (slow routes past the 8-second ceiling) sees none and plays immediately, which is correct since the curtain is gone by then.
+
+## The project zoom (list and project pages)
+
+Navigations between the project list and a project page don't use the curtain. They play the project zoom instead, a lusion.co style transition: clicking a card zooms into its cover and shifts the page to the project's theme, and going back zooms out and lands on the card again. It lives in `components/transition/project-transition.tsx` (the layer, mounted in `layout.tsx` right after `<RouteTransition />`) and `project-zoom.ts` (the controller). The frame maths is in `project-zoom-frame.ts`, the colours and the header tint in `project-zoom-colors.ts`, the WebGL2 renderer in `project-zoom-gl.ts` (dynamically imported on first use, raw WebGL2, no three.js) and the DOM fallback in `project-zoom-dom.ts`. The signals it shares with the pages are in `lib/project-transition.ts`. The list's side of the contract (return mode) is in `docs/projects-page.md`.
+
+### What it takes over
+
+| From        | To                 | Trigger                                                                   | What plays                                                 |
+| ----------- | ------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `/projects` | `/projects/<slug>` | A card click (`a[data-project-transition]`), or a homepage featured link  | Enter: the zoom in                                         |
+| a project   | `/projects`        | The header's Back pill, the page's own back link, any link to `/projects` | Exit: the zoom out onto the card                           |
+| a project   | `/projects`        | Browser back or forward                                                   | Exit, covered in the same task as the browser's navigation |
+| a project   | another project    | Browser back or forward                                                   | Swap: a crossfade from one page colour to the other        |
+| `/projects` | a project          | Browser forward                                                           | Swap (the route commits too soon for a zoom)               |
+
+Clicks go through a capture listener on `window`, which runs before the curtain's listener on `document` and prevents the default, so the curtain bails on `defaultPrevented`. Popstates go through `claimsProjectPopstate(from, to)`, a pure matcher the curtain consults, which claims only while the layer is mounted and motion is allowed. Every pair it claims has a handler. The "next project" navigation a project page does itself with `router.push` never reaches either listener and plays whatever the page plays.
+
+Same bail-outs as the curtain: a modifier key, a non-left button, a `target` other than `_self`, `download`, `/admin`, the same pathname. Reduced motion never intercepts anything (see below). While a transition runs, every click anywhere is swallowed (`preventDefault` and `stopPropagation` in the capture phase), so nothing navigates or toggles under the overlay.
+
+### Stacking and blocking
+
+The overlay is `fixed inset-0 z-[45]`: above the page, the WebGL cover stage (20), BackToTop (30), the cursor wake and the nav menu (40), and below the header (50), which stays visible above the zoom and walks to the project's colours. A second element, a transparent shield at `z-[51]` over the header's 64 px, takes pointer input only while a transition runs. Both toggle `pointer-events` as an inline style (the gotcha at the top of this page). The nav menu renders inside the header, so an exit through the menu's Projects link shows the menu over the colour cover until it closes on the route change.
+
+### Enter
+
+1. At the click: the card's cover frame rect and radius, its `<img>`, the theme (`data-project-theme`, the light or dark variant by the site's current `.dark` class) and the list's scroll position are taken. The scroll lock is taken (`"project-transition"`), `markProjectCoverStarted()` and `expectProjectPage(slug)` are called, and the route's full payload is prefetched. `pointerdown` already warms the renderer, decodes the cover and prefetches.
+2. The zoom waits up to 300 ms for the renderer and the decoded cover (16 to 62 ms measured). Its first frame is the card itself at its rest overscan, so showing the overlay changes nothing on screen.
+3. 1.5 s on the GSAP ticker. The quad travels from the frame's rect to the screen centre and grows to 1.2 times a cover fit of the viewport (cubic in-out, done by 82%), swinging up to about 4 degrees with its inner side receding. The picture zooms into its centre from the rest overscan to 2.5 times, accelerating to the end. A radial motion blur follows the zoom speed, a radial chromatic split peaks mid-zoom, a slight barrel bulge grows, and the picture dissolves into the theme background from the rim inward, the centre last. A full-screen theme colour layer fades in over the list (10% to 72%), and the header palette walks to the theme's.
+4. `router.push` only once that layer is opaque: a route committed earlier would show through it. The payload is prefetched, so the commit is usually immediate.
+5. Hold on the solid theme colour until the project route has committed (8 s ceiling) and the page has called `markProjectPageReady(slug)`, or 3 s after the click. Then `markProjectRevealStarted()`, which releases the page's `waitForProjectReveal()`, and the overlay fades out over 0.35 s onto the page's own background, the same colour.
+
+The old detail page (before the themed one) never reports ready, so it always waits out the 3 s, and its white background shows through the final fade. That goes away with the themed page.
+
+### Exit
+
+1. At the trigger (in the popstate handler itself for browser back): an instant cover in the project page's own background colour, so only its content goes. The header palette is pinned where it is. The return note is left for the list (`setProjectReturn({ slug, scrollY })`, with the scroll position only if this visit started from that card), and `skipScrollReset("/projects")` stops the smooth scroller jumping the list to the top. Clicks navigate with `router.push("/projects", { scroll: false })`: Next's own scroll to top runs after the page's layout effects and would undo the list's restore.
+2. The list commits in return mode, already scrolled back to the card, with the card's cover hidden.
+3. The cover holds until the card's picture is decoded (1.5 s at most) and the covers on screen can paint (1.2 s at most). A picture that decodes later is uploaded mid-zoom, while the dissolve still hides the swap.
+4. 1.3 s: the reverse zoom. The dissolve clears centre first, the blur and the split fade, the quad shrinks and swings back onto the card's rect (re-measured every frame), the colour layer fades out (22% to 82%) and the header walks back to the site tokens. At 90% it rests on the card: the real cover is unhidden under it and the quad fades out over the last 10%. Measured against the real card at that moment, the difference is 0.63 levels on average.
+5. No card to land on (an empty list, a project that isn't listed, a card less than 30% on screen): the cover just fades out over 0.45 s.
+
+### Swap
+
+An instant cover in the current page's background and `markProjectCoverStarted()`. Once the route commits, a 0.45 s crossfade to the new page's background (read from its theme after it has committed), with the header palette, then the reveal signal and a 0.3 s fade.
+
+### Header colours
+
+The header reads `--project-bg`, `--project-text`, `--project-highlight` and the `--project-button-*` variables, each falling back to a site token. A themed project page sets them on `:root` from its own stylesheet when it commits, which lands mid-zoom and would snap the header. So while a transition runs, the controller writes all of them as inline custom properties on `<html>` (inline beats the page's `:root` rule) and lerps them in sRGB every frame. It writes one property at a time with `setProperty`, because the scroll lock owns `overflow` and `scrollbar-gutter` on the same element. Colours are resolved through a hidden probe element, which handles `var()` chains and `color-mix()`. `finish()` removes them, and the page underneath then carries the values the walk ended on. The header also eases its colours over 0.5 s in CSS, so the walk ends early (by 80% on the way in) to arrive in time.
+
+### Cleanup
+
+Every flow ends in one `finish()`, whichever way it ended (landed, revealed, aborted, replaced by another flow, unmounted). It kills the tweens, releases every pending wait, calls `markProjectRevealStarted()`, releases the scroll lock, clears the inline blocking and the inline colours, unhides any landing card, clears the return note and the scroll-reset skip, and hides the overlay. A route that settles anywhere the flow didn't mean to go aborts it with a 0.2 s fade. A return note is also dropped whenever the route settles anywhere but the list, so an abandoned exit never leaves the next ordinary list visit in return mode.
+
+### Reduced motion and fallbacks
+
+- Reduced motion: no interception, no overlay, native navigation. The one trick left is the list's scroll position: going back to the list (a link or browser back) scrolls it to the card again (`restoreOnly` in the return note).
+- No hardware WebGL2 (`failIfMajorPerformanceCaveat`), a lost context, or a renderer that failed to load: the DOM fallback. It is a fixed clone of the cover moved by the same frames with CSS transforms, with a CSS blur for the streak and a radial `mask-image` for the dissolve over the theme colour. No split and no bulge. It waits (200 ms at most) for the clone's picture to decode before it replaces the card.
+- Touch uses the WebGL renderer too: the overlay isn't scroll-synced.
+
+### Verifying
+
+- Dev builds expose `window.__projectTransition`. `state()` reports the running flow and renderer, the overlay's visibility, the inline blocking, the `html` overflow, landing cards, inline colours, the pending note, the renderer's status, the last prepare timings and the current progress. `setSlowdown(factor)` stretches every duration for slow-motion frame sheets, and `forceDom(true)` forces the fallback.
+- In dev the CMS media route takes 1 to 8 s per image, and the first visit to each route compiles it: judge holds and timings on a production build.
+- A pixel diff of a card before and after a zoom must keep the pointer off the card: a hovered card on the WebGL stage rests at about 1.0 times instead of 1.026.
+- Playwright's Firefox screenshots can show a frame without the fixed overlay while a route commits, and WebKit's video capture has dropped a WebGL canvas. Confirm anything odd with in-page state sampled every animation frame before chasing it.
