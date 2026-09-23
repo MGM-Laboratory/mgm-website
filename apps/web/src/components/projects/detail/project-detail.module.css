@@ -101,7 +101,7 @@
 
 /* Before hydration the title waits for its entrance only where it has
    one: the horizontal layout with motion allowed. */
-@media (min-width: 813px) and (prefers-reduced-motion: no-preference) {
+@media (width > 812px) and (prefers-reduced-motion: no-preference) {
   .titleEnter {
     opacity: 0;
   }
@@ -639,7 +639,7 @@
 
 /* ================================================================ horizontal */
 
-@media (min-width: 813px) {
+@media (width > 812px) {
   .root {
     --pad-x: max(5vw, 40px);
     --pad-y: clamp(30px, 4vw, 50px);
@@ -838,7 +838,7 @@
   }
 }
 
-@media (min-width: 813px) and (min-aspect-ratio: 21/9) {
+@media (width > 812px) and (min-aspect-ratio: 21/9) {
   .root {
     --pad-x: max(6vw, 60px);
   }

@@ -43,7 +43,7 @@ const LIST_LIMIT = 6;
 // everything visible (the horizontal layout needs the scroll mapping).
 const NO_SCRIPT_CSS = `
 [data-project-detail] [data-enter],[data-project-detail] [data-detail-item] :is(img,video){opacity:1!important}
-@media (min-width:813px){
+@media (width>812px){
 [data-project-detail]{padding:0 var(--pad-x)!important}
 [data-project-detail] [data-detail-spacer],[data-project-detail] [data-detail-hint]{display:none!important}
 [data-project-detail] [data-detail-stage]{position:relative!important;inset:auto!important;height:auto!important;overflow:visible!important}
