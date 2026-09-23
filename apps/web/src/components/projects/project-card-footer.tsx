@@ -4,6 +4,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
 
+import {
+  motionAllowed,
+  useMotionPreference,
+} from "@/components/projects/card-text/motion-preference";
 import { createScramble } from "@/components/projects/card-text/scramble-text";
 import { createTitleDrop } from "@/components/projects/card-text/title-drop";
 import { createTitleFlip } from "@/components/projects/card-text/title-flip";
@@ -57,6 +61,15 @@ export function ProjectCardFooter({
   const [drop] = useState(createTitleDrop);
   // The title hover flip (the entrance stops it on reset).
   const [flip] = useState(createTitleFlip);
+  // The live reduced-motion preference: every motion effect below lists it
+  // as a dependency, so switching the OS setting mid-visit tears the
+  // effects down (their cleanups leave the resting text) or re-arms them.
+  // The effects still gate on motionAllowed(), read when they run
+  // (card-text/motion-preference.ts explains why).
+  const motion = useMotionPreference();
+  // What the entrance effect saw on its previous run, to tell a switch
+  // back from reduced motion apart from the first mount.
+  const entranceMotionRef = useRef<boolean | null>(null);
 
   // The title must stay on one line: measure the real rendered width
   // against an invisible sizer and trim with an ellipsis when it overflows.
@@ -77,9 +90,7 @@ export function ProjectCardFooter({
       // overflow-clipped row (the indent timeline below), so the fit leaves
       // that em free: the tail and the ellipsis stay visible while
       // indented. Reduced motion never indents and keeps the full width.
-      const indent = window.matchMedia("(prefers-reduced-motion: no-preference)").matches
-        ? parseFloat(getComputedStyle(row).fontSize) || 0
-        : 0;
+      const indent = motionAllowed() ? parseFloat(getComputedStyle(row).fontSize) || 0 : 0;
       const room = row.clientWidth - indent;
       if (measure(fullTitle) <= room) {
         setTitle(fullTitle);
@@ -110,7 +121,7 @@ export function ProjectCardFooter({
       cancelled = true;
       ro.disconnect();
     };
-  }, [fullTitle]);
+  }, [fullTitle, motion]);
 
   // Runs after every re-split (the truncation above can swap the title
   // once fonts load or the card resizes), so new columns pick up the
@@ -132,18 +143,29 @@ export function ProjectCardFooter({
     const titleRow = titleRowRef.current;
     const root = footer?.closest("a");
     if (!footer || !titleRow || !root) return;
-    // Reduced motion: the real text stays, no scramble, no drop.
-    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+    // Reduced motion: the real text stays, no scramble, no drop. Switching
+    // it on mid-visit re-runs this effect, and the cleanup below has
+    // already finished every running or parked card to its real text.
+    const allowed = motionAllowed();
+    const resumed = entranceMotionRef.current === false;
+    entranceMotionRef.current = allowed;
+    if (!allowed) return;
 
     const line = categoryRef.current;
     const scramble = line ? createScramble(line, categoryText) : null;
-    scramble?.reset();
-    drop.reset();
+    // Switching reduced motion back off mid-visit keeps the real text that
+    // is on screen instead of blanking and replaying it: the card starts
+    // disarmed, and only a card that is out of view parks and arms (the
+    // viewport observer reports that at once).
+    if (!resumed) {
+      scramble?.reset();
+      drop.reset();
+    }
 
     // Armed: waiting to play on the next footer entry. lusion replays
     // every time the card comes back, but only after the whole card was
     // out of view, so a footer that dips out and back in doesn't restart.
-    let armed = true;
+    let armed = !resumed;
     let cancelled = false;
     const stops: Array<() => void> = [];
 
@@ -180,7 +202,7 @@ export function ProjectCardFooter({
       scramble?.finish();
       drop.finish();
     };
-  }, [categoryText, drop, flip]);
+  }, [categoryText, drop, flip, motion]);
 
   useIsomorphicLayoutEffect(() => {
     const titleRow = titleRowRef.current;
@@ -191,10 +213,11 @@ export function ProjectCardFooter({
 
     // Every hover effect is decorative; reduced motion keeps the card
     // completely static.
-    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+    if (!motionAllowed()) return;
 
+    const title = titleRow.querySelector<HTMLElement>(".project-card-title");
     const icon = titleRow.querySelector<HTMLElement>(".project-card-icon");
-    if (!icon) return;
+    if (!title || !icon) return;
 
     // The indent/arrow travel distance is one em of the title row.
     const em = () => parseFloat(getComputedStyle(titleRow).fontSize) || 28;
@@ -203,12 +226,7 @@ export function ProjectCardFooter({
     // the left edge. .fromTo baselines (not .to) so reversing mid-animation
     // can never strand a half-finished value.
     const indent = gsap.timeline({ paused: true });
-    indent.fromTo(
-      [titleRow.querySelector(".project-card-title"), icon],
-      { x: 0 },
-      { x: () => em(), duration: 0.5, ease: "power3.out" },
-      0,
-    );
+    indent.fromTo([title, icon], { x: 0 }, { x: () => em(), duration: 0.5, ease: "power3.out" }, 0);
 
     // Title hover: the magicui 3D flip (card-text/title-flip.ts), never
     // while the letters are still parked or dropping in (it would roll
@@ -265,9 +283,12 @@ export function ProjectCardFooter({
       titleRow.removeEventListener("mouseenter", onTitleEnter);
       drop.onChange(null);
       flip.stop();
-      indent.kill();
+      // Back to the flat resting title: a card that is hovered or focused
+      // when reduced motion switches on must not stay indented.
+      indent.progress(0).kill();
+      gsap.set([title, icon], { clearProps: "transform" });
     };
-  }, [drop, flip]);
+  }, [drop, flip, motion]);
 
   return (
     // data-card-footer: the page's cover stage moves this wrapper with the
