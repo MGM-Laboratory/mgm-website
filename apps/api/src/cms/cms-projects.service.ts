@@ -57,7 +57,38 @@ function mediaSectionsOf(record: Record<string, unknown>) {
   });
 }
 
-/** Every image key a record references: cover, gallery, media sections and posters. */
+const BODY_MEDIA_URL_PATTERN = /\/api\/projects-cms\/media\/([^/?#"]+)/;
+
+/** Image keys embedded in the record's BlockNote body (image blocks' `props.url`). */
+function bodyMediaKeysOf(record: Record<string, unknown>) {
+  const keys: string[] = [];
+  const visit = (blocks: unknown) => {
+    if (!Array.isArray(blocks)) return;
+    for (const block of blocks) {
+      const node = block as { props?: { url?: unknown }; children?: unknown } | undefined;
+      const match =
+        typeof node?.props?.url === "string" && BODY_MEDIA_URL_PATTERN.exec(node.props.url);
+      if (match) {
+        try {
+          keys.push(decodeURIComponent(match[1]));
+        } catch {
+          // A malformed escape can't name a stored object.
+        }
+      }
+      visit(node?.children);
+    }
+  };
+  visit(record.body);
+  return keys;
+}
+
+/**
+ * Every image key a record references: cover, gallery, media sections,
+ * posters, and images placed in the body. Save and delete only remove
+ * stored objects that no longer appear anywhere in this list, so an image
+ * dropped from the gallery or the media sections survives while the body
+ * still shows it.
+ */
 function mediaKeysOf(record: Record<string, unknown>) {
   const project = projectOf(record);
   const keys: string[] = [];
@@ -69,6 +100,7 @@ function mediaKeysOf(record: Record<string, unknown>) {
     if (section.kind === "image") keys.push(section.key);
     if (section.posterKey) keys.push(section.posterKey);
   }
+  keys.push(...bodyMediaKeysOf(record));
   return keys;
 }
 
