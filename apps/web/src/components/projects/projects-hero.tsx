@@ -316,6 +316,10 @@ export function ProjectsHero({ count }: { count: number }) {
             { drawSVG: "0% 50%", duration: 0.35, ease: "power3.out" },
             1.35,
           );
+        // The first 0.1 s is an empty beat before the letters rise. Arriving
+        // through the curtain, the page has just been blank under the
+        // reveal already, so the rise starts at once.
+        if (skipEntranceForInternalNavRef.current === true) tl.time(0.1);
       });
     };
 
