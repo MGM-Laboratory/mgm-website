@@ -25,6 +25,31 @@ const WHEEL_LERP = 0.15;
 // site's programmatic scrolls.
 const easeInOutQuart = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
 
+// Keyboard scrolling (lusion-style steps): arrows move 100px, Page Up/Down
+// and Space most of a screen, Home/End glide to either end.
+const ARROW_STEP = 100;
+const PAGE_STEP = 0.85; // of the viewport height
+const EDGE_GLIDE_SECONDS = 1.2;
+
+// Keys typed into these keep their own meaning (Space presses a button,
+// arrows move a slider or a caret, and so on).
+const KEY_OWNERS =
+  "input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='listbox'], [role='menu'], [role='menubar'], [role='slider'], [role='spinbutton'], [role='tablist'], [role='radiogroup'], [role='grid'], [role='tree'], [data-lenis-prevent]";
+
+/** True when a scrollable element between `node` and the page would take the key. */
+function insideNestedScroller(node: Element | null) {
+  for (
+    let el = node;
+    el && el !== document.body && el !== document.documentElement;
+    el = el.parentElement
+  ) {
+    if (el.scrollHeight <= el.clientHeight) continue;
+    const overflow = getComputedStyle(el).overflowY;
+    if (overflow === "auto" || overflow === "scroll") return true;
+  }
+  return false;
+}
+
 /** Starts the smooth scroller; resolves with its stop function. */
 export async function startSmoothScroll(): Promise<() => void> {
   const { default: Lenis } = await import("lenis");
@@ -59,6 +84,51 @@ export async function startSmoothScroll(): Promise<() => void> {
 
   const offFrame = addFrameCallback("scroll", (time) => lenis.raf(time * 1000));
 
+  // The browser animates keyboard scrolling itself, possibly on the
+  // compositor where the WebGL covers can't follow in the same frame; the
+  // scroll keys go through Lenis instead, with the wheel's easing.
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (lenis.isStopped) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest(KEY_OWNERS) || insideNestedScroller(target)) return;
+
+    const page = window.innerHeight * PAGE_STEP;
+    let step = 0;
+    switch (event.key) {
+      case "ArrowDown":
+        step = ARROW_STEP;
+        break;
+      case "ArrowUp":
+        step = -ARROW_STEP;
+        break;
+      case "PageDown":
+        step = page;
+        break;
+      case "PageUp":
+        step = -page;
+        break;
+      case " ":
+        step = event.shiftKey ? -page : page;
+        break;
+      case "Home":
+      case "End":
+        event.preventDefault();
+        lenis.scrollTo(event.key === "Home" ? 0 : lenis.limit, {
+          duration: EDGE_GLIDE_SECONDS,
+          easing: easeInOutQuart,
+        });
+        return;
+      default:
+        return;
+    }
+    event.preventDefault();
+    // Not "programmatic": repeated presses keep adding to the target, the
+    // same way wheel notches do.
+    lenis.scrollTo(lenis.targetScroll + step, { programmatic: false, lerp: WHEEL_LERP });
+  };
+  window.addEventListener("keydown", onKeyDown);
+
   // scrollPageTo() callers (the hero's arrow) go through Lenis, which a
   // direct window.scrollTo would otherwise fight toward its own target.
   // Elements resolve to a plain document offset, the same way the native
@@ -77,6 +147,7 @@ export async function startSmoothScroll(): Promise<() => void> {
   );
 
   return () => {
+    window.removeEventListener("keydown", onKeyDown);
     offScroller();
     offFrame();
     offLock();
