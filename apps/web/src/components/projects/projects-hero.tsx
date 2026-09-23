@@ -61,7 +61,8 @@ const INTRO_LOCK_OWNER = "projects-intro";
 const FONT_WAIT_MS = 1500;
 // The intro lets go of the page no matter what after the curtain's 8 s
 // ceiling, the font wait and the entrance itself have all had their time:
-// a list gated on a signal that never fires is a page-high blank.
+// a list gated on a signal that never fires is a page-high blank. Counted
+// in visible time only (see syncFailsafe).
 const INTRO_FAILSAFE_MS = 13000;
 
 // Ink alignment, in pure CSS so the server HTML is already right. The
@@ -174,10 +175,26 @@ export function ProjectsHero({ count }: { count: number }) {
     const pinTop = () => {
       if (window.scrollY !== 0) window.scrollTo(0, 0);
     };
+    // The failsafe counts visible time only. A hidden tab (one opened in
+    // the background, or switched away from mid-intro) freezes the
+    // entrance, which runs on animation frames, but not timers: a
+    // wall-clock failsafe would unlock the page and release the list
+    // while the entrance is still waiting to be seen.
+    let failsafeLeft = INTRO_FAILSAFE_MS;
+    let failsafeSince = 0;
+    const syncFailsafe = () => {
+      window.clearTimeout(failsafeTimer);
+      if (failsafeSince) failsafeLeft -= performance.now() - failsafeSince;
+      failsafeSince = 0;
+      if (!introOpen || document.hidden) return;
+      failsafeSince = performance.now();
+      failsafeTimer = window.setTimeout(endIntro, Math.max(0, failsafeLeft));
+    };
     const endIntro = () => {
       if (!introOpen) return;
       introOpen = false;
       window.clearTimeout(failsafeTimer);
+      document.removeEventListener("visibilitychange", syncFailsafe);
       window.removeEventListener("scroll", pinTop);
       releaseScrollLock(INTRO_LOCK_OWNER);
       finishProjectsIntro();
@@ -189,7 +206,8 @@ export function ProjectsHero({ count }: { count: number }) {
       scrollPageTo(0, { duration: 0 });
       pinTop();
       window.addEventListener("scroll", pinTop, { passive: true });
-      failsafeTimer = window.setTimeout(endIntro, INTRO_FAILSAFE_MS);
+      document.addEventListener("visibilitychange", syncFailsafe);
+      syncFailsafe();
     } else {
       finishProjectsIntro();
     }
