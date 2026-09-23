@@ -67,7 +67,14 @@ export function LogoMark() {
   }
 
   return (
-    <Link href="/" onMouseEnter={handleEnter} className="flex items-center gap-2">
+    // The wordmark inherits the header ink (a project page's text colour
+    // there); the mark itself is a multicolour image and keeps its brand
+    // colours on every theme.
+    <Link
+      href="/"
+      onMouseEnter={handleEnter}
+      className="header-focus flex items-center gap-2 rounded-md"
+    >
       <div className="relative inline-flex size-7 items-center justify-center">
         <div className="pointer-events-none absolute inset-0">
           {BURST.map((b, i) => (
@@ -94,7 +101,7 @@ export function LogoMark() {
       </div>
       <span className="flex flex-col leading-[1.1] font-display tracking-tight">
         <span className="text-sm font-bold">MGM</span>
-        <span className="text-[10px] font-medium text-foreground/70">Laboratory</span>
+        <span className="text-[10px] font-medium text-current/70">Laboratory</span>
       </span>
     </Link>
   );

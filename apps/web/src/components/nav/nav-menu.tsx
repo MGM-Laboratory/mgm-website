@@ -517,7 +517,7 @@ export function NavMenu() {
         aria-expanded={open}
         aria-controls="site-nav-panel"
         aria-label={open ? "Close menu" : "Open menu"}
-        className="relative z-10 flex items-center gap-2.5 rounded-full py-1.5 pr-1 pl-3 text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+        className="header-control relative z-10 flex items-center gap-2.5 rounded-full py-1.5 pr-1 pl-3"
       >
         <span className="hidden h-[1em] w-11 overflow-hidden text-xs leading-none font-semibold tracking-wide uppercase sm:block">
           <span ref={textInnerRef} className="flex flex-col">

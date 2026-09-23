@@ -1,6 +1,14 @@
 # Navigation Menu System
 
-The site's only navigation is the full-screen right-side menu (`nav/nav-menu.tsx`), derived from the React Bits `StaggeredMenu` component and modeled on the menu at `https://kaizin.framer.website` (studied, then rebuilt on the MGM design system, not copied verbatim). The old center navbar was removed entirely; `site-header.tsx` is LogoMark + ID/EN + ThemeToggle + hamburger.
+The site's only navigation is the full-screen right-side menu (`nav/nav-menu.tsx`), derived from the React Bits `StaggeredMenu` component and modeled on the menu at `https://kaizin.framer.website` (studied, then rebuilt on the MGM design system, not copied verbatim). The old center navbar was removed entirely. `site-header.tsx` holds the LogoMark, the ThemeToggle and the menu button, plus a centre Back pill on project detail pages.
+
+## The header bar
+
+The bar is frosted glass: a tint of the page background (76% in light mode, 80% in dark, 94% while the menu is open) under `backdrop-filter: blur(20px) saturate(180%)`, with a hairline bottom border and a faint top highlight. The glass sits on a child layer, not on `<header>` itself. A `backdrop-filter` on `<header>` would make it the containing block for the menu's fixed overlay and panel, which render inside the header, and the panel would collapse into the 64 px bar. Under `prefers-reduced-transparency: reduce`, or where `backdrop-filter` isn't supported, the bar is opaque.
+
+On a project detail page the bar takes that project's theme: its tint, ink and accents read `var(--project-bg)`, `var(--project-text)` and `var(--project-highlight)`, falling back to the site tokens everywhere else, and the colours transition over 0.5 s. The multicolour logo mark keeps its brand colours. The open menu panel keeps the site colours.
+
+The Back pill renders only on `/projects/<slug>`. It is a `Link` to `/projects` (`data-project-back`, labelled "Back to projects") that the project zoom transition intercepts (see [`page-transition.md`](page-transition.md)). Hover and keyboard focus play a slide-through arrow swap with a fill rising from the bottom, and the pill slides in once the page-transition curtain lifts. At 812 px and below it becomes a 44 px icon-only circle beside the theme toggle. Everything is CSS, and reduced motion keeps only the colour change.
 
 ## Files
 

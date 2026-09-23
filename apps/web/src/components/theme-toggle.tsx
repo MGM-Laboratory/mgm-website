@@ -35,8 +35,11 @@ export function ThemeToggle({ className }: { className?: string }) {
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label="Toggle theme"
+      // Colours come from the site header (globals.css, .header-control):
+      // the header ink, its hover wash and its focus ring, so the toggle
+      // follows a project page's theme. The outline is the ink at 15%.
       className={cn(
-        "inline-flex size-9 items-center justify-center rounded-full border border-black/10 bg-background text-foreground transition-colors hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10",
+        "header-control inline-flex size-9 items-center justify-center rounded-full border border-current/15",
         className,
       )}
     >
