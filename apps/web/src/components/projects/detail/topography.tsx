@@ -38,7 +38,7 @@ export type ProjectTopographyProps = {
  *
  * - Colours: valleys take the palette's highlight, ridges its text colour.
  *   Every line core sits the same small lightness step from `palette.bg`
- *   (5.5 L*, roughly 4-6% luma), whatever the theme. A palette change
+ *   (3.8 L*, roughly 3-4% luma), whatever the theme. A palette change
  *   (light/dark switch, the next project) crossfades over 0.6 s.
  * - The canvas is transparent (premultiplied alpha), so the page's own
  *   background shows through; it is decorative (aria-hidden, no pointer

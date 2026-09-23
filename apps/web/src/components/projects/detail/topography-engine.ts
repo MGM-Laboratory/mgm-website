@@ -61,9 +61,10 @@ const FIELD = {
  * faintness on a pale page and a near-black one). Every stop gets the alpha
  * that lands exactly this far from its own background, so the lines read
  * the same on all 40 theme variants instead of following each palette's
- * contrast. About 6% in gamma-encoded luma on light pages, 4-6% on dark.
+ * contrast. 3.8 L* is about 4% in gamma-encoded luma on light pages and
+ * 3-4% on dark ones: perceptible when you look for it, never a pattern.
  */
-const LINE_LIGHTNESS_STEP = 5.5;
+const LINE_LIGHTNESS_STEP = 3.8;
 /** Hard ceiling for one stop's alpha, whatever the palette. */
 const MAX_STOP_ALPHA = 0.35;
 
