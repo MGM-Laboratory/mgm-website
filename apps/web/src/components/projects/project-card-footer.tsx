@@ -8,6 +8,7 @@ import { createScramble } from "@/components/projects/card-text/scramble-text";
 import { createTitleDrop } from "@/components/projects/card-text/title-drop";
 import { createTitleFlip } from "@/components/projects/card-text/title-flip";
 import { observeInViewport, observeSeen } from "@/components/projects/card-text/view-trigger";
+import { trackScrollIdle, whenScrollIdle } from "@/components/projects/stage/scroll-idle";
 import { waitForGridReveal } from "@/lib/projects-intro";
 import { motionAllowed, useMotionPreference } from "@/lib/reduced-motion";
 
@@ -230,8 +231,17 @@ export function ProjectCardFooter({
     // boxes nobody can see yet).
     // Ownership: the flip rotates the box (copy one), the drop moves the
     // column around it, the indent moves the whole title: three elements.
+    // Scrolling slides cards under a resting cursor, and the browser fires
+    // mouseenter on each of them; like the cover's focus pull, the flip and
+    // the indent wait for the scroll to settle (and only play if the
+    // pointer is still there by then).
+    const releaseIdle = trackScrollIdle();
+    let cancelTitleWait = () => {};
     const onTitleEnter = () => {
-      if (drop.state === "landed") flip.play(titleRow);
+      cancelTitleWait();
+      cancelTitleWait = whenScrollIdle(() => {
+        if (drop.state === "landed" && titleRow.matches(":hover")) flip.play(titleRow);
+      });
     };
 
     // The indent and arrow lead a title that is on screen. While the
@@ -248,11 +258,16 @@ export function ProjectCardFooter({
       if ((hovered || focused) && drop.state === "landed") indent.play();
       else indent.reverse();
     };
+    let cancelHoverWait = () => {};
     const onEnter = () => {
-      hovered = true;
-      sync();
+      cancelHoverWait();
+      cancelHoverWait = whenScrollIdle(() => {
+        hovered = true;
+        sync();
+      });
     };
     const onLeave = () => {
+      cancelHoverWait();
       hovered = false;
       sync();
     };
@@ -278,6 +293,9 @@ export function ProjectCardFooter({
       root.removeEventListener("focus", onFocus);
       root.removeEventListener("blur", onBlur);
       titleRow.removeEventListener("mouseenter", onTitleEnter);
+      cancelHoverWait();
+      cancelTitleWait();
+      releaseIdle();
       drop.onChange(null);
       flip.stop();
       // Back to the flat resting title: a card that is hovered or focused
