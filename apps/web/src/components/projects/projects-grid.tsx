@@ -25,7 +25,8 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 // before settling on the DOM covers instead.
 const STAGE_SETTLE_MS = 700;
 // Reveal the list even if the hero's intro never reports back (a hidden
-// list still reserves its full height as blank scrollable space).
+// list still reserves its full height as blank scrollable space). Visible
+// tab time only.
 const INTRO_FAILSAFE_MS = 13_000;
 const RISE_PX = 28;
 
@@ -86,14 +87,52 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
 
     let cancelled = false;
     let tween: gsap.core.Tween | null = null;
-    const timers: number[] = [];
+    const stops: Array<() => void> = [];
     const delay = (ms: number) =>
       new Promise<void>((resolve) => {
-        timers.push(window.setTimeout(resolve, ms));
+        const timer = window.setTimeout(resolve, ms);
+        stops.push(() => window.clearTimeout(timer));
+      });
+    // Counts only the time the tab is visible. A background tab freezes the
+    // hero's entrance (no animation frames) but not timers: a wall-clock
+    // failsafe fired there, and the list then faded in over an entrance
+    // that had not played yet.
+    const visibleDelay = (ms: number) =>
+      new Promise<void>((resolve) => {
+        let left = ms;
+        let since = 0;
+        let timer = 0;
+        const stop = () => {
+          window.clearTimeout(timer);
+          document.removeEventListener("visibilitychange", onVisibility);
+        };
+        const run = () => {
+          since = performance.now();
+          timer = window.setTimeout(
+            () => {
+              stop();
+              resolve();
+            },
+            Math.max(0, left),
+          );
+        };
+        const onVisibility = () => {
+          if (document.hidden) {
+            if (!timer) return;
+            window.clearTimeout(timer);
+            timer = 0;
+            left -= performance.now() - since;
+          } else if (!timer) {
+            run();
+          }
+        };
+        stops.push(stop);
+        document.addEventListener("visibilitychange", onVisibility);
+        if (!document.hidden) run();
       });
 
     void (async () => {
-      await Promise.race([waitForProjectsIntro(), delay(INTRO_FAILSAFE_MS)]);
+      await Promise.race([waitForProjectsIntro(), visibleDelay(INTRO_FAILSAFE_MS)]);
       if (cancelled) return;
       if (getStageMode() === "pending") {
         await Promise.race([waitForStageMode(), delay(STAGE_SETTLE_MS)]);
@@ -116,7 +155,7 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       // never leave the list or the footer unreachable.
       hold(false);
       tween?.kill();
-      for (const timer of timers) window.clearTimeout(timer);
+      for (const stop of stops) stop();
     };
   }, []);
 
