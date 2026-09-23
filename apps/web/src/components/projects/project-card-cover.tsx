@@ -148,17 +148,20 @@ export function ProjectCardCover({
     const whenDom = (playVisible: boolean) => {
       void waitForGridReveal().then(() => arm(playVisible));
     };
-    const mode = getStageMode();
+    let mode = getStageMode();
     let offMode: (() => void) | null = null;
     if (mode === "dom") whenDom(true);
     else {
       offMode = onStageModeChange((next) => {
+        const previous = mode;
+        mode = next;
         if (next !== "dom") return;
         offMode?.();
         offMode = null;
         // Undecided until now: the reveal is still ahead, play on it.
-        // Leaving WebGL mid-visit: covers come back at rest.
-        whenDom(mode === "pending");
+        // Leaving WebGL mid-visit (a lost context): covers come back at
+        // rest, and only later entries play the DOM opening.
+        whenDom(previous !== "gl");
       });
     }
 
