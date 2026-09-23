@@ -42,7 +42,7 @@ const LIST_LIMIT = 6;
 // Without JavaScript the page uses the stacked layout at every width, with
 // everything visible (the horizontal layout needs the scroll mapping).
 const NO_SCRIPT_CSS = `
-[data-project-detail] [data-enter]{opacity:1!important}
+[data-project-detail] [data-enter],[data-project-detail] [data-detail-item] :is(img,video){opacity:1!important}
 @media (min-width:813px){
 [data-project-detail]{padding:0 var(--pad-x)!important}
 [data-project-detail] [data-detail-spacer],[data-project-detail] [data-detail-hint]{display:none!important}
