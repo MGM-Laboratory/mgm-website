@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect } from "react";
 
 import type { CoverEngine } from "@/components/projects/stage/cover-engine";
 import { startDomReaction } from "@/components/projects/stage/dom-reaction";
+import { onReducedMotion } from "@/components/projects/stage/reduced-motion";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
 import {
   getStageMode,
@@ -55,7 +56,8 @@ function supportsWebGL2() {
  *   moment the swap can't show (cover-engine.ts attachAtRest).
  * - Fine pointer without WebGL2: DOM covers, still with smooth scrolling.
  * - Touch: DOM covers and native scrolling.
- * - Reduced motion: DOM covers, completely static.
+ * - Reduced motion: DOM covers, completely static (also when it is turned
+ *   on mid-visit: everything above is torn down).
  *
  * "dom" is final: touch, reduced motion, no WebGL2, a stage that failed to
  * start, or a WebGL context lost later (the engine is then disposed and
@@ -69,6 +71,7 @@ export function ProjectsStage() {
     const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
     let cancelled = false;
+    let reduced = false;
     let engine: CoverEngine | null = null;
     let stopScroll: (() => void) | null = null;
     let stopReaction: (() => void) | null = null;
@@ -84,12 +87,26 @@ export function ProjectsStage() {
     // list that revealed before the stage was ready.
     if (motion) stopReaction = startDomReaction();
 
+    // Reduced motion turned on mid-visit: native scrolling, no WebGL stage
+    // (every card handed back to its DOM cover, which goes static itself)
+    // and no scroll reaction, for the rest of the visit.
+    const offReduced = motion
+      ? onReducedMotion(() => {
+          reduced = true;
+          stopScroll?.();
+          stopScroll = null;
+          stopReaction?.();
+          stopReaction = null;
+          setStageMode("dom");
+        })
+      : null;
+
     if (!motion) {
       setStageMode("dom");
     } else {
       if (fine) {
         void startSmoothScroll().then((stop) => {
-          if (cancelled) stop();
+          if (cancelled || reduced) stop();
           else stopScroll = stop;
         });
       }
@@ -123,6 +140,7 @@ export function ProjectsStage() {
     return () => {
       cancelled = true;
       offMode();
+      offReduced?.();
       disposeEngine();
       stopScroll?.();
       stopReaction?.();

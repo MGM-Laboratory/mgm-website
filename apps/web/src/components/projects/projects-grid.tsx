@@ -9,6 +9,7 @@ import {
   resetGridRevealState,
 } from "@/components/projects/stage/grid-reveal-state";
 import { ProjectsStage } from "@/components/projects/stage/projects-stage";
+import { onReducedMotion } from "@/components/projects/stage/reduced-motion";
 import { getStageMode, waitForStageMode } from "@/components/projects/stage/stage-registry";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import { markGridRevealStarted, waitForProjectsIntro } from "@/lib/projects-intro";
@@ -154,8 +155,24 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       );
     })();
 
+    // Reduced motion turned on mid-visit: the list shows as it ends up,
+    // right away (mid-intro, or mid-fade).
+    const offReduced = onReducedMotion(() => {
+      if (!reveal.started) {
+        cancelled = true;
+        reveal.started = true;
+        hold(false);
+        markGridRevealStarted();
+      }
+      tween?.kill();
+      reveal.opacity = 1;
+      reveal.y = 0;
+      apply();
+    });
+
     return () => {
       cancelled = true;
+      offReduced();
       // A Strict Mode rehearsal unmount (or any teardown mid-intro) must
       // never leave the list or the footer unreachable, or the page locked.
       hold(false);

@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
 import { PatternTile, type PatternKind } from "@/components/process/pattern-tile";
+import { motionAllowed, onReducedMotion } from "@/components/projects/stage/reduced-motion";
 import { trackScrollIdle, whenScrollIdle } from "@/components/projects/stage/scroll-idle";
 import {
   FOCUS_HUNT_DELAY,
@@ -193,6 +194,7 @@ export function ProjectCardCover({
 
     // The stage taking this card over, or handing it back (a lost context).
     const ownership = new MutationObserver(() => {
+      if (cancelled || !motionAllowed()) return;
       if (ownedByStage()) {
         // Hidden behind the stage's cover: park it at rest, so a later
         // handback never uncovers a half-played or rewound opening.
@@ -208,13 +210,26 @@ export function ProjectCardCover({
     });
     ownership.observe(frame, { attributes: true, attributeFilter: ["data-stage"] });
 
-    return () => {
+    const stop = () => {
       cancelled = true;
       ownership.disconnect();
       observer?.disconnect();
       window.removeEventListener("scroll", check);
       timeline?.kill();
       setOpening(null);
+    };
+    // Reduced motion turned on mid-visit: the cover goes static, exactly as
+    // a reduced-motion visit renders it (no window, no zoom, no blur).
+    const offReduced = onReducedMotion(() => {
+      stop();
+      gsap.set(frame, { clearProps: "clipPath" });
+      gsap.set(lens, { clearProps: "transform,filter" });
+      gsap.set(edge, { autoAlpha: 0 });
+    });
+
+    return () => {
+      offReduced();
+      stop();
     };
   }, []);
 
@@ -336,7 +351,7 @@ export function ProjectCardCover({
     root.addEventListener("mousemove", onMove);
     root.addEventListener("focus", onFocus);
     root.addEventListener("blur", onBlur);
-    return () => {
+    const stop = () => {
       root.removeEventListener("mouseenter", onEnter);
       root.removeEventListener("mouseleave", onLeave);
       root.removeEventListener("mousemove", onMove);
@@ -347,6 +362,16 @@ export function ProjectCardCover({
       cancelWait?.();
       stopTracking();
       delete frame.dataset.domHover;
+    };
+    // Reduced motion turned on mid-visit: no more hover, and the picture
+    // straightens and sharpens at once.
+    const offReduced = onReducedMotion(() => {
+      stop();
+      gsap.set(img, { clearProps: "filter,transform" });
+    });
+    return () => {
+      offReduced();
+      stop();
     };
   }, []);
 
