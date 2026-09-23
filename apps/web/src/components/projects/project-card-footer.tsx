@@ -25,8 +25,15 @@ export function ProjectCardFooter({
   const [title, setTitle] = useState(fullTitle);
   // Word groups keep the space between words as a real whitespace-pre span
   // (magicui's approach): a bare space inside an inline-block char box
-  // collapses to zero width, which glued words together.
-  const titleWords = title.split(" ");
+  // collapses to zero width, which glued words together. Each character
+  // also carries its index in the whole title (spaces counted, as lusion
+  // counts its empty space columns) for the drop's per-character stagger.
+  const titleWords: Array<{ chars: string[]; start: number }> = [];
+  for (const word of title.split(" ")) {
+    const last = titleWords[titleWords.length - 1];
+    const start = last ? last.start + last.chars.length + 1 : 0;
+    titleWords.push({ chars: Array.from(word), start });
+  }
 
   const titleRowRef = useRef<HTMLDivElement>(null);
   const sizerRef = useRef<HTMLSpanElement>(null);
@@ -73,6 +80,20 @@ export function ProjectCardFooter({
     };
   }, [fullTitle]);
 
+  // Runs after every re-split (the truncation above can swap the title
+  // once fonts load or the card resizes), so new flip boxes get their
+  // geometry before paint.
+  useIsomorphicLayoutEffect(() => {
+    const titleRow = titleRowRef.current;
+    if (!titleRow) return;
+    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+    // Never animated: each flip box hangs half a line behind its own
+    // plane, and the flip's rotationX tweens preserve this offset.
+    gsap.set(gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow), {
+      z: -0.5 * parseFloat(getComputedStyle(titleRow).lineHeight),
+    });
+  }, [title]);
+
   useIsomorphicLayoutEffect(() => {
     const titleRow = titleRowRef.current;
     // The card's <a> root, found from our own element: a parent's ref is
@@ -109,9 +130,6 @@ export function ProjectCardFooter({
     // geometry exactly (translateZ offsets of ±0.5lh, no perspective);
     // only the spring is approximated with a power2 ease.
     const chars = () => gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow);
-    // Set once, never animated: the box hangs half a line behind its own
-    // plane, and the rotationX tweens below preserve this offset.
-    gsap.set(chars(), { z: () => -0.5 * parseFloat(getComputedStyle(titleRow).lineHeight) });
     const flip = () => {
       if (flipActiveRef.current) return;
       flipActiveRef.current = true;
@@ -146,13 +164,19 @@ export function ProjectCardFooter({
     // wrapper's own transform (the effects below animate inner elements).
     <div data-card-footer="" className="mt-5">
       {categories.length ? (
-        <p className="mb-3 truncate text-[clamp(0.6875rem,0.9vw,0.875rem)] font-medium tracking-[0.12em] text-[var(--ink-3)] uppercase dark:text-white/50">
+        <p
+          aria-hidden="true"
+          className="mb-3 truncate text-[clamp(0.6875rem,0.9vw,0.875rem)] font-medium tracking-[0.12em] text-[var(--ink-3)] uppercase dark:text-white/50"
+        >
           {categories.join(" • ")}
         </p>
       ) : null}
+      {/* The row is a fixed one-line window (h = line-height): each
+          character below is a four-line column that the drop slides down
+          through it, so only the row's overflow clip decides what shows. */}
       <div
         ref={titleRowRef}
-        className="relative overflow-hidden text-[clamp(1.5rem,3vw,3.5rem)] leading-[1.15em] whitespace-nowrap"
+        className="relative h-[1.15em] overflow-hidden text-[clamp(1.5rem,3vw,3.5rem)] leading-[1.15em] whitespace-nowrap"
       >
         <span
           aria-hidden="true"
@@ -160,26 +184,42 @@ export function ProjectCardFooter({
         >
           <ArrowRight className="size-full" strokeWidth={2} />
         </span>
-        <span className="project-card-title relative inline-block font-display font-medium tracking-[-0.02em] text-[#0e1116] dark:text-white">
-          {titleWords.map((word, wordIndex) => (
+        {/* Visual only: the card link's aria-label carries the real title. */}
+        <span
+          aria-hidden="true"
+          className="project-card-title relative inline-block font-display font-medium tracking-[-0.02em] text-[#0e1116] dark:text-white"
+        >
+          {titleWords.map(({ chars, start }, wordIndex) => (
             <span className="inline-flex" key={wordIndex}>
-              {Array.from(word).map((char, charIndex) => (
+              {chars.map((char, charIndex) => (
+                // The drop column: four identical copies stacked in one
+                // column, the first on top (it is the one that lands in
+                // the window). Only the drop writes this element's
+                // transform; its resting (no-JS) position shows copy one.
                 <span
-                  className="project-card-char relative inline-block [transform-style:preserve-3d]"
+                  className="project-card-drop flex flex-col"
+                  data-drop-index={start + charIndex}
                   key={`${wordIndex}-${charIndex}`}
                 >
-                  <span
-                    className="inline-block [backface-visibility:hidden]"
-                    style={{ transform: "translateZ(0.5lh)" }}
-                  >
-                    {char}
+                  {/* Copy one is the magicui flip box (the flip owns its
+                      rotation); copies two to four are plain glyphs. */}
+                  <span className="project-card-char relative inline-block [transform-style:preserve-3d]">
+                    <span
+                      className="inline-block [backface-visibility:hidden]"
+                      style={{ transform: "translateZ(0.5lh)" }}
+                    >
+                      {char}
+                    </span>
+                    <span
+                      className="absolute inset-0 inline-block [backface-visibility:hidden]"
+                      style={{ transform: "rotateX(-90deg) translateZ(0.5lh)" }}
+                    >
+                      {char}
+                    </span>
                   </span>
-                  <span
-                    className="absolute inset-0 inline-block [backface-visibility:hidden]"
-                    style={{ transform: "rotateX(-90deg) translateZ(0.5lh)" }}
-                  >
-                    {char}
-                  </span>
+                  <span>{char}</span>
+                  <span>{char}</span>
+                  <span>{char}</span>
                 </span>
               ))}
               {wordIndex < titleWords.length - 1 && <span className="whitespace-pre"> </span>}
