@@ -119,7 +119,7 @@ type Glyph = {
   put: Record<"x" | "y" | "r" | "sx" | "sy", Setter>;
 };
 
-type Resident = { el: HTMLElement; body: HTMLElement; busy: boolean };
+type Resident = { el: HTMLElement; body: HTMLElement; key: string; busy: boolean };
 
 export type HeroPlayOptions = {
   /** Each letter's frozen slot width, in em of the title's font size. */
@@ -178,7 +178,12 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   if (glyphEls.length !== slots.length) return;
   const residents: Resident[] = [
     ...root.querySelectorAll<HTMLElement>(".projects-hero-resident"),
-  ].map((el) => ({ el, body: el.firstElementChild as HTMLElement, busy: false }));
+  ].map((el) => ({
+    el,
+    body: el.firstElementChild as HTMLElement,
+    key: el.dataset.resident ?? "",
+    busy: false,
+  }));
 
   // E: the title's font size in px; every physics length below is in em.
   let E = parseFloat(getComputedStyle(h1).fontSize) || 16;
@@ -674,7 +679,11 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   /** A resident rises behind a gap or letter, looks around, pops its head
    *  above the cap line, then ducks back down. */
   function peek(): Beat {
-    const free = residents.filter((r) => !r.busy);
+    // In dark mode the letters are white, and white strokes crossing the
+    // brand-yellow disc read as notches cut into it (yellow only ever
+    // carries ink, DESIGN_SYSTEM.md): the other residents peek instead.
+    const dark = document.documentElement.classList.contains("dark");
+    const free = residents.filter((r) => !r.busy && !(dark && r.key === "disc"));
     if (!free.length) return null;
     const r = randomPick(free);
     const x = randomPick(spots);

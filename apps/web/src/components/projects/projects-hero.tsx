@@ -398,6 +398,7 @@ export function ProjectsHero({ count }: { count: number }) {
             {RESIDENTS.map(({ key, shape }) => (
               <span
                 key={key}
+                data-resident={key}
                 className="projects-hero-resident absolute bottom-0 left-0 block size-[0.42em]"
               >
                 <span className="projects-hero-resident-body invisible relative block size-full">
