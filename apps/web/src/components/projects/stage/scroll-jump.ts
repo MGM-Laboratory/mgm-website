@@ -18,12 +18,15 @@ const STILL_SHARE = 0.05;
 
 /** Returns a per-frame filter: pass the raw scroll change, get the motion. */
 export function createScrollDeltaFilter() {
+  // The last frame's accepted motion: a rejected jump leaves the page
+  // "still", so a second jump on the very next frame (two quick PageDowns)
+  // is rejected too instead of passing as motion.
   let previous = 0;
   return (moved: number, viewportHeight: number) => {
     const size = Math.abs(moved);
     const fromStill = Math.abs(previous) < STILL_SHARE * viewportHeight;
-    previous = moved;
-    if (size > viewportHeight || (fromStill && size > JUMP_SHARE * viewportHeight)) return 0;
-    return moved;
+    const jump = size > viewportHeight || (fromStill && size > JUMP_SHARE * viewportHeight);
+    previous = jump ? 0 : moved;
+    return previous;
   };
 }
