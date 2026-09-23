@@ -1,4 +1,5 @@
 import { runTextEffect } from "@/components/projects/card-text/ticker";
+import { randomInt } from "@/lib/random";
 
 /**
  * lusion.co's category "typing" (ProjectItem, `.project-item-line-1`): a
@@ -31,7 +32,7 @@ export function scrambleFrame(text: string, t: number) {
   let frame = solid > 0 ? text.slice(0, solid) : "";
   for (let i = 0; i < total - solid; i++) {
     // "!" (33) to "}" (125); CSS uppercases the letters like the text.
-    frame += String.fromCharCode(33 + Math.floor(Math.random() * 93));
+    frame += String.fromCharCode(randomInt(33, 125));
   }
   return frame;
 }
