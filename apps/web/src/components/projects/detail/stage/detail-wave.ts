@@ -32,11 +32,15 @@ const SPEED_EPSILON = 1e-5;
 const SMEAR_GAIN = 1;
 const ARCH_GAIN = 2;
 
-// Ripple amplitude in viewport heights: RIPPLE_GAIN per unit of s past
+// Ripple amplitude in viewport heights: RIPPLE_GAIN per unit of speed past
 // RIPPLE_DEADZONE[0], faded in across the dead zone window and eased into
-// a soft cap. At 1440x900, near the viewport edges, that is nothing up to
-// about 1200 px/s, then about 11 px at 2000 px/s, 19 px at 3000 px/s and
+// a soft cap. The speed here is physical (px/s, written as the s it gives
+// on a RIPPLE_REFERENCE_WIDTH wide viewport), so a fling of a given px/s
+// ripples alike on any screen width; the amplitude scales with the
+// viewport height. At 1440x900, near the viewport edges, that is nothing up
+// to about 1200 px/s, then about 11 px at 2000 px/s, 19 px at 3000 px/s and
 // 25 px at 4000 px/s (arch included).
+const RIPPLE_REFERENCE_WIDTH = 1440;
 const RIPPLE_DEADZONE = [0.012, 0.02] as const;
 const RIPPLE_GAIN = 1.35;
 const RIPPLE_MAX = 0.034;
@@ -100,9 +104,10 @@ export class SpeedWave {
 
     const s = this.speed;
     const size = Math.abs(s);
-    const linear = vh * RIPPLE_GAIN * Math.max(0, size - RIPPLE_DEADZONE[0]);
+    const physical = (size * vw) / RIPPLE_REFERENCE_WIDTH;
+    const linear = vh * RIPPLE_GAIN * Math.max(0, physical - RIPPLE_DEADZONE[0]);
     const cap = vh * RIPPLE_MAX;
-    const target = cap * Math.tanh(linear / cap) * smoothstep(...RIPPLE_DEADZONE, size);
+    const target = cap * Math.tanh(linear / cap) * smoothstep(...RIPPLE_DEADZONE, physical);
     this.ripple.step(dt, target);
     this.ripple.settle(RIPPLE_EPSILON);
 
