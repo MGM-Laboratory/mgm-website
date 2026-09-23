@@ -88,7 +88,9 @@
 .titleType {
   margin: 0;
   font-family: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
-  font-size: 4.5em;
+  /* lusion's 72 px, eased down on narrow phones so a long single word
+     ("Hollowmere") still fits the column instead of breaking. */
+  font-size: min(4.5em, 16.5vw);
   font-weight: 500;
   line-height: 0.95;
   letter-spacing: -0.025em;
@@ -680,6 +682,10 @@
     z-index: 1;
     display: block;
     pointer-events: none;
+  }
+
+  .titleType {
+    font-size: 4.5em;
   }
 
   .meta {

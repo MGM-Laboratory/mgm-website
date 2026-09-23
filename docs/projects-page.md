@@ -163,7 +163,7 @@ Horizontal, above 812 px (tablets included):
 - The first item starts at `48em`. Gaps are `5em`. The last item keeps a `10vw` margin, and the track ends with a `25vw` pad for the next project panel.
 - A long legacy meta block (many credits or outputs) shrinks its copy under the title, down to 72%, and pins under the header if it still doesn't fit. The title never changes size, because the next-project hand-off lands on it.
 
-Vertical, 812 px and below: document flow. The meta block on top, then the media full width with side padding, a 10 px radius and 50 px gaps. Full items drop the padding and the radius. The next project panel closes the page. Visitors without JavaScript get this layout at every width, with everything visible.
+Vertical, 812 px and below: document flow. The meta block on top, with the title at `min(4.5em, 16.5vw)` so a long single word still fits a narrow phone. Then the media full width with side padding, a 10 px radius and 50 px gaps. Full items drop the padding and the radius. The next project panel closes the page. Visitors without JavaScript get this layout at every width, with everything visible.
 
 ### Scrolling
 
