@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 
 import type { CoverEngine } from "@/components/projects/stage/cover-engine";
 import { startDomReaction } from "@/components/projects/stage/dom-reaction";
@@ -13,6 +13,12 @@ import {
   setStageMode,
 } from "@/components/projects/stage/stage-registry";
 import { waitForProjectsIntro } from "@/lib/projects-intro";
+
+// A layout effect on purpose: its cleanup runs in the same commit that
+// swaps the route, before the route-change handler resets the scroll to
+// the top. As a passive effect, a still-gliding Lenis outlived that reset
+// by a commit and dragged the next page back to the old scroll position.
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 let webgl2Supported: boolean | null = null;
 
@@ -54,7 +60,7 @@ function supportsWebGL2() {
  * Renders nothing.
  */
 export function ProjectsStage() {
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
     const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
