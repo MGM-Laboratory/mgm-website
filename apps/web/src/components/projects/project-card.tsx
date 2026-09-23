@@ -48,6 +48,10 @@ export function ProjectCard({
   // The rendered title — starts as the full title and gets trimmed with an
   // ellipsis below when it does not fit on one line.
   const [title, setTitle] = useState(project.title);
+  // Word groups keep the space between words as a real whitespace-pre span
+  // (magicui's approach): a bare space inside an inline-block char box
+  // collapses to zero width, which glued words together.
+  const titleWords = title.split(" ");
 
   const rootRef = useRef<HTMLAnchorElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -157,28 +161,28 @@ export function ProjectCard({
       0,
     );
 
-    // Title hover: every character box-flips 90deg forward and back in a
-    // wave. Only the character containers rotate; the two faces hold
-    // static transforms (front at 0deg, back pre-rotated -90deg on X).
+    // Title hover: the magicui text-3d-flip — every character is a 3D box
+    // whose front face sits in the text plane and whose back face is
+    // pre-rotated -90deg on X; hovering rotates each box 90deg forward in
+    // a staggered wave and snaps all of them back at once. The container
+    // z-offset and the two face transforms mirror magicui's CharBox
+    // geometry exactly (translateZ offsets of ±0.5lh, no perspective);
+    // only the spring is approximated with a power2 ease.
     const chars = () => gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow);
+    // Set once, never animated: the box hangs half a line behind its own
+    // plane, and the rotationX tweens below preserve this offset.
+    gsap.set(chars(), { z: () => -0.5 * parseFloat(getComputedStyle(titleRow).lineHeight) });
     const flip = () => {
       if (flipActiveRef.current) return;
       flipActiveRef.current = true;
-      const tl = gsap.timeline({
-        onComplete: () => {
-          flipActiveRef.current = false;
-        },
-      });
-      tl.to(chars(), { rotationX: 90, duration: 0.45, stagger: 0.05, ease: "power2.inOut" }).to(
-        chars(),
-        {
-          rotationX: 0,
-          duration: 0.45,
-          stagger: { each: 0.05, from: "end" },
-          ease: "power2.inOut",
-        },
-        "+=0.3",
-      );
+      gsap
+        .timeline({
+          onComplete: () => {
+            flipActiveRef.current = false;
+          },
+        })
+        .to(chars(), { rotationX: 90, duration: 0.5, stagger: 0.05, ease: "power2.out" })
+        .add(() => gsap.set(chars(), { rotationX: 0 }));
     };
 
     const onEnter = () => {
@@ -263,16 +267,29 @@ export function ProjectCard({
           >
             <ArrowRight className="size-full" strokeWidth={2} />
           </span>
-          <span className="project-card-title relative inline-block font-display font-medium tracking-[-0.02em] text-[#0e1116] [perspective:600px] dark:text-white">
-            {Array.from(title).map((char, index) => (
-              <span
-                className="project-card-char relative inline-block [transform-style:preserve-3d]"
-                key={`${index}-${char}`}
-              >
-                <span className="inline-block [backface-visibility:hidden]">{char}</span>
-                <span className="absolute inset-0 inline-block [transform:rotateX(-90deg)] [backface-visibility:hidden]">
-                  {char}
-                </span>
+          <span className="project-card-title relative inline-block font-display font-medium tracking-[-0.02em] text-[#0e1116] dark:text-white">
+            {titleWords.map((word, wordIndex) => (
+              <span className="inline-flex" key={wordIndex}>
+                {Array.from(word).map((char, charIndex) => (
+                  <span
+                    className="project-card-char relative inline-block [transform-style:preserve-3d]"
+                    key={`${wordIndex}-${charIndex}`}
+                  >
+                    <span
+                      className="inline-block [backface-visibility:hidden]"
+                      style={{ transform: "translateZ(0.5lh)" }}
+                    >
+                      {char}
+                    </span>
+                    <span
+                      className="absolute inset-0 inline-block [backface-visibility:hidden]"
+                      style={{ transform: "rotateX(-90deg) translateZ(0.5lh)" }}
+                    >
+                      {char}
+                    </span>
+                  </span>
+                ))}
+                {wordIndex < titleWords.length - 1 && <span className="whitespace-pre"> </span>}
               </span>
             ))}
           </span>
