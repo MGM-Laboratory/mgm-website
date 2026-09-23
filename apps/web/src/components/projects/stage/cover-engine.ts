@@ -236,6 +236,7 @@ export class CoverEngine {
   private readonly bow = new Spring(...BOW_SPRING);
 
   private loads = 0;
+  private renders = 0;
   private uploadedThisFrame = false;
   private started = false;
   private disposed = false;
@@ -890,8 +891,10 @@ export class CoverEngine {
     }
 
     // One extra frame after everything settles draws the exact rest state.
-    if (active || this.lastActive || this.uploadedThisFrame)
+    if (active || this.lastActive || this.uploadedThisFrame) {
       renderer.render(this.scene, this.camera);
+      this.renders += 1;
+    }
     this.lastActive = active;
   };
 
@@ -923,6 +926,7 @@ export class CoverEngine {
       lens: () => this.shared.u_lens.value,
       bow: () => this.bow.value,
       alpha: () => this.shared.u_alpha.value,
+      renders: () => this.renders,
     };
   }
 }
