@@ -4,7 +4,9 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 
+import { Circle, Square, TriangleShape } from "@/components/hero/shapes";
 import { startHeroPlay } from "@/components/projects/hero-play";
+import { CompetencyMotifShape } from "@/components/sections/competency-motif";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { scrollPageTo } from "@/lib/page-scroll";
 import { beginProjectsIntro, finishProjectsIntro } from "@/lib/projects-intro";
@@ -40,6 +42,19 @@ const HERO_SLOTS = HERO_CHARS.map((char) => SLOT_EM[char]);
 // Letters lean and squash about the ink centre on the baseline (the slot
 // centre minus half the trailing tracking), so they stay planted on it.
 const GLYPH_PIVOT = "calc(50% - 0.025em) 0.9235em";
+
+// The lab's Bauhaus shapes, in their brand colors.
+const RESIDENTS = [
+  { key: "disc", shape: <Circle className="size-full" /> },
+  { key: "triangle", shape: <TriangleShape className="size-full" /> },
+  { key: "square", shape: <Square className="size-full" /> },
+  {
+    key: "ring",
+    shape: (
+      <CompetencyMotifShape motif="ring" stroke="var(--brand-red)" className="inset-0 size-full" />
+    ),
+  },
+];
 
 const INTRO_LOCK_OWNER = "projects-intro";
 // The display-font wait never holds the entrance longer than this.
@@ -126,6 +141,8 @@ export function ProjectsHero({ count }: { count: number }) {
       gsap.set(arrow, { opacity: 1 });
       gsap.set(arrowPath, { drawSVG: "100%" });
       if (numberText) numberText.textContent = String(count);
+      // No play: the eye stays a still, centered dot.
+      gsap.set(q(".projects-hero-pupil"), { autoAlpha: 1 });
       enteredRef.current = true;
       return;
     }
@@ -268,7 +285,9 @@ export function ProjectsHero({ count }: { count: number }) {
           the finished title before the entrance hides and replays it. */}
       <noscript>
         <style>
-          {".projects-hero-char,.projects-hero-number,.projects-hero-arrow{opacity:1 !important}"}
+          {
+            ".projects-hero-char,.projects-hero-number,.projects-hero-arrow{opacity:1 !important}.projects-hero-pupil{visibility:visible !important}"
+          }
         </style>
       </noscript>
       <div className="projects-hero-wrap relative">
@@ -279,6 +298,25 @@ export function ProjectsHero({ count }: { count: number }) {
           className="relative overflow-hidden font-display text-[17vw] leading-[1.15em] font-medium tracking-[0.05em] whitespace-nowrap text-[#0e1116] select-none [-webkit-touch-callout:none] dark:text-white"
           aria-label="Projects"
         >
+          {/* The residents: Bauhaus shapes that live behind the word and
+              peek through its gaps and counters. First in the DOM, so the
+              (positioned) letters paint over them; their own mask ends at
+              the baseline, so they never show below the word. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 block h-[0.9235em] overflow-hidden"
+          >
+            {RESIDENTS.map(({ key, shape }) => (
+              <span
+                key={key}
+                className="projects-hero-resident absolute bottom-0 left-0 block size-[0.42em]"
+              >
+                <span className="projects-hero-resident-body invisible relative block size-full">
+                  {shape}
+                </span>
+              </span>
+            ))}
+          </span>
           {HERO_CHARS.map((char, index) => (
             // Two layers with separate owners: the entrance moves the outer
             // slot, the idle play moves the inner glyph.
@@ -293,6 +331,15 @@ export function ProjectsHero({ count }: { count: number }) {
                 style={{ transformOrigin: GLYPH_PIVOT }}
               >
                 {char}
+                {char === "O" && (
+                  // The eye: a brand-blue pupil at the O's ink centre, with
+                  // separate layers for looking, dilating and blinking.
+                  <span className="projects-hero-pupil-look pointer-events-none absolute top-[0.575em] left-[calc(50%_-_0.025em)] block size-0">
+                    <span className="projects-hero-pupil-dilate absolute -top-[0.07em] -left-[0.07em] block size-[0.14em]">
+                      <span className="projects-hero-pupil invisible block size-full rounded-full bg-brand-blue" />
+                    </span>
+                  </span>
+                )}
               </span>
             </span>
           ))}
