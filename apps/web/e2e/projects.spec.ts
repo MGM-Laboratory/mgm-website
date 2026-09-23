@@ -42,7 +42,9 @@ test.describe("projects page", () => {
       .locator('a[href="/projects"]')
       .filter({ hasText: /our work/i })
       .first()
-      .evaluate((el: HTMLElement) => el.click());
+      .evaluate((el: HTMLElement) => {
+        el.click();
+      });
     await expect(page).toHaveURL(/\/projects$/, { timeout: 15_000 });
     await expect(page.getByRole("heading", { level: 1, name: "Projects" })).toBeVisible();
 
