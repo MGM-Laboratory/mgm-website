@@ -60,7 +60,11 @@ const ARROW_STEP = 100;
 const EAGER_AHEAD_VW = 2.5;
 const FONT_WAIT_MS = 1500;
 const REVEAL_WAIT_SECONDS = 9;
-const READY_TIMEOUT_MS = 1200;
+// How long the page waits for its first screen of media before telling the
+// project zoom it can reveal. Short on purpose: the entrance only fades the
+// media in from about 0.75 s, and until a file decodes its frame shows the
+// highlight placeholder, so a longer wait just holds a blank theme colour.
+const READY_TIMEOUT_MS = 450;
 const SITE_HEADER = 64;
 const META_CLEARANCE = 24;
 const META_MIN_FIT = 0.72;

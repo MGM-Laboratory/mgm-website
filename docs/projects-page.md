@@ -202,7 +202,7 @@ On a fresh load, after the route curtain or after the project zoom, the page wai
 - The media fade in over the second half.
 - The page is locked (`"project-detail-entrance"`) until 75%.
 
-`markProjectPageReady(slug)` fires once the layout is measured and the first screen's media are decoded, or after 1.2 s. Before hydration the animated pieces are hidden only when motion is allowed (`motion-safe:opacity-0`, with a `<noscript>` override).
+`markProjectPageReady(slug)` fires once the layout is measured and the first screen's media are decoded, or after 450 ms (the entrance fades the media in late, and a highlight placeholder stands in until a file decodes). Before hydration the animated pieces are hidden only when motion is allowed (`motion-safe:opacity-0`, with a `<noscript>` override).
 
 ### While scrolling
 
