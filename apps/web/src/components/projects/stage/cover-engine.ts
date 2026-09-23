@@ -24,7 +24,10 @@ import { addFrameCallback } from "@/components/projects/stage/frame-loop";
 import { gridRevealState } from "@/components/projects/stage/grid-reveal-state";
 import { Spring } from "@/components/projects/stage/spring";
 import {
+  FOCUS_HUNT_DELAY,
+  FOCUS_HUNT_ONSET,
   getStageCards,
+  OPENING_VISIBLE_SHARE,
   onStageCardsChange,
   type StageCard,
 } from "@/components/projects/stage/stage-registry";
@@ -39,12 +42,14 @@ import { randomBetween } from "@/lib/random";
  * Loaded only through a dynamic import from the /projects client code, so
  * three.js never reaches a chunk another route loads.
  *
- * Per card it plays, all time-based from the moment the card enters:
+ * Per card it plays, all time-based from the moment enough of the card is
+ * on screen (OPENING_VISIBLE_SHARE):
  * - the opening: a rounded mask growing 70% -> 100%, the picture pulling
  *   back from 1.333x, the quad sliding in from the page centre and
  *   un-rotating (lusion's exact curves);
- * - a focus pulse (blur -> sharp -> blur -> sharp, spring driven) on every
- *   opening, plus a radial motion blur at the edges while it zooms out;
+ * - in camera order: the zoom-out starts with a radial motion blur at the
+ *   edges on a sharp picture, then the focus hunts (a quick blur-in, then
+ *   lusion's spring pump: sharp -> soft -> sharp) on every opening;
  * - hover: a focus pull, a small zoom-out, a cursor tilt, two handheld
  *   "jolts".
  * And for the whole list, from the scroll itself: lusion's horizontal lens
@@ -71,15 +76,12 @@ const ZOOM_FROM = 0.75; // sampling scale at the start: content at 1.333x
 // the parallax never sample past the picture's edges.
 const REST_ZOOM = 0.975;
 
-// Focus pulse: the spring starts fully blurred and is released toward
-// sharp; its kick undershoots to about -0.5, which reads as blur -> sharp
-// -> blur -> sharp, a lens hunting for focus.
+// Focus hunt (FOCUS_HUNT_DELAY after the zoom starts): a smooth blur-in over
+// FOCUS_HUNT_ONSET, then lusion's pump: the spring released from fully
+// blurred toward sharp, whose kick undershoots to about -0.5, which reads
+// as blur -> sharp -> blur -> sharp, a lens hunting for focus.
 const FOCUS_SPRING = [2.2, 0.7, 3] as const;
 const FOCUS_PX = 9;
-// A card entering from the bottom edge holds its blur until enough of it is
-// on screen to see the pulse (or this long at most).
-const FOCUS_HOLD_VISIBLE = 0.3;
-const FOCUS_HOLD_SECONDS = 0.35;
 const FOCUS_EPSILON = 0.004;
 
 // Edge motion blur: streak length per unit of zoom-out speed (1/s).
@@ -164,10 +166,12 @@ type Card = {
   crop: CoverCrop | null;
   mesh: Mesh | null;
   uniforms: CardUniforms | null;
-  // Opening.
+  // Opening: armed until enough of the frame is on screen, then playing
+  // (time runs) until the card has been fully out of view again.
   inRange: boolean;
+  opening: "armed" | "playing";
   time: number;
-  focusHeld: boolean;
+  hunt: "waiting" | "onset" | "done";
   focus: Spring;
   // Hover.
   hovered: boolean;
@@ -450,9 +454,10 @@ export class CoverEngine {
       mesh: null,
       uniforms: null,
       inRange: false,
+      opening: "armed",
       time: 0,
-      focusHeld: true,
-      focus: new Spring(...FOCUS_SPRING, 1),
+      hunt: "waiting",
+      focus: new Spring(...FOCUS_SPRING),
       hovered: false,
       hoverTime: 0,
       blurInLeft: 0,
@@ -682,8 +687,9 @@ export class CoverEngine {
       return;
     }
     this.attach(card);
+    card.opening = "playing";
     card.time = SETTLE_SECONDS;
-    card.focusHeld = false;
+    card.hunt = "done";
     card.focus.reset(0);
   }
 
@@ -697,17 +703,17 @@ export class CoverEngine {
   // ---------------------------------------------------------------- frame
 
   private beginOpening(card: Card) {
+    card.opening = "playing";
     card.time = 0;
-    card.focusHeld = true;
-    // Blurred, "previously aiming at" blurred: releasing it toward sharp
-    // gives the spring its kick.
-    card.focus.reset(1, 1);
+    card.hunt = "waiting";
+    card.focus.reset(0);
   }
 
   private endOpening(card: Card) {
+    card.opening = "armed";
     card.time = 0;
-    card.focusHeld = true;
-    card.focus.reset(1, 1);
+    card.hunt = "waiting";
+    card.focus.reset(0);
     card.hovered = false;
     card.blurInLeft = 0;
     card.zoom.reset(0);
@@ -813,16 +819,20 @@ export class CoverEngine {
 
       // The opening replays whenever the card comes back after having been
       // fully out of view, from either direction.
-      if (revealed && inRange !== card.inRange) {
-        if (inRange) this.beginOpening(card);
-        else this.endOpening(card);
-      }
+      if (revealed && !inRange && card.inRange) this.endOpening(card);
       card.inRange = inRange;
       if (!revealed) {
         card.mesh.visible = false;
         continue;
       }
-      if (inRange) card.time += dt;
+      // It starts once enough of the frame is on screen; until then the
+      // card holds the opening's first frame, still and sharp.
+      if (card.opening === "armed" && inRange) {
+        const onScreen = Math.min(bottom, vh) - Math.max(top, 0);
+        if (onScreen >= OPENING_VISIBLE_SHARE * card.height) this.beginOpening(card);
+      }
+      const playing = card.opening === "playing";
+      if (playing) card.time += dt;
 
       const visible = inRange && top < vh && bottom > 0;
       card.mesh.visible = visible;
@@ -838,15 +848,28 @@ export class CoverEngine {
       const zoomBase = mix(ZOOM_FROM, 1, show);
       const magRate =
         ((1 - ZOOM_FROM) * (expoOutRate(showX) / SHOW_SECONDS)) / (zoomBase * zoomBase);
-      const streak = Math.min(STREAK_MAX, magRate * STREAK_GAIN);
+      // Only while the zoom actually runs (a held first frame is still).
+      const streak = playing ? Math.min(STREAK_MAX, magRate * STREAK_GAIN) : 0;
 
-      // Focus: hold, then release toward sharp (or a hover's blur-in).
-      if (card.focusHeld) {
-        const onScreen = (Math.min(bottom, vh) - Math.max(top, 0)) / card.height;
-        if (onScreen >= FOCUS_HOLD_VISIBLE || card.time >= FOCUS_HOLD_SECONDS)
-          card.focusHeld = false;
+      // Focus: sharp through the zoom's first beat, then the hunt (a
+      // smooth blur-in, then the spring pump from fully blurred), and a
+      // hover's blur-in afterwards.
+      let focus: number;
+      if (playing && card.hunt === "waiting" && card.time >= FOCUS_HUNT_DELAY) {
+        card.hunt = "onset";
       }
-      if (!card.focusHeld) {
+      if (card.hunt === "onset") {
+        const k = (card.time - FOCUS_HUNT_DELAY) / FOCUS_HUNT_ONSET;
+        if (k >= 1) {
+          card.hunt = "done";
+          // Blurred, "previously aiming at" blurred: releasing it toward
+          // sharp gives the spring its kick.
+          card.focus.reset(1, 1);
+          focus = 1;
+        } else {
+          focus = k * k * (3 - 2 * k);
+        }
+      } else {
         let target = 0;
         if (card.blurInLeft > 0) {
           target = HOVER_BLUR;
@@ -854,6 +877,7 @@ export class CoverEngine {
         }
         card.focus.step(dt, target);
         if (target === 0) card.focus.settle(FOCUS_EPSILON);
+        focus = Math.abs(card.focus.value);
       }
 
       // Hover springs.
@@ -914,14 +938,13 @@ export class CoverEngine {
       u.u_show.value = show;
       u.u_mag.value = mag;
       u.u_shift.value.set(clamp(shiftX, -maxX, maxX), clamp(shiftY, -maxY, maxY));
-      u.u_focus.value = Math.abs(card.focus.value) * FOCUS_PX;
+      u.u_focus.value = focus * FOCUS_PX;
       u.u_streak.value = streak < 0.01 ? 0 : streak;
 
       this.moveFooter(card, bow * FOOTER_BOW);
 
       if (
-        card.time < SETTLE_SECONDS ||
-        card.focusHeld ||
+        (playing && (card.time < SETTLE_SECONDS || card.hunt !== "done")) ||
         !card.focus.atRest ||
         card.blurInLeft > 0 ||
         !card.zoom.atRest ||
@@ -952,6 +975,7 @@ export class CoverEngine {
           index: card.source.index,
           state: card.state,
           inRange: card.inRange,
+          opening: card.opening,
           time: card.time,
           hovered: card.hovered,
           visible: card.mesh?.visible ?? false,

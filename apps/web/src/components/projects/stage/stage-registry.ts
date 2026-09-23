@@ -26,6 +26,22 @@
  * calls `resetStage()` when it mounts for a new visit.
  */
 
+/**
+ * A card's opening starts once this share of its cover frame is on screen,
+ * so the zoom-out and the focus hunt play where they can be seen (starting
+ * at the first pixel spent them on a sliver at the viewport's edge). The
+ * WebGL stage and the DOM covers both use it.
+ */
+export const OPENING_VISIBLE_SHARE = 0.25;
+/**
+ * Camera order within an opening: the zoom-out starts with a radial smear
+ * at the edges on a sharp picture, then the focus hunts (blur, sharp, a
+ * little soft, sharp), starting this long after the zoom and blurring in
+ * over the onset.
+ */
+export const FOCUS_HUNT_DELAY = 0.12; // s
+export const FOCUS_HUNT_ONSET = 0.05; // s
+
 export type StageCard = {
   /** The card's <a> root: pointer events for hover effects. */
   root: HTMLAnchorElement;

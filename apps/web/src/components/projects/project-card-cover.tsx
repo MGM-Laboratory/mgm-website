@@ -4,7 +4,12 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
 import { PatternTile, type PatternKind } from "@/components/process/pattern-tile";
-import { registerStageCard } from "@/components/projects/stage/stage-registry";
+import {
+  FOCUS_HUNT_DELAY,
+  FOCUS_HUNT_ONSET,
+  OPENING_VISIBLE_SHARE,
+  registerStageCard,
+} from "@/components/projects/stage/stage-registry";
 import { waitForGridReveal } from "@/lib/projects-intro";
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring
@@ -29,12 +34,13 @@ const ZOOM_REST = 1.026;
  * card over it marks the frame `data-stage="gl"`, which hides the DOM
  * picture and the frame's own background so only the WebGL cover shows.
  *
- * Otherwise (touch, no WebGL2, a lost context) this DOM cover is what
- * visitors see, and it plays a DOM version of the opening whenever the
- * card scrolls into view: the window grows, the picture zooms out through
- * a quick focus pulse, and a blurred, edge-masked copy fades out while it
- * zooms (a cheap edge motion blur). Hovering a DOM cover pulls focus and
- * tilts the picture slightly toward the cursor.
+ * Otherwise (touch, no WebGL2, a lost context, or a card the stage hasn't
+ * taken yet) this DOM cover is what visitors see, and it plays a DOM
+ * version of the opening whenever enough of the card scrolls into view:
+ * the window grows and the picture zooms out, first with a blurred,
+ * edge-masked copy fading out on a sharp picture (a cheap edge motion
+ * blur), then through a quick focus hunt. Hovering a DOM cover pulls focus
+ * and tilts the picture slightly toward the cursor.
  */
 export function ProjectCardCover({
   coverUrl,
@@ -90,11 +96,12 @@ export function ProjectCardCover({
     // by a class: GSAP owns this element's transform).
     gsap.set(lens, { scale: ZOOM_REST });
 
+    // The opening's first frame, held still and sharp until it plays.
     const toStart = () => {
       timeline?.kill();
       gsap.set(frame, { clipPath: CLIP_FROM });
-      gsap.set(lens, { scale: ZOOM_FROM, filter: "blur(8px)" });
-      gsap.set(edge, { autoAlpha: 1 });
+      gsap.set(lens, { scale: ZOOM_FROM, filter: "blur(0px)" });
+      gsap.set(edge, { autoAlpha: 0 });
       setOpening("start");
     };
     const toRest = () => {
@@ -126,26 +133,40 @@ export function ProjectCardCover({
           { scale: ZOOM_REST, duration: 1.5, ease: "expo.out" },
           0,
         )
-        // Focus pulse: blurred, sharp, a little soft again, sharp; it
-        // always lands on exactly blur(0px).
+        // Camera order, as on the WebGL stage: the zoom starts with a smear
+        // at the edges on a sharp picture (the blurred copy only shows at
+        // the edges, radial mask), fading out as the zoom slows...
+        .fromTo(edge, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.5, ease: "power3.out" }, 0)
+        // ...then the focus hunts, with the stage's timing: blur in, sharp,
+        // a little soft again, sharp. It always lands on exactly blur(0px).
         // (">" chains each beat right after the previous one, not after the
         // 1.5 s zoom.)
         .fromTo(
           lens,
-          { filter: "blur(8px)" },
-          { filter: "blur(0px)", duration: 0.12, ease: "power2.out" },
-          0,
+          { filter: "blur(0px)" },
+          { filter: "blur(8px)", duration: FOCUS_HUNT_ONSET, ease: "sine.in" },
+          FOCUS_HUNT_DELAY,
         )
-        .to(lens, { filter: "blur(3px)", duration: 0.14, ease: "sine.inOut" }, ">")
-        .to(lens, { filter: "blur(0px)", duration: 0.24, ease: "power2.out" }, ">")
-        // The blurred copy only shows at the edges (radial mask) and fades
-        // out while the zoom is fastest.
-        .fromTo(edge, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.7, ease: "power2.out" }, 0);
+        .to(lens, { filter: "blur(0px)", duration: 0.035, ease: "power2.out" }, ">")
+        .to(lens, { filter: "blur(4px)", duration: 0.07, ease: "sine.inOut" }, ">")
+        .to(lens, { filter: "blur(0px)", duration: 0.23, ease: "power2.out" }, ">");
     };
 
-    // From the list's reveal on: every card the stage doesn't draw starts
-    // on the opening's first frame, and plays it whenever it comes into
-    // view after having been fully out.
+    // From the list's reveal on: every card the stage doesn't draw holds
+    // the opening's first frame and plays it once enough of its frame is
+    // on screen (the stage's trigger too), after having been fully out.
+    // The card (its link) leaving the viewport entirely re-arms it. The
+    // share is measured from the frame's box on scroll while the card is
+    // armed and in view: an IntersectionObserver on the frame would see
+    // its clip-path (the opening's window), not the frame.
+    const check = () => {
+      if (!armed || !inView || ownedByStage()) return;
+      const rect = frame.getBoundingClientRect();
+      const onScreen = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+      if (onScreen < OPENING_VISIBLE_SHARE * rect.height) return;
+      armed = false;
+      play();
+    };
     const arm = () => {
       if (cancelled || observer) return;
       armed = true;
@@ -156,18 +177,16 @@ export function ProjectCardCover({
         inView = entry.isIntersecting;
         if (ownedByStage()) {
           if (!inView) armed = true;
-          return;
-        }
-        if (!inView) {
+        } else if (!inView) {
           // Fully out of view: rewind so the next entry replays it.
           toStart();
           armed = true;
-        } else if (armed) {
-          armed = false;
-          play();
+        } else {
+          check();
         }
       });
       observer.observe(root);
+      window.addEventListener("scroll", check, { passive: true });
     };
     void waitForGridReveal().then(arm);
 
@@ -192,6 +211,7 @@ export function ProjectCardCover({
       cancelled = true;
       ownership.disconnect();
       observer?.disconnect();
+      window.removeEventListener("scroll", check);
       timeline?.kill();
       setOpening(null);
     };
