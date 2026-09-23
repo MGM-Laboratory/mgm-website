@@ -62,7 +62,14 @@ async function whenLoaded(img: HTMLImageElement) {
  */
 async function encodedSource(img: HTMLImageElement): Promise<Blob | HTMLImageElement> {
   try {
-    const response = await fetch(img.currentSrc || img.src, { cache: "force-cache" });
+    // Covers are same-origin (the CMS media proxy or /public); anything
+    // else decodes from the element, and the request's host always comes
+    // from the page itself, never from the image's URL.
+    const { origin, pathname, search } = new URL(img.currentSrc || img.src, window.location.href);
+    if (origin !== window.location.origin) return img;
+    const response = await fetch(`${window.location.origin}${pathname}${search}`, {
+      cache: "force-cache",
+    });
     if (response.ok) return await response.blob();
   } catch {
     // Offline, blocked or opaque: decode from the element instead.
