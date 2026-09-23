@@ -46,9 +46,11 @@ export function ProjectCard({
       aria-label={categories.length ? `${project.title} (${categories.join(", ")})` : project.title}
       // A designed keyboard ring around the whole card (the hover effects
       // also follow :focus-visible); an outline, never a transform, since
-      // the cover stage and the footer animate the card's insides.
+      // the cover stage and the footer animate the card's insides. The
+      // scroll margins keep a focus-scrolled card's ring clear of the fixed
+      // header (64px) and the viewport's bottom edge.
       className={cn(
-        "group block rounded-[23px] focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[var(--focus)]",
+        "group block scroll-mt-20 scroll-mb-4 rounded-[23px] focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[var(--focus)]",
         className,
       )}
     >
