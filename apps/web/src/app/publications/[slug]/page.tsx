@@ -11,6 +11,7 @@ import {
   doiUrl,
   formatPaperSize,
   formatPublicationDate,
+  paperIsPublic,
   publishedPublications,
   publicationPaperUrl,
   publicationTypeLabel,
@@ -88,7 +89,11 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
   if (!record) notFound();
 
   const { publication } = record;
-  const paperUrl = publicationPaperUrl(publication.paperKey);
+  // Papers are hidden until an editor publishes them from the admin editor:
+  // the preview, the viewer, and the manuscript row only appear once the
+  // record opts in, and the DOI row stays the access path until then.
+  const paperVisible = paperIsPublic(publication);
+  const paperUrl = paperVisible ? publicationPaperUrl(publication.paperKey) : undefined;
   const doi = doiUrl(publication.doi);
   const others = feed
     .filter(
@@ -147,14 +152,16 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
               value={formatPublicationDate(publication.date).replace(/^[^,]+, /, "")}
             />
             <MetaRow label="License" value={publication.license} />
-            <MetaRow
-              label="Manuscript"
-              value={
-                publication.paperName
-                  ? `${publication.paperName}${formatPaperSize(publication.paperSize) ? ` · ${formatPaperSize(publication.paperSize)}` : ""}`
-                  : undefined
-              }
-            />
+            {paperVisible ? (
+              <MetaRow
+                label="Manuscript"
+                value={
+                  publication.paperName
+                    ? `${publication.paperName}${formatPaperSize(publication.paperSize) ? ` · ${formatPaperSize(publication.paperSize)}` : ""}`
+                    : undefined
+                }
+              />
+            ) : null}
           </dl>
 
           {/* DOI + quick actions. */}
@@ -213,15 +220,17 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
             </section>
           ) : null}
 
-          {/* The paper itself. */}
-          <div className="mt-14">
-            <PaperSection
-              fileName={publication.paperName}
-              paperSize={publication.paperSize}
-              title={publication.title}
-              url={paperUrl}
-            />
-          </div>
+          {/* The paper itself, once the editors have made it visible. */}
+          {paperVisible ? (
+            <div className="mt-14">
+              <PaperSection
+                fileName={publication.paperName}
+                paperSize={publication.paperSize}
+                title={publication.title}
+                url={paperUrl}
+              />
+            </div>
+          ) : null}
 
           {/* Citations. */}
           <div className="mt-16">

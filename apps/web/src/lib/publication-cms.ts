@@ -52,6 +52,10 @@ export type PublicationDraft = {
   paperKey?: string;
   paperName?: string;
   paperSize?: number;
+  /** Uploaded papers are private until an editor flips the paper's visibility
+   *  to Visible. Omitted on every record that predates the flag, which reads
+   *  as hidden. */
+  paperHidden?: boolean;
 };
 
 export type CmsPublicationRecord = {
@@ -115,6 +119,7 @@ export function emptyPublicationDraft(): PublicationDraft {
     abstract: "",
     authors: [],
     draft: true,
+    paperHidden: true,
   };
 }
 
@@ -169,6 +174,17 @@ export function publishedPublications(records: readonly CmsPublicationRecord[]) 
   return records
     .filter((record) => !record.publication.draft)
     .sort((left, right) => right.publication.date.localeCompare(left.publication.date));
+}
+
+/**
+ * Whether a publication's paper may be shown and served. Papers are opt-in:
+ * the record has to carry a key and an explicit `paperHidden: false`, so
+ * records that predate the flag, and records saved with it unset, stay out of
+ * the public page. The API refuses hidden keys too, so this mirrors the
+ * server rather than replacing it.
+ */
+export function paperIsPublic(publication: PublicationDraft) {
+  return Boolean(publication.paperKey) && publication.paperHidden === false;
 }
 
 /** Resolves a paper key to a loadable URL — bundled seed papers or CMS storage. */

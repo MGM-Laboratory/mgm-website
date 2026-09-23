@@ -153,7 +153,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   href={`/articles/${other.slug}`}
                   key={other.slug}
                 >
-                  <ArticleCover src={articleCoverUrl(other.article.coverKey)} />
+                  <ArticleCover
+                    className="rounded-xl"
+                    src={articleCoverUrl(other.article.coverKey)}
+                  />
                   <h3 className="mt-[25px] font-display text-[1.5rem] leading-snug font-medium text-[#919191] transition group-hover:text-[#0e1116] dark:text-[#8b8f9a] dark:group-hover:text-white">
                     {other.article.title}
                   </h3>
