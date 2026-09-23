@@ -394,3 +394,39 @@ a:focus-visible .article-cover-arrow {
   filter: grayscale(0);
   opacity: 1;
 }
+
+/* Page-transition "still loading" indicator: three pulsing white dots under
+   the idle logo on the curtain, shown only while the destination's
+   loading.tsx fallback is up (a genuinely slow route). GSAP animates the
+   curtain layers' autoAlpha and the logo's scale only, never these dots, so
+   CSS owns their transform safely (animation-system.md gotcha #1). The
+   curtain itself never mounts under reduced motion, but the guard below
+   keeps the dots static anyway per the house rule. */
+.rt-waiting-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: white;
+  opacity: 0.35;
+  animation: rt-waiting-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes rt-waiting-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-waiting-dot {
+    animation: none;
+    opacity: 0.6;
+  }
+}
