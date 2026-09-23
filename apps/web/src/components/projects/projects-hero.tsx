@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { Circle, Square, TriangleShape } from "@/components/hero/shapes";
 import { startHeroPlay } from "@/components/projects/hero-play";
@@ -14,7 +15,7 @@ import { waitForRouteReveal } from "@/lib/route-reveal";
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(DrawSVGPlugin);
+  gsap.registerPlugin(DrawSVGPlugin, ScrollTrigger);
 }
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so the reveal
@@ -136,6 +137,13 @@ export function ProjectsHero({ count }: { count: number }) {
 
     enteredRef.current = false;
     const reduced = !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
+    // Scroll restoration: a visit that holds the page at the top takes it
+    // over (see the intro below); any other visit makes sure the browser
+    // has it back, since reloading a visit that held the page arrives
+    // with the entry still set to "manual".
+    if ((reduced || count === 0) && history.scrollRestoration === "manual") {
+      ScrollTrigger.clearScrollMemory("auto");
+    }
     if (reduced) {
       // Nothing to wait for: the list shows at once and nothing is locked.
       finishProjectsIntro();
@@ -169,9 +177,11 @@ export function ProjectsHero({ count }: { count: number }) {
     // The intro: the list waits and the page is held at the top, locked.
     // An empty list has nothing to hold back, so it never locks.
     let introOpen = false;
-    // Browser scroll restoration can land after hydration on a mid-page
-    // reload, and overflow: hidden does not stop programmatic scrolling,
-    // so every scroll while the intro holds the page snaps it back.
+    let ownsRestoration = false;
+    // The backstop for scroll restoration (taken over below, but a restore
+    // or a scroll can still land after hydration), and overflow: hidden
+    // does not stop programmatic scrolling, so every scroll while the
+    // intro holds the page snaps it back.
     const pinTop = () => {
       if (window.scrollY !== 0) window.scrollTo(0, 0);
     };
@@ -203,6 +213,14 @@ export function ProjectsHero({ count }: { count: number }) {
       introOpen = true;
       beginProjectsIntro();
       acquireScrollLock(INTRO_LOCK_OWNER);
+      // Manual scroll restoration for as long as the hero is mounted, so a
+      // reload (deep in the list, after the intro) lands at the top
+      // instead of painting the old offset first: the browser restores it
+      // before hydration, and the pin below could only snap back a frame
+      // of footer later. Set through ScrollTrigger, which otherwise
+      // rewrites the mode from its own saved copy on every refresh.
+      ScrollTrigger.clearScrollMemory("manual");
+      ownsRestoration = true;
       scrollPageTo(0, { duration: 0 });
       pinTop();
       window.addEventListener("scroll", pinTop, { passive: true });
@@ -305,6 +323,11 @@ export function ProjectsHero({ count }: { count: number }) {
       // Leaving mid-intro (or Strict Mode's rehearsal unmount) must never
       // strand the lock or a list that waits for an intro nobody will end.
       endIntro();
+      // Native restoration back for the rest of the site. Always "auto"
+      // (the browser default, and nothing else here changes it), never a
+      // value read at mount: after a reload the entry was still "manual",
+      // and handing that back would pin the whole session on manual.
+      if (ownsRestoration) ScrollTrigger.clearScrollMemory("auto");
       tl?.kill();
       stopPlay?.();
     };
