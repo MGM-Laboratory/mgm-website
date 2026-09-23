@@ -44,7 +44,13 @@ export function ProjectCard({
     <Link
       href={`/projects/${record.slug}`}
       aria-label={categories.length ? `${project.title} (${categories.join(", ")})` : project.title}
-      className={cn("group block", className)}
+      // A designed keyboard ring around the whole card (the hover effects
+      // also follow :focus-visible); an outline, never a transform, since
+      // the cover stage and the footer animate the card's insides.
+      className={cn(
+        "group block rounded-[23px] focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[var(--focus)]",
+        className,
+      )}
     >
       <ProjectCardCover
         coverUrl={coverUrl}
