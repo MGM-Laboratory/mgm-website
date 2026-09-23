@@ -29,6 +29,11 @@ const CLIP_FROM = "inset(15% 15% 15% 15% round 15px)";
 const CLIP_TO = "inset(0% 0% 0% 0% round 15px)";
 const ZOOM_FROM = 1.333;
 const ZOOM_REST = 1.026;
+// The link's visibility in 5% steps: each step re-checks the opening share.
+const VISIBILITY_STEPS = Array.from({ length: 21 }, (_, i) => i / 20);
+// A touch longer than the list's reveal (0.9 s fade and 28 px rise, see
+// projects-grid.tsx), which moves cards up without a scroll event.
+const REVEAL_RISE_SECONDS = 0.95;
 
 /**
  * The card's forced 3:2 cover frame. The frame registers with the page's
@@ -158,9 +163,12 @@ export function ProjectCardCover({
     // the opening's first frame and plays it once enough of its frame is
     // on screen (the stage's trigger too), after having been fully out.
     // The card (its link) leaving the viewport entirely re-arms it. The
-    // share is measured from the frame's box on scroll while the card is
-    // armed and in view: an IntersectionObserver on the frame would see
-    // its clip-path (the opening's window), not the frame.
+    // share is measured from the frame's box while the card is armed and
+    // in view: an IntersectionObserver on the frame would see its
+    // clip-path (the opening's window), not the frame. It is re-checked on
+    // scroll, on resize, whenever the link's visibility changes by a step
+    // (the observer's thresholds: layout shifts move cards without any
+    // scroll) and once the list's reveal rise has ended.
     const check = () => {
       if (!armed || !inView || ownedByStage()) return;
       const rect = frame.getBoundingClientRect();
@@ -169,26 +177,32 @@ export function ProjectCardCover({
       armed = false;
       play();
     };
+    let afterRise: gsap.core.Tween | null = null;
     const arm = () => {
       if (cancelled || observer) return;
       armed = true;
       if (!ownedByStage()) toStart();
-      observer = new IntersectionObserver((entries) => {
-        const entry = entries[entries.length - 1];
-        if (!entry) return;
-        inView = entry.isIntersecting;
-        if (ownedByStage()) {
-          if (!inView) armed = true;
-        } else if (!inView) {
-          // Fully out of view: rewind so the next entry replays it.
-          toStart();
-          armed = true;
-        } else {
-          check();
-        }
-      });
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (!entry) return;
+          inView = entry.isIntersecting;
+          if (ownedByStage()) {
+            if (!inView) armed = true;
+          } else if (!inView) {
+            // Fully out of view: rewind so the next entry replays it.
+            toStart();
+            armed = true;
+          } else {
+            check();
+          }
+        },
+        { threshold: VISIBILITY_STEPS },
+      );
       observer.observe(root);
       window.addEventListener("scroll", check, { passive: true });
+      window.addEventListener("resize", check);
+      afterRise = gsap.delayedCall(REVEAL_RISE_SECONDS, check);
     };
     void waitForGridReveal().then(arm);
 
@@ -215,6 +229,8 @@ export function ProjectCardCover({
       ownership.disconnect();
       observer?.disconnect();
       window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+      afterRise?.kill();
       timeline?.kill();
       setOpening(null);
     };
