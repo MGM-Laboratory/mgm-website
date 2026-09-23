@@ -43,15 +43,45 @@ function BackToTop() {
     // this footer (and this effect) remounts on every page. Wrapping the
     // same config in an (empty) timeline makes it timeline-level instead;
     // onEnter/onLeaveBack behave identically either way.
+    let entered = false;
+    const show = () => {
+      if (entered) return;
+      entered = true;
+      gsap.to(button, { autoAlpha: 1, y: 0, duration: 0.4 * d });
+    };
+    const hide = () => {
+      entered = false;
+      gsap.to(button, { autoAlpha: 0, y: 12, duration: 0.3 * d });
+    };
     const trigger = gsap.timeline({
       scrollTrigger: {
         trigger: button.closest("footer"),
         start: "top bottom",
-        onEnter: () => gsap.to(button, { autoAlpha: 1, y: 0, duration: 0.4 * d }),
-        onLeaveBack: () => gsap.to(button, { autoAlpha: 0, y: 12, duration: 0.3 * d }),
+        onEnter: show,
+        onLeaveBack: hide,
       },
     }).scrollTrigger;
-    return () => trigger?.kill();
+    // Catch-up for mounting already scrolled past the footer's start (fast
+    // scroll straight to the bottom on a fresh page): onEnter only fires on
+    // a forward crossing, and a freshly created trigger defers its position
+    // calculation to the next tick, so re-check on the refresh event and at
+    // two delays, mirroring fadeUpOnScroll's catch-up (lib/scroll-reveal.ts).
+    let handled = false;
+    const onRefresh = () => {
+      if (handled || !trigger || !(trigger.progress > 0)) return;
+      handled = true;
+      show();
+      timers.forEach(clearTimeout);
+      ScrollTrigger.removeEventListener("refresh", onRefresh);
+    };
+    const timers = [250, 750].map((ms) => setTimeout(onRefresh, ms));
+    ScrollTrigger.addEventListener("refresh", onRefresh);
+    onRefresh();
+    return () => {
+      trigger?.kill();
+      timers.forEach(clearTimeout);
+      ScrollTrigger.removeEventListener("refresh", onRefresh);
+    };
   }, []);
 
   function scrollToTop() {
@@ -81,6 +111,12 @@ export function CtaFooter() {
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
+    // The footer's blocks carry no static `opacity-0` (unlike the sections
+    // above): server HTML stays fully visible without JS, and a reveal that
+    // never fires can't leave invisible content reserving its full height -
+    // the long blank scrollable region after the footer reported in #66.
+    // The tween below applies the hidden "from" state via immediateRender
+    // in this pre-paint effect, so JS visitors still get the same entrance.
     const tween = fadeUpOnScroll(root, ".footer-reveal", { stagger: 0.1 });
     return () => tween?.scrollTrigger?.kill();
   }, []);
@@ -103,7 +139,7 @@ export function CtaFooter() {
 
   return (
     <footer ref={rootRef} className="relative overflow-hidden bg-background text-foreground">
-      <div className="footer-reveal mx-auto grid max-w-5xl gap-10 px-6 py-14 opacity-0 sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-end lg:px-16">
+      <div className="footer-reveal mx-auto grid max-w-5xl gap-10 px-6 py-14 sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-end lg:px-16">
         <div>
           <Image src="/logo.svg" alt="MGM Laboratory" width={32} height={32} />
           <p className="mt-4 font-display text-xl font-semibold tracking-tight">
@@ -157,7 +193,7 @@ export function CtaFooter() {
 
       <div
         aria-hidden="true"
-        className="footer-reveal overflow-hidden border-y border-[var(--line)] py-5 opacity-0"
+        className="footer-reveal overflow-hidden border-y border-[var(--line)] py-5"
       >
         <div ref={wordmarkTrackRef} className="flex w-max items-center whitespace-nowrap">
           {[0, 1].map((copy) => (
@@ -183,7 +219,7 @@ export function CtaFooter() {
         </div>
       </div>
 
-      <div className="footer-reveal mx-auto flex max-w-5xl flex-col items-center gap-3 pt-6 pr-6 pb-20 pl-6 text-xs text-foreground/70 opacity-0 sm:flex-row sm:justify-between sm:pt-6 sm:pr-24 sm:pb-6 sm:pl-10 lg:px-16">
+      <div className="footer-reveal mx-auto flex max-w-5xl flex-col items-center gap-3 pt-6 pr-6 pb-20 pl-6 text-xs text-foreground/70 sm:flex-row sm:justify-between sm:pt-6 sm:pr-24 sm:pb-6 sm:pl-10 lg:px-16">
         <p>© {year} MGM Laboratory. All rights reserved.</p>
         <div className="flex gap-5">
           {LEGAL_LINKS.map((link) => (
