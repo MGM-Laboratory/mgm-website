@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { cmsApi } from "@/lib/cms-api";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 
@@ -27,3 +29,18 @@ export async function fetchProjectRecord(slug: string): Promise<CmsProjectRecord
   const data = (await response.json()) as { record?: CmsProjectRecord };
   return data.record;
 }
+
+/**
+ * Everything a project detail page renders from: the record (with the
+ * measured sizes of media stored without one) and the published feed, which
+ * decides the next project. Read once per request: the metadata, the
+ * viewport and the page itself all ask for it. A failed read counts as a
+ * missing record (the page then 404s) or an empty feed (no next project).
+ */
+export const readProjectDetail = cache(async (slug: string) => {
+  const [record, feed] = await Promise.all([
+    fetchProjectRecord(slug).catch(() => undefined),
+    fetchProjectFeed().catch(() => [] as CmsProjectRecord[]),
+  ]);
+  return { record, feed };
+});
