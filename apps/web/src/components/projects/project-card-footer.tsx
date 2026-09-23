@@ -4,14 +4,24 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
 
-// SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring
-// and the title measurement happen before first paint.
+import { createScramble } from "@/components/projects/card-text/scramble-text";
+import { createTitleDrop } from "@/components/projects/card-text/title-drop";
+import { observeInViewport, observeSeen } from "@/components/projects/card-text/view-trigger";
+import { waitForGridReveal } from "@/lib/projects-intro";
+
+// SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring,
+// the title measurement and the entrance pre-state happen before first
+// paint.
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
- * The card's text: a one-line categories row and a one-line title.
- * Hovering the card indents the title and slides an arrow in from the
- * left; hovering the title itself box-flips every character in 3D.
+ * The card's text: a one-line categories row and a one-line title, with
+ * lusion.co's entrance. When the footer comes into view, the categories
+ * scramble-type in (card-text/scramble-text.ts) and the title letters drop
+ * into place (card-text/title-drop.ts); both reset once the whole card has
+ * left the viewport and replay on the next entry. Hovering the card
+ * indents the title and slides an arrow in from the left; hovering the
+ * title itself box-flips every character in 3D.
  */
 export function ProjectCardFooter({
   title: fullTitle,
@@ -35,9 +45,17 @@ export function ProjectCardFooter({
     titleWords.push({ chars: Array.from(word), start });
   }
 
+  const categoryText = categories.join(" • ");
+
+  const footerRef = useRef<HTMLDivElement>(null);
+  const categoryRef = useRef<HTMLParagraphElement>(null);
   const titleRowRef = useRef<HTMLDivElement>(null);
   const sizerRef = useRef<HTMLSpanElement>(null);
-  const flipActiveRef = useRef(false);
+  // The running title flip, if any (the entrance cancels it on reset).
+  const flipRef = useRef<gsap.core.Timeline | null>(null);
+  // One drop controller for the card's lifetime: it outlives re-splits of
+  // the title, which only hand it new columns.
+  const [drop] = useState(createTitleDrop);
 
   // The title must stay on one line: measure the real rendered width
   // against an invisible sizer and trim with an ellipsis when it overflows.
@@ -81,18 +99,87 @@ export function ProjectCardFooter({
   }, [fullTitle]);
 
   // Runs after every re-split (the truncation above can swap the title
-  // once fonts load or the card resizes), so new flip boxes get their
-  // geometry before paint.
+  // once fonts load or the card resizes), so new columns and flip boxes
+  // pick up the drop's current state and their geometry before paint:
+  // a re-split mid-drop continues the drop instead of flashing the title.
   useIsomorphicLayoutEffect(() => {
     const titleRow = titleRowRef.current;
     if (!titleRow) return;
+    drop.setColumns(titleRow, Array.from(title).length);
     if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
     // Never animated: each flip box hangs half a line behind its own
     // plane, and the flip's rotationX tweens preserve this offset.
     gsap.set(gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow), {
       z: -0.5 * parseFloat(getComputedStyle(titleRow).lineHeight),
     });
-  }, [title]);
+  }, [title, drop]);
+
+  // The entrance. Server HTML shows the final text; with motion allowed,
+  // this hides both lines before first paint (category emptied, title
+  // columns parked above the window), then plays them when the footer
+  // comes into view. It waits for the grid reveal first so nothing plays
+  // while the page intro still hides the list.
+  useIsomorphicLayoutEffect(() => {
+    const footer = footerRef.current;
+    const titleRow = titleRowRef.current;
+    const root = footer?.closest("a");
+    if (!footer || !titleRow || !root) return;
+    // Reduced motion: the real text stays, no scramble, no drop.
+    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+
+    const line = categoryRef.current;
+    const scramble = line ? createScramble(line, categoryText) : null;
+    scramble?.reset();
+    drop.reset();
+
+    // Armed: waiting to play on the next footer entry. lusion replays
+    // every time the card comes back, but only after the whole card was
+    // out of view, so a footer that dips out and back in doesn't restart.
+    let armed = true;
+    let cancelled = false;
+    const stops: Array<() => void> = [];
+
+    waitForGridReveal().then(() => {
+      if (cancelled) return;
+      // Deliberately the footer, not the card top (lusion's trigger): on a
+      // slow scroll lusion's text can finish before it is on screen.
+      stops.push(
+        observeSeen(footer, (seen) => {
+          if (!seen || !armed) return;
+          armed = false;
+          scramble?.play();
+          drop.play();
+        }),
+      );
+      stops.push(
+        observeInViewport(root, (inView) => {
+          if (inView || armed) return;
+          armed = true;
+          scramble?.reset();
+          drop.reset();
+          // A flip still rolling as the card left would otherwise finish
+          // on columns that are parked out of sight.
+          const flip = flipRef.current;
+          if (flip) {
+            flip.kill();
+            flipRef.current = null;
+            gsap.set(gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow), {
+              rotationX: 0,
+            });
+          }
+        }),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      for (const stop of stops) stop();
+      // Leave the real text behind (unmount, a Strict Mode remount, or a
+      // new category string, which re-runs this effect from the top).
+      scramble?.finish();
+      drop.finish();
+    };
+  }, [categoryText, drop]);
 
   useIsomorphicLayoutEffect(() => {
     const titleRow = titleRowRef.current;
@@ -129,14 +216,17 @@ export function ProjectCardFooter({
     // z-offset and the two face transforms mirror magicui's CharBox
     // geometry exactly (translateZ offsets of ±0.5lh, no perspective);
     // only the spring is approximated with a power2 ease.
+    // Ownership: the flip rotates the box (copy one), the drop moves the
+    // column around it, the indent moves the whole title: three elements.
     const chars = () => gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow);
     const flip = () => {
-      if (flipActiveRef.current) return;
-      flipActiveRef.current = true;
-      gsap
+      // One flip at a time, and never while the letters are still parked
+      // or dropping in (the flip would roll boxes nobody can see yet).
+      if (flipRef.current || drop.state !== "landed") return;
+      flipRef.current = gsap
         .timeline({
           onComplete: () => {
-            flipActiveRef.current = false;
+            flipRef.current = null;
           },
         })
         .to(chars(), { rotationX: 90, duration: 0.5, stagger: 0.05, ease: "power2.out" })
@@ -153,22 +243,27 @@ export function ProjectCardFooter({
       root.removeEventListener("mouseenter", onEnter);
       root.removeEventListener("mouseleave", onLeave);
       titleRow.removeEventListener("mouseenter", flip);
+      flipRef.current?.kill();
+      flipRef.current = null;
       gsap.killTweensOf([icon, ...gsap.utils.toArray(".project-card-char", titleRow)]);
       indent.kill();
     };
-  }, []);
+  }, [drop]);
 
   return (
     // data-card-footer: the page's cover stage moves this wrapper with the
     // card's scroll reaction, so nothing in this component may animate the
     // wrapper's own transform (the effects below animate inner elements).
-    <div data-card-footer="" className="mt-5">
+    <div ref={footerRef} data-card-footer="" className="mt-5">
       {categories.length ? (
+        // The entrance scramble writes this line's text directly while it
+        // plays (one-line truncation still applies to every frame).
         <p
+          ref={categoryRef}
           aria-hidden="true"
           className="mb-3 truncate text-[clamp(0.6875rem,0.9vw,0.875rem)] font-medium tracking-[0.12em] text-[var(--ink-3)] uppercase dark:text-white/50"
         >
-          {categories.join(" • ")}
+          {categoryText}
         </p>
       ) : null}
       {/* The row is a fixed one-line window (h = line-height): each
