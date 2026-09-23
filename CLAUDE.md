@@ -11,7 +11,7 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 5. `docs/animation-system.md`: GSAP setup, conventions, and the **gotchas that have already cost days** (read before touching any animation).
 6. `docs/navigation-menu.md`: the full-screen nav menu system spec.
 7. `docs/page-transition.md`: the full-screen navigation curtain played on every internal route change, and the related homepage-entrance-skip behavior.
-8. `docs/projects-page.md`: the `/projects` index, the most animated page (intro choreography, hero play, the WebGL cover stage and its DOM fallback, card text effects).
+8. `docs/projects-page.md`: the `/projects` index and the `/projects/[slug]` detail pages, the most animated pages (intro choreography, hero play, the WebGL cover stage, the horizontal themed detail page and its media stage, the project zoom transitions).
 9. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
 10. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
 11. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
@@ -57,7 +57,7 @@ apps/web/            Next.js 16 marketing site (the focus of most work)
                      contact/ careers/ members/ articles/ projects/ (all real, CMS-driven)
                      + admin/ (internal CMS workspace), site-header, smooth-scroll, theme-toggle,
                      social-icons, providers, api-status, app-boot-tracker
-  src/data/          nav.ts (menu config), competencies.ts, projects.ts (homepage showcase only)
+  src/data/          nav.ts (menu config), competencies.ts, and other static page content
   src/lib/           env.ts (zod-validated), scroll-reveal.ts (fadeUpOnScroll), app-boot.ts, utils.ts
   src/hooks/         use-health.ts (API health polling); the WIB menu clock hook lives inside nav/nav-menu.tsx
   public/            logo.svg, patterns/*.svg (pattern tiles), logo/*.svg (dept logos, untracked)
