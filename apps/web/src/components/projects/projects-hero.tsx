@@ -131,10 +131,10 @@ export function ProjectsHero({ count }: { count: number }) {
   }, [count]);
 
   return (
-    <section ref={rootRef} className="relative pt-[6em] pb-[clamp(2.5rem,7vh,5rem)] md:pt-[20vh]">
-      <div className="relative w-fit">
+    <section ref={rootRef} className="relative pt-[4em] pb-[clamp(2.5rem,7vh,5rem)] md:pt-[12vh]">
+      <div className="relative">
         <h1
-          className="overflow-hidden font-display text-[17vw] leading-[1.15em] font-medium tracking-[-0.03em] text-[#0e1116] dark:text-white"
+          className="overflow-hidden font-display text-[17vw] leading-[1.15em] font-medium tracking-[0.05em] text-[#0e1116] dark:text-white"
           aria-label="Projects"
         >
           {HERO_TITLE.split("").map((char, index) => (
@@ -148,13 +148,13 @@ export function ProjectsHero({ count }: { count: number }) {
           ))}
         </h1>
 
-        <span className="projects-hero-number absolute top-[2vw] left-[calc(100%+1.5vw)] overflow-hidden font-mono text-[clamp(0.875rem,4vw,4rem)] leading-none font-medium text-[#0e1116] dark:text-white">
+        <span className="projects-hero-number absolute top-0 right-0 overflow-hidden font-mono text-[clamp(0.875rem,4vw,4rem)] leading-none font-medium text-[#0e1116] dark:text-white">
           <span className="projects-hero-number-text inline-block tabular-nums">{count}</span>
         </span>
 
         <svg
           aria-hidden="true"
-          className="projects-hero-arrow absolute bottom-[5vw] left-[calc(100%+1.5vw)] size-[clamp(1.5rem,4vw,4rem)] text-[#0e1116] dark:text-white"
+          className="projects-hero-arrow absolute bottom-0 right-0 size-[clamp(1.5rem,4vw,4rem)] text-[#0e1116] dark:text-white"
           viewBox="0 0 38 38"
           fill="none"
         >
