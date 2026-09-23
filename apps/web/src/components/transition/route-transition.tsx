@@ -128,6 +128,14 @@ function freshPendingState(): PendingState {
 export function RouteTransition() {
   const router = useRouter();
   const pathname = usePathname();
+  // The pathname currently on screen, for telling a real back/forward
+  // navigation apart from a same-page fragment jump: following an
+  // in-page <a href="#x"> (or going back from one) also fires popstate,
+  // and covering for it would wait for a route change that never comes.
+  const shownPathnameRef = useRef(pathname);
+  useEffect(() => {
+    shownPathnameRef.current = pathname;
+  }, [pathname]);
 
   const whiteRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -462,6 +470,7 @@ export function RouteTransition() {
     }
 
     function onPopState() {
+      if (window.location.pathname === shownPathnameRef.current) return;
       startPopstateCover();
     }
 
