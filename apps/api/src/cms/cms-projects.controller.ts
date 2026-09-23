@@ -20,6 +20,7 @@ import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
 import sharp from "sharp";
 import { z } from "zod";
+import { projectDetailFieldsSchema } from "@repo/shared";
 
 import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
@@ -137,6 +138,14 @@ const projectSchema = z
     seoTitle: z.string().trim().max(120).optional(),
     seoDescription: z.string().trim().max(300).optional(),
   })
+  // The detail page's own fields (theme, description, call to action,
+  // services, ordered media sections) live in the shared package so the
+  // admin editor validates against the same limits.
+  .extend(projectDetailFieldsSchema.shape)
+  .refine(
+    ({ media }) => (media ?? []).every((item) => mediaKeyFits(item.kind, item.key, item.posterKey)),
+    "A media section points at a file of the wrong kind.",
+  )
   .refine(
     ({ startDate, endDate }) => !startDate || !endDate || endDate >= startDate,
     "The end date cannot be earlier than the start date.",
@@ -171,6 +180,17 @@ const MEDIA_KEY_PATTERN =
   /^project-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp)$/;
 const VIDEO_KEY_PATTERN =
   /^demo-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:mp4|webm)$/;
+// Bundled seed art under apps/web/public (never a storage object).
+const STATIC_KEY_PATTERN = /^static\/[\w./-]+$/;
+
+/** A media section's file must be of its own kind: an image section never
+ *  serves a video key (or the reverse), and a poster is always an image. */
+function mediaKeyFits(kind: "image" | "video", key: string, posterKey?: string) {
+  if (STATIC_KEY_PATTERN.test(key)) return !posterKey || !VIDEO_KEY_PATTERN.test(posterKey);
+  if (kind === "image") return MEDIA_KEY_PATTERN.test(key) && !posterKey;
+  if (!VIDEO_KEY_PATTERN.test(key)) return false;
+  return !posterKey || MEDIA_KEY_PATTERN.test(posterKey) || STATIC_KEY_PATTERN.test(posterKey);
+}
 
 function safeEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left);

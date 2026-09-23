@@ -35,10 +35,29 @@ function projectOf(record: Record<string, unknown>) {
         galleryKeys?: unknown;
         videoKey?: unknown;
         contributors?: unknown;
+        media?: unknown;
       }
     | undefined;
 }
 
+/** The detail page's media sections, as loosely typed as the stored JSON. */
+function mediaSectionsOf(record: Record<string, unknown>) {
+  const media = projectOf(record)?.media;
+  if (!Array.isArray(media)) return [];
+  return media.flatMap((item) => {
+    const section = item as { kind?: unknown; key?: unknown; posterKey?: unknown } | undefined;
+    if (typeof section?.key !== "string") return [];
+    return [
+      {
+        kind: section.kind === "video" ? ("video" as const) : ("image" as const),
+        key: section.key,
+        posterKey: typeof section.posterKey === "string" ? section.posterKey : undefined,
+      },
+    ];
+  });
+}
+
+/** Every image key a record references: cover, gallery, media sections and posters. */
 function mediaKeysOf(record: Record<string, unknown>) {
   const project = projectOf(record);
   const keys: string[] = [];
@@ -46,12 +65,22 @@ function mediaKeysOf(record: Record<string, unknown>) {
   if (Array.isArray(project?.galleryKeys)) {
     for (const key of project.galleryKeys) if (typeof key === "string") keys.push(key);
   }
+  for (const section of mediaSectionsOf(record)) {
+    if (section.kind === "image") keys.push(section.key);
+    if (section.posterKey) keys.push(section.posterKey);
+  }
   return keys;
 }
 
-function videoKeyOf(record: Record<string, unknown>) {
-  const key = projectOf(record)?.videoKey;
-  return typeof key === "string" ? key : undefined;
+/** Every video key a record references: the demo video and video media sections. */
+function videoKeysOf(record: Record<string, unknown>) {
+  const keys: string[] = [];
+  const demo = projectOf(record)?.videoKey;
+  if (typeof demo === "string") keys.push(demo);
+  for (const section of mediaSectionsOf(record)) {
+    if (section.kind === "video") keys.push(section.key);
+  }
+  return keys;
 }
 
 function contributorPhotoKeysOf(record: Record<string, unknown>) {
@@ -91,8 +120,15 @@ export class CmsProjectsService {
     const cacheKey = `cms:projects:video-allowed:${key}`;
     const cached = await this.cache.getJson<boolean>(cacheKey);
     if (cached !== undefined) return cached;
+    // A video is public when a published record uses it as its demo video
+    // or in one of its media sections (jsonb containment on the array).
     const records = await this.prisma.cmsProject.findMany({
-      where: { data: { path: ["project", "videoKey"], equals: key } },
+      where: {
+        OR: [
+          { data: { path: ["project", "videoKey"], equals: key } },
+          { data: { path: ["project", "media"], array_contains: [{ key }] } },
+        ],
+      },
     });
     const allowed = records.some((record) => !isDraft(record.data as Record<string, unknown>));
     await this.cache.setJson(cacheKey, allowed, VIDEO_ALLOWED_TTL_SECONDS);
@@ -130,7 +166,7 @@ export class CmsProjectsService {
 
   async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
     let previousMediaKeys: string[] = [];
-    let previousVideoKey: string | undefined;
+    let previousVideoKeys: string[] = [];
     let previousPhotoKeys: string[] = [];
     const record = await this.prisma.$transaction(async (tx) => {
       const current = await tx.cmsProject.findUnique({ where: { slug: currentSlug } });
@@ -143,7 +179,7 @@ export class CmsProjectsService {
         if (destination) throw new Error("CMS_PROJECT_SLUG_CONFLICT");
       }
       previousMediaKeys = mediaKeysOf(current.data as Record<string, unknown>);
-      previousVideoKey = videoKeyOf(current.data as Record<string, unknown>);
+      previousVideoKeys = videoKeysOf(current.data as Record<string, unknown>);
       previousPhotoKeys = contributorPhotoKeysOf(current.data as Record<string, unknown>);
       return tx.cmsProject.update({ where: { slug: currentSlug }, data: { data, slug: nextSlug } });
     });
@@ -154,13 +190,11 @@ export class CmsProjectsService {
         await this.storage.deleteFile(key).catch(() => undefined);
       }
     }
-    const nextVideoKey = videoKeyOf(data as Record<string, unknown>);
-    if (
-      previousVideoKey &&
-      previousVideoKey !== nextVideoKey &&
-      VIDEO_KEY_PATTERN.test(previousVideoKey)
-    ) {
-      await this.storage.deleteFile(previousVideoKey).catch(() => undefined);
+    const nextVideoKeys = videoKeysOf(data as Record<string, unknown>);
+    for (const key of previousVideoKeys) {
+      if (!nextVideoKeys.includes(key) && VIDEO_KEY_PATTERN.test(key)) {
+        await this.storage.deleteFile(key).catch(() => undefined);
+      }
     }
     const nextPhotoKeys = contributorPhotoKeysOf(data as Record<string, unknown>);
     for (const key of previousPhotoKeys) {
@@ -171,8 +205,9 @@ export class CmsProjectsService {
 
     await Promise.all([
       this.invalidateRecords(),
-      this.invalidateVideoAllowed(previousVideoKey),
-      this.invalidateVideoAllowed(nextVideoKey),
+      ...[...new Set([...previousVideoKeys, ...nextVideoKeys])].map((key) =>
+        this.invalidateVideoAllowed(key),
+      ),
     ]);
     return {
       ...(record.data as Record<string, unknown>),
@@ -209,16 +244,19 @@ export class CmsProjectsService {
     for (const key of mediaKeysOf(data)) {
       if (MEDIA_KEY_PATTERN.test(key)) await this.storage.deleteFile(key).catch(() => undefined);
     }
-    const videoKey = videoKeyOf(data);
-    if (videoKey && VIDEO_KEY_PATTERN.test(videoKey)) {
-      await this.storage.deleteFile(videoKey).catch(() => undefined);
+    const videoKeys = videoKeysOf(data);
+    for (const key of videoKeys) {
+      if (VIDEO_KEY_PATTERN.test(key)) await this.storage.deleteFile(key).catch(() => undefined);
     }
     for (const key of contributorPhotoKeysOf(data)) {
       if (CONTRIBUTOR_PHOTO_KEY_PATTERN.test(key)) {
         await this.storage.deleteFile(key).catch(() => undefined);
       }
     }
-    await Promise.all([this.invalidateRecords(), this.invalidateVideoAllowed(videoKey)]);
+    await Promise.all([
+      this.invalidateRecords(),
+      ...videoKeys.map((key) => this.invalidateVideoAllowed(key)),
+    ]);
   }
 
   private async invalidateRecords() {
