@@ -3,6 +3,10 @@ import type {
   DetailStageHandle,
   DetailStageItem,
 } from "@/components/projects/detail/stage/contract";
+import {
+  walkHeaderPalette,
+  type HeaderPaletteWalk,
+} from "@/components/transition/project-zoom-colors";
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
 import { scrollPageTo } from "@/lib/page-scroll";
@@ -103,6 +107,8 @@ export type DetailControllerOptions = {
   /** Entered from the previous project's hand-off (see detail-session.ts). */
   arrived: boolean;
   palette: ProjectPalette;
+  /** The next project's palette (same scheme): the header walks to it during the hand-off. */
+  nextPalette?: ProjectPalette;
   /** Plays the navigation once the hand-off has covered the screen. */
   onNavigateNext(): void;
   onPrefetchNext(): void;
@@ -175,6 +181,8 @@ export class DetailController {
   private inputForward = false;
   private inputBack = false;
   private handoff: Handoff | null = null;
+  /** Walks the header's colours to the next palette during the hand-off. */
+  private headerWalk: HeaderPaletteWalk | null = null;
   private prefetched = false;
 
   private hintGone = false;
@@ -282,6 +290,9 @@ export class DetailController {
     this.stopStage("off");
     releaseScrollLock(ENTRANCE_LOCK);
     releaseScrollLock(HANDOFF_LOCK);
+    // By now the next page's own theme style carries the same colours.
+    this.headerWalk?.release();
+    this.headerWalk = null;
   }
 
   /** The palette the stage tints its placeholders with (light/dark switch). */
@@ -699,6 +710,9 @@ export class DetailController {
     this.overscroll = 1;
     this.momentum = 0;
     acquireScrollLock(HANDOFF_LOCK);
+    // The header sits above the wipe and would otherwise keep this page's
+    // colours until the next page's theme lands at navigation.
+    if (this.o.nextPalette) this.headerWalk = walkHeaderPalette(this.o.nextPalette);
     if (!this.vertical) {
       this.handoff = { time: 0, from: this.panelRest(), titleFrom: 0, titleTo: 0, done: false };
     } else {
@@ -727,6 +741,9 @@ export class DetailController {
     if (!handoff) return 0;
     handoff.time += dt;
     const npr = clamp(handoff.time / HANDOFF_SECONDS);
+    // Lands a little before the navigation: the header's own CSS colour
+    // transition trails what we write.
+    this.headerWalk?.set(fit(npr, 0.45, 0.85, 0, 1));
     if (npr >= 1 && !handoff.done) {
       handoff.done = true;
       this.o.onNavigateNext();
