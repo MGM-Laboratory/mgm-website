@@ -21,7 +21,7 @@ export default function CareersLoading() {
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
       <RouteLoadingSentinel />
       <main className="flex-1">
-        <section className="mx-auto w-full max-w-[1200px] px-[55px] pt-24 pb-20">
+        <section className="mx-auto w-full max-w-[1200px] px-6 pt-24 pb-20 sm:px-10 lg:px-14">
           <Skeleton className="h-3 w-24" />
           <Skeleton className="mt-4 h-12 w-64" />
           <Skeleton className="mt-5 h-6 w-full max-w-2xl" />
@@ -30,7 +30,7 @@ export default function CareersLoading() {
           <Skeleton className="mt-8 h-12 w-full rounded-full" />
         </section>
 
-        <section className="mx-auto w-full max-w-[1200px] px-[55px] pb-40">
+        <section className="mx-auto w-full max-w-[1200px] px-6 pb-32 sm:px-10 lg:px-14">
           <Skeleton className="h-4 w-32" />
           <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
