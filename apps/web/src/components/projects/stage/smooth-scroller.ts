@@ -151,6 +151,12 @@ export async function startSmoothScroll(): Promise<() => void> {
     offScroller();
     offFrame();
     offLock();
+    // A native scroll (scrollbar drag, find-in-page, a focus scroll) leaves
+    // Lenis a 400 ms timer that sets isScrolling back to false, and that
+    // setter re-adds the "lenis" class to <html>; destroy() doesn't clear
+    // it, so the class came back on the next route. stop() resets
+    // isScrolling first, which turns that late write into a no-op.
+    lenis.stop();
     lenis.destroy();
   };
 }
