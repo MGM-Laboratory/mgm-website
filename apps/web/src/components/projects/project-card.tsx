@@ -22,7 +22,7 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 const FALLBACK_PATTERNS: PatternKind[] = ["fans", "arcs", "circle", "plus"];
 
 /**
- * The public list card, modeled on lusion.co/projects: a forced 16:9 cover
+ * The public list card, modeled on lusion.co/projects: a forced 3:2 cover
  * with rounded corners, a one-line categories row, and a one-line title.
  * Hovering the card plays the "camera focus" blur on the cover, tilts the
  * image in 3D toward the cursor (the frame itself stays a flat 2D
@@ -130,12 +130,13 @@ export function ProjectCard({
         )
         .to(img, { filter: "blur(0px)", duration: 0.55, ease: "power3.out" });
     };
-    // Leaving blurs the cover back out and leaves it blurred, like a camera
-    // pulling away from the card.
+    // Leaving pulls the cover back to sharp instead of leaving it blurred:
+    // the image must end clear when the hover ends (and a mid-blur kill
+    // lands on blur(0) too), so every new hover replays the same cycle.
     const blurOut = () => {
       if (!img) return;
       gsap.killTweensOf(img, "filter");
-      gsap.to(img, { filter: "blur(10px)", duration: 0.45, ease: "power2.inOut" });
+      gsap.to(img, { filter: "blur(0px)", duration: 0.35, ease: "power2.out" });
     };
 
     // Slight 3D tilt of the image toward the cursor. Only the image
