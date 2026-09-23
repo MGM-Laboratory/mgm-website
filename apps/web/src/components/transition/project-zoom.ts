@@ -69,6 +69,8 @@ const LOCK_OWNER = "project-transition";
 // Enter: the click waits at most this long for the renderer and the
 // decoded cover before the zoom starts with whatever is ready.
 const PREPARE_MS = 300;
+// The DOM fallback's clone must decode before it replaces the card.
+const DOM_PICTURE_MS = 200;
 // How long the overlay holds for a project page that never says it is ready.
 const PAGE_READY_MS = 3000;
 // The route never committing at all: reveal whatever is there.
@@ -295,6 +297,7 @@ export class ProjectZoom {
   private slowdown = 1;
   private forceDom = false;
   private lastPrepare: { ms: number; picture: string; renderer: string } | null = null;
+  private lastExit: { picture: string; uploaded: boolean | null; renderer: string } | null = null;
 
   constructor({ root, layer, shield, navigate, prefetch, pathname }: ProjectZoomOptions) {
     this.root = root;
@@ -475,14 +478,14 @@ export class ProjectZoom {
       ? null
       : await withTimeout(this.ensureGl(), deadline - performance.now());
     let prepared: PreparedPicture | null = null;
+    let late: Promise<PreparedPicture | null> | null = null;
     if (gl && s.image) {
       const warmed = this.warmed?.image === s.image ? this.warmed.picture : null;
       if (!warmed) void this.warmed?.picture.then(closePicture);
       this.warmed = null;
       const pending = warmed ?? gl.prepare(s.image);
       prepared = (await withTimeout(pending, deadline - performance.now())) ?? null;
-      // Too late for this zoom (it uploads the element instead): free it.
-      if (!prepared) void pending.then(closePicture);
+      if (!prepared) late = pending;
     }
     if (process.env.NODE_ENV !== "production") {
       this.lastPrepare = {
@@ -514,6 +517,17 @@ export class ProjectZoom {
       fog,
       backdrop: s.backdrop,
     });
+    // Too late to start with: the element was uploaded instead (a loaded
+    // cover), or, with none, the decoded picture replaces the frame's
+    // colour as soon as it lands.
+    if (late && gl) {
+      if (renderer === gl && !gl.hasPicture) this.uploadLate(run, gl, late);
+      else void late.then(closePicture);
+    }
+    if (renderer === this.dom) {
+      await withTimeout(this.dom.ready(), Math.max(DOM_PICTURE_MS, deadline - performance.now()));
+      if (!this.live(run)) return;
+    }
     this.layer.style.backgroundColor = toCss(fog);
     this.tint.start(this.tint.current(), this.tint.theme(palette));
 
@@ -632,13 +646,17 @@ export class ProjectZoom {
     const covers = withTimeout(Promise.all(coversOnScreen(run.view).map(settle)), LIST_COVERS_MS);
     const gl = this.forceDom ? null : await withTimeout(this.ensureGl(), PICTURE_MS);
     let prepared: PreparedPicture | null = null;
+    let late: Promise<PreparedPicture | null> | null = null;
     if (gl && image) {
-      const warmed = (await withTimeout(s.warm, PICTURE_MS)) ?? null;
+      const warmed = await withTimeout(s.warm, PICTURE_MS);
+      if (warmed === undefined) discardWarm();
       if (warmed && sameAddress(warmed.url, image.currentSrc || image.src)) {
         prepared = warmed;
       } else {
         closePicture(warmed);
-        prepared = (await withTimeout(gl.prepare(image), PICTURE_MS)) ?? null;
+        const pending = gl.prepare(image);
+        prepared = (await withTimeout(pending, PICTURE_MS)) ?? null;
+        if (!prepared) late = pending;
       }
     } else {
       discardWarm();
@@ -663,6 +681,22 @@ export class ProjectZoom {
       fog: s.background,
       backdrop: backgroundBehind(frame),
     });
+    if (late && gl) this.uploadLate(run, gl, late);
+    if (process.env.NODE_ENV !== "production") {
+      this.lastExit = {
+        picture: prepared
+          ? prepared.source instanceof HTMLImageElement
+            ? "element"
+            : "bitmap"
+          : "none",
+        uploaded: renderer === this.gl ? this.gl.hasPicture : null,
+        renderer: renderer === this.dom ? "dom" : "gl",
+      };
+    }
+    if (renderer === this.dom) {
+      await withTimeout(this.dom.ready(), PICTURE_MS);
+      if (!this.live(run)) return;
+    }
     this.tint.start(s.pinned, site);
 
     let landed = false;
@@ -878,6 +912,15 @@ export class ProjectZoom {
 
   // ---------------------------------------------------------------- misc
 
+  /** Uploads a picture that finished decoding after the zoom started. */
+  private uploadLate(run: Run, gl: ZoomGl, pending: Promise<PreparedPicture | null>) {
+    void pending.then((picture) => {
+      if (!picture) return;
+      if (this.live(run) && run.renderer === gl && !gl.hasPicture) gl.setPicture(picture);
+      else closePicture(picture);
+    });
+  }
+
   private restingZoom(frame: HTMLElement, anchor: HTMLAnchorElement) {
     const rest = Number(frame.dataset.overscan) || 1;
     // A hovered card on the WebGL stage shows its picture at about 1.0x.
@@ -956,6 +999,7 @@ export class ProjectZoom {
         note: peekProjectReturn() ?? null,
         gl: this.gl ? "ready" : this.glFailed ? "failed" : "idle",
         prepare: this.lastPrepare,
+        exit: this.lastExit,
       }),
       setSlowdown: (factor: number) => {
         this.slowdown = Math.max(0.1, factor);

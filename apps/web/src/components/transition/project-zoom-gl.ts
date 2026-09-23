@@ -250,6 +250,7 @@ export class ZoomGl implements ZoomRenderer {
   private ratio = 1;
   private hasImage = false;
   private crop: readonly [number, number, number, number] = [0, 0, 1, 1];
+  private aspect = 1.5;
   private lost = false;
 
   /** A hardware WebGL2 context with the program built, or null. */
@@ -343,6 +344,11 @@ export class ZoomGl implements ZoomRenderer {
     return this.lost;
   }
 
+  /** Whether the current zoom has a picture on the GPU (verification). */
+  get hasPicture() {
+    return this.hasImage;
+  }
+
   /**
    * Decodes a cover for upload, off the main thread where the engine can:
    * the page's own cached bytes (the card's <img>, or an address the page
@@ -380,6 +386,7 @@ export class ZoomGl implements ZoomRenderer {
     const gl = this.gl;
     this.resize(view);
     this.hasImage = false;
+    this.aspect = source.rect.width / source.rect.height;
     const prepared =
       picture.prepared ??
       (picture.element?.complete && picture.element.naturalWidth
@@ -390,28 +397,36 @@ export class ZoomGl implements ZoomRenderer {
             url: "",
           }
         : null);
-    if (prepared && !this.lost) {
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-      try {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prepared.source);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        this.hasImage = true;
-      } catch {
-        this.hasImage = false;
-      }
-      // The pixels live on the GPU now.
-      if (!(prepared.source instanceof HTMLImageElement)) prepared.source.close();
-      this.crop = coverCrop(
-        prepared.width,
-        prepared.height,
-        source.rect.width / source.rect.height,
-      );
-    }
+    if (prepared) this.setPicture(prepared);
     this.setColors(fog, backdrop);
     gl.uniform2f(this.uniforms.u_grainOffset, Math.random() * 64, Math.random() * 64);
+  }
+
+  /**
+   * Uploads the zoom's picture: at begin(), or later, mid-zoom, for a
+   * picture that arrived late (the quad shows the frame's own background
+   * until then, which the dissolve mostly hides).
+   */
+  setPicture(prepared: PreparedPicture) {
+    const gl = this.gl;
+    if (this.lost) {
+      if (!(prepared.source instanceof HTMLImageElement)) prepared.source.close();
+      return;
+    }
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    try {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prepared.source);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      this.hasImage = true;
+    } catch {
+      this.hasImage = false;
+    }
+    // The pixels live on the GPU now.
+    if (!(prepared.source instanceof HTMLImageElement)) prepared.source.close();
+    this.crop = coverCrop(prepared.width, prepared.height, this.aspect);
   }
 
   resize(view: View) {

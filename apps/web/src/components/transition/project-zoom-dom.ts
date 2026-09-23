@@ -80,6 +80,19 @@ export class ZoomDom implements ZoomRenderer {
     }
   }
 
+  /**
+   * Resolves once the clone's picture can paint (or can't load at all).
+   * Shown any earlier, the clone would flash its theme colour fill where
+   * the card's picture was.
+   */
+  ready(): Promise<void> {
+    const picture = this.picture;
+    if (picture.style.display === "none" || !picture.getAttribute("src")) {
+      return Promise.resolve();
+    }
+    return picture.decode().catch(() => undefined);
+  }
+
   resize(view: View) {
     this.view = view;
   }
