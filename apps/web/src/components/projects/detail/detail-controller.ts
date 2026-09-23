@@ -142,20 +142,6 @@ type Drag = {
   history: { t: number; d: number }[];
 };
 
-function hasHardwareWebGL2() {
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true });
-    if (!gl) return false;
-    // Hand the probe's context back at once: next-project hops would
-    // otherwise pile up contexts until the browser drops the oldest.
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 const delay = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 function videoReady(video: HTMLVideoElement) {
@@ -258,6 +244,29 @@ export class DetailController {
     void this.signalReady();
     this.cleanups.push(onReducedMotion(() => this.toReduced()));
     this.maybeStartStage();
+
+    if (process.env.NODE_ENV !== "production") {
+      // Dev-only probe for verification scripts.
+      const probe = () => ({
+        slug: this.o.slug,
+        vertical: this.vertical,
+        entrance: this.entrance,
+        csr: this.csr,
+        travel: this.travel,
+        maxTravel: this.maxTravel,
+        overscroll: this.overscroll,
+        handoff: this.handoff ? clamp(this.handoff.time / HANDOFF_SECONDS) : 0,
+        stage: this.stageState,
+        owned: this.items.filter((item) => item.owned).length,
+        lenis: this.lenisOn,
+        arrived: this.o.arrived,
+      });
+      Object.assign(window, { __projectDetail: probe });
+      this.cleanups.push(() => {
+        const target = window as { __projectDetail?: unknown };
+        if (target.__projectDetail === probe) delete target.__projectDetail;
+      });
+    }
   }
 
   dispose() {
@@ -819,10 +828,9 @@ export class DetailController {
 
   private maybeStartStage() {
     if (this.vertical || this.reduced || this.stageState !== "off" || !this.items.length) return;
-    if (!hasHardwareWebGL2()) {
-      this.stageState = "failed";
-      return;
-    }
+    // Started at once, before the entrance: items the stage claims while
+    // already on screen still open from its own emerge. It resolves null
+    // without hardware WebGL2, and the DOM media stay.
     this.stageState = "starting";
     void (async () => {
       try {
@@ -840,6 +848,8 @@ export class DetailController {
           if (this.stageState === "starting") this.stageState = "failed";
           return;
         }
+        // Resolved after this page (or this layout) let go of it: nothing
+        // may keep drawing.
         if (this.stageState !== "starting" || this.disposed || this.vertical || this.reduced) {
           handle.dispose();
           this.releaseOwnership();

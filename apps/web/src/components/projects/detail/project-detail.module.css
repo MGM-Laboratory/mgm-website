@@ -402,10 +402,14 @@
   flex: none;
   margin: 0;
   aspect-ratio: var(--aspect);
+  /* Nothing to round on the box itself: the WebGL stage reads the corner
+     radius from here, so it matches the DOM frame's. */
+  border-radius: var(--radius);
 }
 
 .item.full {
   margin-inline: calc(var(--pad-x) * -1);
+  border-radius: 0;
 }
 
 .frame {
