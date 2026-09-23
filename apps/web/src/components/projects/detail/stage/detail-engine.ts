@@ -817,9 +817,10 @@ export class DetailEngine {
       sceneActive = true;
     }
 
+    // A texture that lands on a visible item redraws through its map swap
+    // (stepItem); one for an item off screen needs no frame.
     this.uploadedThisFrame = false;
     this.stream(scroll);
-    if (this.uploadedThisFrame) sceneActive = true;
 
     const now = performance.now();
     for (const item of this.items) {
