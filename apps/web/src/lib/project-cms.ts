@@ -125,6 +125,9 @@ export type CmsProjectRecord = {
   body: ArticleBlock[];
   slug: string;
   updatedAt?: string;
+  /** Measured pixel sizes of images the record stores without one, by media key
+   *  (only on single-record reads). */
+  mediaSizes?: Record<string, [number, number]>;
 };
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -288,7 +291,21 @@ export function projectThemeId(project: Pick<ProjectDraft, "slug" | "theme">): P
  * full height first, gallery images follow at the normal size, and an
  * uploaded demo video closes full height.
  */
-export function projectMediaSections(project: ProjectDraft): ProjectMediaItem[] {
+export function projectMediaSections(
+  project: ProjectDraft,
+  sizes?: Record<string, [number, number]>,
+): ProjectMediaItem[] {
+  const sections = derivedMediaSections(project);
+  if (!sizes) return sections;
+  // Fill in sizes the record didn't store (older uploads) from the API's
+  // measurements, so the page can lay out before the files load.
+  return sections.map((item) => {
+    const size = !item.width || !item.height ? sizes[item.key] : undefined;
+    return size ? { ...item, width: size[0], height: size[1] } : item;
+  });
+}
+
+function derivedMediaSections(project: ProjectDraft): ProjectMediaItem[] {
   if (project.media?.length) return project.media;
   const sections: ProjectMediaItem[] = [];
   const seen = new Set<string>();

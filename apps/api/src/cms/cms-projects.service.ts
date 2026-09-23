@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import sharp from "sharp";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -9,6 +10,17 @@ const DRAFTS_CACHE_KEY = "cms:projects:drafts:v1";
 const FEED_CACHE_KEY = "cms:projects:feed:v1";
 const RECORDS_CACHE_TTL_SECONDS = 60 * 10;
 const VIDEO_ALLOWED_TTL_SECONDS = 60 * 10;
+// Stored image keys are immutable (every upload mints a new uuid), so a
+// measured size never goes stale; a failed read is retried after a while.
+const MEDIA_SIZE_TTL_SECONDS = 60 * 60 * 24 * 30;
+const MEDIA_SIZE_MISS_TTL_SECONDS = 60 * 10;
+const MEDIA_SIZE_MAX_BYTES = 12 * 1024 * 1024;
+const MEDIA_SIZE_MAX_KEYS = 48;
+const MEDIA_SIZE_CONCURRENCY = 4;
+// A detail page render waits at most this long for sizes it hasn't cached
+// yet; whatever isn't measured by then is measured in the background and
+// served from the cache on the next request.
+const MEDIA_SIZE_BUDGET_MS = 2500;
 type PublicProjectRecord = Record<string, unknown> & { slug: string; updatedAt: string };
 
 const MEDIA_KEY_PATTERN =
@@ -176,7 +188,73 @@ export class CmsProjectsService {
       updatedAt: record.updatedAt.toISOString(),
     };
     if (isDraft(publicRecord)) throw new NotFoundException("Project record not found");
-    return publicRecord;
+    return { ...publicRecord, mediaSizes: await this.mediaSizesOf(publicRecord) };
+  }
+
+  /**
+   * Pixel sizes of the record's images whose size the record doesn't carry
+   * (the cover, gallery images, and media sections saved without one), keyed
+   * by media key. The detail page lays its horizontal track out from these
+   * before any image loads, so older records don't reflow as they arrive.
+   */
+  private async mediaSizesOf(record: Record<string, unknown>) {
+    const project = projectOf(record);
+    const keys = new Set<string>();
+    if (typeof project?.coverKey === "string") keys.add(project.coverKey);
+    if (Array.isArray(project?.galleryKeys)) {
+      for (const key of project.galleryKeys) if (typeof key === "string") keys.add(key);
+    }
+    if (Array.isArray(project?.media)) {
+      for (const item of project.media) {
+        const section = item as { kind?: unknown; key?: unknown; width?: unknown } | undefined;
+        if (section?.kind === "image" && typeof section.key === "string" && !section.width) {
+          keys.add(section.key);
+        }
+      }
+    }
+    const wanted = [...keys]
+      .filter((key) => MEDIA_KEY_PATTERN.test(key))
+      .slice(0, MEDIA_SIZE_MAX_KEYS);
+    const sizes: Record<string, [number, number]> = {};
+    const queue = [...wanted];
+    const worker = async () => {
+      for (let key = queue.shift(); key; key = queue.shift()) {
+        const size = await this.imageSize(key);
+        if (size) sizes[key] = size;
+      }
+    };
+    const work = Promise.all(Array.from({ length: MEDIA_SIZE_CONCURRENCY }, worker));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      work,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, MEDIA_SIZE_BUDGET_MS);
+      }),
+    ]);
+    clearTimeout(timer);
+    return { ...sizes };
+  }
+
+  private async imageSize(key: string): Promise<[number, number] | undefined> {
+    const cacheKey = `cms:projects:media-size:${key}`;
+    const cached = await this.cache.getJson<[number, number] | 0>(cacheKey);
+    if (cached !== undefined) return cached || undefined;
+    try {
+      const metadata = await sharp(await this.storage.readFile(key, MEDIA_SIZE_MAX_BYTES), {
+        limitInputPixels: 100_000_000,
+      }).metadata();
+      if (!metadata.width || !metadata.height) throw new Error("No dimensions");
+      // EXIF orientations 5 to 8 display rotated a quarter turn.
+      const turned = (metadata.orientation ?? 1) >= 5;
+      const size: [number, number] = turned
+        ? [metadata.height, metadata.width]
+        : [metadata.width, metadata.height];
+      await this.cache.setJson(cacheKey, size, MEDIA_SIZE_TTL_SECONDS);
+      return size;
+    } catch {
+      await this.cache.setJson(cacheKey, 0, MEDIA_SIZE_MISS_TTL_SECONDS);
+      return undefined;
+    }
   }
 
   async allIncludingDrafts() {

@@ -86,6 +86,22 @@ export class StorageService {
     return signedUrl;
   }
 
+  /**
+   * Reads a stored object into memory, refusing anything larger than
+   * `maxBytes` (checked against the reported length before reading).
+   */
+  async readFile(key: string, maxBytes: number): Promise<Buffer> {
+    const response = await this.client.send(
+      new GetObjectCommand({ Bucket: this.requireBucket(), Key: key }),
+    );
+    if ((response.ContentLength ?? 0) > maxBytes) {
+      throw new Error(`Object ${key} is larger than ${maxBytes} bytes`);
+    }
+    const bytes = await response.Body?.transformToByteArray();
+    if (!bytes) throw new Error(`Object ${key} has no body`);
+    return Buffer.from(bytes);
+  }
+
   async deleteFile(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.requireBucket(), Key: key }));
   }
