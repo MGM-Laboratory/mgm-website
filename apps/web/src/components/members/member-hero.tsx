@@ -35,7 +35,7 @@ export function MemberHero() {
   return (
     <section
       ref={root}
-      className="relative min-h-[max(76dvh,56.25vw)] overflow-hidden bg-[var(--background)] pt-16"
+      className="relative min-h-[32rem] overflow-hidden bg-[var(--background)] pt-16 sm:min-h-[max(76dvh,56.25vw)]"
     >
       <div className="member-hero-media absolute inset-x-0 top-0 aspect-video origin-top">
         <Image
@@ -49,7 +49,7 @@ export function MemberHero() {
         />
         <div aria-hidden="true" className="member-hero-fade absolute inset-0" />
       </div>
-      <div className="relative mx-auto flex min-h-[calc(max(76dvh,56.25vw)-4rem)] max-w-[1440px] items-end px-5 pb-12 sm:px-8 sm:pb-16 lg:px-12 lg:pb-20">
+      <div className="relative mx-auto flex min-h-[calc(32rem-4rem)] max-w-[1440px] items-end px-5 pb-12 sm:min-h-[calc(max(76dvh,56.25vw)-4rem)] sm:px-8 sm:pb-16 lg:px-12 lg:pb-20">
         <div className="max-w-3xl">
           <h1 className="member-hero-title font-display text-[clamp(3.25rem,8vw,7rem)] font-semibold leading-[0.93] tracking-[-0.055em] text-[var(--ink)] dark:text-white">
             Our Little Family

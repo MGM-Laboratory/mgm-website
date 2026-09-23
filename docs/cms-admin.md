@@ -63,6 +63,8 @@ Large bodies must be streamed through the Next proxy, not parsed into `request.f
 - job CVs: `CMS_MAX_CV_BYTES`, default 100 MB, PDF/DOC/DOCX;
 - contact attachments: 25 MB hard limit.
 
+Publication papers carry a visibility flag of their own. The API serves a paper only when the record states `paperHidden: false`, and answers 404 for every other record, so a hidden paper cannot be read from a known storage key. Papers that predate the flag, and every fresh upload, start hidden: the publication page keeps showing the DOI alone until an editor switches the Paper (PDF) card to Visible.
+
 When adding a media type, enforce the byte limit at the API, preserve the stream through the Next route handler, validate the file type, and ensure deletion cleans up the object as well as the JSON record.
 
 ## Content seeding and failure behavior

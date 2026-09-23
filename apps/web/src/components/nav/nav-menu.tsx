@@ -578,7 +578,7 @@ export function NavMenu() {
           ref={panelRef}
           aria-hidden={!open}
           inert={!open ? true : undefined}
-          className="invisible pointer-events-auto absolute inset-0 flex flex-col overflow-y-auto border-l border-[var(--line)] bg-[var(--surface-muted)] px-6 pt-[clamp(1rem,4dvh,2rem)] pb-[clamp(0.75rem,3dvh,1.5rem)] text-foreground opacity-0 sm:px-10"
+          className="invisible pointer-events-auto absolute inset-0 flex flex-col overflow-y-auto border-l border-[var(--line)] bg-[var(--surface-muted)] px-6 pt-[clamp(0.6rem,2.5dvh,1.25rem)] pb-[clamp(0.5rem,2dvh,1rem)] text-foreground opacity-0 sm:px-10"
         >
           <p className="text-[11px] font-semibold tracking-[0.2em] text-foreground/40 uppercase">
             Menu
@@ -588,8 +588,11 @@ export function NavMenu() {
               this one viewport-height-driven clamp, so the whole list scales
               as one unit — on a short viewport it shrinks enough that all
               eight items plus socials and the legal row fit with no scroll,
-              instead of overflowing at a fixed size. */}
-          <nav className="mt-[2dvh] flex flex-col text-[clamp(1rem,2.7dvh,1.75rem)]">
+              instead of overflowing at a fixed size. The `max-lg` clamp is the
+              larger mobile anchor: it is deliberately bigger than the desktop
+              one, and the tighter panel/bottom-block spacing around it is what
+              keeps the no-scroll guarantee on phones. */}
+          <nav className="mt-[1.25dvh] flex flex-col text-[clamp(1rem,2.7dvh,1.75rem)] max-lg:text-[clamp(1.125rem,3.4dvh,2rem)]">
             {NAV_ITEMS.map((item, i) => {
               const accentVar = toneColor(item.accent);
               const accentStyle = { "--nav-item-accent": accentVar } as CSSProperties;
@@ -726,7 +729,7 @@ export function NavMenu() {
             })}
           </nav>
 
-          <div className="mt-auto flex flex-col gap-[clamp(0.3rem,1dvh,0.85rem)] pt-[clamp(0.4rem,1.2dvh,1.25rem)] text-[clamp(0.7rem,1.7dvh,0.95rem)]">
+          <div className="mt-auto flex flex-col gap-[clamp(0.2rem,0.6dvh,0.5rem)] pt-[clamp(0.25rem,0.7dvh,0.75rem)] text-[clamp(0.7rem,1.7dvh,0.95rem)]">
             <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)]">
               <p className="text-[11px] font-semibold tracking-wide text-foreground/40 uppercase">
                 Let&apos;s Talk
@@ -734,7 +737,7 @@ export function NavMenu() {
               <EmailReveal email={CONTACT_EMAIL} />
             </div>
 
-            <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)] border-t border-[var(--line)] pt-[clamp(0.5rem,1.5dvh,1.25rem)]">
+            <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)] border-t border-[var(--line)] pt-[clamp(0.25rem,0.8dvh,0.6rem)]">
               <p className="text-[11px] font-semibold tracking-wide text-foreground/40 uppercase">
                 Socials
               </p>
@@ -772,7 +775,7 @@ export function NavMenu() {
               </div>
             </div>
 
-            <div className="flex items-center gap-[clamp(0.75rem,2dvh,1.25rem)] border-t border-[var(--line)] pt-[clamp(0.35rem,1dvh,0.75rem)] text-[clamp(0.6rem,1.5dvh,0.75rem)] text-foreground/40">
+            <div className="flex flex-wrap items-center gap-[clamp(0.75rem,2dvh,1.25rem)] border-t border-[var(--line)] pt-[clamp(0.2rem,0.6dvh,0.4rem)] text-[clamp(0.6rem,1.5dvh,0.75rem)] text-foreground/40">
               <span className="whitespace-nowrap">
                 <span className="text-foreground/60">Malang (ID)</span> {wibTime ?? "--:--"}
               </span>

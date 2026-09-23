@@ -44,6 +44,6 @@ Each row: number + label + trailing icon (ArrowUpRight for links, ChevronDown fo
 
 ## Sizing (the no-scroll guarantee)
 
-**Hard requirement from the owner: the menu must never scroll.** All content fits in one view at any aspect ratio, scaling fluidly. Implementation: a single font-size anchor on the `<nav>`, `text-[clamp(1rem,2.7dvh,1.75rem)]`, and **everything else sized in `em` off it** (item text, gaps `0.7em`, paddings, icon sizes). Bento tiles: height `clamp(1.9rem,5.2dvh,3rem)`, text `clamp(0.65rem,1.7dvh,0.95rem)`. Bottom block: `clamp(0.7rem,1.7dvh,0.95rem)`.
+**Hard requirement from the owner: the menu must never scroll.** All content fits in one view at any aspect ratio, scaling fluidly. Implementation: a single font-size anchor on the `<nav>`, `text-[clamp(1rem,2.7dvh,1.75rem)]`, and **everything else sized in `em` off it** (item text, gaps `0.7em`, paddings, icon sizes). The item text itself is larger below `lg` (`max-lg:text-[clamp(1.125rem,3.4dvh,2rem)]`) so the mobile menu reads bigger, paid for by tightening the panel/bottom-block spacing. Bento tiles: height `clamp(2rem,5.2dvh,3rem)`, text `clamp(0.65rem,1.7dvh,0.95rem)`. Bottom block: `clamp(0.7rem,1.7dvh,0.95rem)`.
 
 When changing sizes: verify across viewports (1280×800, 1440×900, 1280×600, mobile 390×844) with **both dropdowns open**, checking no scrollbar appears. Extreme-landscape and ~600px-tall cases fall back to `overflow-y-auto` (documented, accepted). A quick-size change here has broken fit repeatedly. The gap between icons and text was tuned three times (settled: `0.7em`).

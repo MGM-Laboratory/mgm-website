@@ -138,7 +138,7 @@ export type ContactSettings = z.infer<typeof contactSettingsSchema>;
 export const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
   emails: ["hi@labmgm.org"],
   address:
-    "Faculty of Computer Science, Building F Room F10.5 and F10.6\nVeteran Street No. 8, Malang, 65145, Indonesia",
+    "Faculty of Computer Science (FILKOM), Universitas Brawijaya\nBuilding F Room F10.5 and F10.6\nVeteran Street No. 8, Malang, 65145, Indonesia",
   lat: -7.9543,
   lng: 112.6146,
   mailStrategy: "failover",
