@@ -69,7 +69,9 @@ async function encodedSource(img: HTMLImageElement): Promise<Blob | HTMLImageEle
     const { origin, pathname } = new URL(img.currentSrc || img.src, window.location.href);
     const mediaPrefix = "/api/projects-cms/media/";
     if (origin !== window.location.origin || !pathname.startsWith(mediaPrefix)) return img;
-    const key = pathname.slice(mediaPrefix.length);
+    // Re-encoded as a single path segment (as projectMediaUrl builds it),
+    // so the key can't smuggle in extra segments.
+    const key = encodeURIComponent(decodeURIComponent(pathname.slice(mediaPrefix.length)));
     const response = await fetch(`/api/projects-cms/media/${key}`, { cache: "force-cache" });
     if (response.ok) return await response.blob();
   } catch {
