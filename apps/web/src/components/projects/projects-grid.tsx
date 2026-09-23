@@ -65,6 +65,23 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       return;
     }
 
+    // While the intro hides the list, it takes no clicks, no keyboard focus
+    // and stays out of the accessibility tree (opacity alone hides none of
+    // that). Whatever follows the page's <main> (the footer) is held too:
+    // otherwise Tab from the hero skips the hidden list straight into
+    // footer links thousands of pixels down, and the locked page flashes
+    // there until the hero pins it back. Set from here only, never in the
+    // server HTML: CSS can't undo inert, so the <noscript> visitors who
+    // see the list must never get it.
+    const held: HTMLElement[] = [section];
+    for (let el = section.closest("main")?.nextElementSibling; el; el = el.nextElementSibling) {
+      if (el instanceof HTMLElement) held.push(el);
+    }
+    const hold = (on: boolean) => {
+      for (const el of held) el.inert = on;
+    };
+    hold(true);
+
     let cancelled = false;
     let tween: gsap.core.Tween | null = null;
     const timers: number[] = [];
@@ -82,6 +99,7 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
         if (getStageMode() === "pending") setStageMode("dom");
       }
       reveal.started = true;
+      hold(false);
       markGridRevealStarted();
       tween = gsap.fromTo(
         reveal,
@@ -92,6 +110,9 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
 
     return () => {
       cancelled = true;
+      // A Strict Mode rehearsal unmount (or any teardown mid-intro) must
+      // never leave the list or the footer unreachable.
+      hold(false);
       tween?.kill();
       for (const timer of timers) window.clearTimeout(timer);
     };
