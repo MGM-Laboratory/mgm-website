@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 
 import { createScramble } from "@/components/projects/card-text/scramble-text";
 import { createTitleDrop } from "@/components/projects/card-text/title-drop";
+import { createTitleFlip } from "@/components/projects/card-text/title-flip";
 import { observeInViewport, observeSeen } from "@/components/projects/card-text/view-trigger";
 import { waitForGridReveal } from "@/lib/projects-intro";
 
@@ -51,11 +52,11 @@ export function ProjectCardFooter({
   const categoryRef = useRef<HTMLParagraphElement>(null);
   const titleRowRef = useRef<HTMLDivElement>(null);
   const sizerRef = useRef<HTMLSpanElement>(null);
-  // The running title flip, if any (the entrance cancels it on reset).
-  const flipRef = useRef<gsap.core.Timeline | null>(null);
   // One drop controller for the card's lifetime: it outlives re-splits of
   // the title, which only hand it new columns.
   const [drop] = useState(createTitleDrop);
+  // The title hover flip (the entrance stops it on reset).
+  const [flip] = useState(createTitleFlip);
 
   // The title must stay on one line: measure the real rendered width
   // against an invisible sizer and trim with an ellipsis when it overflows.
@@ -99,19 +100,13 @@ export function ProjectCardFooter({
   }, [fullTitle]);
 
   // Runs after every re-split (the truncation above can swap the title
-  // once fonts load or the card resizes), so new columns and flip boxes
-  // pick up the drop's current state and their geometry before paint:
-  // a re-split mid-drop continues the drop instead of flashing the title.
+  // once fonts load or the card resizes), so new columns pick up the
+  // drop's current state before paint: a re-split mid-drop continues the
+  // drop instead of flashing the title.
   useIsomorphicLayoutEffect(() => {
     const titleRow = titleRowRef.current;
     if (!titleRow) return;
     drop.setColumns(titleRow, Array.from(title).length);
-    if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
-    // Never animated: each flip box hangs half a line behind its own
-    // plane, and the flip's rotationX tweens preserve this offset.
-    gsap.set(gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow), {
-      z: -0.5 * parseFloat(getComputedStyle(titleRow).lineHeight),
-    });
   }, [title, drop]);
 
   // The entrance. Server HTML shows the final text; with motion allowed,
@@ -159,14 +154,7 @@ export function ProjectCardFooter({
           drop.reset();
           // A flip still rolling as the card left would otherwise finish
           // on columns that are parked out of sight.
-          const flip = flipRef.current;
-          if (flip) {
-            flip.kill();
-            flipRef.current = null;
-            gsap.set(gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow), {
-              rotationX: 0,
-            });
-          }
+          flip.stop();
         }),
       );
     });
@@ -179,7 +167,7 @@ export function ProjectCardFooter({
       scramble?.finish();
       drop.finish();
     };
-  }, [categoryText, drop]);
+  }, [categoryText, drop, flip]);
 
   useIsomorphicLayoutEffect(() => {
     const titleRow = titleRowRef.current;
@@ -209,28 +197,13 @@ export function ProjectCardFooter({
       0,
     );
 
-    // Title hover: the magicui text-3d-flip — every character is a 3D box
-    // whose front face sits in the text plane and whose back face is
-    // pre-rotated -90deg on X; hovering rotates each box 90deg forward in
-    // a staggered wave and snaps all of them back at once. The container
-    // z-offset and the two face transforms mirror magicui's CharBox
-    // geometry exactly (translateZ offsets of ±0.5lh, no perspective);
-    // only the spring is approximated with a power2 ease.
+    // Title hover: the magicui 3D flip (card-text/title-flip.ts), never
+    // while the letters are still parked or dropping in (it would roll
+    // boxes nobody can see yet).
     // Ownership: the flip rotates the box (copy one), the drop moves the
     // column around it, the indent moves the whole title: three elements.
-    const chars = () => gsap.utils.toArray<HTMLElement>(".project-card-char", titleRow);
-    const flip = () => {
-      // One flip at a time, and never while the letters are still parked
-      // or dropping in (the flip would roll boxes nobody can see yet).
-      if (flipRef.current || drop.state !== "landed") return;
-      flipRef.current = gsap
-        .timeline({
-          onComplete: () => {
-            flipRef.current = null;
-          },
-        })
-        .to(chars(), { rotationX: 90, duration: 0.5, stagger: 0.05, ease: "power2.out" })
-        .add(() => gsap.set(chars(), { rotationX: 0 }));
+    const onTitleEnter = () => {
+      if (drop.state === "landed") flip.play(titleRow);
     };
 
     const onEnter = () => indent.play();
@@ -238,17 +211,15 @@ export function ProjectCardFooter({
 
     root.addEventListener("mouseenter", onEnter);
     root.addEventListener("mouseleave", onLeave);
-    titleRow.addEventListener("mouseenter", flip);
+    titleRow.addEventListener("mouseenter", onTitleEnter);
     return () => {
       root.removeEventListener("mouseenter", onEnter);
       root.removeEventListener("mouseleave", onLeave);
-      titleRow.removeEventListener("mouseenter", flip);
-      flipRef.current?.kill();
-      flipRef.current = null;
-      gsap.killTweensOf([icon, ...gsap.utils.toArray(".project-card-char", titleRow)]);
+      titleRow.removeEventListener("mouseenter", onTitleEnter);
+      flip.stop();
       indent.kill();
     };
-  }, [drop]);
+  }, [drop, flip]);
 
   return (
     // data-card-footer: the page's cover stage moves this wrapper with the
@@ -297,18 +268,15 @@ export function ProjectCardFooter({
                   key={`${wordIndex}-${charIndex}`}
                 >
                   {/* Copy one is the magicui flip box (the flip owns its
-                      rotation); copies two to four are plain glyphs. */}
-                  <span className="project-card-char relative inline-block [transform-style:preserve-3d]">
-                    <span
-                      className="inline-block [backface-visibility:hidden]"
-                      style={{ transform: "translateZ(0.5lh)" }}
-                    >
+                      transform); copies two to four are plain glyphs. The
+                      box and its two faces are flat text at rest; the 3D
+                      geometry below only applies while the title row
+                      carries data-flipping (card-text/title-flip.ts). */}
+                  <span className="project-card-char relative inline-block in-data-flipping:transform-3d">
+                    <span className="inline-block in-data-flipping:[transform:translateZ(0.5lh)] in-data-flipping:backface-hidden">
                       {char}
                     </span>
-                    <span
-                      className="absolute inset-0 inline-block [backface-visibility:hidden]"
-                      style={{ transform: "rotateX(-90deg) translateZ(0.5lh)" }}
-                    >
+                    <span className="absolute inset-0 hidden in-data-flipping:inline-block in-data-flipping:[transform:rotateX(-90deg)_translateZ(0.5lh)] in-data-flipping:backface-hidden">
                       {char}
                     </span>
                   </span>
