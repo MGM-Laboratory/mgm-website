@@ -67,23 +67,36 @@ export function ProjectCardFooter({
 
     let cancelled = false;
     const fit = () => {
+      // Subpixel width: offsetWidth rounds, and the indent reserve below
+      // leaves no slack for rounding.
       const measure = (text: string) => {
         sizer.textContent = text;
-        return sizer.offsetWidth;
+        return sizer.getBoundingClientRect().width;
       };
-      if (measure(fullTitle) <= row.clientWidth + 1) {
+      // Hover and keyboard focus indent the title one em inside this
+      // overflow-clipped row (the indent timeline below), so the fit leaves
+      // that em free: the tail and the ellipsis stay visible while
+      // indented. Reduced motion never indents and keeps the full width.
+      const indent = window.matchMedia("(prefers-reduced-motion: no-preference)").matches
+        ? parseFloat(getComputedStyle(row).fontSize) || 0
+        : 0;
+      const room = row.clientWidth - indent;
+      if (measure(fullTitle) <= room) {
         setTitle(fullTitle);
         return;
       }
-      // Longest prefix whose ellipsized form still fits on one line.
+      // Longest prefix whose ellipsized form still fits on one line. A cut
+      // right after a word drops the space, so the ellipsis never stands
+      // alone as its own word.
+      const ellipsized = (length: number) => `${fullTitle.slice(0, length).trimEnd()}…`;
       let lo = 1;
       let hi = fullTitle.length;
       while (lo < hi) {
         const mid = (lo + hi + 1) >> 1;
-        if (measure(`${fullTitle.slice(0, mid)}…`) <= row.clientWidth) lo = mid;
+        if (measure(ellipsized(mid)) <= room) lo = mid;
         else hi = mid - 1;
       }
-      setTitle(`${fullTitle.slice(0, lo)}…`);
+      setTitle(ellipsized(lo));
     };
 
     fit();
@@ -325,11 +338,14 @@ export function ProjectCardFooter({
           ))}
         </span>
         {/* Invisible sizer mirroring the title typography, used by the
-            one-line truncation measurement above. */}
+            one-line truncation measurement above. Every title character
+            is its own box, so no kerning pair or ligature forms between
+            them; the sizer turns both off to match (kerned plain text
+            measured up to ~10px narrower than the split title). */}
         <span
           ref={sizerRef}
           aria-hidden="true"
-          className="pointer-events-none invisible absolute top-0 left-0 font-display font-medium tracking-[-0.02em] whitespace-nowrap"
+          className="pointer-events-none invisible absolute top-0 left-0 font-display font-medium tracking-[-0.02em] whitespace-nowrap [font-kerning:none] [font-variant-ligatures:none]"
         />
       </div>
     </div>
