@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowUp,
   CalendarBlank,
+  CaretDown,
   Check,
   FloppyDisk,
   ImageSquare,
@@ -812,6 +813,8 @@ export function ProjectEditor({
   const [coverUpload, setCoverUpload] = useState<string>();
   const [coverToEdit, setCoverToEdit] = useState<string>();
   const [mediaStatus, setMediaStatus] = useState<MediaUploadStatus>({ busy: 0, failed: 0 });
+  // The detail page no longer renders the write-up, so it starts folded away.
+  const [writeUpOpen, setWriteUpOpen] = useState(false);
   const [contributorPhotos, setContributorPhotos] = useState<
     Record<string, ContributorPhotoUpload>
   >({});
@@ -1346,18 +1349,50 @@ export function ProjectEditor({
             />
           </div>
 
-          <div className="mt-5 rounded-2xl border border-[#dfe4ee] bg-white p-1 shadow-[0_18px_45px_-35px_rgba(20,32,58,0.5)] dark:border-white/10 dark:bg-white/[0.03]">
-            <BlocknoteEditor
-              initialContent={body}
-              mediaBase="/api/projects-cms/media"
-              onChange={setBody}
-              uploadPath={`/api/admin/projects/${encodeURIComponent(draft.slug || "draft")}/media`}
-            />
-          </div>
-          <p className="mt-3 text-xs text-[#9ba4b5] dark:text-white/35">
-            Type <span className="font-semibold">/</span> for blocks, drag the ⋮⋮ handle to
-            rearrange, and drop images straight into the page.
-          </p>
+          <section className="mt-5 rounded-2xl border border-[#dfe4ee] bg-white shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+            <button
+              aria-controls="project-write-up"
+              aria-expanded={writeUpOpen}
+              className="group flex w-full items-start justify-between gap-4 rounded-2xl p-4 text-left transition hover:bg-[#f8fafd] focus-visible:ring-4 focus-visible:ring-brand-blue/15 focus-visible:outline-none dark:hover:bg-white/[0.03]"
+              onClick={() => setWriteUpOpen((current) => !current)}
+              type="button"
+            >
+              <span className="min-w-0">
+                <span className="block font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
+                  Write-up (archive)
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-[#8490a5] dark:text-white/40">
+                  Kept with the project for reference. The detail page shows the description, media
+                  sections, services and links instead.
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2 pt-0.5 text-xs font-semibold text-[#5d687d] dark:text-white/55">
+                {body.length ? `${body.length} block${body.length === 1 ? "" : "s"}` : "Empty"}
+                <CaretDown
+                  aria-hidden="true"
+                  className="transition group-aria-expanded:rotate-180"
+                  size={14}
+                  weight="bold"
+                />
+              </span>
+            </button>
+            {writeUpOpen ? (
+              <div className="px-4 pb-4" id="project-write-up">
+                <div className="rounded-2xl border border-[#dfe4ee] bg-white p-1 shadow-[0_18px_45px_-35px_rgba(20,32,58,0.5)] dark:border-white/10 dark:bg-white/[0.03]">
+                  <BlocknoteEditor
+                    initialContent={body}
+                    mediaBase="/api/projects-cms/media"
+                    onChange={setBody}
+                    uploadPath={`/api/admin/projects/${encodeURIComponent(draft.slug || "draft")}/media`}
+                  />
+                </div>
+                <p className="mt-3 text-xs text-[#9ba4b5] dark:text-white/35">
+                  Type <span className="font-semibold">/</span> for blocks, drag the ⋮⋮ handle to
+                  rearrange, and drop images straight into the page.
+                </p>
+              </div>
+            ) : null}
+          </section>
 
           <div className="mt-8 space-y-5">
             <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
