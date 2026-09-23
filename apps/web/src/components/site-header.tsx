@@ -13,12 +13,17 @@ import { NavMenu } from "@/components/nav/nav-menu";
 // The nav panel/overlay NavMenu renders are `fixed` themselves and sit at a
 // lower z-index than this header, so the header (logo + toggle) stays
 // crisp and clickable on top while the panel slides in below it.
+//
+// The frosted glass is the first child, not the <header> itself: see the
+// .site-header block in globals.css for why the menu needs it that way.
 export function SiteHeader() {
   const pathname = usePathname();
   if (pathname.startsWith("/admin")) return null;
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between gap-4 border-b border-[var(--line)] bg-background px-6 sm:px-10">
+    <header className="site-header fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between gap-4 px-6 sm:px-10">
+      <div aria-hidden className="site-header-glass" />
+
       <LogoMark />
 
       <div className="flex items-center gap-2 sm:gap-4">
