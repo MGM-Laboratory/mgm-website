@@ -299,7 +299,9 @@ export class CoverEngine {
 
     for (const card of first) {
       if (card.state === "prepared") this.upload(card);
-      if (card.state === "uploaded") this.attach(card);
+      // Once the list is showing (a stage that got ready late), the frame
+      // loop decides when each card can be taken over.
+      if (card.state === "uploaded" && !gridRevealState.started) this.attach(card);
     }
     this.renderDirty = true;
     return true;
@@ -645,14 +647,39 @@ export class CoverEngine {
   }
 
   /**
-   * Hands a card's cover to the stage. Only ever while the list is still
-   * hidden or the card is off screen, so the swap from the DOM picture
-   * (1.0x) to the GL one (1.026x overscan) is never seen.
+   * Hands a card's cover to the stage: while the list is still hidden, while
+   * the card is off screen, or (attachAtRest) on screen at a moment the swap
+   * can't show.
    */
   private attach(card: Card) {
     card.state = "attached";
     card.frame.dataset.stage = "gl";
+    // The footer's y changes owner (the DOM scroll reaction may have left
+    // one): force the next write even if it matches the cached value.
+    card.footerY = Number.NaN;
     this.renderDirty = true;
+  }
+
+  /**
+   * A cover that became ready while its card was on screen: the DOM cover
+   * has played its own opening by then, so the stage takes over at rest,
+   * only while both renderings are identical: the DOM cover resting (no
+   * opening, no hover, no scroll reaction; it rests at the same 1.026x
+   * overscan) and the page still (no lens, no bend).
+   */
+  private attachAtRest(card: Card) {
+    const frame = card.frame;
+    if (
+      frame.dataset.domOpening !== undefined ||
+      frame.dataset.domHover !== undefined ||
+      frame.style.transform
+    ) {
+      return;
+    }
+    this.attach(card);
+    card.time = SETTLE_SECONDS;
+    card.focusHeld = false;
+    card.focus.reset(0);
   }
 
   private detach(card: Card) {
@@ -752,6 +779,8 @@ export class CoverEngine {
     this.lastAlpha = alpha;
     this.lastRevealY = revealY;
 
+    // Nothing moving the covers: an on-screen takeover can't show.
+    const still = moved === 0 && lens === 0 && this.bow.atRest;
     const offset = revealY - scrollY;
     for (const card of this.cards.values()) {
       const top = card.top + offset;
@@ -768,7 +797,10 @@ export class CoverEngine {
         this.loadCover(card);
       }
       if (card.state === "prepared" && !this.uploadedThisFrame) this.upload(card);
-      if (card.state === "uploaded" && (!revealed || !inRange)) this.attach(card);
+      if (card.state === "uploaded") {
+        if (!revealed || !inRange) this.attach(card);
+        else if (still) this.attachAtRest(card);
+      }
       if (card.state !== "attached" || !card.mesh || !card.uniforms) {
         card.inRange = inRange;
         continue;

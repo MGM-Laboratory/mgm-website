@@ -4,11 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
 import { PatternTile, type PatternKind } from "@/components/process/pattern-tile";
-import {
-  getStageMode,
-  onStageModeChange,
-  registerStageCard,
-} from "@/components/projects/stage/stage-registry";
+import { registerStageCard } from "@/components/projects/stage/stage-registry";
 import { waitForGridReveal } from "@/lib/projects-intro";
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring
@@ -64,7 +60,9 @@ export function ProjectCardCover({
     return registerStageCard({ root, frame, image: imageRef.current, index });
   }, [index]);
 
-  // DOM opening (only while the page renders its covers in the DOM).
+  // DOM opening: plays for every card the WebGL stage isn't drawing, in any
+  // mode (touch, no WebGL2, a lost context, or a stage that hasn't taken
+  // this card over yet), so no card ever enters as a static picture.
   useIsomorphicLayoutEffect(() => {
     const frame = frameRef.current;
     const lens = lensRef.current;
@@ -77,24 +75,45 @@ export function ProjectCardCover({
     let cancelled = false;
     let observer: IntersectionObserver | null = null;
     let timeline: gsap.core.Timeline | null = null;
+    // Waiting to play on the next entry (re-armed once fully out of view).
+    let armed = false;
+    let inView = false;
     const ownedByStage = () => frame.dataset.stage === "gl";
+    // The stage only takes a card over on screen while its DOM cover
+    // rests (which matches the stage's own rest), so it reads this.
+    const setOpening = (state: "start" | "play" | null) => {
+      if (state) frame.dataset.domOpening = state;
+      else delete frame.dataset.domOpening;
+    };
+
+    // The DOM cover rests at the stage's 1.026x overscan (set here, never
+    // by a class: GSAP owns this element's transform).
+    gsap.set(lens, { scale: ZOOM_REST });
 
     const toStart = () => {
       timeline?.kill();
       gsap.set(frame, { clipPath: CLIP_FROM });
       gsap.set(lens, { scale: ZOOM_FROM, filter: "blur(8px)" });
       gsap.set(edge, { autoAlpha: 1 });
+      setOpening("start");
     };
     const toRest = () => {
       timeline?.kill();
       gsap.set(frame, { clearProps: "clipPath" });
       gsap.set(lens, { scale: ZOOM_REST, filter: "blur(0px)" });
       gsap.set(edge, { autoAlpha: 0 });
+      setOpening(null);
     };
     const play = () => {
       timeline?.kill();
+      setOpening("play");
       timeline = gsap
-        .timeline({ onComplete: () => gsap.set(frame, { clearProps: "clipPath" }) })
+        .timeline({
+          onComplete: () => {
+            gsap.set(frame, { clearProps: "clipPath" });
+            setOpening(null);
+          },
+        })
         .fromTo(
           frame,
           { clipPath: CLIP_FROM },
@@ -124,52 +143,57 @@ export function ProjectCardCover({
         .fromTo(edge, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.7, ease: "power2.out" }, 0);
     };
 
-    // playVisible: at the list's reveal, the cards on screen play their
-    // opening; after a WebGL fallback mid-visit they just stay at rest.
-    const arm = (playVisible: boolean) => {
+    // From the list's reveal on: every card the stage doesn't draw starts
+    // on the opening's first frame, and plays it whenever it comes into
+    // view after having been fully out.
+    const arm = () => {
       if (cancelled || observer) return;
-      if (playVisible) toStart();
-      let first = true;
+      armed = true;
+      if (!ownedByStage()) toStart();
       observer = new IntersectionObserver((entries) => {
         const entry = entries[entries.length - 1];
-        if (!entry || ownedByStage()) return;
-        if (entry.isIntersecting) {
-          if (first && !playVisible) toRest();
-          else play();
-        } else {
+        if (!entry) return;
+        inView = entry.isIntersecting;
+        if (ownedByStage()) {
+          if (!inView) armed = true;
+          return;
+        }
+        if (!inView) {
           // Fully out of view: rewind so the next entry replays it.
           toStart();
+          armed = true;
+        } else if (armed) {
+          armed = false;
+          play();
         }
-        first = false;
       });
       observer.observe(root);
     };
+    void waitForGridReveal().then(arm);
 
-    const whenDom = (playVisible: boolean) => {
-      void waitForGridReveal().then(() => arm(playVisible));
-    };
-    let mode = getStageMode();
-    let offMode: (() => void) | null = null;
-    if (mode === "dom") whenDom(true);
-    else {
-      offMode = onStageModeChange((next) => {
-        const previous = mode;
-        mode = next;
-        if (next !== "dom") return;
-        offMode?.();
-        offMode = null;
-        // Undecided until now: the reveal is still ahead, play on it.
-        // Leaving WebGL mid-visit (a lost context): covers come back at
-        // rest, and only later entries play the DOM opening.
-        whenDom(previous !== "gl");
-      });
-    }
+    // The stage taking this card over, or handing it back (a lost context).
+    const ownership = new MutationObserver(() => {
+      if (ownedByStage()) {
+        // Hidden behind the stage's cover: park it at rest, so a later
+        // handback never uncovers a half-played or rewound opening.
+        toRest();
+      } else if (inView) {
+        // Handed back on screen: it stays at rest (jumping to the start
+        // frame would show); the next entry plays the opening again.
+        armed = false;
+      } else if (observer) {
+        toStart();
+        armed = true;
+      }
+    });
+    ownership.observe(frame, { attributes: true, attributeFilter: ["data-stage"] });
 
     return () => {
       cancelled = true;
-      offMode?.();
+      ownership.disconnect();
       observer?.disconnect();
       timeline?.kill();
+      setOpening(null);
     };
   }, []);
 
@@ -215,16 +239,38 @@ export function ProjectCardCover({
     const tiltX = gsap.quickTo(img, "rotationX", { duration: 0.5, ease: "power2.out" });
     const tiltY = gsap.quickTo(img, "rotationY", { duration: 0.5, ease: "power2.out" });
 
+    // Marked busy while the hover plays or settles back (the blur-out and
+    // the tilt's return both end within 0.55 s): the stage never takes a
+    // card over on screen mid-hover, where its resting cover would jump.
+    let settle: gsap.core.Tween | null = null;
+    const markBusy = () => {
+      settle?.kill();
+      settle = null;
+      frame.dataset.domHover = "";
+    };
+    const markSettling = () => {
+      if (frame.dataset.domHover === undefined) return;
+      settle?.kill();
+      settle = gsap.delayedCall(0.55, () => {
+        settle = null;
+        delete frame.dataset.domHover;
+      });
+    };
+
     const onEnter = () => {
-      if (!ownedByStage()) focusIn();
+      if (ownedByStage()) return;
+      markBusy();
+      focusIn();
     };
     const onLeave = () => {
       blurOut();
       tiltX(0);
       tiltY(0);
+      markSettling();
     };
     const onMove = (event: MouseEvent) => {
       if (ownedByStage()) return;
+      if (frame.dataset.domHover === undefined || settle) markBusy();
       const rect = root.getBoundingClientRect();
       const px = (event.clientX - rect.left) / rect.width - 0.5;
       const py = (event.clientY - rect.top) / rect.height - 0.5;
@@ -240,6 +286,8 @@ export function ProjectCardCover({
       root.removeEventListener("mouseleave", onLeave);
       root.removeEventListener("mousemove", onMove);
       gsap.killTweensOf(img);
+      settle?.kill();
+      delete frame.dataset.domHover;
     };
   }, []);
 
