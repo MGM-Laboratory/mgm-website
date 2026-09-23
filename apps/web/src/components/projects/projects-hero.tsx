@@ -224,10 +224,12 @@ export function ProjectsHero({ count }: { count: number }) {
         // separate tween) so killing the timeline also stops the count.
         const counter = { value: 0 };
 
+        // Each letter rises out of the mask tilted 30deg and levels off
+        // as it lands, the way lusion's title enters.
         tl.fromTo(
           chars,
-          { yPercent: 100, opacity: 0 },
-          { yPercent: 0, opacity: 1, duration: 0.85, stagger: 0.06 },
+          { yPercent: 100, rotation: 30, opacity: 0 },
+          { yPercent: 0, rotation: 0, opacity: 1, duration: 0.85, stagger: 0.06 },
           0.1,
         )
           // The count slides up from behind its own mask, then counts from 0.
