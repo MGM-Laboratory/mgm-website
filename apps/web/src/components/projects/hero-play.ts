@@ -495,10 +495,12 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
 
   /** Fires the arrow and scrolls the page to the list. */
   function fire(e: MouseEvent) {
-    const list = document.getElementById("projects");
-    // No list on the page: leave the native link alone.
-    if (!list) return;
+    // Always handled here: a native fragment jump also fires popstate,
+    // which the page-transition curtain reads as a back/forward navigation
+    // (and then waits on a pathname change that never comes).
     e.preventDefault();
+    // Without a list (the empty state), aim at whatever follows the hero.
+    const target = document.getElementById("projects") ?? root.nextElementSibling;
     lastInput = performance.now();
     arrow.held = false;
     arrow.x.v += 5;
@@ -518,11 +520,13 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       .to(arrowShaft, { drawSVG: "0% 100%", duration: 0.5, ease: "power3.out" }, "+=0.05");
     glance(arrow.cx + arrow.size, arrow.cy + arrow.size, 1.2);
     flinch();
+    if (!target) return;
     // Through the page's scroller (a JS smooth scroller would fight a
-    // direct window scroll); the offset honours the list's scroll margin.
-    const margin = parseFloat(getComputedStyle(list).scrollMarginTop) || 0;
+    // direct window scroll); the offset honours the list's scroll margin
+    // (scroll-mt-24, which the empty state's box lacks).
+    const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 96;
     gsap.delayedCall(0.12, () => {
-      if (alive) scrollPageTo(list, { duration: 1.1, offset: -margin });
+      if (alive) scrollPageTo(target, { duration: 1.1, offset: -margin });
     });
   }
 
