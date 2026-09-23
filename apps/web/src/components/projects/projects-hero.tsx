@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 
+import { startHeroPlay } from "@/components/projects/hero-play";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { scrollPageTo } from "@/lib/page-scroll";
 import { beginProjectsIntro, finishProjectsIntro } from "@/lib/projects-intro";
@@ -19,6 +20,26 @@ if (typeof window !== "undefined") {
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const HERO_TITLE = "PROJECT";
+
+// Each letter's slot is frozen at its Hanken Grotesk 500 advance plus the
+// 0.05em tracking, straight from the server HTML: the idle play swells
+// letters' weight, and a frozen slot means a heavier letter never shoves
+// its neighbours (or the whole word) sideways. The glyph is centered in
+// its slot, so a heavier one grows evenly both ways.
+const SLOT_EM: Record<string, number> = {
+  P: 0.6066,
+  R: 0.6526,
+  O: 0.7978,
+  J: 0.6032,
+  E: 0.6326,
+  C: 0.7558,
+  T: 0.636,
+};
+const HERO_CHARS = HERO_TITLE.split("");
+const HERO_SLOTS = HERO_CHARS.map((char) => SLOT_EM[char]);
+// Letters lean and squash about the ink centre on the baseline (the slot
+// centre minus half the trailing tracking), so they stay planted on it.
+const GLYPH_PIVOT = "calc(50% - 0.025em) 0.9235em";
 
 const INTRO_LOCK_OWNER = "projects-intro";
 // The display-font wait never holds the entrance longer than this.
@@ -121,6 +142,7 @@ export function ProjectsHero({ count }: { count: number }) {
 
     let cancelled = false;
     let tl: gsap.core.Timeline | null = null;
+    let stopPlay: (() => void) | undefined;
     let fontTimer = 0;
     let failsafeTimer = 0;
 
@@ -175,6 +197,7 @@ export function ProjectsHero({ count }: { count: number }) {
             if (cancelled) return;
             endIntro();
             enteredRef.current = true;
+            stopPlay = startHeroPlay(root, { slots: HERO_SLOTS });
           },
         });
 
@@ -234,6 +257,7 @@ export function ProjectsHero({ count }: { count: number }) {
       // strand the lock or a list that waits for an intro nobody will end.
       endIntro();
       tl?.kill();
+      stopPlay?.();
     };
   }, [count]);
 
@@ -247,18 +271,29 @@ export function ProjectsHero({ count }: { count: number }) {
           {".projects-hero-char,.projects-hero-number,.projects-hero-arrow{opacity:1 !important}"}
         </style>
       </noscript>
-      <div className="relative">
+      <div className="projects-hero-wrap relative">
+        {/* The rise mask (overflow-hidden) is lifted once the entrance is
+            over, so hopping letters can leave the line box. nowrap: no
+            weight swell may ever wrap the T onto a second line. */}
         <h1
-          className="overflow-hidden font-display text-[17vw] leading-[1.15em] font-medium tracking-[0.05em] text-[#0e1116] dark:text-white"
+          className="relative overflow-hidden font-display text-[17vw] leading-[1.15em] font-medium tracking-[0.05em] whitespace-nowrap text-[#0e1116] select-none [-webkit-touch-callout:none] dark:text-white"
           aria-label="Projects"
         >
-          {HERO_TITLE.split("").map((char, index) => (
+          {HERO_CHARS.map((char, index) => (
+            // Two layers with separate owners: the entrance moves the outer
+            // slot, the idle play moves the inner glyph.
             <span
               aria-hidden="true"
-              className="projects-hero-char inline-block opacity-0 will-change-transform"
+              className="projects-hero-char relative inline-flex justify-center opacity-0 will-change-transform"
+              style={{ width: `${SLOT_EM[char]}em` }}
               key={index}
             >
-              {char}
+              <span
+                className="projects-hero-glyph relative inline-block"
+                style={{ transformOrigin: GLYPH_PIVOT }}
+              >
+                {char}
+              </span>
             </span>
           ))}
         </h1>
