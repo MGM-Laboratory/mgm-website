@@ -30,6 +30,14 @@ function paperKeyOf(record: Record<string, unknown>) {
   return typeof publication?.paperKey === "string" ? publication.paperKey : undefined;
 }
 
+// A paper is private unless the record opts in explicitly. Records that
+// predate the flag (and every record saved without it, since the write schema
+// defaults it to true) count as hidden.
+function isPaperHidden(record: Record<string, unknown>) {
+  const publication = record.publication as { paperHidden?: unknown } | undefined;
+  return publication?.paperHidden !== false;
+}
+
 function authorPhotoKeysOf(record: Record<string, unknown>) {
   const publication = record.publication as { authors?: unknown } | undefined;
   if (!Array.isArray(publication?.authors)) return [];
@@ -71,7 +79,12 @@ export class CmsPublicationsService {
     return records;
   }
 
-  /** Whether a paper key belongs to a published (non-draft) publication. */
+  /**
+   * Whether a paper key may be served: the key has to belong to a published
+   * (non-draft) publication that also marks the paper visible. Hidden papers
+   * 404 even when their storage key is known, which is the whole point of the
+   * flag; a hidden paper never leaves storage, it just stops being served.
+   */
   async paperIsPublished(key: string) {
     const cacheKey = `cms:publications:paper-allowed:${key}`;
     const cached = await this.cache.getJson<boolean>(cacheKey);
@@ -80,7 +93,10 @@ export class CmsPublicationsService {
     const records = await this.prisma.cmsPublication.findMany({
       where: { data: { path: ["publication", "paperKey"], equals: key } },
     });
-    const allowed = records.some((record) => !isDraft(record.data as Record<string, unknown>));
+    const allowed = records.some((record) => {
+      const data = record.data as Record<string, unknown>;
+      return !isDraft(data) && !isPaperHidden(data);
+    });
     await this.cache.setJson(cacheKey, allowed, PAPER_ALLOWED_TTL_SECONDS);
     return allowed;
   }

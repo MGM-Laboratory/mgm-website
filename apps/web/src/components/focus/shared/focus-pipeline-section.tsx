@@ -4,6 +4,8 @@ import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
+import { killTriggerOnComplete } from "@/lib/scroll-reveal";
+
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
@@ -15,7 +17,7 @@ function reducedMotion() {
 export type PipelineStage = { label: string; detail: string };
 
 // The one dark, high-contrast --surface-inverse moment every Focus page has
-// (DESIGN_SYSTEM.md caps it at once per page): a `once: true` ScrollTrigger
+// (DESIGN_SYSTEM.md caps it at once per page): a play-once ScrollTrigger
 // timeline fades up the stage cards and grows a GSAP-owned connector line
 // (`scaleX` set in JS, never a static class — animation-system.md gotcha
 // #1) alongside a staggered dot color change. `dotStyle: "border"` targets
@@ -59,7 +61,11 @@ export function FocusPipelineSection({
     }
 
     gsap.set(line, { scaleX: 0, transformOrigin: "left center" });
-    const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 75%", once: true } });
+    // `once: false` + kill-on-complete instead of `once: true`: identical
+    // visible behavior without the refresh-loop self-kill that crashes when
+    // several triggers mount on a page already scrolled down (see
+    // killTriggerOnComplete in lib/scroll-reveal.ts).
+    const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 75%", once: false } });
     tl.fromTo(
       items,
       { opacity: 0, y: 24 },
@@ -67,6 +73,7 @@ export function FocusPipelineSection({
     )
       .to(line, { scaleX: 1, duration: 1, ease: "power2.inOut" }, "-=0.35")
       .to(dots, { [dotColorProp]: accentVar, duration: 0.3, stagger: 0.22 }, "<");
+    killTriggerOnComplete(tl);
 
     return () => {
       tl.scrollTrigger?.kill();

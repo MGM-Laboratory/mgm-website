@@ -55,7 +55,11 @@ test("desktop idle motion and headline parallax survive returning home", async (
     .first()
     .evaluate((el: HTMLElement) => el.click());
   await expect(page).toHaveURL(/\/articles$/);
-  await page.waitForTimeout(1900);
+  // A click while the curtain is still covering is dropped by design
+  // (route-transition.tsx), so wait out the full floor: cover 0.66s +
+  // MIN_STAY_MS 0.75s + reveal 0.82s plus a margin for the RSC fetch that
+  // gates the /articles sentinel (docs/page-transition.md).
+  await page.waitForTimeout(3200);
   await page
     .locator('a[href="/"]')
     .first()
