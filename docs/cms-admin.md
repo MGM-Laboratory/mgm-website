@@ -85,7 +85,9 @@ A project record also carries the fields its detail page (`/projects/[slug]`, se
 - The editor still writes `galleryKeys` from the image sections, so older readers (the homepage showcase, the list card) keep finding images.
 - Media-section videos play through the same video route as the demo video. A video is public when a published record uses it as its demo video or in a media section.
 - Saving deletes a stored file only when the record no longer references it anywhere: cover, gallery, media sections, posters, or an image block in the body. So pruning a picture from the gallery or the sections never breaks a body that still shows it. Deleting a project removes all of them.
-- The BlockNote body stays in the record and in the editor, but the detail page doesn't render it.
+- The BlockNote body stays in the record and in the editor, but the detail page doesn't render it. The editor folds it into a collapsed "Write-up (archive)" section.
+- The media sections manager uploads a file as soon as it's added, so a file added and never saved stays in storage (there is no delete endpoint for unsaved uploads). Images over 5.5 MB are scaled to a 3840 px long edge and re-encoded as JPEG, because a base64 image just under 6 MB already exceeds the API's 8 MB request limit. Videos get their size, duration and a poster frame read in the browser before they stream through the video route.
+- Removing every section saves an empty list, and an empty list derives again from the cover. To show fewer images, keep at least one section.
 
 ## Content seeding and failure behavior
 
