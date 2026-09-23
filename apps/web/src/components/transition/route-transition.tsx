@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import gsap from "gsap";
 
@@ -58,19 +58,22 @@ import { LogoMark } from "@/components/hero/shapes";
  */
 
 const WHITE_FADE_IN_DURATION = 0.1;
-const WHITE_FADE_OUT_DURATION = 0.35;
+const WHITE_FADE_OUT_DURATION = 0.42;
 const GIANT_SETTLE_DURATION = 0.06;
-const SHRINK_DURATION = 0.4;
+const SHRINK_DURATION = 0.5;
 const SHRINK_FROM_ROTATION = -18;
-const GROW_DURATION = 0.22;
+const GROW_DURATION = 0.28;
 const GROW_TO_ROTATION = 18;
-const FADE_OUT_DURATION = 0.1;
+const FADE_OUT_DURATION = 0.12;
 const GIANT_SCALE_MARGIN = 1.15;
 // Guarantees the idle mark is actually visible for a beat before reversing,
 // even when the destination resolves almost instantly (a fast dev server or
 // a fully static route can otherwise make coverAnimDone and routeReady flip
 // true back-to-back, revealing before the idle mark ever really registers).
-const MIN_STAY_MS = 500;
+// Raised from 500ms after the whole curtain read as a blink (issue #60);
+// the reveal side was slowed by the same proportion so the hold still reads
+// as a deliberate beat rather than a stall.
+const MIN_STAY_MS = 750;
 // See LOGO_PIVOT above: 20x the "just covers the viewport" scale, verified
 // empirically to fully cover every sampled corner across seven aspect
 // ratios (a tall mobile viewport needed 18x; this leaves headroom above
@@ -132,6 +135,11 @@ export function RouteTransition() {
   const pendingRef = useRef<PendingState>(freshPendingState());
 
   const dimsRef = useRef({ width: 0, height: 0 });
+
+  // True while the destination is genuinely still loading (its loading.tsx
+  // fallback is up): drives the "still loading" dot indicator on the
+  // curtain, so a slow route reads as progress instead of a frozen screen.
+  const [waiting, setWaiting] = useState(false);
 
   useEffect(() => {
     function syncViewportSize() {
@@ -231,6 +239,7 @@ export function RouteTransition() {
   function startReveal() {
     const state = pendingRef.current;
     state.revealed = true;
+    setWaiting(false);
     clearCeiling();
     clearHoldTimer();
     clearMinStayTimer();
@@ -288,15 +297,22 @@ export function RouteTransition() {
       if (!pendingRef.current.active) return;
       const sentinel = document.querySelector("[data-route-loading]");
       if (!sentinel) {
+        setWaiting(false);
         pendingRef.current.routeReady = true;
         maybeReveal();
         return;
       }
+      // The destination's loading.tsx fallback is on screen: surface the
+      // waiting indicator immediately (the breathing hold starts at
+      // HOLD_DELAY_MS, which is tuned for cosmetics, not for honesty about
+      // whether we are still waiting).
+      setWaiting(true);
       requestHold();
       const observer = new MutationObserver(() => {
         if (!document.querySelector("[data-route-loading]")) {
           observer.disconnect();
           pendingRef.current.observer = null;
+          setWaiting(false);
           pendingRef.current.routeReady = true;
           maybeReveal();
         }
@@ -476,6 +492,16 @@ export function RouteTransition() {
       >
         <div className="absolute inset-0 flex items-center justify-center">
           <LogoMark ref={logoRef} tone="white" solid className="h-24 w-24 sm:h-32 sm:w-32" />
+          {waiting ? (
+            <span
+              data-route-transition-waiting
+              className="rt-waiting absolute top-[calc(50%+4.5rem)] flex items-center gap-2 sm:top-[calc(50%+5.5rem)]"
+            >
+              <span className="rt-waiting-dot" />
+              <span className="rt-waiting-dot [animation-delay:0.15s]" />
+              <span className="rt-waiting-dot [animation-delay:0.3s]" />
+            </span>
+          ) : null}
         </div>
       </div>
     </>

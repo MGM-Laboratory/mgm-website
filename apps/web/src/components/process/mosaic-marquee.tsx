@@ -199,10 +199,16 @@ export function MosaicMarquee() {
     const idleLoops: gsap.core.Animation[] = [];
 
     const tl = gsap.timeline({
-      scrollTrigger: { trigger: wrap, start: "top 88%", once: true },
+      scrollTrigger: { trigger: wrap, start: "top 88%", once: false },
     });
     tl.fromTo(wrap, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
     tl.eventCallback("onComplete", () => {
+      // `once: false` + this kill-on-complete replaces `once: true`: same
+      // visible behavior without the refresh-loop self-kill that crashes
+      // when several triggers mount on a page already scrolled down (GSAP
+      // 3.15.0 splices the registry mid-refresh; see docs/animation-system.md
+      // gotcha #4 and the Known issues section).
+      tl.scrollTrigger?.kill();
       // Move exactly one copy, independent of how many copies are needed
       // to cover an ultrawide viewport.
       idleLoops.push(

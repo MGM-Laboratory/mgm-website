@@ -88,8 +88,13 @@ export function ProcessSection() {
 
     gsap.utils.toArray<HTMLElement>(".process-row", root).forEach((row) => {
       const items = gsap.utils.toArray<HTMLElement>(".process-item", row);
+      // `once: false` + kill-on-complete instead of `once: true`: identical
+      // visible behavior without the refresh-loop self-kill that crashes
+      // when several triggers mount on a page already scrolled down (GSAP
+      // 3.15.0 splices the registry mid-refresh; see docs/animation-system.md
+      // gotcha #4 and the Known issues section).
       const tl = gsap.timeline({
-        scrollTrigger: { trigger: row, start: "top 82%", once: true },
+        scrollTrigger: { trigger: row, start: "top 82%", once: false },
       });
       tl.fromTo(
         items,
@@ -108,6 +113,9 @@ export function ProcessSection() {
         },
         "-=0.35",
       );
+      tl.eventCallback("onComplete", () => {
+        tl.scrollTrigger?.kill();
+      });
       if (tl.scrollTrigger) triggers.push(tl.scrollTrigger);
     });
 
