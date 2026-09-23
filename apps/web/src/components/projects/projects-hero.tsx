@@ -11,6 +11,7 @@ import { CompetencyMotifShape } from "@/components/sections/competency-motif";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { scrollPageTo } from "@/lib/page-scroll";
 import { beginProjectsIntro, finishProjectsIntro } from "@/lib/projects-intro";
+import { onReducedMotion } from "@/lib/reduced-motion";
 import { waitForRouteReveal } from "@/lib/route-reveal";
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 
@@ -144,10 +145,9 @@ export function ProjectsHero({ count }: { count: number }) {
     if ((reduced || count === 0) && history.scrollRestoration === "manual") {
       ScrollTrigger.clearScrollMemory("auto");
     }
-    if (reduced) {
-      // Nothing to wait for: the list shows at once and nothing is locked.
-      finishProjectsIntro();
-      gsap.set(chars, { yPercent: 0, opacity: 1 });
+    // The finished hero, as reduced motion shows it from the start.
+    const showFinal = () => {
+      gsap.set(chars, { yPercent: 0, rotation: 0, opacity: 1 });
       gsap.set(numberWrap, { yPercent: 0, opacity: 1 });
       gsap.set(arrow, { opacity: 1 });
       gsap.set(arrowPath, { drawSVG: "100%" });
@@ -155,6 +155,11 @@ export function ProjectsHero({ count }: { count: number }) {
       // No play: the eye stays a still, centered dot.
       gsap.set(q(".projects-hero-pupil"), { autoAlpha: 1 });
       enteredRef.current = true;
+    };
+    if (reduced) {
+      // Nothing to wait for: the list shows at once and nothing is locked.
+      finishProjectsIntro();
+      showFinal();
       return;
     }
 
@@ -314,6 +319,24 @@ export function ProjectsHero({ count }: { count: number }) {
       });
     };
 
+    // Reduced motion switched on mid-intro: the entrance jumps to its end
+    // (its onComplete ends the intro, and the play it starts stays off
+    // under reduced motion), or, before it has started, the hero shows
+    // finished and the intro ends here. Either way the page unlocks now
+    // instead of animating on after the visitor asked for no motion.
+    const offReduced = onReducedMotion(() => {
+      if (cancelled || enteredRef.current) return;
+      if (tl) {
+        tl.progress(1);
+        return;
+      }
+      cancelled = true;
+      window.clearTimeout(fontTimer);
+      showFinal();
+      endIntro();
+      arrowLink?.removeAttribute("tabindex");
+    });
+
     if (skipEntranceForInternalNavRef.current === true) {
       // Arrived behind the transition curtain: play once it has fully
       // revealed the page, so the entrance is actually visible.
@@ -325,6 +348,7 @@ export function ProjectsHero({ count }: { count: number }) {
 
     return () => {
       cancelled = true;
+      offReduced();
       window.clearTimeout(fontTimer);
       // Leaving mid-intro (or Strict Mode's rehearsal unmount) must never
       // strand the lock or a list that waits for an intro nobody will end.
