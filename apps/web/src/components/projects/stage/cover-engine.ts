@@ -21,7 +21,10 @@ import {
   type PreparedCover,
 } from "@/components/projects/stage/cover-textures";
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
-import { gridRevealState } from "@/components/projects/stage/grid-reveal-state";
+import {
+  gridRevealState,
+  OPENING_MIN_REVEAL_OPACITY,
+} from "@/components/projects/stage/grid-reveal-state";
 import { isScrollIdle, trackScrollIdle } from "@/components/projects/stage/scroll-idle";
 import { Spring } from "@/components/projects/stage/spring";
 import {
@@ -867,9 +870,10 @@ export class CoverEngine {
         card.mesh.visible = false;
         continue;
       }
-      // It starts once enough of the frame is on screen; until then the
-      // card holds the opening's first frame, still and sharp.
-      if (card.opening === "armed" && inRange) {
+      // It starts once enough of the frame is on screen (and, at the
+      // reveal, once the list has faded mostly in); until then the card
+      // holds the opening's first frame, still and sharp.
+      if (card.opening === "armed" && inRange && alpha >= OPENING_MIN_REVEAL_OPACITY) {
         const onScreen = Math.min(bottom, vh) - Math.max(top, 0);
         if (onScreen >= OPENING_VISIBLE_SHARE * card.height) this.beginOpening(card);
       }

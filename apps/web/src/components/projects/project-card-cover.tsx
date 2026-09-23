@@ -4,6 +4,10 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
 import { PatternTile, type PatternKind } from "@/components/process/pattern-tile";
+import {
+  gridRevealState,
+  OPENING_MIN_REVEAL_OPACITY,
+} from "@/components/projects/stage/grid-reveal-state";
 import { trackScrollIdle, whenScrollIdle } from "@/components/projects/stage/scroll-idle";
 import {
   FOCUS_HUNT_DELAY,
@@ -34,6 +38,8 @@ const VISIBILITY_STEPS = Array.from({ length: 21 }, (_, i) => i / 20);
 // A touch longer than the list's reveal (0.9 s fade and 28 px rise, see
 // projects-grid.tsx), which moves cards up without a scroll event.
 const REVEAL_RISE_SECONDS = 0.95;
+// When the list's fade-in passes OPENING_MIN_REVEAL_OPACITY, with a margin.
+const REVEAL_FADE_SECONDS = 0.3;
 
 /**
  * The card's forced 3:2 cover frame. The frame registers with the page's
@@ -171,12 +177,14 @@ export function ProjectCardCover({
     // scroll) and once the list's reveal rise has ended.
     const check = () => {
       if (!armed || !inView || ownedByStage()) return;
+      if (gridRevealState.opacity < OPENING_MIN_REVEAL_OPACITY) return;
       const rect = frame.getBoundingClientRect();
       const onScreen = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
       if (onScreen < OPENING_VISIBLE_SHARE * rect.height) return;
       armed = false;
       play();
     };
+    let afterFade: gsap.core.Tween | null = null;
     let afterRise: gsap.core.Tween | null = null;
     const arm = () => {
       if (cancelled || observer) return;
@@ -202,6 +210,7 @@ export function ProjectCardCover({
       observer.observe(root);
       window.addEventListener("scroll", check, { passive: true });
       window.addEventListener("resize", check);
+      afterFade = gsap.delayedCall(REVEAL_FADE_SECONDS, check);
       afterRise = gsap.delayedCall(REVEAL_RISE_SECONDS, check);
     };
     void waitForGridReveal().then(arm);
@@ -230,6 +239,7 @@ export function ProjectCardCover({
       observer?.disconnect();
       window.removeEventListener("scroll", check);
       window.removeEventListener("resize", check);
+      afterFade?.kill();
       afterRise?.kill();
       timeline?.kill();
       setOpening(null);
