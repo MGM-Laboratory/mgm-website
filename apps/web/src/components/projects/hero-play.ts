@@ -22,10 +22,13 @@ if (typeof window !== "undefined") {
  *   counters; the pupil tracks the cursor, glances at events and blinks
  *   (a hard landing makes it flinch).
  * - The instruments: the count re-rolls with a drop; the arrow is pulled
- *   toward a nearby cursor, winds up on hover, and fires (its shaft zips
- *   into the tip and regrows) while the page scrolls to the list.
+ *   toward a nearby cursor, winds up over a yellow disc on hover, and
+ *   fires (its shaft zips into the tip and regrows, and the word flinches)
+ *   while the page scrolls to the list.
+ * - Touch: tapping a letter launches it, and a sideways drag across the
+ *   word strums the letters it crosses.
  * - An idle director plays one beat at a time (peek, blink, breathe,
- *   count) while nobody is interacting.
+ *   count, a hop wave) while nobody is interacting.
  *
  * One fixed-step spring solver on the GSAP ticker writes every physics
  * transform. It only runs while something moves: once everything is calm
@@ -152,13 +155,15 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   const dilate = root.querySelector<HTMLElement>(".projects-hero-pupil-dilate");
   const pupil = root.querySelector<HTMLElement>(".projects-hero-pupil");
   const link = root.querySelector<HTMLElement>(".projects-hero-arrow-link");
+  const disc = root.querySelector<HTMLElement>(".projects-hero-arrow-disc");
   const numberWrap = root.querySelector<HTMLElement>(".projects-hero-number");
   const numberText = root.querySelector<HTMLElement>(".projects-hero-number-text");
   const roll = root.querySelector<HTMLElement>(".projects-hero-number-roll");
   const arrowSvg = root.querySelector<SVGSVGElement>(".projects-hero-arrow");
   const arrowShaft = root.querySelector<SVGPathElement>(".projects-hero-arrow-shaft");
   if (!arrowSvg || !arrowShaft) return;
-  if (!h1 || !look || !dilate || !pupil || !link || !numberWrap || !numberText || !roll) return;
+  if (!h1 || !look || !dilate || !pupil || !link || !disc) return;
+  if (!numberWrap || !numberText || !roll) return;
   if (glyphEls.length !== slots.length) return;
   const residents: Resident[] = [
     ...root.querySelectorAll<HTMLElement>(".projects-hero-resident"),
@@ -177,6 +182,8 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   let held: Glyph | null = null;
   // The pointer in em, relative to the title's top-left corner.
   const pointer = { x: 0, y: 0, inside: false };
+  // A touch drag across the word: where it was last seen (em) and when.
+  const strum = { active: false, startX: 0, x: 0, t: 0 };
   let lastInput = performance.now();
 
   let activeBeat: Beat = null;
@@ -258,6 +265,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   // quickTo drives one real property, not the scale shorthand.
   const dilateX = gsap.quickTo(dilate, "scaleX", { duration: 0.5, ease: "back.out(2)" });
   const dilateY = gsap.quickTo(dilate, "scaleY", { duration: 0.5, ease: "back.out(2)" });
+  gsap.set(disc, { scale: 0, autoAlpha: 1 });
   const putArrow = {
     x: qs(arrowSvg, "x", "px"),
     y: qs(arrowSvg, "y", "px"),
@@ -464,7 +472,25 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   function setHot(on: boolean) {
     arrow.hover = on;
     link!.toggleAttribute("data-hot", on);
+    gsap.to(disc, {
+      scale: on ? 1 : 0,
+      duration: on ? 0.35 : 0.22,
+      ease: on ? "back.out(2)" : "power2.in",
+      overwrite: true,
+    });
     wake();
+  }
+
+  /** The recoil runs back through the word, right to left. */
+  function flinch() {
+    [...glyphs].reverse().forEach((g, k) => {
+      gsap.delayedCall(k * 0.035, () => {
+        if (!running) return;
+        launch(g, 0.05 * 0.85 ** k);
+        g.r.v -= 60 * 0.85 ** k;
+        wake();
+      });
+    });
   }
 
   /** Fires the arrow and scrolls the page to the list. */
@@ -491,6 +517,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       )
       .to(arrowShaft, { drawSVG: "0% 100%", duration: 0.5, ease: "power3.out" }, "+=0.05");
     glance(arrow.cx + arrow.size, arrow.cy + arrow.size, 1.2);
+    flinch();
     // Through the page's scroller (a JS smooth scroller would fight a
     // direct window scroll); the offset honours the list's scroll margin.
     const margin = parseFloat(getComputedStyle(list).scrollMarginTop) || 0;
@@ -655,6 +682,20 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     );
   }
 
+  /** Each letter crouches and hops in turn, then the arrow nods on. */
+  function hopWave(): Beat {
+    wake();
+    const tl = gsap.timeline({ data: "glyphs" });
+    glyphs.forEach((g, i) => {
+      tl.call(() => void (g.s.v -= 1.2), [], i * 0.07).call(
+        () => launch(g, 0.1),
+        [],
+        i * 0.07 + 0.08,
+      );
+    });
+    return tl.call(nudgeArrow, [], glyphs.length * 0.07 + 0.1).set({}, {}, "+=0.5");
+  }
+
   /** The eye opens once the entrance is over, and looks at the arrow. */
   function openEye(): Beat {
     return gsap
@@ -670,6 +711,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     { id: "blink", weight: 2, whileHovered: true, run: () => blink() },
     { id: "breathe", weight: 2, run: breathe },
     { id: "count", weight: 1, run: () => dropCount(4) },
+    { id: "hop", weight: 1, run: hopWave },
   ];
 
   // Idle gaps stretch on touch devices and once nobody has touched
@@ -727,6 +769,10 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     if (e.button !== 0) return;
     if (e.pointerType === "mouse") onMove(e);
     lastInput = performance.now();
+    if (e.pointerType !== "mouse") {
+      const [x] = toLocal(e);
+      Object.assign(strum, { active: true, startX: x, x, t: e.timeStamp });
+    }
     const target = e.target as Element;
     const glyphEl = target.closest<HTMLElement>(".projects-hero-glyph");
     if (glyphEl) {
@@ -747,7 +793,40 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     }
   }
 
+  /**
+   * The strum (touch only; the title allows vertical panning, so a
+   * sideways drag stays with us): every letter the finger crosses near the
+   * cap middle gets a kick scaled by the drag's speed. It also cancels a
+   * pending tap launch.
+   */
+  function onTouchMove(e: PointerEvent) {
+    if (e.pointerType === "mouse" || !strum.active) return;
+    const [x, y] = toLocal(e);
+    const dt = Math.max((e.timeStamp - strum.t) / 1000, 1 / 240);
+    const vx = (x - strum.x) / dt;
+    if (held && Math.abs(x - strum.startX) > 0.1) {
+      held.held = false;
+      held = null;
+    }
+    if (Math.abs(vx) >= 1.2 && Math.abs(y - CAP_MID) < 0.5) {
+      const lo = Math.min(strum.x, x);
+      const hi = Math.max(strum.x, x);
+      const m = clamp(-1, 1, vx / 6);
+      for (const g of glyphs) {
+        if (g.cx < lo || g.cx > hi) continue;
+        g.x.v += m;
+        g.r.v += m * 180;
+        g.vy -= Math.abs(m) * 2.4;
+        g.s.v += Math.abs(m);
+      }
+      wake();
+    }
+    strum.x = x;
+    strum.t = e.timeStamp;
+  }
+
   function onUp() {
+    strum.active = false;
     arrow.held = false;
     if (held) {
       const g = held;
@@ -763,6 +842,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
 
   // A touch that turned into a scroll: let go without a launch.
   function onCancel() {
+    strum.active = false;
     arrow.held = false;
     if (held) {
       held.held = false;
@@ -788,6 +868,9 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     arrow.held = false;
     arrow.hover = false;
     link!.removeAttribute("data-hot");
+    gsap.killTweensOf(disc);
+    gsap.set(disc, { scale: 0 });
+    strum.active = false;
     pointer.inside = false;
     lookAt(null);
     sleep(true);
@@ -854,6 +937,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   listen(link, "blur", () => setHot(false));
   listen(link, "click", fire);
   listen(root, "pointerdown", onDown);
+  listen(root, "pointermove", onTouchMove, { passive: true });
   listen(window, "pointerup", onUp);
   listen(window, "pointercancel", onCancel);
   listen(document, "visibilitychange", sync);

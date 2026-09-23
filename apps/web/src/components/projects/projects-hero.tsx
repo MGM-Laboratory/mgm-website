@@ -309,7 +309,7 @@ export function ProjectsHero({ count }: { count: number }) {
             over, so hopping letters can leave the line box. nowrap: no
             weight swell may ever wrap the T onto a second line. */}
         <h1
-          className="relative overflow-hidden font-display text-[17vw] leading-[1.15em] font-medium tracking-[0.05em] whitespace-nowrap text-[#0e1116] select-none [-webkit-touch-callout:none] dark:text-white"
+          className="relative touch-pan-y touch-pinch-zoom overflow-hidden font-display text-[17vw] leading-[1.15em] font-medium tracking-[0.05em] whitespace-nowrap text-[#0e1116] select-none [-webkit-touch-callout:none] dark:text-white"
           aria-label="Projects"
         >
           {/* The residents: Bauhaus shapes that live behind the word and
@@ -386,14 +386,21 @@ export function ProjectsHero({ count }: { count: number }) {
           onClick={(event) => {
             if (!enteredRef.current) event.preventDefault();
           }}
-          className="projects-hero-arrow-link absolute block size-[1em] rounded-md text-[clamp(1.5rem,4vw,4rem)] text-[#0e1116] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)] dark:text-white"
+          className="projects-hero-arrow-link group absolute block size-[1em] rounded-md text-[clamp(1.5rem,4vw,4rem)] text-[#0e1116] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)] dark:text-white"
           style={{ right: "calc(-1em / 38)", bottom: `calc(${TITLE_CAP_INSET} - 1em / 38)` }}
         >
+          {/* A brand-yellow disc swells behind the arrow while it is wound
+              up; the arrow turns ink on it in both themes (yellow never
+              sits under white). */}
+          <span
+            aria-hidden="true"
+            className="projects-hero-arrow-disc invisible absolute -inset-[18%] rounded-full bg-brand-yellow"
+          />
           {/* `block` drops the inline-svg descender gap, so the glyph sits
               exactly in the link's box. */}
           <svg
             aria-hidden="true"
-            className="projects-hero-arrow block size-full opacity-0"
+            className="projects-hero-arrow relative block size-full opacity-0 transition-colors duration-200 group-data-[hot]:text-[#0e1116]"
             viewBox="0 0 38 38"
             fill="none"
           >
