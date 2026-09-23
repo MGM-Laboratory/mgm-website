@@ -28,6 +28,7 @@ import {
   onStageCardsChange,
   type StageCard,
 } from "@/components/projects/stage/stage-registry";
+import { randomBetween } from "@/lib/random";
 
 /**
  * The /projects cover stage: one full-viewport WebGL canvas (fixed, at the
@@ -827,7 +828,7 @@ export class CoverEngine {
         JOLT_TIMES.forEach((at, i) => {
           if (before < at && card.hoverTime >= at) {
             // Two small handheld "camera" kicks, the second one weaker.
-            const angle = Math.random() * Math.PI * 2;
+            const angle = randomBetween(0, Math.PI * 2);
             const size = i === 0 ? 0.667 : 0.25;
             jolt.tx = Math.cos(angle) * size;
             jolt.ty = Math.sin(angle) * size;
