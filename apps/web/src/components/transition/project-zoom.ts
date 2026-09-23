@@ -298,6 +298,8 @@ export class ProjectZoom {
   private forceDom = false;
   private lastPrepare: { ms: number; picture: string; renderer: string } | null = null;
   private lastExit: { picture: string; uploaded: boolean | null; renderer: string } | null = null;
+  // The running zoom's progress, 0..1 (verification only).
+  private progress = 0;
 
   constructor({ root, layer, shield, navigate, prefetch, pathname }: ProjectZoomOptions) {
     this.root = root;
@@ -538,6 +540,7 @@ export class ProjectZoom {
     let pushed = false;
     const draw = (t: number) => {
       const frame = enterFrame(t, s.source, run.view);
+      this.progress = t;
       renderer.draw(frame);
       this.layer.style.opacity = String(frame.layer);
       this.tint.set(frame.tint);
@@ -704,6 +707,7 @@ export class ProjectZoom {
       // Follows the card through any late layout shift (fonts settling).
       source.rect = toRect(frame.getBoundingClientRect());
       const zoom = exitFrame(t, source, run.view);
+      this.progress = t;
       if (!landed && t >= EXIT_LAND_AT) {
         // At rest on the card: the real cover shows under the fading quad.
         landed = true;
@@ -1000,6 +1004,7 @@ export class ProjectZoom {
         gl: this.gl ? "ready" : this.glFailed ? "failed" : "idle",
         prepare: this.lastPrepare,
         exit: this.lastExit,
+        progress: this.progress,
       }),
       setSlowdown: (factor: number) => {
         this.slowdown = Math.max(0.1, factor);
