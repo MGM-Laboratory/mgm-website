@@ -24,7 +24,7 @@ export default async function ProjectsPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col overflow-x-clip bg-[#fcfcfc] dark:bg-[#0e1116]">
       <main className="flex-1 px-6 sm:px-10 lg:px-14">
         <ProjectsHero count={records.length} />
 
