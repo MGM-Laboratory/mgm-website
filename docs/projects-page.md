@@ -179,7 +179,7 @@ The document scrolls natively, so the keyboard, the scrollbar, find-in-page and 
 
 On a fresh load, after the route curtain or after the project zoom, the page waits for the display font (at most 1.5 s), `waitForRouteReveal()` and `waitForProjectReveal()`. Then it plays lusion's 1.5 s windows:
 
-- The title fades in and rises from the viewport centre into its slot (expo in-out, first 65%).
+- The title fades in and rises from the viewport centre into its slot (expo in-out, first 65%). Stacked, it doesn't move and shows from the first paint, as on lusion's phones. It is the stacked page's largest paint.
 - The description, CTA, credits, services and links each fade and rise 30 px in staggered windows (expo out).
 - The media fade in over the second half.
 - The page is locked (`"project-detail-entrance"`) until 75%.

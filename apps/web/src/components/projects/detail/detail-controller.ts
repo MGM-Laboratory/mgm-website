@@ -590,7 +590,9 @@ export class DetailController {
 
     const rise =
       horizontal && !this.reduced ? fit(this.csr, 0, 0.65, this.centerOffset, 0, expoInOut) : 0;
-    const titleIn = this.o.arrived || this.reduced ? 1 : fit(this.csr, 0, 0.2, 0, 1);
+    // Stacked, the title doesn't move (as on lusion's phones): it is there
+    // from the first paint, which is also the page's largest paint.
+    const titleIn = this.o.arrived || this.reduced || !horizontal ? 1 : fit(this.csr, 0, 0.2, 0, 1);
     this.setTransform(title, `translate3d(${shift(0.5).toFixed(1)}px,${rise.toFixed(1)}px,0)`);
     this.setOpacity(title, Math.min(visible, titleIn));
 

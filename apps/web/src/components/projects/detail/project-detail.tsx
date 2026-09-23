@@ -291,7 +291,7 @@ export function ProjectDetail({ data }: { data: DetailData }) {
 
         <div className={styles.meta} data-detail-meta="" ref={metaRef}>
           <h1
-            className={cn(styles.titleType, styles.title, !arrived && "motion-safe:opacity-0")}
+            className={cn(styles.titleType, styles.title, !arrived && styles.titleEnter)}
             data-enter=""
             ref={titleRef}
             style={titleStyle}
