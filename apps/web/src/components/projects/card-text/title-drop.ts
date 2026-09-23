@@ -67,6 +67,13 @@ export type TitleDrop = {
   reset(): void;
   /** Stops with the title landed. */
   finish(): void;
+  /**
+   * Sets the one listener told when the title lands or is parked again by
+   * reset(), so hover affordances can wait for letters that are actually
+   * on screen. finish() stays silent: it is the teardown path, and the
+   * listener's own effect is being torn down alongside it.
+   */
+  onChange(listener: (() => void) | null): void;
 };
 
 export function createTitleDrop(): TitleDrop {
@@ -76,6 +83,7 @@ export function createTitleDrop(): TitleDrop {
   let columns: HTMLElement[] = [];
   let leads: number[] = [];
   let stop: (() => void) | null = null;
+  let listener: (() => void) | null = null;
 
   const paint = () => {
     if (state === "running") {
@@ -110,22 +118,30 @@ export function createTitleDrop(): TitleDrop {
         time += dt * TIME_SCALE;
         // Every lead is >= 0, so all columns have landed once time hits 1.
         if (time >= 1) {
+          // State first, so the listener already reads "landed".
           state = "landed";
           stop = null;
+          paint();
+          listener?.();
+          return false;
         }
         paint();
-        return state === "running";
+        return true;
       });
     },
     reset() {
       halt();
       state = "waiting";
       paint();
+      listener?.();
     },
     finish() {
       halt();
       state = "landed";
       paint();
+    },
+    onChange(next) {
+      listener = next;
     },
   };
 }

@@ -206,8 +206,26 @@ export function ProjectCardFooter({
       if (drop.state === "landed") flip.play(titleRow);
     };
 
-    const onEnter = () => indent.play();
-    const onLeave = () => indent.reverse();
+    // The indent and arrow lead a title that is on screen. While the
+    // letters are parked or still dropping in, the arrow would slide in
+    // beside an empty row, so a hover then waits for the drop to land (the
+    // drop reports landing, and a reset that parks the title again).
+    // `hovered` follows the same mouse events the indent answers to.
+    let hovered = root.matches(":hover");
+    const sync = () => {
+      if (hovered && drop.state === "landed") indent.play();
+      else indent.reverse();
+    };
+    const onEnter = () => {
+      hovered = true;
+      sync();
+    };
+    const onLeave = () => {
+      hovered = false;
+      sync();
+    };
+    drop.onChange(sync);
+    if (hovered) sync();
 
     root.addEventListener("mouseenter", onEnter);
     root.addEventListener("mouseleave", onLeave);
@@ -216,6 +234,7 @@ export function ProjectCardFooter({
       root.removeEventListener("mouseenter", onEnter);
       root.removeEventListener("mouseleave", onLeave);
       titleRow.removeEventListener("mouseenter", onTitleEnter);
+      drop.onChange(null);
       flip.stop();
       indent.kill();
     };
