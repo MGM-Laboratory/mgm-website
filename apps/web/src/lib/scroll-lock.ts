@@ -19,11 +19,15 @@ const listeners = new Set<(locked: boolean) => void>();
 
 function apply(locked: boolean) {
   const html = document.documentElement;
-  html.style.overflow = locked ? "hidden" : "";
   // Hiding a classic (non-overlay) scrollbar would widen the page by its
   // width and shift every right-anchored element; keep its gutter reserved
-  // while locked so nothing moves on lock or unlock.
-  html.style.scrollbarGutter = locked ? "stable" : "";
+  // while locked so nothing moves on lock or unlock. Only when a bar is
+  // showing right now: on a page too short to scroll there is none, and
+  // `stable` would add a gutter (and shift things) of its own. Measured
+  // before overflow is hidden, since the bar is gone after that.
+  const bar = locked ? window.innerWidth - html.clientWidth : 0;
+  html.style.overflow = locked ? "hidden" : "";
+  html.style.scrollbarGutter = bar > 0 ? "stable" : "";
   ScrollSmoother.get()?.paused(locked);
   for (const listener of listeners) listener(locked);
 }
