@@ -51,6 +51,7 @@ import {
   type ProjectVideoMode,
 } from "@/lib/project-cms";
 import { PhotoCropDialog, type PhotoCropPosition } from "@/components/admin/photo-crop-dialog";
+import { Field, inputClass, textareaClass } from "@/components/admin/project-editor/ui";
 
 const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
   ssr: false,
@@ -60,11 +61,6 @@ const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
     </div>
   ),
 });
-
-const inputClass =
-  "h-10 w-full rounded-xl border border-[#d9dfeb] bg-white px-3 text-sm text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
-const textareaClass =
-  "min-h-24 w-full rounded-xl border border-[#d9dfeb] bg-white px-3 py-2.5 text-sm leading-6 text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
 
 const RESIDENCE_AFFILIATION = "MGM Laboratory, University of Brawijaya";
 
@@ -77,28 +73,6 @@ const OUTPUT_TYPES: { id: ProjectOutputLink["type"]; label: string }[] = [
 /** Site paths (a single leading slash) and http(s) URLs only, like the API. */
 function isSafeLink(value: string) {
   return /^https?:\/\//i.test(value) || /^\/(?!\/)/.test(value);
-}
-
-function Field({
-  children,
-  label,
-  hint,
-}: {
-  children: React.ReactNode;
-  label: string;
-  hint?: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-        {label}
-      </span>
-      {children}
-      {hint ? (
-        <p className="mt-1.5 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">{hint}</p>
-      ) : null}
-    </div>
-  );
 }
 
 function EditRow({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
