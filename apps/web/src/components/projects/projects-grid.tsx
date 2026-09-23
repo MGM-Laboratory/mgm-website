@@ -39,7 +39,9 @@ const RISE_PX = 28;
  *
  * The list starts at `opacity-0` from the server (opacity only, so no
  * transform ever stacks with an animated one), with a <noscript> override
- * so visitors without JavaScript still see every project.
+ * so visitors without JavaScript still see every project. The hide only
+ * applies when motion is allowed: reduced motion has no reveal to wait
+ * for, so those visitors see the list in the server HTML right away.
  */
 export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -127,7 +129,7 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       <section
         ref={sectionRef}
         id="projects"
-        className="projects-grid-reveal grid scroll-mt-24 grid-cols-1 gap-x-7 gap-y-16 pb-28 opacity-0 md:grid-cols-2 md:gap-y-20 md:pb-36"
+        className="projects-grid-reveal grid scroll-mt-24 grid-cols-1 gap-x-7 gap-y-16 pb-28 motion-safe:opacity-0 md:grid-cols-2 md:gap-y-20 md:pb-36"
       >
         {records.map((record, index) => (
           <ProjectCard key={record.slug} record={record} index={index} />
