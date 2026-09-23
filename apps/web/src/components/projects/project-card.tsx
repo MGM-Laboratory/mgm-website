@@ -48,7 +48,7 @@ export function ProjectCard({
     >
       <ProjectCardCover
         coverUrl={coverUrl}
-        alt={project.coverAlt || project.title}
+        alt={project.coverAlt || ""}
         slug={record.slug}
         index={index}
       />
