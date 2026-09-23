@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 
 import { scrollPageTo } from "@/lib/page-scroll";
+import { waitForGridReveal } from "@/lib/projects-intro";
 import { random, randomBetween, randomInt, randomPick } from "@/lib/random";
 import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";
 
@@ -544,8 +545,14 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       // left on a link that just scrolled off the top: onto the first card
       // (or the empty state's box). preventScroll, so it never fights the
       // glide. Pointer users keep their focus where it was, with no ring.
+      // Right after the intro the list can still be inert for a moment
+      // (until its reveal starts), and focus() on an inert card does
+      // nothing, so the hand-off waits for the reveal.
       if (fromKeyboard) {
-        (target.querySelector<HTMLElement>("a[href]") ?? target).focus({ preventScroll: true });
+        void waitForGridReveal().then(() => {
+          if (!alive) return;
+          (target.querySelector<HTMLElement>("a[href]") ?? target).focus({ preventScroll: true });
+        });
       }
     });
   }

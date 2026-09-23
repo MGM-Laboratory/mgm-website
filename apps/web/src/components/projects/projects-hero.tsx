@@ -167,6 +167,11 @@ export function ProjectsHero({ count }: { count: number }) {
     // Start the count from a real 0 (not the SSR-rendered total) so the
     // first counter update never snaps the number backwards.
     if (numberText) numberText.textContent = "0";
+    // The arrow is invisible (and does nothing) until the entrance has
+    // drawn it, so keyboard focus skips it until then instead of ringing
+    // an empty corner.
+    const arrowLink = q(".projects-hero-arrow-link")[0];
+    arrowLink?.setAttribute("tabindex", "-1");
 
     let cancelled = false;
     let tl: gsap.core.Timeline | null = null;
@@ -252,6 +257,7 @@ export function ProjectsHero({ count }: { count: number }) {
             if (cancelled) return;
             endIntro();
             enteredRef.current = true;
+            arrowLink?.removeAttribute("tabindex");
             stopPlay = startHeroPlay(root, { slots: HERO_SLOTS, count });
           },
         });
@@ -330,6 +336,7 @@ export function ProjectsHero({ count }: { count: number }) {
       if (ownsRestoration) ScrollTrigger.clearScrollMemory("auto");
       tl?.kill();
       stopPlay?.();
+      arrowLink?.removeAttribute("tabindex");
     };
   }, [count]);
 
