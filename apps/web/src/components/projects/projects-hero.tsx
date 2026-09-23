@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
+import { waitForRouteReveal } from "@/lib/route-reveal";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(DrawSVGPlugin);
@@ -20,9 +21,12 @@ const HERO_TITLE = "PROJECT";
  * The lusion-style list hero: a huge "PROJECT" headline whose characters
  * rise into view one by one behind a mask, the total project count sliding
  * up beside it while counting from 0, and the corner arrow drawing itself
- * in last. A fresh page load plays the full entrance; internal navigation
- * (already behind the transition curtain), reduced motion, and visits that
- * start already scrolled all jump straight to the end state.
+ * in last.
+ *
+ * The entrance must be SEEN, so it never plays behind the page-transition
+ * curtain: a fresh page load plays it immediately, while internal navigation
+ * waits for the curtain's reveal to finish (waitForRouteReveal) before
+ * starting. Only reduced motion jumps straight to the end state.
  */
 export function ProjectsHero({ count }: { count: number }) {
   const rootRef = useRef<HTMLElement>(null);
@@ -48,9 +52,7 @@ export function ProjectsHero({ count }: { count: number }) {
     const arrowPath = q(".projects-hero-arrow-path");
 
     const reduced = !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
-    const startedScrolled = window.scrollY > 40;
-    const cameFromInternalNav = skipEntranceForInternalNavRef.current === true;
-    if (reduced || startedScrolled || cameFromInternalNav) {
+    if (reduced) {
       gsap.set(chars, { yPercent: 0, opacity: 1 });
       gsap.set(numberWrap, { yPercent: 0, opacity: 1 });
       gsap.set(arrow, { opacity: 1 });
@@ -59,48 +61,72 @@ export function ProjectsHero({ count }: { count: number }) {
       return;
     }
 
-    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+    // Hide the pre-hydration state right away so nothing peeks through the
+    // curtain while an internal navigation's reveal is still playing.
+    gsap.set(chars, { yPercent: 100, opacity: 0 });
+    gsap.set(numberWrap, { yPercent: 110, opacity: 0 });
+    gsap.set(arrow, { opacity: 0 });
+    gsap.set(arrowPath, { drawSVG: "0%" });
 
-    // The counter object is tweened as part of the timeline (not in a
-    // separate tween) so killing the timeline also stops the count.
-    const counter = { value: 0 };
+    let cancelled = false;
+    let tl: gsap.core.Timeline | null = null;
 
-    tl.fromTo(
-      chars,
-      { yPercent: 100, opacity: 0 },
-      { yPercent: 0, opacity: 1, duration: 0.85, stagger: 0.06 },
-      0.1,
-    )
-      // The count slides up from behind its own mask, then counts from 0.
-      .fromTo(
-        numberWrap,
-        { yPercent: 110, opacity: 0 },
-        { yPercent: 0, opacity: 1, duration: 0.65 },
-        0.4,
+    const play = () => {
+      if (cancelled) return;
+
+      tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+      // The counter object is tweened as part of the timeline (not in a
+      // separate tween) so killing the timeline also stops the count.
+      const counter = { value: 0 };
+
+      tl.fromTo(
+        chars,
+        { yPercent: 100, opacity: 0 },
+        { yPercent: 0, opacity: 1, duration: 0.85, stagger: 0.06 },
+        0.1,
       )
-      .to(
-        counter,
-        {
-          value: count,
-          duration: 1.1,
-          ease: "power2.out",
-          onUpdate: () => {
-            if (numberText) numberText.textContent = String(Math.round(counter.value));
+        // The count slides up from behind its own mask, then counts from 0.
+        .fromTo(
+          numberWrap,
+          { yPercent: 110, opacity: 0 },
+          { yPercent: 0, opacity: 1, duration: 0.65 },
+          0.4,
+        )
+        .to(
+          counter,
+          {
+            value: count,
+            duration: 1.1,
+            ease: "power2.out",
+            onUpdate: () => {
+              if (numberText) numberText.textContent = String(Math.round(counter.value));
+            },
           },
-        },
-        0.5,
-      )
-      // The corner arrow fades in and draws itself from the top-left corner.
-      .fromTo(arrow, { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.95)
-      .fromTo(
-        arrowPath,
-        { drawSVG: "0%" },
-        { drawSVG: "100%", duration: 0.75, ease: "power2.inOut" },
-        0.95,
-      );
+          0.5,
+        )
+        // The corner arrow fades in and draws itself from the top-left corner.
+        .fromTo(arrow, { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.95)
+        .fromTo(
+          arrowPath,
+          { drawSVG: "0%" },
+          { drawSVG: "100%", duration: 0.75, ease: "power2.inOut" },
+          0.95,
+        );
+    };
+
+    if (skipEntranceForInternalNavRef.current === true) {
+      // Arrived behind the transition curtain: play once it has fully
+      // revealed the page, so the entrance is actually visible.
+      waitForRouteReveal().then(play);
+    } else {
+      // Fresh page load (hard reload resets the boot tracker): play now.
+      play();
+    }
 
     return () => {
-      tl.kill();
+      cancelled = true;
+      tl?.kill();
     };
   }, [count]);
 
