@@ -176,8 +176,9 @@ type Card = {
   focus: Spring;
   // Hover. The pointer can be over the frame without a hover playing: a
   // card the page scrolled under a resting cursor waits for the scroll to
-  // settle.
+  // settle. Keyboard focus (focus-visible) plays the same hover, untilted.
   pointerInside: boolean;
+  focused: boolean;
   hovered: boolean;
   hoverTime: number;
   blurInLeft: number;
@@ -465,6 +466,7 @@ export class CoverEngine {
       hunt: "waiting",
       focus: new Spring(...FOCUS_SPRING),
       pointerInside: false,
+      focused: false,
       hovered: false,
       hoverTime: 0,
       blurInLeft: 0,
@@ -493,21 +495,41 @@ export class CoverEngine {
       aim(event);
       if (isScrollIdle()) this.startHover(card);
     };
-    const leave = () => {
-      card.pointerInside = false;
+    const endHover = () => {
+      if (card.pointerInside || card.focused) return;
       card.hovered = false;
       card.blurInLeft = 0;
+    };
+    const leave = () => {
+      card.pointerInside = false;
+      endHover();
     };
     const move = (event: MouseEvent) => {
       if (card.pointerInside) aim(event);
     };
+    // A keyboard user gets the same focus pull and zoom on the focused card
+    // (no tilt: there is no cursor to lean toward). Mouse clicks focus the
+    // link too, but never match :focus-visible.
+    const focus = () => {
+      if (!card.root.matches(":focus-visible")) return;
+      card.focused = true;
+      this.startHover(card);
+    };
+    const blur = () => {
+      card.focused = false;
+      endHover();
+    };
     card.frame.addEventListener("mouseenter", enter);
     card.frame.addEventListener("mouseleave", leave);
     card.frame.addEventListener("mousemove", move);
+    card.root.addEventListener("focus", focus);
+    card.root.addEventListener("blur", blur);
     card.offHover = () => {
       card.frame.removeEventListener("mouseenter", enter);
       card.frame.removeEventListener("mouseleave", leave);
       card.frame.removeEventListener("mousemove", move);
+      card.root.removeEventListener("focus", focus);
+      card.root.removeEventListener("blur", blur);
     };
     return card;
   }
@@ -900,13 +922,17 @@ export class CoverEngine {
         focus = Math.abs(card.focus.value);
       }
 
-      // Hover springs (a hover held back by a scroll starts once it settles).
-      if (card.pointerInside && !card.hovered && scrollIdle) this.startHover(card);
+      // Hover springs (a hover held back by a scroll starts once it settles;
+      // a focused card that comes back into view picks its hover up again).
+      if (!card.hovered && ((card.pointerInside && scrollIdle) || card.focused)) {
+        this.startHover(card);
+      }
       const hovered = card.hovered;
+      const tilting = hovered && card.pointerInside;
       card.zoom.step(dt, hovered ? HOVER_ZOOM : 0);
       card.zoom.settle(1e-4);
-      card.tiltX.step(dt, hovered ? -card.pointerY * 2 * TILT_MAX : 0);
-      card.tiltY.step(dt, hovered ? card.pointerX * 2 * TILT_MAX : 0);
+      card.tiltX.step(dt, tilting ? -card.pointerY * 2 * TILT_MAX : 0);
+      card.tiltY.step(dt, tilting ? card.pointerX * 2 * TILT_MAX : 0);
       card.tiltX.settle(1e-5);
       card.tiltY.settle(1e-5);
       const jolt = card.jolt;
@@ -1000,6 +1026,7 @@ export class CoverEngine {
           time: card.time,
           hovered: card.hovered,
           pointerInside: card.pointerInside,
+          focused: card.focused,
           visible: card.mesh?.visible ?? false,
           focus: card.uniforms?.u_focus.value ?? null,
           focusSpring: card.focus.value,

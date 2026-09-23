@@ -283,22 +283,43 @@ export function ProjectCardCover({
     // if the pointer is still over the card.
     const stopTracking = trackScrollIdle();
     let cancelWait: (() => void) | null = null;
+    let pointerInside = false;
+    let focused = false;
     const onEnter = () => {
+      pointerInside = true;
       cancelWait?.();
       cancelWait = whenScrollIdle(() => {
         cancelWait = null;
-        if (ownedByStage()) return;
+        if (ownedByStage() || focused) return;
         markBusy();
         focusIn();
       });
     };
-    const onLeave = () => {
-      cancelWait?.();
-      cancelWait = null;
+    const release = () => {
       blurOut();
       tiltX(0);
       tiltY(0);
       markSettling();
+    };
+    const onLeave = () => {
+      pointerInside = false;
+      cancelWait?.();
+      cancelWait = null;
+      if (!focused) release();
+    };
+    // Keyboard focus gets the same focus pull (no tilt: no cursor). Mouse
+    // clicks focus the link too, but never match :focus-visible.
+    const onFocus = () => {
+      if (ownedByStage() || !root.matches(":focus-visible")) return;
+      focused = true;
+      if (pointerInside && frame.dataset.domHover !== undefined && !settle) return;
+      markBusy();
+      focusIn();
+    };
+    const onBlur = () => {
+      if (!focused) return;
+      focused = false;
+      if (!pointerInside) release();
     };
     const onMove = (event: MouseEvent) => {
       if (ownedByStage()) return;
@@ -313,10 +334,14 @@ export function ProjectCardCover({
     root.addEventListener("mouseenter", onEnter);
     root.addEventListener("mouseleave", onLeave);
     root.addEventListener("mousemove", onMove);
+    root.addEventListener("focus", onFocus);
+    root.addEventListener("blur", onBlur);
     return () => {
       root.removeEventListener("mouseenter", onEnter);
       root.removeEventListener("mouseleave", onLeave);
       root.removeEventListener("mousemove", onMove);
+      root.removeEventListener("focus", onFocus);
+      root.removeEventListener("blur", onBlur);
       gsap.killTweensOf(img);
       settle?.kill();
       cancelWait?.();
