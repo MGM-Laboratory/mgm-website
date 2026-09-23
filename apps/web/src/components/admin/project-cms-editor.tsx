@@ -978,68 +978,69 @@ export function ProjectEditor({
     if (status === "saved") setStatus("idle");
   };
 
-  const save = async (overrideDraft?: ProjectDraft) => {
+  /** Resolves true once the record is saved, false when validation or the request stops it. */
+  const save = async (overrideDraft?: ProjectDraft): Promise<boolean> => {
     let project = draftToProject(overrideDraft ?? draft);
     if (!project.title || !project.slug) {
       toast.error("Title and project URL are required.");
-      return;
+      return false;
     }
     if (!isProjectSlug(project.slug)) {
       toast.error("Project URL is not valid", {
         description: "Use lowercase letters, numbers, and hyphens.",
       });
-      return;
+      return false;
     }
     if (!project.summary.trim()) {
       toast.error("Add a short summary.");
-      return;
+      return false;
     }
     if (!project.categories.length) {
       toast.error("Choose at least one category.");
-      return;
+      return false;
     }
     if (project.startDate && project.endDate && project.endDate < project.startDate) {
       toast.error("The end date cannot be earlier than the start date.");
-      return;
+      return false;
     }
     for (const link of project.links) {
       if (!link.label.trim() || !link.url.trim()) {
         toast.error("Every link needs a label and a URL.");
-        return;
+        return false;
       }
       if (!isSafeLink(link.url)) {
         toast.error("Links must be site paths or https:// URLs.");
-        return;
+        return false;
       }
     }
     for (const organization of project.organizations) {
       if (organization.url && !isSafeLink(organization.url)) {
         toast.error("Organization websites must use https:// URLs.");
-        return;
+        return false;
       }
     }
     for (const output of project.outputs) {
       if (!output.label.trim() || !output.href.trim()) {
         toast.error("Every linked output needs a label and a link.");
-        return;
+        return false;
       }
       if (!isSafeLink(output.href)) {
         toast.error("Linked outputs must use site paths or https:// URLs.");
-        return;
+        return false;
       }
     }
     if (mediaStatus.busy) {
       toast.error("Media is still uploading", {
         description: "Save once every section has finished uploading.",
       });
-      return;
+      return false;
     }
     if (mediaStatus.failed || project.media?.some((item) => !item.key)) {
       toast.error("Some media sections have no file", {
         description: "Retry or remove the sections whose upload failed.",
       });
       document.getElementById("project-media-sections")?.scrollIntoView({ block: "start" });
-      return;
+      return false;
     }
     const detailCheck = validateDetailFields(overrideDraft ?? draft);
     if (hasDetailErrors(detailCheck)) {
@@ -1049,7 +1050,7 @@ export function ProjectEditor({
         description: Object.values(fields).find(Boolean) ?? Object.values(mediaRows)[0],
       });
       focusFirstInvalid();
-      return;
+      return false;
     }
 
     setStatus("saving");
@@ -1136,6 +1137,7 @@ export function ProjectEditor({
           ? "Saved as a draft. Publish it when the project is ready to go public."
           : `${savedRecord.project.title} is live at /projects/${savedRecord.project.slug}.`,
       });
+      return true;
     } catch (saveError) {
       setStatus("error");
       const message =
@@ -1147,16 +1149,21 @@ export function ProjectEditor({
         setApiDetailErrors(fieldErrors);
         focusFirstInvalid();
       }
+      return false;
     }
   };
 
   // The Publication card's switch and button both flip and save in one
   // step, so publishing never depends on remembering the separate
   // "Save project" action above.
-  const togglePublish = () => {
+  const togglePublish = async () => {
     const nextDraft: ProjectDraft = { ...draft, draft: !draft.draft };
     setDraft(nextDraft);
-    void save(nextDraft);
+    // A refused or failed save puts the switch back, so it always shows
+    // the state the record is actually in.
+    if (!(await save(nextDraft))) {
+      setDraft((current) => ({ ...current, draft: !nextDraft.draft }));
+    }
   };
 
   const remove = async () => {
