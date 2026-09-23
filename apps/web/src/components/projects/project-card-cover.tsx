@@ -4,7 +4,6 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
 import { PatternTile, type PatternKind } from "@/components/process/pattern-tile";
-import { motionAllowed, onReducedMotion } from "@/components/projects/stage/reduced-motion";
 import { trackScrollIdle, whenScrollIdle } from "@/components/projects/stage/scroll-idle";
 import {
   FOCUS_HUNT_DELAY,
@@ -13,6 +12,7 @@ import {
   registerStageCard,
 } from "@/components/projects/stage/stage-registry";
 import { waitForGridReveal } from "@/lib/projects-intro";
+import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring
 // happens before first paint.

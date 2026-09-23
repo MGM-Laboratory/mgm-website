@@ -4,7 +4,6 @@ import { useEffect, useLayoutEffect } from "react";
 
 import type { CoverEngine } from "@/components/projects/stage/cover-engine";
 import { startDomReaction } from "@/components/projects/stage/dom-reaction";
-import { onReducedMotion } from "@/components/projects/stage/reduced-motion";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
 import {
   getStageMode,
@@ -13,6 +12,7 @@ import {
   setStageMode,
 } from "@/components/projects/stage/stage-registry";
 import { waitForProjectsIntro } from "@/lib/projects-intro";
+import { onReducedMotion } from "@/lib/reduced-motion";
 
 // A layout effect on purpose: its cleanup runs in the same commit that
 // swaps the route, before the route-change handler resets the scroll to

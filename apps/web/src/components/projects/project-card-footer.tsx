@@ -4,15 +4,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
 
-import {
-  motionAllowed,
-  useMotionPreference,
-} from "@/components/projects/card-text/motion-preference";
 import { createScramble } from "@/components/projects/card-text/scramble-text";
 import { createTitleDrop } from "@/components/projects/card-text/title-drop";
 import { createTitleFlip } from "@/components/projects/card-text/title-flip";
 import { observeInViewport, observeSeen } from "@/components/projects/card-text/view-trigger";
 import { waitForGridReveal } from "@/lib/projects-intro";
+import { motionAllowed, useMotionPreference } from "@/lib/reduced-motion";
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring,
 // the title measurement and the entrance pre-state happen before first
@@ -65,7 +62,7 @@ export function ProjectCardFooter({
   // as a dependency, so switching the OS setting mid-visit tears the
   // effects down (their cleanups leave the resting text) or re-arms them.
   // The effects still gate on motionAllowed(), read when they run
-  // (card-text/motion-preference.ts explains why).
+  // (lib/reduced-motion.ts explains why).
   const motion = useMotionPreference();
   // What the entrance effect saw on its previous run, to tell a switch
   // back from reduced motion apart from the first mount.

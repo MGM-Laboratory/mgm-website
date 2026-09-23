@@ -9,10 +9,10 @@ import {
   resetGridRevealState,
 } from "@/components/projects/stage/grid-reveal-state";
 import { ProjectsStage } from "@/components/projects/stage/projects-stage";
-import { onReducedMotion } from "@/components/projects/stage/reduced-motion";
 import { getStageMode, waitForStageMode } from "@/components/projects/stage/stage-registry";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import { markGridRevealStarted, waitForProjectsIntro } from "@/lib/projects-intro";
+import { onReducedMotion } from "@/lib/reduced-motion";
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so the list's
