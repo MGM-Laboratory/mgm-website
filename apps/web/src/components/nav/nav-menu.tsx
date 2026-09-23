@@ -12,7 +12,6 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import gsap from "gsap";
-import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 
 import { CONTACT_EMAIL, LEGAL_LINKS, NAV_ITEMS, NAV_SOCIALS } from "@/data/nav";
@@ -24,6 +23,7 @@ import {
   type GlyphProps,
 } from "@/components/social-icons";
 import { LogoMark as ShardLogo } from "@/components/hero/shapes";
+import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 import { EmailReveal } from "./email-reveal";
 import { FocusBento } from "./focus-bento";
 import { WorkBento } from "./work-bento";
@@ -219,9 +219,12 @@ export function NavMenu() {
     socialTimelines.current[i]?.reverse();
   }
 
+  // Shared, owner-counted lock: another feature (the /projects intro) may
+  // hold the page locked at the same time, and closing the menu must not
+  // release that hold.
   const lockScroll = useCallback((locked: boolean) => {
-    ScrollSmoother.get()?.paused(locked);
-    document.documentElement.style.overflow = locked ? "hidden" : "";
+    if (locked) acquireScrollLock("nav-menu");
+    else releaseScrollLock("nav-menu");
   }, []);
 
   const resetAccordions = useCallback(() => {
