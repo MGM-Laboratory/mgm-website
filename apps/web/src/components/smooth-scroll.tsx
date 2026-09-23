@@ -8,7 +8,7 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { InteractiveBackground } from "@/components/interactive-background";
-import { consumeScrollResetSkip } from "@/lib/project-transition";
+import { consumeScrollResetSkip, projectDetailSlug } from "@/lib/project-transition";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -19,6 +19,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const isFirstRender = useRef(true);
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
+  const isProjectDetail = projectDetailSlug(pathname) !== null;
   const shouldSmooth = pathname === "/";
 
   useLayoutEffect(() => {
@@ -94,7 +95,10 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <InteractiveBackground />
+      {/* Project detail pages draw their own ambient layer (the topography
+          canvas, which also reacts to the cursor): a second cursor effect on
+          top would fight it and ignores the page's theme colours. */}
+      {isProjectDetail ? null : <InteractiveBackground />}
       <div id="smooth-wrapper">
         {/* Offsets every page's content below the fixed SiteHeader — the
           header lives outside this wrapper (see layout.tsx) so it stays
