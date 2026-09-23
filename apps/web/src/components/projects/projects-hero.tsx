@@ -296,7 +296,10 @@ export function ProjectsHero({ count }: { count: number }) {
     <section ref={rootRef} className="relative pt-[4em] pb-[clamp(2.5rem,7vh,5rem)] md:pt-[12vh]">
       {/* The entrance's pieces start hidden in the server HTML (opacity
           only, GSAP owns their transforms), so a fresh load never flashes
-          the finished title before the entrance hides and replays it. */}
+          the finished title before the entrance hides and replays it.
+          Only when motion is allowed (motion-safe:): reduced motion has no
+          entrance to protect, and its end state is the server HTML itself,
+          so it shows at first paint instead of waiting on hydration. */}
       <noscript>
         <style>
           {
@@ -336,7 +339,7 @@ export function ProjectsHero({ count }: { count: number }) {
             // slot, the idle play moves the inner glyph.
             <span
               aria-hidden="true"
-              className="projects-hero-char relative inline-flex justify-center opacity-0 will-change-transform"
+              className="projects-hero-char relative inline-flex justify-center will-change-transform motion-safe:opacity-0"
               style={{ width: `${SLOT_EM[char]}em` }}
               key={index}
             >
@@ -350,7 +353,7 @@ export function ProjectsHero({ count }: { count: number }) {
                   // separate layers for looking, dilating and blinking.
                   <span className="projects-hero-pupil-look pointer-events-none absolute top-[0.575em] left-[calc(50%_-_0.025em)] block size-0">
                     <span className="projects-hero-pupil-dilate absolute -top-[0.07em] -left-[0.07em] block size-[0.14em]">
-                      <span className="projects-hero-pupil invisible block size-full rounded-full bg-brand-blue" />
+                      <span className="projects-hero-pupil block size-full rounded-full bg-brand-blue motion-safe:invisible" />
                     </span>
                   </span>
                 )}
@@ -362,7 +365,7 @@ export function ProjectsHero({ count }: { count: number }) {
         {/* Digits' flat ink top on the title's cap line, ink right edge on
             the card grid's right edge (the content box). */}
         <span
-          className="projects-hero-number absolute overflow-hidden font-mono opacity-0 text-[clamp(0.875rem,4vw,4rem)] leading-none font-medium text-[#0e1116] dark:text-white"
+          className="projects-hero-number absolute overflow-hidden font-mono text-[clamp(0.875rem,4vw,4rem)] leading-none font-medium text-[#0e1116] motion-safe:opacity-0 dark:text-white"
           style={countInkOffsets(count)}
         >
           <span className="sr-only">{count} projects</span>
@@ -400,7 +403,7 @@ export function ProjectsHero({ count }: { count: number }) {
               exactly in the link's box. */}
           <svg
             aria-hidden="true"
-            className="projects-hero-arrow relative block size-full opacity-0 transition-colors duration-200 group-data-[hot]:text-[#0e1116]"
+            className="projects-hero-arrow relative block size-full transition-colors duration-200 group-data-[hot]:text-[#0e1116] motion-safe:opacity-0"
             viewBox="0 0 38 38"
             fill="none"
           >
