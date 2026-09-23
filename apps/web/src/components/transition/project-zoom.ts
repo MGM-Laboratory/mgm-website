@@ -27,6 +27,7 @@ import {
   clearProjectReturn,
   expectProjectPage,
   markProjectCoverStarted,
+  markProjectPageReady,
   markProjectRevealStarted,
   peekProjectReturn,
   projectDetailSlug,
@@ -71,8 +72,12 @@ const LOCK_OWNER = "project-transition";
 const PREPARE_MS = 300;
 // The DOM fallback's clone must decode before it replaces the card.
 const DOM_PICTURE_MS = 200;
-// How long the overlay holds for a project page that never says it is ready.
-const PAGE_READY_MS = 3000;
+// How long the overlay holds, once the project route has committed, for a
+// page that never says it is ready. Counted from the commit, not the click:
+// the route only changes about 1.1 s into the zoom, and a slow server can
+// commit it later still, so a clock started at the click could run out
+// before the page had any time to lay out.
+const PAGE_READY_MS = 2000;
 // The route never committing at all: reveal whatever is there.
 const COMMIT_CEILING_MS = 8000;
 // Exit: how long the landing waits for the card's picture, and for the
@@ -208,6 +213,21 @@ function pageRoot(): HTMLElement {
   );
 }
 
+/**
+ * The colour a page shows behind its content. A themed project page puts
+ * its palette on :root, and its background may be painted by an element
+ * other than its root (a transparent root over a decorative canvas would
+ * otherwise read as the site background), so its `--project-bg` wins.
+ * Any other page: the first opaque background behind its root.
+ */
+function pageBackground(page: HTMLElement): Rgb {
+  if (page.matches("[data-project-detail]")) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue("--project-bg");
+    if (value.trim()) return resolveColor(value.trim());
+  }
+  return backgroundBehind(page);
+}
+
 /** The detail page from before the themed one carries no cover attribute. */
 function legacyCoverUrl() {
   const image = document.querySelector<HTMLImageElement>(
@@ -298,8 +318,10 @@ export class ProjectZoom {
   private forceDom = false;
   private lastPrepare: { ms: number; picture: string; renderer: string } | null = null;
   private lastExit: { picture: string; uploaded: boolean | null; renderer: string } | null = null;
-  // The running zoom's progress, 0..1 (verification only).
+  // The running zoom's progress, 0..1, and the cover address the last exit
+  // decoded ahead (verification only).
   private progress = 0;
+  private lastWarmUrl: string | null = null;
 
   constructor({ root, layer, shield, navigate, prefetch, pathname }: ProjectZoomOptions) {
     this.root = root;
@@ -458,8 +480,7 @@ export class ProjectZoom {
     markProjectCoverStarted();
     expectProjectPage(slug);
     this.prefetch(href);
-    const ready = waitForProjectPage(PAGE_READY_MS * this.slowdown);
-    void this.playEnter(run, { href, palette, image, source, backdrop, ready });
+    void this.playEnter(run, { href, palette, image, source, backdrop });
     return true;
   }
 
@@ -471,7 +492,6 @@ export class ProjectZoom {
       image: HTMLImageElement | null;
       source: ZoomSource;
       backdrop: Rgb;
-      ready: Promise<void>;
     },
   ) {
     const { palette } = s;
@@ -569,7 +589,7 @@ export class ProjectZoom {
     const committed = await this.waitForCommit(run, run.target, COMMIT_CEILING_MS);
     if (!this.live(run)) return;
     if (committed) {
-      await s.ready;
+      await this.waitForPage(run);
       await nextFrame();
       if (!this.live(run)) return;
     }
@@ -591,7 +611,8 @@ export class ProjectZoom {
     const coverUrl =
       (page.matches("[data-project-detail]") ? page.dataset.projectCover : null) ||
       legacyCoverUrl();
-    const background = backgroundBehind(page);
+    const background = pageBackground(page);
+    if (process.env.NODE_ENV !== "production") this.lastWarmUrl = coverUrl ?? null;
 
     const run = this.begin("exit", from, PROJECTS_LIST_PATH);
     // An instant cover in the page's own colour: only the content goes.
@@ -750,7 +771,7 @@ export class ProjectZoom {
   private startSwap(from: string, to: string) {
     const slug = projectDetailSlug(to);
     if (!slug) return;
-    const background = backgroundBehind(pageRoot());
+    const background = pageBackground(pageRoot());
     const run = this.begin("swap", from, to);
     this.layer.style.backgroundColor = toCss(background);
     this.layer.style.opacity = "1";
@@ -759,14 +780,10 @@ export class ProjectZoom {
     this.tint.start(pinned, pinned);
     markProjectCoverStarted();
     expectProjectPage(slug);
-    const ready = waitForProjectPage(PAGE_READY_MS * this.slowdown);
-    void this.playSwap(run, { background, pinned, ready });
+    void this.playSwap(run, { background, pinned });
   }
 
-  private async playSwap(
-    run: Run,
-    s: { background: Rgb; pinned: TintPalette; ready: Promise<void> },
-  ) {
+  private async playSwap(run: Run, s: { background: Rgb; pinned: TintPalette }) {
     const committed = await this.waitForCommit(run, run.target, COMMIT_CEILING_MS);
     if (!this.live(run)) return;
     await nextFrame();
@@ -786,7 +803,7 @@ export class ProjectZoom {
       },
     });
     if (!this.live(run)) return;
-    if (committed) await s.ready;
+    if (committed) await this.waitForPage(run);
     if (!this.live(run)) return;
     markProjectRevealStarted();
     await this.animate(run, this.root, {
@@ -898,6 +915,15 @@ export class ProjectZoom {
     });
   }
 
+  /** The committed project page says it can be shown, or PAGE_READY_MS pass. */
+  private waitForPage(run: Run): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.live(run)) return resolve();
+      void waitForProjectPage(PAGE_READY_MS * this.slowdown).then(() => resolve());
+      run.waiters.push(resolve);
+    });
+  }
+
   private waitForCommit(run: Run, path: string, ms: number): Promise<boolean> {
     if (this.shown === path) return Promise.resolve(true);
     return new Promise((resolve) => {
@@ -1005,6 +1031,7 @@ export class ProjectZoom {
         prepare: this.lastPrepare,
         exit: this.lastExit,
         progress: this.progress,
+        warmUrl: this.lastWarmUrl,
       }),
       setSlowdown: (factor: number) => {
         this.slowdown = Math.max(0.1, factor);
@@ -1012,6 +1039,8 @@ export class ProjectZoom {
       forceDom: (on: boolean) => {
         this.forceDom = on;
       },
+      // Stands in for a themed detail page reporting ready.
+      markPageReady: (slug: string) => markProjectPageReady(slug),
     };
   }
 }
