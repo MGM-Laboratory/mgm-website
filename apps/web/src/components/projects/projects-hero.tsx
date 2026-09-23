@@ -445,7 +445,7 @@ export function ProjectsHero({ count }: { count: number }) {
           className="projects-hero-number absolute overflow-hidden font-mono text-[clamp(0.875rem,4vw,4rem)] leading-none font-medium text-[#0e1116] motion-safe:opacity-0 dark:text-white"
           style={countInkOffsets(count)}
         >
-          <span className="sr-only">{count} projects</span>
+          <span className="sr-only">{count === 1 ? "1 project" : `${count} projects`}</span>
           <span aria-hidden="true" className="projects-hero-number-text inline-block tabular-nums">
             {count}
           </span>
