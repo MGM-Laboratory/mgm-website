@@ -423,14 +423,19 @@ export function ProjectsHero({ count }: { count: number }) {
 
         {/* The link's font size IS the arrow's size, so its offsets can be
             em: the stroke's ink sits 1/38 inside the 38-unit viewBox, and
-            the ink's bottom lands on the title's baseline. */}
+            the ink's bottom lands on the title's baseline. The focus ring
+            is a circle 2px outside the fully swollen disc (0.18em past the
+            box), so it never sits on yellow; `isolate` plus the disc's
+            negative z-index paint it above the disc even while the disc
+            overshoots (an element's own outline otherwise paints under its
+            positioned children). */}
         <a
           href="#projects"
           aria-label="Jump to the project list"
           onClick={(event) => {
             if (!enteredRef.current) event.preventDefault();
           }}
-          className="projects-hero-arrow-link group absolute block size-[1em] rounded-md text-[clamp(1.5rem,4vw,4rem)] text-[#0e1116] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)] dark:text-white"
+          className="projects-hero-arrow-link group absolute isolate block size-[1em] rounded-full text-[clamp(1.5rem,4vw,4rem)] text-[#0e1116] focus-visible:outline-2 focus-visible:outline-offset-[calc(0.18em+2px)] focus-visible:outline-[var(--focus)] dark:text-white"
           style={{ right: "calc(-1em / 38)", bottom: `calc(${TITLE_CAP_INSET} - 1em / 38)` }}
         >
           {/* A brand-yellow disc swells behind the arrow while it is wound
@@ -438,7 +443,7 @@ export function ProjectsHero({ count }: { count: number }) {
               sits under white). */}
           <span
             aria-hidden="true"
-            className="projects-hero-arrow-disc invisible absolute -inset-[18%] rounded-full bg-brand-yellow"
+            className="projects-hero-arrow-disc invisible absolute -inset-[18%] -z-10 rounded-full bg-brand-yellow"
           />
           {/* `block` drops the inline-svg descender gap, so the glyph sits
               exactly in the link's box. */}
