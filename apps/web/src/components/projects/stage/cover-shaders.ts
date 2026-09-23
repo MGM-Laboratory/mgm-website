@@ -130,6 +130,15 @@ void main() {
   vec4 color;
   if (u_focus + streak < 0.05) {
     color = sampleCover(f);
+    if (u_split > 0.0) {
+      // A hint of chromatic fringe where the lens bends the card the most.
+      // Only on a sharp picture: splitting sharp red/blue taps off a
+      // blurred green one would ring every edge in magenta and green.
+      float amount = u_split * lensWeight * (screen.x - 0.5) * 2.0;
+      vec2 o = vec2(amount * pxToUv.x, 0.0);
+      color.r = sampleCover(f + o).r;
+      color.b = sampleCover(f - o).b;
+    }
   } else {
     // One kernel carries both blurs: a golden-angle (Vogel) spiral for the
     // focus blur plus a radial line for the zoom streak.
@@ -145,14 +154,6 @@ void main() {
       color += sampleCover(f + o * pxToUv);
     }
     color /= float(TAPS);
-  }
-
-  if (u_split > 0.0) {
-    // A hint of chromatic fringe where the lens bends the card the most.
-    float amount = u_split * lensWeight * (screen.x - 0.5) * 2.0;
-    vec2 o = vec2(amount * pxToUv.x, 0.0);
-    color.r = sampleCover(f + o).r;
-    color.b = sampleCover(f - o).b;
   }
 
   // The texture is premultiplied, and so is the canvas.
