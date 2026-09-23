@@ -433,8 +433,9 @@ export class TopographyEngine {
       return false;
     }
 
-    const uniforms = {} as Uniforms;
-    for (const name of UNIFORM_NAMES) uniforms[name] = gl.getUniformLocation(program, name);
+    const uniforms = Object.fromEntries(
+      UNIFORM_NAMES.map((name) => [name, gl.getUniformLocation(program, name)]),
+    ) as Uniforms;
     this.program = program;
     this.uniforms = uniforms;
     // The triangle comes from gl_VertexID; an empty VAO keeps every driver
@@ -489,15 +490,18 @@ export class TopographyEngine {
     gl.uniform2f(u.uResolution, width, height);
 
     const time = this.time;
-    const ctrlLocations = [u.uCtrlA, u.uCtrlB, u.uCtrlC, u.uCtrlD];
-    for (let group = 0; group < 4; group += 1) {
-      const indices = CTRL_INDICES[group];
-      for (let j = 0; j < 4; j += 1) {
-        const i = indices[j];
-        this.ctrl[j] =
-          FIELD.morphAmount * Math.sin(time * FIELD.speed * Math.sin(i * FIELD.morphSpeed) + i);
-      }
-      gl.uniform4fv(ctrlLocations[group], this.ctrl);
+    const control = (i: number) =>
+      FIELD.morphAmount * Math.sin(time * FIELD.speed * Math.sin(i * FIELD.morphSpeed) + i);
+    const [indicesA, indicesB, indicesC, indicesD] = CTRL_INDICES;
+    const groups = [
+      [u.uCtrlA, indicesA],
+      [u.uCtrlB, indicesB],
+      [u.uCtrlC, indicesC],
+      [u.uCtrlD, indicesD],
+    ] as const;
+    for (const [location, indices] of groups) {
+      this.ctrl.set(indices.map(control));
+      gl.uniform4fv(location, this.ctrl);
     }
 
     gl.uniform2f(u.uOffset, live ? this.offset : 0, 0);
@@ -627,9 +631,8 @@ export class TopographyEngine {
     if (this.tweenDuration > 0) {
       const progress = Math.min((now - this.tweenStart) / this.tweenDuration, 1);
       const eased = easeInOutSine(progress);
-      for (let i = 0; i < 12; i += 1) {
-        this.stops[i] = this.from[i] + (this.to[i] - this.from[i]) * eased;
-      }
+      const to = this.to;
+      this.stops.set(this.from.map((from, i) => from + ((to.at(i) ?? from) - from) * eased));
       if (progress >= 1) this.tweenDuration = 0;
     }
 
@@ -642,7 +645,7 @@ export class TopographyEngine {
   // --------------------------------------------------------------- events
 
   private onResize = (entries: ResizeObserverEntry[]) => {
-    const box = entries[entries.length - 1]?.contentRect;
+    const box = entries.at(-1)?.contentRect;
     if (!box || !this.resize(box.width, box.height)) return;
     // A new buffer size clears the canvas. Resize observers run before
     // paint, so drawing here means the lines never blink out.
@@ -650,7 +653,7 @@ export class TopographyEngine {
   };
 
   private onIntersect = (entries: IntersectionObserverEntry[]) => {
-    const entry = entries[entries.length - 1];
+    const entry = entries.at(-1);
     if (!entry) return;
     this.visible = entry.isIntersecting;
     this.schedule();

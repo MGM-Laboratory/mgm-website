@@ -838,8 +838,8 @@ export function ProjectEditor({
   const signature = editorSignature(
     draft,
     body,
-    Object.keys(contributorPhotos).sort(),
-    Object.keys(removedContributorPhotos).sort(),
+    Object.keys(contributorPhotos).sort((left, right) => left.localeCompare(right)),
+    Object.keys(removedContributorPhotos).sort((left, right) => left.localeCompare(right)),
   );
   const isDirty = Boolean(coverUpload) || baseline !== signature;
   useEffect(() => {
