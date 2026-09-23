@@ -2,8 +2,9 @@
  * Cover texture preparation for the WebGL stage, kept free of three.js so
  * it can run (and warm up) before the renderer exists.
  *
- * The source is the card's own same-origin DOM <img> (no second request,
- * no crossOrigin mode switch). Full-size covers would cost 120-160 MB of
+ * The source is the card's own same-origin DOM <img>: it gates on that
+ * image having loaded, then decodes its bytes from the HTTP cache (no
+ * second download, no crossOrigin mode switch). Full-size covers would cost 120-160 MB of
  * GPU memory for the live list, so each one is cropped to the region the
  * 3:2 frame actually shows (object-cover, centred) plus a small margin
  * where the source has spare pixels, and downscaled to about its rendered
@@ -48,6 +49,25 @@ async function whenLoaded(img: HTMLImageElement) {
     // natural size check above is the real gate.
   }
   return img.naturalWidth > 0;
+}
+
+/**
+ * The cover's encoded bytes, for createImageBitmap to decode. Given an
+ * <img>, Chromium decodes and resizes the full-size original synchronously
+ * on the main thread (tens of ms per large cover, over 100 ms on a slower
+ * CPU, landing right as the list reveals); given a Blob it does that work
+ * off the main thread. The bytes come from the HTTP cache (the <img> has
+ * already loaded them and the media route is immutable), so nothing is
+ * downloaded twice. Falls back to the element if the fetch fails.
+ */
+async function encodedSource(img: HTMLImageElement): Promise<Blob | HTMLImageElement> {
+  try {
+    const response = await fetch(img.currentSrc || img.src, { cache: "force-cache" });
+    if (response.ok) return await response.blob();
+  } catch {
+    // Offline, blocked or opaque: decode from the element instead.
+  }
+  return img;
 }
 
 /** The part of the source an object-cover, centred frame shows. */
@@ -112,14 +132,18 @@ export async function prepareCover(
   const width = Math.max(1, Math.round(sw * scale));
   const height = Math.max(1, Math.round(sh * scale));
 
-  // Preferred path: crop, resize and premultiply off the main thread.
+  // Preferred path: decode, crop, resize and premultiply off the main
+  // thread (see encodedSource).
   if (typeof createImageBitmap === "function") {
     try {
-      const source = await createImageBitmap(img, sx, sy, sw, sh, {
+      const source = await createImageBitmap(await encodedSource(img), sx, sy, sw, sh, {
         resizeWidth: width,
         resizeHeight: height,
         resizeQuality: "high",
         premultiplyAlpha: "premultiply",
+        // A Blob is decoded raw; apply its EXIF orientation so the crop,
+        // computed from the element's (oriented) natural size, lines up.
+        imageOrientation: "from-image",
       });
       return { source, width, height, crop, premultiplied: true };
     } catch {
