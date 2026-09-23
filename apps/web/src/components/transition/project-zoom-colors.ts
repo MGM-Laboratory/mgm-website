@@ -217,3 +217,29 @@ export class HeaderTint {
     return palette;
   }
 }
+
+export type HeaderPaletteWalk = {
+  /** Writes the header palette at `t` (0..1) of the way to the target. */
+  set(t: number): void;
+  /** Hands the variables back to the page's own stylesheet. */
+  release(): void;
+};
+
+/**
+ * Walks the header's palette from whatever it shows now to another theme,
+ * with the caller driving the progress: the project page's next-project
+ * wipe, which navigates on its own (so the zoom overlay never sees it).
+ * Call `release()` once the next page carries its own palette (the old
+ * page's cleanup runs in the same commit that mounts the new one, so
+ * releasing there never snaps), or when the wipe is abandoned. The header
+ * eases its colours over 0.5 s in CSS, so a walk that reaches 1 a little
+ * before the navigation arrives on time.
+ */
+export function walkHeaderPalette(to: ThemeColors): HeaderPaletteWalk {
+  const tint = new HeaderTint();
+  tint.start(tint.current(), tint.theme(to));
+  return {
+    set: (t) => tint.set(Math.min(1, Math.max(0, t))),
+    release: () => tint.release(),
+  };
+}

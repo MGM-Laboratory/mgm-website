@@ -228,14 +228,6 @@ function pageBackground(page: HTMLElement): Rgb {
   return backgroundBehind(page);
 }
 
-/** The detail page from before the themed one carries no cover attribute. */
-function legacyCoverUrl() {
-  const image = document.querySelector<HTMLImageElement>(
-    'main img[src*="/api/projects-cms/media/"]',
-  );
-  return image ? image.currentSrc || image.src : null;
-}
-
 function sameAddress(a: string, b: string) {
   try {
     return new URL(a, window.location.href).href === new URL(b, window.location.href).href;
@@ -608,9 +600,9 @@ export class ProjectZoom {
     const slug = projectDetailSlug(from);
     if (!slug) return;
     const page = pageRoot();
-    const coverUrl =
-      (page.matches("[data-project-detail]") ? page.dataset.projectCover : null) ||
-      legacyCoverUrl();
+    const coverUrl = page.matches("[data-project-detail]")
+      ? page.dataset.projectCover || null
+      : null;
     const background = pageBackground(page);
     if (process.env.NODE_ENV !== "production") this.lastWarmUrl = coverUrl ?? null;
 
