@@ -82,7 +82,8 @@ export class SpeedWave {
   /**
    * Steps the wave. `scrollDelta` is the frame's signed scroll change in
    * viewport widths (the page's), `scroll` the scroll position in CSS px.
-   * Returns whether anything is still moving.
+   * Returns whether any uniform changed this frame (including the frame
+   * it lands at rest).
    */
   step(scrollDelta: number, scroll: number, vw: number, vh: number, dt: number) {
     // A jump (a resize re-clamping the scroll, a programmatic jump) moves
@@ -106,14 +107,21 @@ export class SpeedWave {
     this.ripple.settle(RIPPLE_EPSILON);
 
     const u = this.uniforms;
+    const before = [u.blur, u.arch, u.ripple, u.split];
     u.blur = s * vw * SMEAR_GAIN;
     u.arch = ARCH_GAIN * s * s * vh;
     u.ripple = this.ripple.value;
     u.split = SPLIT_MAX * smoothstep(...SPLIT_RAMP, size);
+    // The phase follows the scroll, and a scroll change redraws anyway.
     for (let i = 0; i < 2; i++) {
       const wavelength = RIPPLE_WAVELENGTHS[i] * vw;
       u.phase[i] = ((TAU * RIPPLE_DRIFT[i] * scroll) / wavelength) % TAU;
     }
-    return s !== 0 || !this.ripple.atRest;
+    return (
+      u.blur !== before[0] ||
+      u.arch !== before[1] ||
+      u.ripple !== before[2] ||
+      u.split !== before[3]
+    );
   }
 }

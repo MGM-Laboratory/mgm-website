@@ -13,7 +13,10 @@ const STRENGTH_OUT = 0.3;
 const FOLLOW = 0.07; // s, the lens centre's lag behind the cursor
 const DRAG_GAIN = 0.35; // share of the lag the picture is dragged by
 const DRAG_MAX = 8; // CSS px
-const EPSILON = 1e-3;
+// Snaps onto its target from here: at 2% the bulge moves pixels by well
+// under 0.1 px, and a slow exponential tail would keep redrawing for
+// seconds for nothing.
+const EPSILON = 0.02;
 
 export class PointerLens {
   /** Raw pointer, CSS px (viewport). */

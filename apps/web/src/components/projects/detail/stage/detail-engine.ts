@@ -207,8 +207,6 @@ export class DetailEngine {
   private claimed = false;
   private lastScroll = Number.NaN;
   private lastOpacity = -1;
-  private lastSceneActive = false;
-  private lastScreenActive = false;
 
   private paletteFrom: [number, number, number];
   private paletteTo: [number, number, number];
@@ -830,12 +828,11 @@ export class DetailEngine {
       }
     }
 
-    // One extra frame after everything settles draws the exact rest state.
-    const renderScene = sceneActive || this.lastSceneActive;
-    const screenActive = renderScene || waveActive || lensActive || opacityChanged;
-    const renderScreen = screenActive || this.lastScreenActive;
-    this.lastSceneActive = sceneActive;
-    this.lastScreenActive = screenActive;
+    // Every change above is reported on the frame it happens, including the
+    // frame something lands at rest, so the rest state is always drawn and
+    // nothing is drawn after it.
+    const renderScene = sceneActive;
+    const renderScreen = renderScene || waveActive || lensActive || opacityChanged;
 
     if (renderScene) {
       renderer.setRenderTarget(this.target);
@@ -878,8 +875,10 @@ export class DetailEngine {
     const video = item.source.video;
     if (item.owned && video?.error) this.release(item);
     if (!item.owned) {
+      // Handed back: one more frame clears it if it was on screen.
+      const wasVisible = item.visible;
       item.visible = false;
-      return false;
+      return wasVisible;
     }
     const left = item.x - scroll;
     const visible =
@@ -906,7 +905,9 @@ export class DetailEngine {
       item.activeTime += dt;
     }
 
+    const mapBefore = item.uniforms.u_map.value;
     const hasMap = this.syncMap(item);
+    if (item.uniforms.u_map.value !== mapBefore) active = true;
     if (hasMap) {
       if (item.ready < 1) {
         item.ready = Math.min(1, item.ready + dt / READY_SECONDS);
@@ -941,9 +942,10 @@ export class DetailEngine {
       if ((ox !== origin.x || oy !== origin.y) && item.hover.value !== 0) active = true;
       origin.set(ox, oy);
     }
+    const hoverBefore = item.hover.value;
     item.hover.step(dt, hovered ? 1 : 0);
-    item.hover.settle(1e-4);
-    if (!item.hover.atRest) active = true;
+    item.hover.settle(1e-3); // 0.003% of zoom: far below a pixel
+    if (item.hover.value !== hoverBefore) active = true;
 
     u.u_rect.value.set(left, item.y, item.width, item.height);
     u.u_emerge.value = expoOut(Math.min(item.activeTime / EMERGE_SECONDS, 1));
