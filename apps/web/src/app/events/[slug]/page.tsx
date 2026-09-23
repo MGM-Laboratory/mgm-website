@@ -236,7 +236,7 @@ export default async function EventPage({ params }: EventPageProps) {
         </article>
 
         {others.length ? (
-          <section className="mx-auto w-full max-w-[1200px] px-6 pb-32 sm:px-10">
+          <section className="mx-auto w-full max-w-[1200px] px-6 pb-32 sm:px-10 lg:px-14">
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
                 Other events

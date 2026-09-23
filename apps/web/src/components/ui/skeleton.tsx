@@ -17,3 +17,23 @@ export function Skeleton({ className }: { className?: string }) {
     />
   );
 }
+
+/**
+ * Skeleton for a photo frame that has no image yet — fills the frame the
+ * image will occupy so the layout never shifts.
+ *
+ * It overrides the base block's translucency: photo frames sit on tinted
+ * card surfaces and the portrait background rather than on white, and at
+ * 60% alpha (halved again at the low end of the pulse) the block reads as
+ * an empty frame instead of a loading one.
+ */
+export function PhotoSkeleton({ className }: { className?: string }) {
+  return (
+    <Skeleton
+      className={cn(
+        "absolute inset-0 size-full rounded-none bg-[var(--line-strong)] dark:bg-white/15",
+        className,
+      )}
+    />
+  );
+}
