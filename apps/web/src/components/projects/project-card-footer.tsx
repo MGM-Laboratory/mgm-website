@@ -20,9 +20,9 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
  * lusion.co's entrance. When the footer comes into view, the categories
  * scramble-type in (card-text/scramble-text.ts) and the title letters drop
  * into place (card-text/title-drop.ts); both reset once the whole card has
- * left the viewport and replay on the next entry. Hovering the card
- * indents the title and slides an arrow in from the left; hovering the
- * title itself box-flips every character in 3D.
+ * left the viewport and replay on the next entry. Hovering the card (or
+ * focusing it from the keyboard) indents the title and slides an arrow in
+ * from the left; hovering the title itself box-flips every character in 3D.
  */
 export function ProjectCardFooter({
   title: fullTitle,
@@ -211,9 +211,13 @@ export function ProjectCardFooter({
     // beside an empty row, so a hover then waits for the drop to land (the
     // drop reports landing, and a reset that parks the title again).
     // `hovered` follows the same mouse events the indent answers to.
+    // Keyboard focus gets the same indent and arrow, but only when it is
+    // :focus-visible: a mouse click also focuses the link, and that focus
+    // would otherwise keep the card indented after the pointer leaves.
     let hovered = root.matches(":hover");
+    let focused = root.matches(":focus-visible");
     const sync = () => {
-      if (hovered && drop.state === "landed") indent.play();
+      if ((hovered || focused) && drop.state === "landed") indent.play();
       else indent.reverse();
     };
     const onEnter = () => {
@@ -224,15 +228,27 @@ export function ProjectCardFooter({
       hovered = false;
       sync();
     };
+    const onFocus = () => {
+      focused = root.matches(":focus-visible");
+      sync();
+    };
+    const onBlur = () => {
+      focused = false;
+      sync();
+    };
     drop.onChange(sync);
-    if (hovered) sync();
+    if (hovered || focused) sync();
 
     root.addEventListener("mouseenter", onEnter);
     root.addEventListener("mouseleave", onLeave);
+    root.addEventListener("focus", onFocus);
+    root.addEventListener("blur", onBlur);
     titleRow.addEventListener("mouseenter", onTitleEnter);
     return () => {
       root.removeEventListener("mouseenter", onEnter);
       root.removeEventListener("mouseleave", onLeave);
+      root.removeEventListener("focus", onFocus);
+      root.removeEventListener("blur", onBlur);
       titleRow.removeEventListener("mouseenter", onTitleEnter);
       drop.onChange(null);
       flip.stop();
