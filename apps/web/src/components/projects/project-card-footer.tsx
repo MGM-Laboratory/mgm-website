@@ -141,7 +141,10 @@ export function ProjectCardFooter({
   }, []);
 
   return (
-    <div className="mt-5">
+    // data-card-footer: the page's cover stage moves this wrapper with the
+    // card's scroll reaction, so nothing in this component may animate the
+    // wrapper's own transform (the effects below animate inner elements).
+    <div data-card-footer="" className="mt-5">
       {categories.length ? (
         <p className="mb-3 truncate text-[clamp(0.6875rem,0.9vw,0.875rem)] font-medium tracking-[0.12em] text-[var(--ink-3)] uppercase dark:text-white/50">
           {categories.join(" • ")}
