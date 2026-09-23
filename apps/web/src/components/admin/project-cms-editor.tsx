@@ -288,7 +288,7 @@ function CoverCropDialog({
           <div>
             <p className="font-display text-lg font-semibold tracking-[-0.03em]">Crop cover</p>
             <p className="mt-0.5 text-xs text-[#7e899d] dark:text-white/45">
-              The cover renders at a wide 1200 × 482 ratio with rounded corners.
+              The cover renders at a 3:2 ratio with rounded corners.
             </p>
           </div>
           <button
@@ -300,9 +300,9 @@ function CoverCropDialog({
             <X size={17} />
           </button>
         </div>
-        <div className="relative mt-4 aspect-[1200/482] w-full overflow-hidden rounded-xl bg-[#e8ecf4] dark:bg-[#1a202b]">
+        <div className="relative mt-4 aspect-[3/2] w-full overflow-hidden rounded-xl bg-[#e8ecf4] dark:bg-[#1a202b]">
           <Cropper
-            aspect={1200 / 482}
+            aspect={3 / 2}
             crop={crop}
             image={image}
             objectFit="contain"
@@ -1320,7 +1320,7 @@ export function ProjectEditor({
       <div className="mt-8 grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0">
           <button
-            className="group relative block aspect-[1200/482] w-full overflow-hidden rounded-2xl border border-[#dfe4ee] bg-[#e8ecf4] text-left transition hover:border-brand-red/50 dark:border-white/10 dark:bg-[#1a202b]"
+            className="group relative block aspect-[3/2] w-full overflow-hidden rounded-2xl border border-[#dfe4ee] bg-[#e8ecf4] text-left transition hover:border-brand-red/50 dark:border-white/10 dark:bg-[#1a202b]"
             onClick={() => fileInput.current?.click()}
             type="button"
           >
@@ -1338,7 +1338,7 @@ export function ProjectEditor({
                   <ImageSquare size={30} weight="duotone" />
                   <span className="text-sm font-medium">Upload a cover image</span>
                   <span className="font-mono text-[10px] tracking-[0.12em] uppercase">
-                    1200 × 482 · JPEG, PNG, or WebP
+                    1200 × 800 · JPEG, PNG, or WebP
                   </span>
                 </span>
               </span>

@@ -228,7 +228,7 @@ export function ProjectCard({
 
   return (
     <Link ref={rootRef} href={`/projects/${record.slug}`} className={cn("group block", className)}>
-      <div className="aspect-video overflow-hidden rounded-[15px] bg-[var(--surface-muted)] dark:bg-white/[0.04]">
+      <div className="aspect-[3/2] overflow-hidden rounded-[15px] bg-[var(--surface-muted)] dark:bg-white/[0.04]">
         {coverUrl ? (
           // CMS media is served through the storage proxy; next/image
           // cannot optimize it, so a plain img matches the rest of the site.
