@@ -1,4 +1,21 @@
+import {
+  PROJECT_THEME_IDS,
+  type ProjectCta,
+  type ProjectMediaItem,
+  type ProjectThemeId,
+} from "@repo/shared";
+
 import { formatArticleDate, slugify as slugifyText, type ArticleBlock } from "@/lib/article-cms";
+
+export {
+  PROJECT_DETAIL_LIMITS,
+  PROJECT_MEDIA_SIZES,
+  PROJECT_THEME_IDS,
+  type ProjectCta,
+  type ProjectMediaItem,
+  type ProjectMediaSize,
+  type ProjectThemeId,
+} from "@repo/shared";
 
 /** Shared types and helpers for the projects editorial workflow. */
 
@@ -92,6 +109,15 @@ export type ProjectDraft = {
   outputs: ProjectOutputLink[];
   seoTitle?: string;
   seoDescription?: string;
+  /** Detail page palette; absent on older records (see `projectThemeId`). */
+  theme?: ProjectThemeId;
+  /** Detail page copy, blank-line separated paragraphs; falls back to the summary. */
+  description?: string;
+  /** The detail page's call-to-action button. */
+  cta?: ProjectCta;
+  services?: string[];
+  /** Ordered detail page media; absent on older records (see `projectMediaSections`). */
+  media?: ProjectMediaItem[];
 };
 
 export type CmsProjectRecord = {
@@ -127,6 +153,9 @@ export function emptyProjectDraft(): ProjectDraft {
     contributors: [],
     organizations: [],
     outputs: [],
+    description: "",
+    services: [],
+    media: [],
   };
 }
 
@@ -170,6 +199,17 @@ export function draftToProject(draft: ProjectDraft): ProjectDraft {
     })),
     seoTitle: draft.seoTitle?.trim() || undefined,
     seoDescription: draft.seoDescription?.trim() || undefined,
+    description: normalizeDescription(draft.description ?? "") || undefined,
+    cta:
+      draft.cta && draft.cta.label.trim() && draft.cta.url.trim()
+        ? { label: draft.cta.label.trim(), url: draft.cta.url.trim() }
+        : undefined,
+    services: [...new Set((draft.services ?? []).map((item) => item.trim()).filter(Boolean))],
+    media: (draft.media ?? []).map((item) => ({
+      ...item,
+      alt: item.alt?.trim() || undefined,
+      posterKey: item.posterKey || undefined,
+    })),
   };
 }
 
@@ -198,7 +238,102 @@ export function projectToDraft(project: ProjectDraft): ProjectDraft {
     outputs: project.outputs.map((output) => ({ ...output })),
     seoTitle: project.seoTitle ?? "",
     seoDescription: project.seoDescription ?? "",
+    description: project.description ?? "",
+    cta: project.cta ? { ...project.cta } : undefined,
+    services: [...(project.services ?? [])],
+    // Older records have no media sections yet: the editor starts from the
+    // same list the public page derives, so saving keeps what visitors see.
+    media: projectMediaSections(project).map((item) => ({ ...item })),
   };
+}
+
+/** Trims each paragraph and collapses runs of blank lines to one. */
+export function normalizeDescription(value: string) {
+  return value
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/** The detail page's paragraphs: the description, else the summary. */
+export function projectDescriptionParagraphs(project: ProjectDraft) {
+  const text = normalizeDescription(project.description || project.summary || "");
+  return text ? text.split("\n\n") : [];
+}
+
+function hashSlug(slug: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < slug.length; index += 1) {
+    hash ^= slug.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+/**
+ * The project's palette: the one an editor picked, else a stable pick from
+ * the slug, so older records still get a considered theme of their own.
+ */
+export function projectThemeId(project: Pick<ProjectDraft, "slug" | "theme">): ProjectThemeId {
+  if (project.theme && (PROJECT_THEME_IDS as readonly string[]).includes(project.theme)) {
+    return project.theme;
+  }
+  return PROJECT_THEME_IDS[hashSlug(project.slug) % PROJECT_THEME_IDS.length];
+}
+
+/**
+ * The detail page's ordered media. Records without media sections (saved
+ * before they existed, or with none added yet) derive theirs: the cover runs
+ * full height first, gallery images follow at the normal size, and an
+ * uploaded demo video closes full height.
+ */
+export function projectMediaSections(project: ProjectDraft): ProjectMediaItem[] {
+  if (project.media?.length) return project.media;
+  const sections: ProjectMediaItem[] = [];
+  const seen = new Set<string>();
+  const push = (item: ProjectMediaItem) => {
+    if (seen.has(item.key)) return;
+    seen.add(item.key);
+    sections.push(item);
+  };
+  if (project.coverKey) {
+    push({
+      id: "cover",
+      kind: "image",
+      size: "full",
+      key: project.coverKey,
+      width: 0,
+      height: 0,
+      alt: project.coverAlt,
+    });
+  }
+  project.galleryKeys.forEach((key, index) =>
+    push({ id: `gallery-${index}`, kind: "image", size: "normal", key, width: 0, height: 0 }),
+  );
+  if (project.videoMode === "upload" && project.videoKey) {
+    push({
+      id: "demo-video",
+      kind: "video",
+      size: "full",
+      key: project.videoKey,
+      width: 0,
+      height: 0,
+      alt: project.videoName,
+    });
+  }
+  return sections;
+}
+
+/** The project after this one in list order, wrapping around; undefined when alone. */
+export function nextPublishedProject(
+  records: readonly CmsProjectRecord[],
+  slug: string,
+): CmsProjectRecord | undefined {
+  const ordered = publishedProjects(records);
+  if (ordered.length < 2) return undefined;
+  const index = ordered.findIndex((record) => record.slug === slug);
+  return ordered[(index + 1) % ordered.length];
 }
 
 /** Newest activity first: the end date, falling back to the start date, then the save time. */
@@ -224,9 +359,10 @@ export function projectMediaUrl(key?: string) {
   return `/api/projects-cms/media/${encodeURIComponent(key)}`;
 }
 
-/** Resolves an uploaded demo video key to a loadable, range-seekable URL. */
+/** Resolves an uploaded video key (or bundled `static/` art) to a loadable, range-seekable URL. */
 export function projectVideoUrl(key?: string) {
   if (!key) return undefined;
+  if (key.startsWith("static/")) return `/${key.slice("static/".length)}`;
   return `/api/projects-cms/video/${encodeURIComponent(key)}`;
 }
 
