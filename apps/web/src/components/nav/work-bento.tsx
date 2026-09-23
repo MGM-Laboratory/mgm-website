@@ -97,7 +97,7 @@ export function WorkBento({
   }
 
   return (
-    <div className="grid grid-cols-2 auto-rows-[clamp(2.4rem,7dvh,4.2rem)] gap-[0.4em] pt-[0.6em] pb-[0.3em] text-[clamp(0.65rem,1.7dvh,0.95rem)]">
+    <div className="grid grid-cols-2 auto-rows-[clamp(2rem,5.2dvh,3rem)] gap-[0.4em] pt-[0.6em] pb-[0.3em] text-[clamp(0.65rem,1.7dvh,0.95rem)]">
       {items.map((item, i) => (
         <Link
           key={item.href}

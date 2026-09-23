@@ -117,7 +117,7 @@ export default async function ProjectsPage({
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
       <main className="flex-1">
-        <section className="mx-auto w-full max-w-[1200px] px-[55px] pt-24 pb-14">
+        <section className="mx-auto w-full max-w-[1200px] px-6 pt-24 pb-14 sm:px-10 lg:px-14">
           <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-blue uppercase">
             Our Work
           </p>
@@ -145,7 +145,7 @@ export default async function ProjectsPage({
         </section>
 
         <section
-          className="mx-auto w-full max-w-[1200px] scroll-mt-24 px-[55px] pb-40"
+          className="mx-auto w-full max-w-[1200px] scroll-mt-24 px-6 pb-32 sm:px-10 lg:px-14"
           id="projects"
         >
           {filtered.length ? (

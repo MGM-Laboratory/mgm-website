@@ -11,6 +11,7 @@ import {
   doiUrl,
   formatPaperSize,
   formatPublicationDate,
+  paperIsPublic,
   publishedPublications,
   publicationPaperUrl,
   publicationTypeLabel,
@@ -88,7 +89,11 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
   if (!record) notFound();
 
   const { publication } = record;
-  const paperUrl = publicationPaperUrl(publication.paperKey);
+  // Papers are hidden until an editor publishes them from the admin editor:
+  // the preview, the viewer, and the manuscript row only appear once the
+  // record opts in, and the DOI row stays the access path until then.
+  const paperVisible = paperIsPublic(publication);
+  const paperUrl = paperVisible ? publicationPaperUrl(publication.paperKey) : undefined;
   const doi = doiUrl(publication.doi);
   const others = feed
     .filter(
@@ -106,7 +111,7 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
       <main className="flex-1">
-        <article className="mx-auto w-full max-w-[1200px] px-6 pt-[91px] pb-16 sm:px-10 lg:px-[55px]">
+        <article className="mx-auto w-full max-w-[1200px] px-6 pt-[91px] pb-16 sm:px-10 lg:px-14">
           <header>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <Link
@@ -147,14 +152,16 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
               value={formatPublicationDate(publication.date).replace(/^[^,]+, /, "")}
             />
             <MetaRow label="License" value={publication.license} />
-            <MetaRow
-              label="Manuscript"
-              value={
-                publication.paperName
-                  ? `${publication.paperName}${formatPaperSize(publication.paperSize) ? ` · ${formatPaperSize(publication.paperSize)}` : ""}`
-                  : undefined
-              }
-            />
+            {paperVisible ? (
+              <MetaRow
+                label="Manuscript"
+                value={
+                  publication.paperName
+                    ? `${publication.paperName}${formatPaperSize(publication.paperSize) ? ` · ${formatPaperSize(publication.paperSize)}` : ""}`
+                    : undefined
+                }
+              />
+            ) : null}
           </dl>
 
           {/* DOI + quick actions. */}
@@ -213,15 +220,17 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
             </section>
           ) : null}
 
-          {/* The paper itself. */}
-          <div className="mt-14">
-            <PaperSection
-              fileName={publication.paperName}
-              paperSize={publication.paperSize}
-              title={publication.title}
-              url={paperUrl}
-            />
-          </div>
+          {/* The paper itself, once the editors have made it visible. */}
+          {paperVisible ? (
+            <div className="mt-14">
+              <PaperSection
+                fileName={publication.paperName}
+                paperSize={publication.paperSize}
+                title={publication.title}
+                url={paperUrl}
+              />
+            </div>
+          ) : null}
 
           {/* Citations. */}
           <div className="mt-16">
@@ -230,7 +239,7 @@ export default async function PublicationPage({ params }: PublicationPageProps) 
         </article>
 
         {others.length ? (
-          <section className="mx-auto w-full max-w-[1200px] px-6 pb-40 sm:px-10 lg:px-[55px]">
+          <section className="mx-auto w-full max-w-[1200px] px-6 pb-32 sm:px-10 lg:px-14">
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <h2 className="font-display text-[2rem] leading-tight font-semibold tracking-[-0.02em] text-[#0e1116] dark:text-white">
                 Related publications

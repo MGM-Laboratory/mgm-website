@@ -64,7 +64,7 @@ export function ContactContent({ settings }: Readonly<{ settings: ContactSetting
         <section className="relative overflow-hidden bg-[var(--surface-muted)]">
           <div
             ref={heroRef}
-            className="relative mx-auto w-full max-w-[1200px] px-6 pt-24 pb-20 sm:px-[55px]"
+            className="relative mx-auto w-full max-w-[1200px] px-6 pt-24 pb-20 sm:px-10 lg:px-14"
           >
             <noscript>
               <style>{".hero-reveal{opacity:1 !important}"}</style>
@@ -90,7 +90,7 @@ export function ContactContent({ settings }: Readonly<{ settings: ContactSetting
         </section>
 
         <section ref={rootRef} className="bg-background">
-          <div className="mx-auto w-full max-w-[1200px] px-6 pt-16 pb-24 sm:px-[55px]">
+          <div className="mx-auto w-full max-w-[1200px] px-6 pt-16 pb-32 sm:px-10 lg:px-14">
             <noscript>
               <style>{".reveal-card,.reveal-field{opacity:1 !important}"}</style>
             </noscript>

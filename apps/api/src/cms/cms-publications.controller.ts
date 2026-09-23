@@ -87,6 +87,10 @@ const publicationSchema = z.object({
     paperKey: z.string().min(1).max(500).optional(),
     paperName: z.string().trim().max(300).optional(),
     paperSize: z.number().int().nonnegative().max(1_073_741_824).optional(),
+    // Uploaded papers are private until an editor says otherwise: the default
+    // keeps every fresh or re-saved record hidden, and a paper is only served
+    // when the record carries an explicit `false`.
+    paperHidden: z.boolean().default(true),
   }),
 });
 const bootstrapSchema = z.object({ records: z.array(publicationSchema).min(1).max(500) });

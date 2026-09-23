@@ -27,7 +27,7 @@ export default async function PublicationsPage() {
   return (
     <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
       <main className="flex-1">
-        <section className="mx-auto w-full max-w-[1200px] px-[55px] pt-24 pb-16">
+        <section className="mx-auto w-full max-w-[1200px] px-6 pt-24 pb-16 sm:px-10 lg:px-14">
           <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-green uppercase">
             Our Work — Publications
           </p>
@@ -40,7 +40,7 @@ export default async function PublicationsPage() {
           </p>
         </section>
 
-        <section className="mx-auto w-full max-w-[1200px] px-[55px] pb-40">
+        <section className="mx-auto w-full max-w-[1200px] px-6 pb-32 sm:px-10 lg:px-14">
           {publications.length ? (
             <PublicationList records={publications} />
           ) : (
