@@ -214,7 +214,7 @@ export function ProjectsHero({ count }: { count: number }) {
             if (cancelled) return;
             endIntro();
             enteredRef.current = true;
-            stopPlay = startHeroPlay(root, { slots: HERO_SLOTS });
+            stopPlay = startHeroPlay(root, { slots: HERO_SLOTS, count });
           },
         });
 
@@ -355,6 +355,12 @@ export function ProjectsHero({ count }: { count: number }) {
           <span aria-hidden="true" className="projects-hero-number-text inline-block tabular-nums">
             {count}
           </span>
+          {/* The idle play's re-roll: per-digit columns that drop through
+              the count's own mask. */}
+          <span
+            aria-hidden="true"
+            className="projects-hero-number-roll invisible absolute inset-0 flex items-start justify-end tabular-nums"
+          />
         </span>
 
         {/* The link's font size IS the arrow's size, so its offsets can be

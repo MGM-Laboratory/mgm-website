@@ -106,6 +106,8 @@ type Resident = { el: HTMLElement; body: HTMLElement; busy: boolean };
 export type HeroPlayOptions = {
   /** Each letter's frozen slot width, in em of the title's font size. */
   slots: number[];
+  /** The real project count, which every re-roll lands on. */
+  count: number;
 };
 
 export function startHeroPlay(root: HTMLElement, options: HeroPlayOptions): () => void {
@@ -130,14 +132,18 @@ export function startHeroPlay(root: HTMLElement, options: HeroPlayOptions): () =
   return () => mm.revert();
 }
 
-function attach(root: HTMLElement, { slots }: HeroPlayOptions, fine: boolean) {
+function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: boolean) {
   const h1 = root.querySelector<HTMLElement>("h1");
   const glyphEls = [...root.querySelectorAll<HTMLElement>(".projects-hero-glyph")];
   const look = root.querySelector<HTMLElement>(".projects-hero-pupil-look");
   const dilate = root.querySelector<HTMLElement>(".projects-hero-pupil-dilate");
   const pupil = root.querySelector<HTMLElement>(".projects-hero-pupil");
   const link = root.querySelector<HTMLElement>(".projects-hero-arrow-link");
-  if (!h1 || !look || !dilate || !pupil || !link || glyphEls.length !== slots.length) return;
+  const numberWrap = root.querySelector<HTMLElement>(".projects-hero-number");
+  const numberText = root.querySelector<HTMLElement>(".projects-hero-number-text");
+  const roll = root.querySelector<HTMLElement>(".projects-hero-number-roll");
+  if (!h1 || !look || !dilate || !pupil || !link || !numberWrap || !numberText || !roll) return;
+  if (glyphEls.length !== slots.length) return;
   const residents: Resident[] = [
     ...root.querySelectorAll<HTMLElement>(".projects-hero-resident"),
   ].map((el) => ({ el, body: el.firstElementChild as HTMLElement, busy: false }));
@@ -159,6 +165,8 @@ function attach(root: HTMLElement, { slots }: HeroPlayOptions, fine: boolean) {
 
   let activeBeat: Beat = null;
   let blinkTl: Beat = null;
+  let dropTl: Beat = null;
+  let dropCooldownUntil = 0;
   let nextBeat: gsap.core.Tween | null = null;
   let glanceBack: gsap.core.Tween | null = null;
   let lastBeatId = "";
@@ -402,6 +410,64 @@ function attach(root: HTMLElement, { slots }: HeroPlayOptions, fine: boolean) {
     return blinkTl;
   }
 
+  // ---- the count's re-roll ----
+  /**
+   * The count "drops", in the same vocabulary as the card titles' lusion
+   * drop: each digit is a column of copies falling through the count's own
+   * mask on expo.inOut. The column starts on the digit already showing, so
+   * that digit sinks away slowly, `randoms` others flash past, and the
+   * real digit settles in from above. Same digit count and tabular
+   * figures, so the right edge never moves.
+   */
+  function dropCount(randoms: number): Beat {
+    if (dropTl?.isActive() || performance.now() < dropCooldownUntil) return null;
+    const digits = String(count).split("");
+    const lines = randoms + 2;
+    const columns = digits.map((digit, j) => {
+      const column = document.createElement("span");
+      column.style.cssText = "display:flex;flex-direction:column";
+      const stack = [digit];
+      for (let k = 0; k < randoms; k++) {
+        // A leading digit never rolls to 0; no copy repeats the one above.
+        let next = digit;
+        while (next === stack[stack.length - 1]) {
+          next = String(gsap.utils.random(j === 0 && digits.length > 1 ? 1 : 0, 9, 1));
+        }
+        stack.push(next);
+      }
+      stack.push(digit);
+      for (const d of stack) {
+        const line = document.createElement("span");
+        line.style.cssText = "display:block;height:1em";
+        line.textContent = d;
+        column.appendChild(line);
+      }
+      return column;
+    });
+    roll!.replaceChildren(...columns);
+    const settle = () => {
+      numberText!.textContent = String(count);
+      gsap.set(numberText, { autoAlpha: 1 });
+      gsap.set(roll, { autoAlpha: 0 });
+      roll!.replaceChildren();
+      dropCooldownUntil = performance.now() + 400;
+    };
+    const duration = 0.5 + 0.09 * (lines - 1);
+    dropTl = gsap
+      .timeline({ onComplete: settle, onInterrupt: settle })
+      .set(roll, { autoAlpha: 1 })
+      .set(numberText, { autoAlpha: 0 });
+    columns.forEach((column, j) => {
+      dropTl!.fromTo(
+        column,
+        { yPercent: (-100 * (lines - 1)) / lines },
+        { yPercent: 0, duration, ease: "expo.inOut" },
+        j * 0.07,
+      );
+    });
+    return dropTl;
+  }
+
   // ---- beats ----
   /** A resident rises behind a gap or letter, looks around, pops its head
    *  above the cap line, then ducks back down. */
@@ -437,17 +503,23 @@ function attach(root: HTMLElement, { slots }: HeroPlayOptions, fine: boolean) {
     wake();
     const crest = { x: -2 };
     const settle = () => glyphs.forEach((g) => (g.tide = 0));
-    return gsap.timeline({ data: "glyphs", onComplete: settle, onInterrupt: settle }).fromTo(
-      crest,
-      { x: -2 },
-      {
-        x: glyphs.length + 1.5,
-        duration: 1.6,
-        ease: "sine.inOut",
-        onUpdate: () => {
-          glyphs.forEach((g, i) => (g.tide = Math.exp(-(((i - crest.x) / 1.1) ** 2))));
-        },
-      },
+    return (
+      gsap
+        .timeline({ data: "glyphs", onComplete: settle, onInterrupt: settle })
+        .fromTo(
+          crest,
+          { x: -2 },
+          {
+            x: glyphs.length + 1.5,
+            duration: 1.6,
+            ease: "sine.inOut",
+            onUpdate: () => {
+              glyphs.forEach((g, i) => (g.tide = Math.exp(-(((i - crest.x) / 1.1) ** 2))));
+            },
+          },
+        )
+        // The swell spills over into the count.
+        .call(() => void dropCount(2), [], 1.15)
     );
   }
 
@@ -467,6 +539,7 @@ function attach(root: HTMLElement, { slots }: HeroPlayOptions, fine: boolean) {
     { id: "peek", weight: 3, run: peek },
     { id: "blink", weight: 2, whileHovered: true, run: () => blink() },
     { id: "breathe", weight: 2, run: breathe },
+    { id: "count", weight: 1, run: () => dropCount(4) },
   ];
 
   // Idle gaps stretch on touch devices and once nobody has touched
@@ -530,6 +603,8 @@ function attach(root: HTMLElement, { slots }: HeroPlayOptions, fine: boolean) {
       held = glyphs[glyphEls.indexOf(glyphEl)] ?? null;
       if (held) held.held = true;
       wake();
+    } else if (numberWrap!.contains(target)) {
+      dropCount(4);
     } else if (e.pointerType !== "mouse") {
       // A tap anywhere else in the hero: the eye looks at it.
       const [x, y] = toLocal(e);
@@ -569,6 +644,7 @@ function attach(root: HTMLElement, { slots }: HeroPlayOptions, fine: boolean) {
     // Each beat's onInterrupt returns it to rest.
     activeBeat?.kill();
     blinkTl?.kill();
+    dropTl?.kill();
     activeBeat = null;
     if (held) {
       held.held = false;
@@ -616,6 +692,9 @@ function attach(root: HTMLElement, { slots }: HeroPlayOptions, fine: boolean) {
   if (fine) {
     listen(root, "pointermove", onMove, { passive: true });
     listen(root, "pointerleave", onLeave);
+    listen(numberWrap, "pointerenter", (e: PointerEvent) => {
+      if (e.pointerType === "mouse") dropCount(4);
+    });
   }
   listen(root, "pointerdown", onDown);
   listen(window, "pointerup", onUp);
