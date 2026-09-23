@@ -295,13 +295,27 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     let tr = 0;
     let tw = REST_WEIGHT;
     const ts = g.held ? -0.18 : 0;
-    // A pressed letter's neighbours lean aside to make room for it.
+    // A pressed letter's neighbours make room for it, and pass a little of
+    // the push on to the next letters, so nothing fuses into its neighbour
+    // (the held letter also spreads sideways as it squashes).
     const hi = held ? glyphs.indexOf(held) : -9;
-    if (Math.abs(hi - i) === 1) {
+    const gap = Math.abs(hi - i);
+    if (gap === 1) {
       tx += (i - hi) * 0.05;
-      tr += (i - hi) * 5;
+      tr += (i - hi) * 3;
+    } else if (gap === 2) {
+      tx += Math.sign(i - hi) * 0.025;
     }
-    if (pointer.inside && fine) {
+    if (held && pointer.inside && fine) {
+      // While a letter is held, the hover field only swells its weight:
+      // pushing and leaning the letters around it on top of making room
+      // ran them into their neighbours.
+      if (g.held) {
+        const dx = g.cx - pointer.x;
+        const dy = (CAP_MID - pointer.y) * 0.8;
+        tw += 180 * Math.exp(-(dx * dx + dy * dy) / (2 * 0.55 * 0.55));
+      }
+    } else if (pointer.inside && fine) {
       // Gaussian falloff around the cursor (vertical distance measured
       // from the cap middle, slightly flattened), so two or three letters
       // react at once: they shift and lean away and gain ink. The push and
