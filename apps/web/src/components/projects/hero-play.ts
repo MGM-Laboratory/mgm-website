@@ -50,8 +50,8 @@ if (typeof window !== "undefined") {
  * so nothing here may clear them.
  *
  * Started only after the entrance completes, and never under reduced
- * motion (gsap.matchMedia also tears it down live if that preference
- * turns on mid-visit).
+ * motion (a media query listener also tears it down live if that
+ * preference turns on mid-visit, and rebuilds it for a new pointer type).
  */
 
 /** Title geometry, in em of the title's font size (see projects-hero.tsx). */
@@ -128,25 +128,34 @@ export type HeroPlayOptions = {
 };
 
 export function startHeroPlay(root: HTMLElement, options: HeroPlayOptions): () => void {
-  const mm = gsap.matchMedia();
-  mm.add(
-    {
-      motion: "(prefers-reduced-motion: no-preference)",
-      fine: "(hover: hover) and (pointer: fine)",
-    },
-    (context) => {
-      const { motion, fine } = context.conditions as { motion: boolean; fine: boolean };
-      if (!motion) {
+  // Plain media query lists whose listeners go away with the play, not
+  // gsap.matchMedia: its add() never removes the change listeners it puts
+  // on each list, so every visit would leave two behind for the session.
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: no-preference)");
+  const fineQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
+  let ctx: gsap.Context | null = null;
+  const run = () => {
+    ctx?.revert();
+    // attach() runs synchronously, so the context records its setup sets
+    // and reverts them (and runs attach()'s returned teardown) on revert.
+    ctx = gsap.context(() => {
+      if (!motionQuery.matches) {
         // Reduced motion switched on mid-visit: the eye stays a still dot.
         gsap.set(root.querySelector(".projects-hero-pupil"), { autoAlpha: 1 });
         return;
       }
-      // attach() runs synchronously, so the matchMedia context records its
-      // setup sets and reverts them on teardown.
-      return attach(root, options, fine);
-    },
-  );
-  return () => mm.revert();
+      return attach(root, options, fineQuery.matches);
+    });
+  };
+  run();
+  motionQuery.addEventListener("change", run);
+  fineQuery.addEventListener("change", run);
+  return () => {
+    motionQuery.removeEventListener("change", run);
+    fineQuery.removeEventListener("change", run);
+    ctx?.revert();
+    ctx = null;
+  };
 }
 
 function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: boolean) {
@@ -251,7 +260,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     ...[0, 1, 3, 5, 6].filter((i) => glyphs[i]).map((i) => glyphs[i].cx),
   ];
 
-  // ---- one-time setup (recorded by the matchMedia context) ----
+  // ---- one-time setup (recorded by startHeroPlay's context) ----
   // The entrance's rise mask has done its job; hops may leave the line box.
   gsap.set(h1, { overflow: "visible" });
   gsap.set(
@@ -1014,8 +1023,8 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     io.disconnect();
     ro.disconnect();
     offs.forEach((off) => off());
-    // quickSetter writes are not recorded by the matchMedia context, so
-    // clear them by hand. Transform only: the markup owns the pivots.
+    // quickSetter writes are not recorded by the context, so clear them by
+    // hand. Transform only: the markup owns the pivots.
     gsap.set([...glyphEls, ...residents.map((r) => r.el), arrowSvg], { clearProps: "transform" });
     gsap.killTweensOf(arrowShaft);
     gsap.set(arrowShaft, { drawSVG: "100%" });
