@@ -16,7 +16,7 @@ The site's only navigation is the full-screen right-side menu (`nav/nav-menu.tsx
 
 ## Behavior spec
 
-**Open**: hamburger click → overlay dims/blurs the page, four brand-color layers stagger across the screen in sequence, the panel slides in from the right, nav items cascade in, and the MGM ShardLogo **assembles itself** on the empty left side (same shard animation as the hero, `back.out(1.9)`, delayed ~0.3× the panel's duration; **no** post-assembly stomp/pulse, that was removed on purpose). Scroll is locked while open.
+**Open**: hamburger click → overlay dims/blurs the page, four brand-color layers stagger across the screen in sequence, the panel slides in from the right, nav items cascade in, and the MGM ShardLogo **assembles itself** on the empty left side (same shard animation as the hero, `back.out(1.9)`, delayed ~0.3× the panel's duration; **no** post-assembly stomp/pulse, that was removed on purpose). Scroll is locked while open, through the shared owner-counted `lib/scroll-lock.ts` (owner `"nav-menu"`), so closing the menu never releases a lock another feature still holds, such as the `/projects` intro.
 
 **Close**: reverse, logo fades out (`power2.in`), layers sweep back, panel exits. Escape, backdrop click, and route change all close. Focus returns to the toggle.
 

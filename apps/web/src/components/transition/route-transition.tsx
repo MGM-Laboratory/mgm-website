@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import gsap from "gsap";
 
 import { LogoMark } from "@/components/hero/shapes";
+import { markRouteCoverStarted, markRouteRevealDone } from "@/lib/route-reveal";
 
 /**
  * Full-screen page-transition curtain, two layers:
@@ -127,6 +128,14 @@ function freshPendingState(): PendingState {
 export function RouteTransition() {
   const router = useRouter();
   const pathname = usePathname();
+  // The pathname currently on screen, for telling a real back/forward
+  // navigation apart from a same-page fragment jump: following an
+  // in-page <a href="#x"> (or going back from one) also fires popstate,
+  // and covering for it would wait for a route change that never comes.
+  const shownPathnameRef = useRef(pathname);
+  useEffect(() => {
+    shownPathnameRef.current = pathname;
+  }, [pathname]);
 
   const whiteRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -250,6 +259,7 @@ export function RouteTransition() {
 
     if (!overlayRef.current || !logoRef.current || !whiteRef.current) {
       pendingRef.current = freshPendingState();
+      markRouteRevealDone();
       return;
     }
 
@@ -264,6 +274,9 @@ export function RouteTransition() {
         if (logoRef.current) gsap.set(logoRef.current, { scale: 1, rotation: 0 });
         if (whiteRef.current) gsap.set(whiteRef.current, { autoAlpha: 0 });
         pendingRef.current = freshPendingState();
+        // The page is fully visible again: entrance animations gated on the
+        // curtain may now play.
+        markRouteRevealDone();
       },
     });
     // Grow back to giant with a pronounced accelerating curve — starts slow,
@@ -351,6 +364,7 @@ export function RouteTransition() {
     pendingRef.current = { ...freshPendingState(), active: true };
 
     setOverlayBlocking(true);
+    markRouteCoverStarted();
 
     const giantScale = getGiantScale();
     // The logo starts already giant — that's the cover, on its own, the
@@ -411,6 +425,7 @@ export function RouteTransition() {
     };
 
     setOverlayBlocking(true);
+    markRouteCoverStarted();
     gsap.set(whiteRef.current, { autoAlpha: 1 });
     gsap.set(overlayRef.current, { autoAlpha: 1 });
     gsap.set(logoRef.current, { scale: 1, rotation: 0, opacity: 1 });
@@ -455,6 +470,7 @@ export function RouteTransition() {
     }
 
     function onPopState() {
+      if (window.location.pathname === shownPathnameRef.current) return;
       startPopstateCover();
     }
 

@@ -11,11 +11,12 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 5. `docs/animation-system.md`: GSAP setup, conventions, and the **gotchas that have already cost days** (read before touching any animation).
 6. `docs/navigation-menu.md`: the full-screen nav menu system spec.
 7. `docs/page-transition.md`: the full-screen navigation curtain played on every internal route change, and the related homepage-entrance-skip behavior.
-8. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
-9. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
-10. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
-11. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
-12. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
+8. `docs/projects-page.md`: the `/projects` index, the most animated page (intro choreography, hero play, the WebGL cover stage and its DOM fallback, card text effects).
+9. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
+10. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
+11. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
+12. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
+13. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
 
 ## ⚠️ Next.js 16: not the Next.js in your training data
 

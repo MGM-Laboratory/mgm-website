@@ -11,6 +11,7 @@ import { ArrowUp, ArrowUpRight } from "lucide-react";
 import { PatternTile } from "@/components/process/pattern-tile";
 import { HQ_ADDRESS_LINES } from "@/data/contact";
 import { LEGAL_LINKS } from "@/data/nav";
+import { scrollPageTo } from "@/lib/page-scroll";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 
 if (typeof window !== "undefined") {
@@ -87,7 +88,10 @@ function BackToTop() {
   function scrollToTop() {
     const reduced = reducedMotion();
     ScrollSmoother.get()?.scrollTo(0, !reduced);
-    window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+    // Through the page's own smooth scroller when it runs one (/projects):
+    // a direct window.scrollTo is cancelled by a wheel glide still in
+    // flight. Everywhere else this is the same native smooth scroll.
+    scrollPageTo(0, { duration: reduced ? 0 : 1 });
   }
 
   return (

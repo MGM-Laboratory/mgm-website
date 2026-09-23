@@ -1,66 +1,64 @@
+"use client";
+
 import Link from "next/link";
 
-import { ProjectThumbnailCarousel } from "@/components/projects/project-thumbnail-carousel";
+import { ProjectCardCover } from "@/components/projects/project-card-cover";
+import { ProjectCardFooter } from "@/components/projects/project-card-footer";
 import {
   projectGalleryKeys,
   projectMediaUrl,
   PROJECT_CATEGORY_LABELS,
   type CmsProjectRecord,
 } from "@/lib/project-cms";
+import { cn } from "@/lib/utils";
 
 /**
- * The public list card: a big preview built for two-per-row desktop grids.
- * The thumbnail carousel is a sibling of the title link, never nested
- * inside it — a link wrapping interactive prev/next controls is invalid and
- * would hijack every click on the card.
+ * The public list card, modeled on lusion.co/projects: a forced 3:2 cover
+ * (project-card-cover.tsx, drawn by the page's WebGL cover stage when it
+ * runs), then a one-line categories row and a one-line title
+ * (project-card-footer.tsx). Both halves hang their hover effects off this
+ * link root, which each finds from its own element (`closest("a")`).
+ *
+ * The link carries an explicit accessible name: the visual text is split
+ * into per-character pieces for its animations, which screen readers would
+ * otherwise read letter by letter.
  */
-export function ProjectCard({ record }: { record: CmsProjectRecord }) {
+export function ProjectCard({
+  record,
+  index,
+  className,
+}: {
+  record: CmsProjectRecord;
+  index: number;
+  className?: string;
+}) {
   const { project } = record;
-  const images = projectGalleryKeys(project)
+  const coverUrl = projectGalleryKeys(project)
     .map((key) => projectMediaUrl(key))
-    .filter((url): url is string => Boolean(url));
+    .find((url): url is string => Boolean(url));
+  const categories = project.categories
+    .map((category) => PROJECT_CATEGORY_LABELS[category])
+    .filter(Boolean);
 
   return (
-    <div className="group flex flex-col">
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] dark:border-white/10">
-        <ProjectThumbnailCarousel
-          alt={project.title}
-          className="aspect-[16/10] w-full"
-          images={images}
-        />
-      </div>
-      <Link className="mt-5 block min-w-0" href={`/projects/${record.slug}`}>
-        {project.categories.length ? (
-          <div className="flex flex-wrap gap-x-[9px] gap-y-1">
-            {project.categories.map((category) => (
-              <span
-                className="text-[11px] font-medium tracking-[0.12em] text-[#464646] uppercase dark:text-[#b9bcc6]"
-                key={category}
-              >
-                {PROJECT_CATEGORY_LABELS[category]}
-              </span>
-            ))}
-          </div>
-        ) : null}
-        <h2 className="mt-3 font-display text-[1.5rem] leading-snug font-medium text-[#0e1116] transition group-hover:text-brand-blue dark:text-white">
-          {project.title}
-        </h2>
-        <p className="mt-2 line-clamp-2 text-[15px] leading-6 text-[var(--ink-2)] dark:text-white/65">
-          {project.summary}
-        </p>
-        {project.techStack.length ? (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {project.techStack.slice(0, 6).map((tech) => (
-              <span
-                className="rounded-md bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-medium text-[var(--ink-3)] dark:bg-white/[0.06] dark:text-white/50"
-                key={tech}
-              >
-                {tech}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </Link>
-    </div>
+    <Link
+      href={`/projects/${record.slug}`}
+      aria-label={categories.length ? `${project.title} (${categories.join(", ")})` : project.title}
+      // A designed keyboard ring around the whole card (the hover effects
+      // also follow :focus-visible); an outline, never a transform, since
+      // the cover stage and the footer animate the card's insides.
+      className={cn(
+        "group block rounded-[23px] focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[var(--focus)]",
+        className,
+      )}
+    >
+      <ProjectCardCover
+        coverUrl={coverUrl}
+        alt={project.coverAlt || ""}
+        slug={record.slug}
+        index={index}
+      />
+      <ProjectCardFooter title={project.title} categories={categories} />
+    </Link>
   );
 }

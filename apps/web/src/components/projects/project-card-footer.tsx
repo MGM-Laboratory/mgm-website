@@ -1,0 +1,389 @@
+"use client";
+
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { ArrowRight } from "lucide-react";
+
+import { createScramble } from "@/components/projects/card-text/scramble-text";
+import { createTitleDrop } from "@/components/projects/card-text/title-drop";
+import { createTitleFlip } from "@/components/projects/card-text/title-flip";
+import { observeInViewport, observeSeen } from "@/components/projects/card-text/view-trigger";
+import { trackScrollIdle, whenScrollIdle } from "@/components/projects/stage/scroll-idle";
+import { waitForGridReveal } from "@/lib/projects-intro";
+import { motionAllowed, useMotionPreference } from "@/lib/reduced-motion";
+
+// SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring,
+// the title measurement and the entrance pre-state happen before first
+// paint.
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+/**
+ * The card's text: a one-line categories row and a one-line title, with
+ * lusion.co's entrance. When the footer comes into view, the categories
+ * scramble-type in (card-text/scramble-text.ts) and the title letters drop
+ * into place (card-text/title-drop.ts); both reset once the whole card has
+ * left the viewport and replay on the next entry. Hovering the card (or
+ * focusing it from the keyboard) indents the title and slides an arrow in
+ * from the left; hovering the title itself box-flips every character in 3D.
+ */
+export function ProjectCardFooter({
+  title: fullTitle,
+  categories,
+}: {
+  title: string;
+  categories: string[];
+}) {
+  // The rendered title — starts as the full title and gets trimmed with an
+  // ellipsis below when it does not fit on one line.
+  const [title, setTitle] = useState(fullTitle);
+  // Word groups keep the space between words as a real whitespace-pre span
+  // (magicui's approach): a bare space inside an inline-block char box
+  // collapses to zero width, which glued words together. Each character
+  // also carries its index in the whole title (spaces counted, as lusion
+  // counts its empty space columns) for the drop's per-character stagger.
+  const titleWords: Array<{ chars: string[]; start: number }> = [];
+  for (const word of title.split(" ")) {
+    const last = titleWords[titleWords.length - 1];
+    const start = last ? last.start + last.chars.length + 1 : 0;
+    titleWords.push({ chars: Array.from(word), start });
+  }
+
+  const categoryText = categories.join(" • ");
+
+  const footerRef = useRef<HTMLDivElement>(null);
+  const categoryRef = useRef<HTMLParagraphElement>(null);
+  const titleRowRef = useRef<HTMLDivElement>(null);
+  const sizerRef = useRef<HTMLSpanElement>(null);
+  // One drop controller for the card's lifetime: it outlives re-splits of
+  // the title, which only hand it new columns.
+  const [drop] = useState(createTitleDrop);
+  // The title hover flip (the entrance stops it on reset).
+  const [flip] = useState(createTitleFlip);
+  // The live reduced-motion preference: every motion effect below lists it
+  // as a dependency, so switching the OS setting mid-visit tears the
+  // effects down (their cleanups leave the resting text) or re-arms them.
+  // The effects still gate on motionAllowed(), read when they run
+  // (lib/reduced-motion.ts explains why).
+  const motion = useMotionPreference();
+  // What the entrance effect saw on its previous run, to tell a switch
+  // back from reduced motion apart from the first mount.
+  const entranceMotionRef = useRef<boolean | null>(null);
+
+  // The title must stay on one line: measure the real rendered width
+  // against an invisible sizer and trim with an ellipsis when it overflows.
+  useIsomorphicLayoutEffect(() => {
+    const row = titleRowRef.current;
+    const sizer = sizerRef.current;
+    if (!row || !sizer) return;
+
+    let cancelled = false;
+    const fit = () => {
+      // Subpixel width: offsetWidth rounds, and the indent reserve below
+      // leaves no slack for rounding.
+      const measure = (text: string) => {
+        sizer.textContent = text;
+        return sizer.getBoundingClientRect().width;
+      };
+      // Hover and keyboard focus indent the title one em inside this
+      // overflow-clipped row (the indent timeline below), so the fit leaves
+      // that em free: the tail and the ellipsis stay visible while
+      // indented. Reduced motion never indents and keeps the full width.
+      const indent = motionAllowed() ? parseFloat(getComputedStyle(row).fontSize) || 0 : 0;
+      const room = row.clientWidth - indent;
+      if (measure(fullTitle) <= room) {
+        setTitle(fullTitle);
+        return;
+      }
+      // Longest prefix whose ellipsized form still fits on one line. A cut
+      // right after a word drops the space, so the ellipsis never stands
+      // alone as its own word.
+      const ellipsized = (length: number) => `${fullTitle.slice(0, length).trimEnd()}…`;
+      let lo = 1;
+      let hi = fullTitle.length;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if (measure(ellipsized(mid)) <= room) lo = mid;
+        else hi = mid - 1;
+      }
+      setTitle(ellipsized(lo));
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(row);
+    // Widths can change once the display font loads.
+    document.fonts.ready.then(() => {
+      if (!cancelled) fit();
+    });
+    return () => {
+      cancelled = true;
+      ro.disconnect();
+    };
+  }, [fullTitle, motion]);
+
+  // Runs after every re-split (the truncation above can swap the title
+  // once fonts load or the card resizes), so new columns pick up the
+  // drop's current state before paint: a re-split mid-drop continues the
+  // drop instead of flashing the title.
+  useIsomorphicLayoutEffect(() => {
+    const titleRow = titleRowRef.current;
+    if (!titleRow) return;
+    drop.setColumns(titleRow, Array.from(title).length);
+  }, [title, drop]);
+
+  // The entrance. Server HTML shows the final text; with motion allowed,
+  // this hides both lines before first paint (category emptied, title
+  // columns parked above the window), then plays them when the footer
+  // comes into view. It waits for the grid reveal first so nothing plays
+  // while the page intro still hides the list.
+  useIsomorphicLayoutEffect(() => {
+    const footer = footerRef.current;
+    const titleRow = titleRowRef.current;
+    const root = footer?.closest("a");
+    if (!footer || !titleRow || !root) return;
+    // Reduced motion: the real text stays, no scramble, no drop. Switching
+    // it on mid-visit re-runs this effect, and the cleanup below has
+    // already finished every running or parked card to its real text.
+    const allowed = motionAllowed();
+    const resumed = entranceMotionRef.current === false;
+    entranceMotionRef.current = allowed;
+    if (!allowed) return;
+
+    const line = categoryRef.current;
+    const scramble = line ? createScramble(line, categoryText) : null;
+    // Switching reduced motion back off mid-visit keeps the real text that
+    // is on screen instead of blanking and replaying it: the card starts
+    // disarmed, and only a card that is out of view parks and arms (the
+    // viewport observer reports that at once).
+    if (!resumed) {
+      scramble?.reset();
+      drop.reset();
+    }
+
+    // Armed: waiting to play on the next footer entry. lusion replays
+    // every time the card comes back, but only after the whole card was
+    // out of view, so a footer that dips out and back in doesn't restart.
+    let armed = !resumed;
+    let cancelled = false;
+    const stops: Array<() => void> = [];
+
+    waitForGridReveal().then(() => {
+      if (cancelled) return;
+      // Deliberately the footer, not the card top (lusion's trigger): on a
+      // slow scroll lusion's text can finish before it is on screen.
+      stops.push(
+        observeSeen(footer, (seen) => {
+          if (!seen || !armed) return;
+          armed = false;
+          scramble?.play();
+          drop.play();
+        }),
+      );
+      stops.push(
+        observeInViewport(root, (inView) => {
+          if (inView || armed) return;
+          armed = true;
+          scramble?.reset();
+          drop.reset();
+          // A flip still rolling as the card left would otherwise finish
+          // on columns that are parked out of sight.
+          flip.stop();
+        }),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      for (const stop of stops) stop();
+      // Leave the real text behind (unmount, a Strict Mode remount, or a
+      // new category string, which re-runs this effect from the top).
+      scramble?.finish();
+      drop.finish();
+    };
+  }, [categoryText, drop, flip, motion]);
+
+  useIsomorphicLayoutEffect(() => {
+    const titleRow = titleRowRef.current;
+    // The card's <a> root, found from our own element: a parent's ref is
+    // not attached yet when a child's layout effect runs on mount.
+    const root = titleRow?.closest("a");
+    if (!root || !titleRow) return;
+
+    // Every hover effect is decorative; reduced motion keeps the card
+    // completely static.
+    if (!motionAllowed()) return;
+
+    const title = titleRow.querySelector<HTMLElement>(".project-card-title");
+    const icon = titleRow.querySelector<HTMLElement>(".project-card-icon");
+    if (!title || !icon) return;
+
+    // The indent/arrow travel distance is one em of the title row.
+    const em = () => parseFloat(getComputedStyle(titleRow).fontSize) || 28;
+
+    // Footer hover: the title indents one em and the arrow slides in from
+    // the left edge. .fromTo baselines (not .to) so reversing mid-animation
+    // can never strand a half-finished value.
+    const indent = gsap.timeline({ paused: true });
+    indent.fromTo([title, icon], { x: 0 }, { x: () => em(), duration: 0.5, ease: "power3.out" }, 0);
+
+    // Title hover: the magicui 3D flip (card-text/title-flip.ts), never
+    // while the letters are still parked or dropping in (it would roll
+    // boxes nobody can see yet).
+    // Ownership: the flip rotates the box (copy one), the drop moves the
+    // column around it, the indent moves the whole title: three elements.
+    // Scrolling slides cards under a resting cursor, and the browser fires
+    // mouseenter on each of them; like the cover's focus pull, the flip and
+    // the indent wait for the scroll to settle (and only play if the
+    // pointer is still there by then).
+    const releaseIdle = trackScrollIdle();
+    let cancelTitleWait = () => {};
+    const onTitleEnter = () => {
+      cancelTitleWait();
+      cancelTitleWait = whenScrollIdle(() => {
+        if (drop.state === "landed" && titleRow.matches(":hover")) flip.play(titleRow);
+      });
+    };
+
+    // The indent and arrow lead a title that is on screen. While the
+    // letters are parked or still dropping in, the arrow would slide in
+    // beside an empty row, so a hover then waits for the drop to land (the
+    // drop reports landing, and a reset that parks the title again).
+    // `hovered` follows the same mouse events the indent answers to.
+    // Keyboard focus gets the same indent and arrow, but only when it is
+    // :focus-visible: a mouse click also focuses the link, and that focus
+    // would otherwise keep the card indented after the pointer leaves.
+    let hovered = root.matches(":hover");
+    let focused = root.matches(":focus-visible");
+    const sync = () => {
+      if ((hovered || focused) && drop.state === "landed") indent.play();
+      else indent.reverse();
+    };
+    let cancelHoverWait = () => {};
+    const onEnter = () => {
+      cancelHoverWait();
+      cancelHoverWait = whenScrollIdle(() => {
+        hovered = true;
+        sync();
+      });
+    };
+    const onLeave = () => {
+      cancelHoverWait();
+      hovered = false;
+      sync();
+    };
+    const onFocus = () => {
+      focused = root.matches(":focus-visible");
+      sync();
+    };
+    const onBlur = () => {
+      focused = false;
+      sync();
+    };
+    drop.onChange(sync);
+    if (hovered || focused) sync();
+
+    root.addEventListener("mouseenter", onEnter);
+    root.addEventListener("mouseleave", onLeave);
+    root.addEventListener("focus", onFocus);
+    root.addEventListener("blur", onBlur);
+    titleRow.addEventListener("mouseenter", onTitleEnter);
+    return () => {
+      root.removeEventListener("mouseenter", onEnter);
+      root.removeEventListener("mouseleave", onLeave);
+      root.removeEventListener("focus", onFocus);
+      root.removeEventListener("blur", onBlur);
+      titleRow.removeEventListener("mouseenter", onTitleEnter);
+      cancelHoverWait();
+      cancelTitleWait();
+      releaseIdle();
+      drop.onChange(null);
+      flip.stop();
+      // Back to the flat resting title: a card that is hovered or focused
+      // when reduced motion switches on must not stay indented.
+      indent.progress(0).kill();
+      gsap.set([title, icon], { clearProps: "transform" });
+    };
+  }, [drop, flip, motion]);
+
+  return (
+    // data-card-footer: the page's cover stage moves this wrapper with the
+    // card's scroll reaction, so nothing in this component may animate the
+    // wrapper's own transform (the effects below animate inner elements).
+    <div ref={footerRef} data-card-footer="" className="mt-5">
+      {categories.length ? (
+        // The entrance scramble writes this line's text directly while it
+        // plays (one-line truncation still applies to every frame).
+        <p
+          ref={categoryRef}
+          aria-hidden="true"
+          className="mb-3 truncate text-[clamp(0.6875rem,0.9vw,0.875rem)] font-medium tracking-[0.12em] text-[var(--ink-3)] uppercase dark:text-white/50"
+        >
+          {categoryText}
+        </p>
+      ) : null}
+      {/* The row is a fixed one-line window (h = line-height): each
+          character below is a four-line column that the drop slides down
+          through it, so only the row's overflow clip decides what shows. */}
+      <div
+        ref={titleRowRef}
+        className="relative h-[1.15em] overflow-hidden text-[clamp(1.5rem,3vw,3.5rem)] leading-[1.15em] whitespace-nowrap"
+      >
+        <span
+          aria-hidden="true"
+          className="project-card-icon absolute top-[0.15em] left-[-1em] inline-flex size-[0.8em] items-center justify-center text-[#0e1116] dark:text-white"
+        >
+          <ArrowRight className="size-full" strokeWidth={2} />
+        </span>
+        {/* Visual only: the card link's aria-label carries the real title. */}
+        <span
+          aria-hidden="true"
+          className="project-card-title relative inline-block font-display font-medium tracking-[-0.02em] text-[#0e1116] dark:text-white"
+        >
+          {titleWords.map(({ chars, start }, wordIndex) => (
+            <span className="inline-flex" key={wordIndex}>
+              {chars.map((char, charIndex) => (
+                // The drop column: four identical copies stacked in one
+                // column, the first on top (it is the one that lands in
+                // the window). Only the drop writes this element's
+                // transform; its resting (no-JS) position shows copy one.
+                <span
+                  className="project-card-drop flex flex-col"
+                  data-drop-index={start + charIndex}
+                  key={`${wordIndex}-${charIndex}`}
+                >
+                  {/* Copy one is the magicui flip box (the flip owns its
+                      transform); copies two to four are plain glyphs. The
+                      box and its two faces are flat text at rest; the 3D
+                      geometry below only applies while the title row
+                      carries data-flipping (card-text/title-flip.ts). */}
+                  <span className="project-card-char relative inline-block in-data-flipping:transform-3d">
+                    <span className="inline-block in-data-flipping:[transform:translateZ(0.5lh)] in-data-flipping:backface-hidden">
+                      {char}
+                    </span>
+                    <span className="absolute inset-0 hidden in-data-flipping:inline-block in-data-flipping:[transform:rotateX(-90deg)_translateZ(0.5lh)] in-data-flipping:backface-hidden">
+                      {char}
+                    </span>
+                  </span>
+                  <span>{char}</span>
+                  <span>{char}</span>
+                  <span>{char}</span>
+                </span>
+              ))}
+              {wordIndex < titleWords.length - 1 && <span className="whitespace-pre"> </span>}
+            </span>
+          ))}
+        </span>
+        {/* Invisible sizer mirroring the title typography, used by the
+            one-line truncation measurement above. Every title character
+            is its own box, so no kerning pair or ligature forms between
+            them; the sizer turns both off to match (kerned plain text
+            measured up to ~10px narrower than the split title). */}
+        <span
+          ref={sizerRef}
+          aria-hidden="true"
+          className="pointer-events-none invisible absolute top-0 left-0 font-display font-medium tracking-[-0.02em] whitespace-nowrap [font-kerning:none] [font-variant-ligatures:none]"
+        />
+      </div>
+    </div>
+  );
+}
