@@ -1,8 +1,10 @@
 /**
  * Signals shared by the project zoom transition (the overlay that carries a
- * card's cover from /projects into /projects/<slug> and back) and the two
- * pages it connects. The overlay lives in the root layout and outlives both
- * pages, so they coordinate through this module instead of props.
+ * card's cover from /projects into /projects/<slug> and back,
+ * components/transition/project-transition.tsx) and the pages it connects.
+ * The overlay lives in the root layout and outlives both pages, so they
+ * coordinate through this module instead of props. It stays free of heavy
+ * imports: the route curtain and the smooth scroller load it on every page.
  *
  * - Cover: while the overlay covers the screen, a detail page that mounts
  *   underneath holds its entrance. `waitForProjectReveal()` resolves once
@@ -14,11 +16,21 @@
  *   page (`setProjectReturn`), which reads it synchronously while rendering
  *   (`peekProjectReturn`) to skip its intro, restore its scroll position
  *   and keep the target card's cover hidden until the overlay lands on it.
+ *   Under reduced motion the note only asks for the scroll position.
+ * - Scroll reset: the root layout's smooth scroller jumps every new route
+ *   to the top after the page's own layout effects. `skipScrollReset()`
+ *   exempts one destination (the list restoring its position).
+ * - Popstate: the curtain (route-transition.tsx) leaves browser back and
+ *   forward between the list and a project, or between two projects, to
+ *   the overlay, but only while the overlay is mounted and motion is
+ *   allowed (`claimsProjectPopstate`).
  *
  * Module state survives client-side navigation and resets on a hard load.
  * Promises resolve asynchronously, which keeps React Strict Mode's
  * rehearsal mount from acting on a stale value.
  */
+
+import { motionAllowed } from "@/lib/reduced-motion";
 
 type Waiter = () => void;
 
@@ -30,9 +42,19 @@ export type ProjectReturn = {
   slug: string;
   /** The list's scroll position when it was left, if the visit started there. */
   scrollY?: number;
+  /**
+   * Reduced motion: no zoom-out, the list only restores its scroll
+   * position (to the card) and otherwise renders as it always does.
+   */
+  restoreOnly?: boolean;
 };
 
 let pendingReturn: ProjectReturn | undefined;
+let scrollResetSkip: string | null = null;
+let layers = 0;
+
+export const PROJECTS_LIST_PATH = "/projects";
+const DETAIL_PATH = /^\/projects\/([^/]+)$/;
 
 function flush(waiters: Waiter[]) {
   for (const resolve of waiters.splice(0)) resolve();
@@ -103,4 +125,62 @@ export function peekProjectReturn(): ProjectReturn | undefined {
 /** Consumes the note once the zoom-out has landed (or was abandoned). */
 export function clearProjectReturn() {
   pendingReturn = undefined;
+}
+
+/** The next route change to `pathname` keeps its scroll position. */
+export function skipScrollReset(pathname: string | null) {
+  scrollResetSkip = pathname;
+}
+
+/**
+ * Called by the smooth scroller on every route change: true when this
+ * destination asked to keep its scroll position. Any route change uses up
+ * the request, so a navigation that went elsewhere never leaves it armed.
+ */
+export function consumeScrollResetSkip(pathname: string) {
+  const skip = scrollResetSkip === pathname;
+  scrollResetSkip = null;
+  return skip;
+}
+
+/** The slug of a project detail path, or null for any other path. */
+export function projectDetailSlug(pathname: string) {
+  const match = DETAIL_PATH.exec(pathname);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export type ProjectTransitionKind = "enter" | "exit" | "swap";
+
+/**
+ * Which project transition a route change is: list to project ("enter"),
+ * project to list ("exit"), project to another project ("swap"), or none.
+ */
+export function projectTransitionKind(from: string, to: string): ProjectTransitionKind | null {
+  const fromSlug = projectDetailSlug(from);
+  const toSlug = projectDetailSlug(to);
+  if (from === PROJECTS_LIST_PATH && toSlug) return "enter";
+  if (fromSlug && to === PROJECTS_LIST_PATH) return "exit";
+  if (fromSlug && toSlug && fromSlug !== toSlug) return "swap";
+  return null;
+}
+
+/** The overlay registers while mounted; returns the unregister function. */
+export function registerProjectTransitionLayer() {
+  layers += 1;
+  let registered = true;
+  return () => {
+    if (!registered) return;
+    registered = false;
+    layers -= 1;
+  };
+}
+
+/**
+ * Whether the project overlay handles a browser back or forward between
+ * these paths (the curtain then stays out of it). Only while the overlay is
+ * mounted and motion is allowed: otherwise the curtain covers as usual.
+ */
+export function claimsProjectPopstate(from: string, to: string) {
+  if (layers === 0 || !motionAllowed()) return false;
+  return projectTransitionKind(from, to) !== null;
 }
