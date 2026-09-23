@@ -184,8 +184,10 @@ const POPUP_MARGIN_PX = 16;
 
 // Constant px/sec instead of a flat duration, so the loop feels equally
 // fast regardless of the track's actual measured width (which changes
-// across breakpoints as the inter-logo gap changes).
-const MARQUEE_SPEED_PX_PER_SEC = 150;
+// across breakpoints as the inter-logo gap changes). 100 px/sec was tuned
+// down from 150 after the strip read as rushing past (issue #59); any
+// faster and the logos blur into a streak instead of reading individually.
+const MARQUEE_SPEED_PX_PER_SEC = 100;
 
 export function TrustedBySection({
   compact = false,
@@ -369,13 +371,22 @@ export function TrustedBySection({
     };
     window.addEventListener("resize", onResize);
 
-    const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 85%", once: true } });
+    // `once: false` + the kill-on-complete inside the handler below
+    // replaces `once: true`: identical visible behavior without the
+    // refresh-loop self-kill that crashes when several triggers mount on a
+    // page already scrolled down (GSAP 3.15.0 splices the registry
+    // mid-refresh; see docs/animation-system.md gotcha #4 and the Known
+    // issues section).
+    const tl = gsap.timeline({ scrollTrigger: { trigger: root, start: "top 85%", once: false } });
     tl.fromTo(
       gsap.utils.toArray<HTMLElement>(".reveal-card", root),
       { opacity: 0, y: 24 },
       { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.1 },
     );
-    tl.eventCallback("onComplete", startMarquee);
+    tl.eventCallback("onComplete", () => {
+      tl.scrollTrigger?.kill();
+      startMarquee();
+    });
 
     return () => {
       window.removeEventListener("resize", onResize);
