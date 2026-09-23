@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 
 import { scrollPageTo } from "@/lib/page-scroll";
+import { random, randomBetween, randomInt, randomPick } from "@/lib/random";
 import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";
 
 if (typeof window !== "undefined") {
@@ -570,7 +571,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     });
   }
 
-  function blink(double = Math.random() < 0.3): Beat {
+  function blink(double = random() < 0.3): Beat {
     if (blinkTl?.isActive()) return blinkTl;
     blinkTl = gsap.timeline({ onInterrupt: () => void gsap.set(pupil, { scaleY: 1 }) });
     for (let k = 0; k < (double ? 2 : 1); k++) {
@@ -602,7 +603,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
         // A leading digit never rolls to 0; no copy repeats the one above.
         let next = digit;
         while (next === stack[stack.length - 1]) {
-          next = String(gsap.utils.random(j === 0 && digits.length > 1 ? 1 : 0, 9, 1));
+          next = String(randomInt(j === 0 && digits.length > 1 ? 1 : 0, 9));
         }
         stack.push(next);
       }
@@ -645,11 +646,11 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   function peek(): Beat {
     const free = residents.filter((r) => !r.busy);
     if (!free.length) return null;
-    const r = gsap.utils.random(free);
-    const x = gsap.utils.random(spots);
+    const r = randomPick(free);
+    const x = randomPick(spots);
     r.busy = true;
     gsap.set(r.el, { x: (x - RESIDENT_SIZE / 2) * E });
-    if (Math.random() < 0.5) glance(x, 0.5, 1.2);
+    if (random() < 0.5) glance(x, 0.5, 1.2);
     const rest = () => {
       gsap.set(r.body, { yPercent: 110, rotation: 0, autoAlpha: 0 });
       r.busy = false;
@@ -747,7 +748,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       (b) => (!pointer.inside || b.whileHovered) && (b.id !== lastBeatId || pointer.inside),
     );
     if (!pool.length) return schedule(0, 2);
-    let pick = Math.random() * pool.reduce((sum, b) => sum + b.weight, 0);
+    let pick = random() * pool.reduce((sum, b) => sum + b.weight, 0);
     const beat =
       firstBeat && !pointer.inside
         ? BEATS[0]
@@ -755,7 +756,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     firstBeat = false;
     lastBeatId = beat.id;
     activeBeat = beat.run();
-    schedule(activeBeat?.duration() ?? 0, gsap.utils.random(3.5, 6.5));
+    schedule(activeBeat?.duration() ?? 0, randomBetween(3.5, 6.5));
   }
 
   // ---- input ----
@@ -782,7 +783,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     // Opening the nav menu under a resting cursor parks the hero and then
     // fires this leave (the backdrop slides under the cursor): scheduling
     // here would start the director again behind the menu.
-    if (running) schedule(0, gsap.utils.random(2.5, 4));
+    if (running) schedule(0, randomBetween(2.5, 4));
   }
 
   function onDown(e: PointerEvent) {
@@ -854,7 +855,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       g.held = false;
       // The release: a hop, a random spin and a stretch kick.
       launch(g, 0.28);
-      g.r.v += gsap.utils.random(-160, 160);
+      g.r.v += randomBetween(-160, 160);
       g.s.v += 1.6;
     }
     wake();
@@ -978,7 +979,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
 
   measure();
   activeBeat = openEye();
-  schedule(activeBeat?.duration() ?? 0, gsap.utils.random(2.5, 4));
+  schedule(activeBeat?.duration() ?? 0, randomBetween(2.5, 4));
   running = !covered && !document.hidden;
   if (!running) park();
 
@@ -1000,7 +1001,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
           activeBeat?.kill();
           lastBeatId = beat.id;
           activeBeat = beat.run();
-          schedule(activeBeat?.duration() ?? 0, gsap.utils.random(3.5, 6.5));
+          schedule(activeBeat?.duration() ?? 0, randomBetween(3.5, 6.5));
         }
       },
     };
