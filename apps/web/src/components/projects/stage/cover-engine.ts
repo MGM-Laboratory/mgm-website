@@ -43,7 +43,9 @@ import {
  *   back from 1.333x, the quad sliding in from the page centre and
  *   un-rotating (lusion's exact curves);
  * - a focus pulse (blur -> sharp -> blur -> sharp, spring driven) on every
- *   opening, plus a radial motion blur at the edges while it zooms out.
+ *   opening, plus a radial motion blur at the edges while it zooms out;
+ * - hover: a focus pull, a small zoom-out, a cursor tilt, two handheld
+ *   "jolts".
  * And for the whole list, from the scroll itself: lusion's horizontal lens
  * (edges flare outward at speed) plus a spring-damped bend of every card,
  * which the card's DOM footer follows so the whole card reacts.
@@ -64,8 +66,8 @@ const SETTLE_SECONDS = 2; // slide + un-rotate
 const SLIDE = 0.05; // x viewport width, from the page centre
 const TILT_IN = 0.05; // rad
 const ZOOM_FROM = 0.75; // sampling scale at the start: content at 1.333x
-// Resting overscan (content at 1.026x): room to move the picture inside
-// its frame without ever sampling past its edges.
+// Resting overscan (content at 1.026x) so the hover zoom-out, the jolts and
+// the parallax never sample past the picture's edges.
 const REST_ZOOM = 0.975;
 
 // Focus pulse: the spring starts fully blurred and is released toward
@@ -103,6 +105,17 @@ const VELOCITY_SMOOTHING = 18; // 1/s, evens out discrete wheel steps
 // The footer rides with the frame's bottom-centre point (the vertex bend
 // there is 1 - 0.35 of the centre's).
 const FOOTER_BOW = 0.65;
+
+// Hover.
+const HOVER_ZOOM = 0.68; // spring target; its overshoot lands near 1.0x
+const HOVER_BLUR = 0.7; // focus kick target
+const HOVER_BLUR_SECONDS = 0.09;
+const HOVER_SPRING = [2.2, 0.7, 3] as const;
+const TILT_MAX = 0.05; // rad at the frame edge
+const TILT_SPRING = [1.3, 0.65, 1] as const;
+const PARALLAX = 0.006; // frame uv at the frame edge
+const JOLT_UV = 0.01;
+const JOLT_TIMES = [0.2, 0.3];
 
 // Texture streaming.
 const PRELOAD_AHEAD = 2.5; // viewports below
@@ -155,7 +168,18 @@ type Card = {
   time: number;
   focusHeld: boolean;
   focus: Spring;
+  // Hover.
+  hovered: boolean;
+  hoverTime: number;
+  blurInLeft: number;
+  pointerX: number;
+  pointerY: number;
+  zoom: Spring;
+  tiltX: Spring;
+  tiltY: Spring;
+  jolt: { x: number; y: number; tx: number; ty: number };
   footerY: number;
+  offHover: () => void;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -418,12 +442,50 @@ export class CoverEngine {
       time: 0,
       focusHeld: true,
       focus: new Spring(...FOCUS_SPRING, 1),
+      hovered: false,
+      hoverTime: 0,
+      blurInLeft: 0,
+      pointerX: 0,
+      pointerY: 0,
+      zoom: new Spring(...HOVER_SPRING),
+      tiltX: new Spring(...TILT_SPRING),
+      tiltY: new Spring(...TILT_SPRING),
+      jolt: { x: 0, y: 0, tx: 0, ty: 0 },
       footerY: 0,
+      offHover: () => {},
+    };
+
+    // Hover follows the picture (the frame), like lusion; the DOM frame
+    // still gets the events because the canvas above it ignores pointers.
+    const enter = () => {
+      if (card.state !== "attached") return;
+      card.hovered = true;
+      card.hoverTime = 0;
+      card.blurInLeft = HOVER_BLUR_SECONDS;
+    };
+    const leave = () => {
+      card.hovered = false;
+      card.blurInLeft = 0;
+    };
+    const move = (event: MouseEvent) => {
+      if (!card.hovered) return;
+      const top = card.top + gridRevealState.y - window.scrollY;
+      card.pointerX = clamp((event.clientX - card.x) / card.width - 0.5, -0.5, 0.5);
+      card.pointerY = clamp((event.clientY - top) / card.height - 0.5, -0.5, 0.5);
+    };
+    card.frame.addEventListener("mouseenter", enter);
+    card.frame.addEventListener("mouseleave", leave);
+    card.frame.addEventListener("mousemove", move);
+    card.offHover = () => {
+      card.frame.removeEventListener("mouseenter", enter);
+      card.frame.removeEventListener("mouseleave", leave);
+      card.frame.removeEventListener("mousemove", move);
     };
     return card;
   }
 
   private destroyCard(card: Card) {
+    card.offHover();
     this.detach(card);
     if (card.mesh) this.scene.remove(card.mesh);
     card.uniforms?.u_map.value?.dispose();
@@ -605,6 +667,12 @@ export class CoverEngine {
     card.time = 0;
     card.focusHeld = true;
     card.focus.reset(1, 1);
+    card.hovered = false;
+    card.blurInLeft = 0;
+    card.zoom.reset(0);
+    card.tiltX.reset(0);
+    card.tiltY.reset(0);
+    card.jolt.x = card.jolt.y = card.jolt.tx = card.jolt.ty = 0;
   }
 
   private moveFooter(card: Card, y: number) {
@@ -726,32 +794,99 @@ export class CoverEngine {
         ((1 - ZOOM_FROM) * (expoOutRate(showX) / SHOW_SECONDS)) / (zoomBase * zoomBase);
       const streak = Math.min(STREAK_MAX, magRate * STREAK_GAIN);
 
-      // Focus: hold, then release toward sharp.
+      // Focus: hold, then release toward sharp (or a hover's blur-in).
       if (card.focusHeld) {
         const onScreen = (Math.min(bottom, vh) - Math.max(top, 0)) / card.height;
         if (onScreen >= FOCUS_HOLD_VISIBLE || card.time >= FOCUS_HOLD_SECONDS)
           card.focusHeld = false;
       }
       if (!card.focusHeld) {
-        card.focus.step(dt, 0);
-        card.focus.settle(FOCUS_EPSILON);
+        let target = 0;
+        if (card.blurInLeft > 0) {
+          target = HOVER_BLUR;
+          card.blurInLeft -= dt;
+        }
+        card.focus.step(dt, target);
+        if (target === 0) card.focus.settle(FOCUS_EPSILON);
+      }
+
+      // Hover springs.
+      const hovered = card.hovered;
+      card.zoom.step(dt, hovered ? HOVER_ZOOM : 0);
+      card.zoom.settle(1e-4);
+      card.tiltX.step(dt, hovered ? -card.pointerY * 2 * TILT_MAX : 0);
+      card.tiltY.step(dt, hovered ? card.pointerX * 2 * TILT_MAX : 0);
+      card.tiltX.settle(1e-5);
+      card.tiltY.settle(1e-5);
+      const jolt = card.jolt;
+      let kicked = false;
+      if (hovered) {
+        const before = card.hoverTime;
+        card.hoverTime += dt;
+        JOLT_TIMES.forEach((at, i) => {
+          if (before < at && card.hoverTime >= at) {
+            // Two small handheld "camera" kicks, the second one weaker.
+            const angle = Math.random() * Math.PI * 2;
+            const size = i === 0 ? 0.667 : 0.25;
+            jolt.tx = Math.cos(angle) * size;
+            jolt.ty = Math.sin(angle) * size;
+            kicked = true;
+          }
+        });
+      } else {
+        card.hoverTime = 0;
+      }
+      if (!kicked) {
+        const decay = Math.exp(-3.1 * dt);
+        jolt.tx *= decay;
+        jolt.ty *= decay;
+      }
+      const follow = 1 - Math.exp(-13.4 * dt);
+      jolt.x += (jolt.tx - jolt.x) * follow;
+      jolt.y += (jolt.ty - jolt.y) * follow;
+      if (
+        Math.max(Math.abs(jolt.x), Math.abs(jolt.y), Math.abs(jolt.tx), Math.abs(jolt.ty)) < 2e-3
+      ) {
+        jolt.x = jolt.y = jolt.tx = jolt.ty = 0;
       }
 
       const u = card.uniforms;
-      const mag = 1 / (zoomBase * REST_ZOOM);
+      const mag = 1 / (zoomBase * mix(REST_ZOOM, 1, card.zoom.value));
+      // Never shift past the pixels the texture actually has.
+      const spare = 0.5 - 0.5 / mag;
+      const rect = u.u_mapRect.value;
+      const maxX = spare + rect.x / rect.z;
+      const maxY = spare + rect.y / rect.w;
+      const shiftX = jolt.x * JOLT_UV - (card.tiltY.value / TILT_MAX) * PARALLAX;
+      const shiftY = jolt.y * JOLT_UV + (card.tiltX.value / TILT_MAX) * PARALLAX;
 
       u.u_rect.value.set(card.x, top, card.width, card.height);
       u.u_offset.value.set((1 - settle) * -card.side * SLIDE * vw, 0);
       u.u_angle.value = (1 - settle) * card.side * TILT_IN;
+      u.u_tilt.value.set(card.tiltX.value, card.tiltY.value);
       u.u_bow.value = bow;
       u.u_show.value = show;
       u.u_mag.value = mag;
+      u.u_shift.value.set(clamp(shiftX, -maxX, maxX), clamp(shiftY, -maxY, maxY));
       u.u_focus.value = Math.abs(card.focus.value) * FOCUS_PX;
       u.u_streak.value = streak < 0.01 ? 0 : streak;
 
       this.moveFooter(card, bow * FOOTER_BOW);
 
-      if (card.time < SETTLE_SECONDS || card.focusHeld || !card.focus.atRest) active = true;
+      if (
+        card.time < SETTLE_SECONDS ||
+        card.focusHeld ||
+        !card.focus.atRest ||
+        card.blurInLeft > 0 ||
+        !card.zoom.atRest ||
+        !card.tiltX.atRest ||
+        !card.tiltY.atRest ||
+        jolt.x !== 0 ||
+        jolt.y !== 0 ||
+        (hovered && card.hoverTime <= JOLT_TIMES[JOLT_TIMES.length - 1])
+      ) {
+        active = true;
+      }
     }
 
     // One extra frame after everything settles draws the exact rest state.
@@ -770,6 +905,7 @@ export class CoverEngine {
           state: card.state,
           inRange: card.inRange,
           time: card.time,
+          hovered: card.hovered,
           visible: card.mesh?.visible ?? false,
           focus: card.uniforms?.u_focus.value ?? null,
           focusSpring: card.focus.value,
@@ -778,6 +914,10 @@ export class CoverEngine {
           show: card.uniforms?.u_show.value ?? null,
           angle: card.uniforms?.u_angle.value ?? null,
           offset: card.uniforms?.u_offset.value.x ?? null,
+          tilt: card.uniforms ? [card.uniforms.u_tilt.value.x, card.uniforms.u_tilt.value.y] : null,
+          shift: card.uniforms
+            ? [card.uniforms.u_shift.value.x, card.uniforms.u_shift.value.y]
+            : null,
           footerY: card.footerY,
         })),
       lens: () => this.shared.u_lens.value,
