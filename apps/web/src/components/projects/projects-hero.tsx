@@ -67,52 +67,63 @@ export function ProjectsHero({ count }: { count: number }) {
     gsap.set(numberWrap, { yPercent: 110, opacity: 0 });
     gsap.set(arrow, { opacity: 0 });
     gsap.set(arrowPath, { drawSVG: "0%" });
+    // Start the count from a real 0 (not the SSR-rendered total) so the
+    // first counter update never snaps the number backwards.
+    if (numberText) numberText.textContent = "0";
 
     let cancelled = false;
     let tl: gsap.core.Timeline | null = null;
 
     const play = () => {
       if (cancelled) return;
+      // Wait for the display font so the rise never starts on fallback
+      // glyphs that then swap mid-animation; bounded so a slow font load
+      // can never hold the entrance hostage.
+      const fontsReady = "fonts" in document ? document.fonts.ready : Promise.resolve();
+      const deadline = new Promise<void>((resolve) => setTimeout(resolve, 1500));
+      void Promise.race([fontsReady, deadline]).then(() => {
+        if (cancelled) return;
 
-      tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+        tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-      // The counter object is tweened as part of the timeline (not in a
-      // separate tween) so killing the timeline also stops the count.
-      const counter = { value: 0 };
+        // The counter object is tweened as part of the timeline (not in a
+        // separate tween) so killing the timeline also stops the count.
+        const counter = { value: 0 };
 
-      tl.fromTo(
-        chars,
-        { yPercent: 100, opacity: 0 },
-        { yPercent: 0, opacity: 1, duration: 0.85, stagger: 0.06 },
-        0.1,
-      )
-        // The count slides up from behind its own mask, then counts from 0.
-        .fromTo(
-          numberWrap,
-          { yPercent: 110, opacity: 0 },
-          { yPercent: 0, opacity: 1, duration: 0.65 },
-          0.4,
+        tl.fromTo(
+          chars,
+          { yPercent: 100, opacity: 0 },
+          { yPercent: 0, opacity: 1, duration: 0.85, stagger: 0.06 },
+          0.1,
         )
-        .to(
-          counter,
-          {
-            value: count,
-            duration: 1.1,
-            ease: "power2.out",
-            onUpdate: () => {
-              if (numberText) numberText.textContent = String(Math.round(counter.value));
+          // The count slides up from behind its own mask, then counts from 0.
+          .fromTo(
+            numberWrap,
+            { yPercent: 110, opacity: 0 },
+            { yPercent: 0, opacity: 1, duration: 0.65 },
+            0.4,
+          )
+          .to(
+            counter,
+            {
+              value: count,
+              duration: 1.1,
+              ease: "power2.out",
+              onUpdate: () => {
+                if (numberText) numberText.textContent = String(Math.round(counter.value));
+              },
             },
-          },
-          0.5,
-        )
-        // The corner arrow fades in and draws itself from the top-left corner.
-        .fromTo(arrow, { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.95)
-        .fromTo(
-          arrowPath,
-          { drawSVG: "0%" },
-          { drawSVG: "100%", duration: 0.75, ease: "power2.inOut" },
-          0.95,
-        );
+            0.5,
+          )
+          // The corner arrow fades in and draws itself from the top-left corner.
+          .fromTo(arrow, { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.95)
+          .fromTo(
+            arrowPath,
+            { drawSVG: "0%" },
+            { drawSVG: "100%", duration: 0.75, ease: "power2.inOut" },
+            0.95,
+          );
+      });
     };
 
     if (skipEntranceForInternalNavRef.current === true) {
