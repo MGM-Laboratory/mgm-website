@@ -60,6 +60,8 @@ import { markRouteCoverStarted, markRouteRevealDone } from "@/lib/route-reveal";
 
 const WHITE_FADE_IN_DURATION = 0.1;
 const WHITE_FADE_OUT_DURATION = 0.42;
+// How faded the white wash must be before reveal-gated entrances start.
+const REVEAL_SIGNAL_OPACITY = 0.3;
 const GIANT_SETTLE_DURATION = 0.06;
 const SHRINK_DURATION = 0.5;
 const SHRINK_FROM_ROTATION = -18;
@@ -274,8 +276,8 @@ export function RouteTransition() {
         if (logoRef.current) gsap.set(logoRef.current, { scale: 1, rotation: 0 });
         if (whiteRef.current) gsap.set(whiteRef.current, { autoAlpha: 0 });
         pendingRef.current = freshPendingState();
-        // The page is fully visible again: entrance animations gated on the
-        // curtain may now play.
+        // Normally already signalled as the wash faded (see below); this
+        // covers a timeline that jumped straight to its end.
         markRouteRevealDone();
       },
     });
@@ -297,6 +299,17 @@ export function RouteTransition() {
       autoAlpha: 0,
       duration: WHITE_FADE_OUT_DURATION,
       ease: "sine.inOut",
+      // Entrances gated on the reveal start once the wash is mostly gone:
+      // the page is plainly visible by then, and waiting for the wash's
+      // last, nearly transparent frames left a beat of blank page before
+      // the destination's entrance began. Idempotent, so every later frame
+      // (and onComplete) calling it again is a no-op.
+      onUpdate: () => {
+        const white = whiteRef.current;
+        if (white && Number(gsap.getProperty(white, "opacity")) <= REVEAL_SIGNAL_OPACITY) {
+          markRouteRevealDone();
+        }
+      },
     });
   }
 
