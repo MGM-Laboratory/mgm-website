@@ -499,8 +499,8 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     // which the page-transition curtain reads as a back/forward navigation
     // (and then waits on a pathname change that never comes).
     e.preventDefault();
-    // Without a list (the empty state), aim at whatever follows the hero.
-    const target = document.getElementById("projects") ?? root.nextElementSibling;
+    // The list, or the empty state's box in its place (same id).
+    const target = document.getElementById("projects");
     lastInput = performance.now();
     arrow.held = false;
     arrow.x.v += 5;
@@ -522,8 +522,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     flinch();
     if (!target) return;
     // Through the page's scroller (a JS smooth scroller would fight a
-    // direct window scroll); the offset honours the list's scroll margin
-    // (scroll-mt-24, which the empty state's box lacks).
+    // direct window scroll); the offset honours the target's scroll margin.
     const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 96;
     gsap.delayedCall(0.12, () => {
       if (alive) scrollPageTo(target, { duration: 1.1, offset: -margin });
