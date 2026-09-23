@@ -14,8 +14,8 @@ export const cardLabelClass =
   "font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35";
 export const cardHintClass = "mt-1 text-xs leading-5 text-[#8490a5] dark:text-white/40";
 
-const fieldLabelClass =
-  "mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45";
+const fieldLabelText =
+  "block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45";
 
 export function Field({
   aside,
@@ -37,19 +37,22 @@ export function Field({
   htmlFor?: string;
   label: string;
 }) {
+  // The label row keeps the plain label's height with or without an aside,
+  // so side-by-side fields keep their controls aligned.
+  const labelClass = `${fieldLabelText} ${aside ? "min-w-0 truncate" : "mb-1.5"}`;
   const labelNode = htmlFor ? (
-    <label className={fieldLabelClass} htmlFor={htmlFor}>
+    <label className={labelClass} htmlFor={htmlFor}>
       {label}
     </label>
   ) : (
-    <span className={fieldLabelClass}>{label}</span>
+    <span className={labelClass}>{label}</span>
   );
   return (
     <div className="min-w-0">
       {aside ? (
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="mb-1.5 flex items-center justify-between gap-3">
           {labelNode}
-          <span className="mb-1.5 shrink-0">{aside}</span>
+          <span className="flex h-0 shrink-0 items-center">{aside}</span>
         </div>
       ) : (
         labelNode

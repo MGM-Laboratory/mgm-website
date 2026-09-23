@@ -51,7 +51,16 @@ import {
   type ProjectVideoMode,
 } from "@/lib/project-cms";
 import { PhotoCropDialog, type PhotoCropPosition } from "@/components/admin/photo-crop-dialog";
+import { DetailPageFields } from "@/components/admin/project-editor/detail-page-fields";
 import { Field, inputClass, textareaClass } from "@/components/admin/project-editor/ui";
+import {
+  detailErrorsFromApi,
+  hasDetailErrors,
+  noDetailErrors,
+  validateDetailFields,
+  type DetailErrors,
+  type DetailField,
+} from "@/components/admin/project-editor/validation";
 
 const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
   ssr: false,
@@ -892,6 +901,11 @@ export function ProjectEditor({
   const [photoToEdit, setPhotoToEdit] = useState<{ contributorId: string; image: string }>();
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
+  // Detail page validation: client errors show once a save was attempted
+  // (or the field was left); API 400s land on their field until it changes.
+  const [revealDetailErrors, setRevealDetailErrors] = useState(false);
+  const [apiDetailErrors, setApiDetailErrors] = useState<DetailErrors>(noDetailErrors);
+  const editorRoot = useRef<HTMLDivElement>(null);
   const [originalRecordSlug] = useState(initialRecord?.slug);
   const fileInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
@@ -940,6 +954,35 @@ export function ProjectEditor({
     if (status === "saved") setStatus("idle");
     setDraft((current) => ({ ...current, [key]: value }));
   };
+  const detailErrors = useMemo(() => validateDetailFields(draft), [draft]);
+  const detailFieldsOf: Record<"theme" | "description" | "cta" | "services", DetailField[]> = {
+    theme: ["theme"],
+    description: ["description"],
+    cta: ["ctaLabel", "ctaUrl"],
+    services: ["services"],
+  };
+  const updateDetail = <K extends "theme" | "description" | "cta" | "services">(
+    key: K,
+    value: ProjectDraft[K],
+  ) => {
+    updateDraft(key, value);
+    setApiDetailErrors((current) => {
+      const fields = detailFieldsOf[key];
+      if (!fields.some((field) => current[field])) return current;
+      const next = { ...current };
+      for (const field of fields) delete next[field];
+      return next;
+    });
+  };
+  /** Brings the first field flagged invalid into view once errors render. */
+  const focusFirstInvalid = () => {
+    window.requestAnimationFrame(() => {
+      const field = editorRoot.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+      field?.scrollIntoView({ block: "center" });
+      field?.focus({ preventScroll: true });
+    });
+  };
+
   const updateTitle = (title: string) => {
     setDraft((current) => ({
       ...current,
@@ -1038,7 +1081,7 @@ export function ProjectEditor({
       return;
     }
     if (!project.summary.trim()) {
-      toast.error("Add a short description.");
+      toast.error("Add a short summary.");
       return;
     }
     if (!project.categories.length) {
@@ -1078,6 +1121,16 @@ export function ProjectEditor({
         toast.error("Linked outputs must use site paths or https:// URLs.");
         return;
       }
+    }
+    const detailCheck = validateDetailFields(overrideDraft ?? draft);
+    if (hasDetailErrors(detailCheck)) {
+      setRevealDetailErrors(true);
+      const { mediaRows, ...fields } = detailCheck;
+      toast.error("Check the detail page fields", {
+        description: Object.values(fields).find(Boolean) ?? Object.values(mediaRows)[0],
+      });
+      focusFirstInvalid();
+      return;
     }
 
     setStatus("saving");
@@ -1209,6 +1262,11 @@ export function ProjectEditor({
         saveError instanceof Error ? saveError.message : "The changes could not be saved.";
       setError(message);
       toast.error("Project was not saved", { description: message });
+      const fieldErrors = detailErrorsFromApi(message, project.media ?? []);
+      if (fieldErrors) {
+        setApiDetailErrors(fieldErrors);
+        focusFirstInvalid();
+      }
     }
   };
 
@@ -1242,7 +1300,7 @@ export function ProjectEditor({
   };
 
   return (
-    <div>
+    <div ref={editorRoot}>
       <div className="mt-10 flex flex-wrap items-start justify-between gap-5 border-b border-[#dee4ef] pb-7 dark:border-white/10">
         <div>
           <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-red uppercase">
@@ -1344,13 +1402,58 @@ export function ProjectEditor({
               value={draft.title}
             />
             <textarea
-              aria-label="Short description"
+              aria-describedby="project-summary-hint"
+              aria-label="Summary"
               className="mt-3 w-full resize-none bg-transparent text-base leading-7 text-[#5d687d] outline-none placeholder:text-[#c2c9d6] dark:text-white/55 dark:placeholder:text-white/20"
               onChange={(event) => updateDraft("summary", event.target.value)}
-              placeholder="A short description shown on the card and at the top of the project page"
+              placeholder="A one or two sentence summary of the project"
               rows={2}
               value={draft.summary}
             />
+            <p
+              className="mt-1 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35"
+              id="project-summary-hint"
+            >
+              <span className="font-semibold text-[#687187] dark:text-white/50">Summary.</span> Used
+              on project cards, in search results and in link previews. The detail page shows the
+              description below, and falls back to this summary while that is empty.
+            </p>
+          </div>
+
+          <div className="mt-8">
+            <DetailPageFields
+              apiErrors={apiDetailErrors}
+              draft={draft}
+              errors={detailErrors}
+              onChange={updateDetail}
+              revealAll={revealDetailErrors}
+            >
+              <div className="space-y-3">
+                {draft.links.map((link) => (
+                  <LinkEditor
+                    key={link.id}
+                    link={link}
+                    onChange={(next) =>
+                      updateDraft(
+                        "links",
+                        draft.links.map((item) => (item.id === next.id ? next : item)),
+                      )
+                    }
+                    onRemove={() =>
+                      updateDraft(
+                        "links",
+                        draft.links.filter((item) => item.id !== link.id),
+                      )
+                    }
+                  />
+                ))}
+              </div>
+              <div className={draft.links.length ? "mt-3" : undefined}>
+                <AddButton onClick={() => updateDraft("links", [...draft.links, newLink()])}>
+                  Add link
+                </AddButton>
+              </div>
+            </DetailPageFields>
           </div>
 
           <div className="mt-5 space-y-2">
@@ -1587,35 +1690,6 @@ export function ProjectEditor({
                 }
               >
                 Add organization
-              </AddButton>
-            </div>
-
-            <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
-              <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
-                Links
-              </p>
-              <div className="space-y-3">
-                {draft.links.map((link) => (
-                  <LinkEditor
-                    key={link.id}
-                    link={link}
-                    onChange={(next) =>
-                      updateDraft(
-                        "links",
-                        draft.links.map((item) => (item.id === next.id ? next : item)),
-                      )
-                    }
-                    onRemove={() =>
-                      updateDraft(
-                        "links",
-                        draft.links.filter((item) => item.id !== link.id),
-                      )
-                    }
-                  />
-                ))}
-              </div>
-              <AddButton onClick={() => updateDraft("links", [...draft.links, newLink()])}>
-                Add link
               </AddButton>
             </div>
 
