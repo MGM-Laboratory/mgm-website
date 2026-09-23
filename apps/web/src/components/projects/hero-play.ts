@@ -501,6 +501,9 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     e.preventDefault();
     // The list, or the empty state's box in its place (same id).
     const target = document.getElementById("projects");
+    // Keyboard or assistive-tech activation: a click no pointer produced
+    // (detail 0), or on a link that was reached by keyboard.
+    const fromKeyboard = e.detail === 0 || link!.matches(":focus-visible");
     lastInput = performance.now();
     arrow.held = false;
     arrow.x.v += 5;
@@ -525,7 +528,15 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     // direct window scroll); the offset honours the target's scroll margin.
     const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 96;
     gsap.delayedCall(0.12, () => {
-      if (alive) scrollPageTo(target, { duration: 1.1, offset: -margin });
+      if (!alive) return;
+      scrollPageTo(target, { duration: 1.1, offset: -margin });
+      // Focus follows the jump, so a keyboard or screen-reader user is not
+      // left on a link that just scrolled off the top: onto the first card
+      // (or the empty state's box). preventScroll, so it never fights the
+      // glide. Pointer users keep their focus where it was, with no ring.
+      if (fromKeyboard) {
+        (target.querySelector<HTMLElement>("a[href]") ?? target).focus({ preventScroll: true });
+      }
     });
   }
 

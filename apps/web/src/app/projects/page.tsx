@@ -33,9 +33,11 @@ export default async function ProjectsPage() {
         ) : (
           // Same id and scroll margin as the grid, so the hero's "Jump to
           // the project list" arrow still has a target (the native fragment
-          // jump under reduced motion included).
+          // jump under reduced motion included). Focusable from script only,
+          // so keyboard focus can follow the arrow's jump here.
           <div
             id="projects"
+            tabIndex={-1}
             className="scroll-mt-24 rounded-2xl border border-[var(--line)] px-8 py-16 text-center"
           >
             <p className="font-display text-xl font-semibold text-[#0e1116] dark:text-white">
