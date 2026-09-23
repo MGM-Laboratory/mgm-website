@@ -6,6 +6,8 @@ import {
   ArrowUp,
   CalendarBlank,
   Check,
+  Eye,
+  EyeSlash,
   FilePdf,
   FloppyDisk,
   ImageSquare,
@@ -539,6 +541,10 @@ export function PublicationEditor({
   const paperLimitMb = Math.floor(paperLimitBytes / 1024 / 1024);
   const currentPaperKey = paperRemoved ? undefined : draft.paperKey;
   const paperUrl = useMemo(() => publicationPaperUrl(currentPaperKey), [currentPaperKey]);
+  // Visibility is opt-in: only an explicit `false` publishes the paper, so
+  // records without the flag (and every fresh upload) read as hidden.
+  const paperHiddenState = draft.paperHidden !== false;
+  const hasPaper = Boolean(currentPaperKey || paperFile);
 
   const updateDraft = <K extends keyof PublicationDraft>(key: K, value: PublicationDraft[K]) => {
     if (status === "saved") setStatus("idle");
@@ -585,6 +591,9 @@ export function PublicationEditor({
     setPaperRemoved(false);
     // Keep a name the admin already typed; otherwise default to the file's.
     if (!draft.paperName) updateDraft("paperName", file.name);
+    // A freshly uploaded paper starts hidden; publishing it is a separate,
+    // deliberate step from the visibility control below.
+    updateDraft("paperHidden", true);
     if (status === "saved") setStatus("idle");
   };
 
@@ -860,6 +869,7 @@ export function PublicationEditor({
                     onClick={() => {
                       setPaperFile(undefined);
                       setPaperRemoved(true);
+                      updateDraft("paperHidden", true);
                     }}
                     type="button"
                   >
@@ -903,6 +913,37 @@ export function PublicationEditor({
               ref={fileInput}
               type="file"
             />
+            {hasPaper ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dfe4ee] bg-[#f8fafd] px-3.5 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+                    Paper visibility
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">
+                    {paperHiddenState
+                      ? "Hidden: the publication page shows no paper, and the file stays unserved even by direct link."
+                      : "Visible: the publication page shows the preview, the reader, and the download."}
+                  </p>
+                </div>
+                <button
+                  aria-pressed={!paperHiddenState}
+                  className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition ${
+                    paperHiddenState
+                      ? "border-[#dfe4ee] bg-white text-[#5d687d] hover:border-brand-blue/40 hover:text-brand-blue dark:border-white/10 dark:bg-white/[0.05] dark:text-white/60 dark:hover:text-white"
+                      : "border-brand-blue/30 bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/15 dark:text-[#9db8e8]"
+                  }`}
+                  onClick={() => updateDraft("paperHidden", !paperHiddenState)}
+                  type="button"
+                >
+                  {paperHiddenState ? (
+                    <EyeSlash size={14} weight="bold" />
+                  ) : (
+                    <Eye size={14} weight="bold" />
+                  )}
+                  {paperHiddenState ? "Hidden" : "Visible"}
+                </button>
+              </div>
+            ) : null}
             <p className="mt-2 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">
               The first page becomes the public preview; readers open the full PDF viewer for the
               whole paper.

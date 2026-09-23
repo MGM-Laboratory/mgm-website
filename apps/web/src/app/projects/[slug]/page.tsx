@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -169,10 +170,14 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
       <main className="flex-1">
         <article className="mx-auto w-full max-w-[1200px] px-6 pt-20 pb-16 sm:px-10 sm:pt-24 lg:px-14">
           <header>
-            <p className="text-sm font-bold tracking-[0.12em] text-brand-blue uppercase">
-              Our Work / Projects
-            </p>
-            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <Link
+              className="inline-flex items-center gap-2 py-2 text-sm font-bold tracking-[0.12em] text-brand-blue uppercase transition hover:opacity-85"
+              href="/projects"
+            >
+              <ArrowLeft aria-hidden="true" size={15} strokeWidth={2.25} />
+              Back to Projects
+            </Link>
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <span
                 className={`rounded-full px-2.5 py-1 text-[11px] font-bold tracking-[0.08em] uppercase ${STATUS_BADGES[project.status]}`}
               >
@@ -336,15 +341,6 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
               ))}
             </div>
           </section>
-
-          <div className="mt-14 border-t border-[var(--line)] pt-8 dark:border-white/10">
-            <Link
-              className="text-sm font-semibold text-[var(--ink-3)] transition hover:text-brand-blue"
-              href="/projects"
-            >
-              ← Back to all projects
-            </Link>
-          </div>
         </article>
       </main>
       <CtaFooter />
