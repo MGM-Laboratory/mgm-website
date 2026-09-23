@@ -311,16 +311,7 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     } else if (gap === 2) {
       tx += Math.sign(i - hi) * 0.025;
     }
-    if (held && pointer.inside && fine) {
-      // While a letter is held, the hover field only swells its weight:
-      // pushing and leaning the letters around it on top of making room
-      // ran them into their neighbours.
-      if (g.held) {
-        const dx = g.cx - pointer.x;
-        const dy = (CAP_MID - pointer.y) * 0.8;
-        tw += 180 * Math.exp(-(dx * dx + dy * dy) / (2 * 0.55 * 0.55));
-      }
-    } else if (pointer.inside && fine) {
+    if (pointer.inside && fine) {
       // Gaussian falloff around the cursor (vertical distance measured
       // from the cap middle, slightly flattened), so two or three letters
       // react at once: they shift and lean away and gain ink. The push and
@@ -330,10 +321,17 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       const dy = (CAP_MID - pointer.y) * 0.8;
       const R = 0.55;
       const f = Math.exp(-(dx * dx + dy * dy) / (2 * R * R));
-      const side = clamp(-1, 1, dx / R);
-      tx += side * 0.08 * f;
-      tr += side * 6 * f;
-      tw += 180 * f;
+      if (!held) {
+        const side = clamp(-1, 1, dx / R);
+        tx += side * 0.08 * f;
+        tr += side * 6 * f;
+        tw += 180 * f;
+      } else if (g.held) {
+        // While a letter is held, the field only swells its weight:
+        // pushing and leaning the letters around it on top of making room
+        // ran them into their neighbours.
+        tw += 180 * f;
+      }
     }
     return [tx, tr, ts, Math.max(tw, REST_WEIGHT + 220 * g.tide)];
   }
