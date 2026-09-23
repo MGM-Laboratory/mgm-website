@@ -738,6 +738,9 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   }
 
   function playBeat() {
+    // Parked: a late delayed call must never restart the director behind
+    // the nav menu (sync() schedules afresh once the hero is back on).
+    if (!running) return;
     // One beat at a time, never the same one twice in a row, and only a
     // blink while the cursor is over the hero.
     const pool = BEATS.filter(
@@ -776,7 +779,10 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     pointer.inside = false;
     lookAt(null);
     wake();
-    schedule(0, gsap.utils.random(2.5, 4));
+    // Opening the nav menu under a resting cursor parks the hero and then
+    // fires this leave (the backdrop slides under the cursor): scheduling
+    // here would start the director again behind the menu.
+    if (running) schedule(0, gsap.utils.random(2.5, 4));
   }
 
   function onDown(e: PointerEvent) {
