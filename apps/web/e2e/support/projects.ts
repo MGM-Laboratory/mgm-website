@@ -103,10 +103,10 @@ type Probed = Window & { __curtainPeak?: number; __everLocked?: boolean };
  * Whether these specs leave WebGL on. By default they switch it off, so the
  * DOM fallbacks run on every engine, locally and in CI alike: Playwright's
  * Chromium starts with SwiftShader enabled, `failIfMajorPerformanceCaveat`
- * doesn't reject it, and a full-screen zoom rendered in software on a busy
- * two-core runner can take tens of seconds (GSAP's lag smoothing stretches
- * every frame past 500 ms). `E2E_WEBGL=1` keeps the WebGL paths for a local
- * run on a machine with a GPU.
+ * doesn't reject it, and a full-screen zoom rendered in software took up to
+ * 19 s on a busy machine (GSAP's lag smoothing stretches every frame past
+ * 500 ms). `E2E_WEBGL=1` keeps the WebGL paths for a local run on a machine
+ * with a GPU.
  */
 export const WEBGL_ENABLED = process.env.E2E_WEBGL === "1";
 
