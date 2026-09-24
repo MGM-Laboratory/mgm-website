@@ -95,12 +95,8 @@ const HOLD = {
 /** The plain cover, when no stage could load. */
 const PLAIN_COVER = 0.35;
 const PLAIN_REVEAL = 0.4;
-/**
- * The share of the reveal after which the page is the visitor's again:
- * input, scroll and the header come back while the last motes fade and
- * the library's camera settles (the page is fully visible by then).
- */
-const INTERACTIVE = 0.75;
+/** The plain cover's share of its reveal after which the page is the visitor's again. */
+const PLAIN_INTERACTIVE = 0.75;
 /** Undoing a cover the route never followed. */
 const REWIND_SECONDS = 0.4;
 /**
@@ -552,7 +548,8 @@ export class PortalController {
           run.log.signalAt = now - run.log.started;
           markRouteRevealDone();
         }
-        if (!run.released && run.t >= INTERACTIVE * seconds) this.letGo(run);
+        const interactive = run.stage?.interactiveShare ?? PLAIN_INTERACTIVE;
+        if (!run.released && run.t >= interactive * seconds) this.letGo(run);
         if (run.t >= seconds) this.finish(run);
         break;
       }

@@ -103,6 +103,12 @@ export interface PortalStage {
   /** Seconds of the reveal, and the point in it where the page is plainly visible. */
   readonly revealSeconds: number;
   readonly revealSignal: number;
+  /**
+   * The share of the reveal after which the page is the visitor's again
+   * (the controller releases input there). The library's camera has
+   * settled by then; only the last motes still fade.
+   */
+  readonly interactiveShare: number;
   cover(t: number, dt: number, world: WorldTransitionApi | null): void;
   /** Fully covered, waiting for the destination. */
   hold(dt: number, world: WorldTransitionApi | null): void;
@@ -153,6 +159,9 @@ const TIMING: Record<"gl" | "dom", Record<PortalDirection, Timing>> = {
     out: { cover: 0.6, reveal: 0.55, signal: 0.22 },
   },
 };
+
+/** See PortalStage.interactiveShare. */
+const INTERACTIVE_SHARE = 0.75;
 
 /** Where the library's camera starts on the way in, and ends on the way out. */
 const ASCENT = { lift: -0.8, dolly: 2600 };
@@ -797,6 +806,7 @@ class Stage implements PortalStage {
   readonly coverSeconds: number;
   readonly revealSeconds: number;
   readonly revealSignal: number;
+  readonly interactiveShare = INTERACTIVE_SHARE;
   private readonly setup: PortalStageSetup;
   private readonly palette: PortalPalette;
   private front: PortalFront;
@@ -960,11 +970,19 @@ class Stage implements PortalStage {
       f.thin = ease.inOut2(fit(t, 0, 0.75 * R));
       f.fade = 1 - ease.in1(fit(t, 0.35 * R, R));
       f.stream += dt * 2.4;
-      if (world) this.ascend(world, t / R);
+      if (world) this.ascend(world, t / (INTERACTIVE_SHARE * R));
     } else {
       f.sheet = 1;
       f.hole = ease.inOut2(fit(t, 0, 0.95 * R));
       if (this.focus) this.focus.style.opacity = (1 - ease.out1(fit(t, 0.1 * R, R))).toFixed(3);
+      // A world still here means the way out was undone (back before the
+      // route committed): the library climbs back out of its fog.
+      if (world) {
+        const fall = 1 - ease.out3(fit(t, 0, INTERACTIVE_SHARE * R));
+        world.setDolly(FALL.dolly * fall);
+        world.setLift(FALL.lift * window.innerHeight * fall);
+        world.setFogSwallow(fall);
+      }
     }
     this.front.draw(f);
   }
