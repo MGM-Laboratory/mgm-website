@@ -26,6 +26,7 @@ import { heroParts, playHeroEntrance, showHero } from "./detail-entrance";
 import { StoryMotion } from "./detail-motion";
 import { StoryReveals } from "./detail-reveals";
 import { adoptFlood } from "./next-flood";
+import { LinkMagnets } from "./detail-magnetic";
 import { NextThreshold } from "./next-threshold";
 
 /**
@@ -98,6 +99,7 @@ export class ArticleController {
   private reveals: StoryReveals | null = null;
   private motion: StoryMotion | null = null;
   private threshold: NextThreshold | null = null;
+  private magnets: LinkMagnets | null = null;
   private entrance: gsap.core.Timeline | null = null;
   private world: ArticlesWorldApi | null = null;
   private glCover: ArticleCoverLayer | null = null;
@@ -166,6 +168,7 @@ export class ArticleController {
     // A transition slid the content: offsets measured meanwhile are stale.
     this.cleanups.push(onArticleTransitionChange(() => this.motion?.queueMeasure()));
     this.listenIndex();
+    if (this.fine && !this.reduced) this.magnets = new LinkMagnets(root);
 
     void this.signalReady();
     void this.runEntrance();
@@ -194,6 +197,7 @@ export class ArticleController {
     this.reveals?.dispose();
     this.motion?.dispose();
     this.threshold?.dispose();
+    this.magnets?.dispose();
     this.offTone?.();
     this.offTone = null;
     for (const cleanup of this.cleanups.splice(0)) cleanup();
@@ -449,6 +453,8 @@ export class ArticleController {
     this.reveals?.showAll();
     this.motion?.stopMotion();
     this.threshold?.dispose();
+    this.magnets?.dispose();
+    this.magnets = null;
     this.threshold = null;
     this.coverFinal = true;
     if (this.coverKind === "gl") {

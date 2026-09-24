@@ -683,20 +683,26 @@ html[data-articles-world="gl"] .ad-story::before {
   margin-bottom: 0;
 }
 
+/* A quiet underline, and on hover a brighter one growing out from where the
+   pointer came in (detail-magnetic.ts sets --ad-link-from). */
 .ad-link {
   color: inherit;
   text-decoration: none;
-  background: linear-gradient(var(--project-highlight), var(--project-highlight)) 0 100% / 100% 1px
-    no-repeat;
+  background:
+    linear-gradient(var(--project-highlight), var(--project-highlight)) var(--ad-link-from, 50%)
+      100% / 0% 2px no-repeat,
+    linear-gradient(var(--project-line), var(--project-line)) 0 100% / 100% 1px no-repeat;
   transition:
-    background-size 0.45s var(--ad-ease),
+    background-size 0.5s var(--ad-ease),
     color 0.3s ease;
 }
 
 @media (hover: hover) {
   .ad-link:hover {
     color: var(--project-highlight);
-    background-size: 100% 2px;
+    background-size:
+      100% 2px,
+      100% 1px;
   }
 }
 
