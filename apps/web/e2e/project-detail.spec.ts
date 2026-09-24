@@ -171,7 +171,10 @@ test.describe("project detail page", () => {
           await expect(video).toHaveJSProperty("muted", true);
           await expect(video).toHaveJSProperty("loop", true);
           await expect(video).toHaveAttribute("playsinline", "");
-          await expect(video).toHaveAttribute("preload", "metadata");
+          // A poster covers the frame until playback, so metadata is enough;
+          // without one the page preloads a first frame to show.
+          const poster = await video.getAttribute("poster");
+          await expect(video).toHaveAttribute("preload", poster ? "metadata" : "auto");
           // The video route relays the fixture's file (with ranges) to the player.
           await expect
             .poll(() => video.evaluate((element: HTMLVideoElement) => element.readyState), {
