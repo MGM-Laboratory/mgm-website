@@ -205,7 +205,10 @@ export class DetailController {
   private readonly byElement = new Map<Element, Item>();
   private parts: { el: HTMLElement; spec: PartSpec }[] = [];
   private centerOffset = 0;
-  private anchor: { id: string; offset: number } | null = null;
+  /** Keeps the visitor's place through a layout change: a fixed pixel offset
+   *  (a media size arriving) or a share of the item (a resize, where every
+   *  item's width scales with the band height). */
+  private anchor: { id: string; offset: number } | { id: string; share: number } | null = null;
   private itemsOpacity = 0;
 
   private speed = 0;
@@ -356,13 +359,31 @@ export class DetailController {
     if (this.disposed) return;
     const { spacer, track, meta, title } = this.e;
     const wasVertical = this.vertical;
+    // Crossing between the stacked and the horizontal layout keeps the item
+    // the visitor was looking at (stacked: the first one on screen, which
+    // the intersection observer tracks; horizontal: the one at the left
+    // edge). CSS has already switched the layout by now, so both come from
+    // what was recorded before.
+    const flipTo = this.items.length
+      ? this.flipAnchor(wasVertical, window.matchMedia(VERTICAL_QUERY).matches)
+      : undefined;
+    // A resize (a tablet's toolbar collapsing, a window drag) rescales every
+    // item before the visitor's place: keep the same part of the item at
+    // the left edge that was there, measured on the old layout.
+    if (!wasVertical && !this.anchor && this.travel > 0) {
+      const item = this.items.find((entry) => entry.left + entry.width > this.travel);
+      if (item && item.width > 0) {
+        this.anchor = { id: item.id, share: (this.travel - item.left) / item.width };
+      }
+    }
     this.vw = window.innerWidth;
     this.vh = window.innerHeight;
     this.vertical = window.matchMedia(VERTICAL_QUERY).matches;
     this.scanItems();
 
     if (this.vertical) {
-      spacer.style.height = "";
+      // The stylesheet hides the spacer here; its height stays so a switch
+      // back doesn't briefly shorten the page (and clamp the scroll to 0).
       meta.style.removeProperty("--fit");
       delete meta.dataset.top;
       this.maxTravel = 0;
@@ -387,6 +408,7 @@ export class DetailController {
     if (wasVertical !== this.vertical) {
       if (this.vertical) this.stopStage("off");
       else this.maybeStartStage();
+      if (flipTo) this.restoreFlipAnchor(flipTo);
     }
     this.observedSizes = this.sizeKey();
     this.stage?.measure();
@@ -459,13 +481,35 @@ export class DetailController {
     }
   }
 
+  private flipAnchor(wasVertical: boolean, nowVertical: boolean) {
+    if (wasVertical === nowVertical) return undefined;
+    if (wasVertical) return this.items.find((item) => item.visible && window.scrollY > 0);
+    return this.travel > 0
+      ? this.items.find((item) => item.left + item.width > this.travel)
+      : undefined;
+  }
+
+  private restoreFlipAnchor(item: Item) {
+    if (!this.items.includes(item)) return;
+    let target: number;
+    if (this.vertical) {
+      target = item.el.getBoundingClientRect().top + window.scrollY - SITE_HEADER - 16;
+    } else {
+      target = clamp(item.left - Math.max(0, this.vw - item.width) / 2, 0, this.maxTravel);
+    }
+    window.scrollTo(0, Math.max(0, target));
+    this.travel = this.lastTravel = this.vertical ? 0 : Math.max(0, target);
+  }
+
   private applyAnchor() {
     const anchor = this.anchor;
     this.anchor = null;
     if (!anchor) return;
     const item = this.items.find((entry) => entry.id === anchor.id);
     if (!item) return;
-    const target = clamp(item.left - anchor.offset, 0, this.maxTravel);
+    const place =
+      "share" in anchor ? item.left + anchor.share * item.width : item.left - anchor.offset;
+    const target = clamp(place, 0, this.maxTravel);
     if (Math.abs(target - this.travel) < 0.5) return;
     scrollPageTo(target, { duration: 0 });
     // The jump isn't motion: keep it out of the speed response.
@@ -1121,10 +1165,24 @@ export class DetailController {
     const figure = target.closest("[data-detail-item]");
     const item = figure ? this.byElement.get(figure) : undefined;
     if (item) {
-      const left = item.left - this.travel;
-      if (left < 0 || left + item.width > this.vw) {
-        const centred = item.left - Math.max(0, this.vw - item.width) / 2;
-        scrollPageTo(clamp(centred, 0, this.maxTravel), { duration });
+      if (item.width <= this.vw) {
+        const left = item.left - this.travel;
+        if (left < 0 || left + item.width > this.vw) {
+          const centred = item.left - (this.vw - item.width) / 2;
+          scrollPageTo(clamp(centred, 0, this.maxTravel), { duration });
+        }
+        return;
+      }
+      // A figure wider than the screen (a full item): bring the focused
+      // control itself into view, with a little room for its focus ring.
+      const rect = target.getBoundingClientRect();
+      const margin = 24;
+      if (rect.left < margin) {
+        scrollPageTo(clamp(this.travel + rect.left - margin, 0, this.maxTravel), { duration });
+      } else if (rect.right > this.vw - margin) {
+        scrollPageTo(clamp(this.travel + rect.right - this.vw + margin, 0, this.maxTravel), {
+          duration,
+        });
       }
       return;
     }

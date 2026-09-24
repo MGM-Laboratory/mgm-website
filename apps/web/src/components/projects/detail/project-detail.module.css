@@ -434,6 +434,16 @@
   border-radius: 0;
 }
 
+/* A phone turned sideways stacks too (the 520 px height floor): keep each
+   normal item within one screen's height, centred, instead of letting a
+   portrait image run several screens tall. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .item:not(.full) {
+    width: min(100%, calc((100svh - var(--site-header) - 32px) * var(--aspect)));
+    margin-inline: auto;
+  }
+}
+
 .frame {
   position: absolute;
   inset: 0;
@@ -675,7 +685,9 @@
     isolation: isolate;
     /* Vertical swipes scroll the document (the track follows); sideways
        drags are handled in JavaScript. */
-    touch-action: pan-y;
+    /* Vertical swipes scroll natively and sideways drags move the strip
+       (detail-controller.ts), but pinch-zoom must stay the browser's. */
+    touch-action: pan-y pinch-zoom;
   }
 
   .gl {
@@ -707,6 +719,8 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     transform: none;
+    /* Scrollable, so it takes wheel and swipes over its text too. */
+    pointer-events: auto;
   }
 
   .meta a,
@@ -714,6 +728,7 @@
     pointer-events: auto;
   }
 
+  .meta[data-top][data-idle],
   .meta[data-idle] a,
   .meta[data-idle] button {
     pointer-events: none;

@@ -121,8 +121,12 @@ export function DetailMedia({ item, index, onSize, onFail }: DetailMediaProps) {
               }}
               playsInline
               poster={item.poster}
-              preload="metadata"
-              src={item.src}
+              // Without a poster there is nothing to show until a frame
+              // decodes, and Safari only decodes one under "metadata" when
+              // playback starts (never, under reduced motion): fetch enough
+              // for a first frame, and start it just past zero.
+              preload={item.poster ? "metadata" : "auto"}
+              src={item.poster ? item.src : `${item.src}#t=0.001`}
             />
           )}
         </div>
