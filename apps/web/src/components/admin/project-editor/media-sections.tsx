@@ -301,10 +301,14 @@ export function MediaSections({
   };
 
   // Abort in-flight uploads and free previews when the editor goes away.
+  // Queued uploads that haven't started yet check `unmounted` and never do.
+  const unmounted = useRef(false);
   useEffect(() => {
+    unmounted.current = false;
     const active = controllers.current;
     const urls = blobUrls.current;
     return () => {
+      unmounted.current = true;
       for (const controller of active.values()) controller.abort();
       for (const url of urls) URL.revokeObjectURL(url);
     };
@@ -359,6 +363,7 @@ export function MediaSections({
   }, [items, onChange, published]);
 
   const runJob = async (id: string) => {
+    if (unmounted.current) return;
     const job = metaRef.current[id]?.job;
     if (!job) return;
     const controller = new AbortController();
