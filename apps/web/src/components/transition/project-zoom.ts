@@ -608,6 +608,9 @@ export class ProjectZoom {
     if (process.env.NODE_ENV !== "production") this.lastWarmUrl = coverUrl ?? null;
 
     const run = this.begin("exit", from, PROJECTS_LIST_PATH);
+    // The Back pill fades with the page's content instead of vanishing
+    // when the list commits (finish() puts it back if the exit is undone).
+    document.querySelector("[data-project-back]")?.setAttribute("data-leaving", "");
     // An instant cover in the page's own colour: only the content goes.
     this.layer.style.backgroundColor = toCss(background);
     this.layer.style.opacity = "1";
@@ -861,6 +864,7 @@ export class ProjectZoom {
     this.layer.style.backgroundColor = "";
     this.block(false);
     releaseScrollLock(LOCK_OWNER);
+    document.querySelector("[data-project-back]")?.removeAttribute("data-leaving");
     markProjectRevealStarted();
     releaseLanding();
     // The page under the overlay now carries the palette the header ended

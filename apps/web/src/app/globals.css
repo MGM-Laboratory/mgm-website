@@ -235,6 +235,13 @@ body {
     animation: project-back-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
   }
 
+  /* The project zoom's exit is under way: the pill leaves with the page. */
+  .project-back[data-leaving] {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
   .project-back::before,
   .project-back::after {
     content: "";

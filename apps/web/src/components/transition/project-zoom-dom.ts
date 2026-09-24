@@ -115,10 +115,11 @@ export class ZoomDom implements ZoomRenderer {
     this.picture.style.filter = blur >= 0.3 ? `blur(${blur.toFixed(2)}px)` : "";
 
     // The dissolve: clear inside the front's soft edge, the theme colour
-    // (the fill behind the picture) past it. Radii in the box's own,
-    // unscaled pixels.
-    const outer = (frame.fog * frame.reach) / scale;
-    const inner = ((frame.fog - FOG_SOFTNESS) * frame.reach) / scale;
+    // (the fill behind the picture) past it. The mask sits on the zoomed
+    // picture, so its radii are in the picture's own pixels: undo both the
+    // box's scale and the picture's zoom, or the front runs out too far.
+    const outer = (frame.fog * frame.reach) / (scale * frame.zoom);
+    const inner = ((frame.fog - FOG_SOFTNESS) * frame.reach) / (scale * frame.zoom);
     const mask =
       outer <= 0
         ? "linear-gradient(transparent, transparent)"
