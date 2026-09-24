@@ -152,7 +152,13 @@ export function consumeScrollResetSkip(pathname: string) {
 /** The slug of a project detail path, or null for any other path. */
 export function projectDetailSlug(pathname: string) {
   const match = DETAIL_PATH.exec(pathname);
-  return match ? decodeURIComponent(match[1]) : null;
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    // A malformed escape (/projects/%E0) is no project page.
+    return null;
+  }
 }
 
 export type ProjectTransitionKind = "enter" | "exit" | "swap";

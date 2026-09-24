@@ -25,11 +25,20 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
   // needs an absolute URL: resolve it against the host this request reached.
   const cover = projectMediaUrl(project.coverKey);
   const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  // Forwarded headers may carry a list ("https, http") or anything a client
+  // sent: take the first entry, and drop the base (only the Open Graph image
+  // goes) rather than fail the page on a value that isn't a URL.
+  const first = (name: string) => requestHeaders.get(name)?.split(",")[0]?.trim() || undefined;
+  const host = first("x-forwarded-host") ?? first("host");
   const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
+    first("x-forwarded-proto") ??
     (host?.startsWith("localhost") || host?.startsWith("127.") ? "http" : "https");
-  const metadataBase = host ? new URL(`${protocol}://${host}`) : undefined;
+  let metadataBase: URL | undefined;
+  try {
+    metadataBase = host && /^https?$/.test(protocol) ? new URL(`${protocol}://${host}`) : undefined;
+  } catch {
+    metadataBase = undefined;
+  }
   return {
     title,
     description,
