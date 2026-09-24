@@ -1,0 +1,199 @@
+{
+  "records": [
+    {
+      "slug": "e2e-solar-atlas",
+      "updatedAt": "2026-07-01T08:00:00.000Z",
+      "project": {
+        "slug": "e2e-solar-atlas",
+        "title": "Solar Atlas",
+        "summary": "A light-leaning fixture project with every detail page field filled in.",
+        "categories": ["website", "hci-ux"],
+        "techStack": ["Next.js", "WebGL"],
+        "status": "completed",
+        "startDate": "2025-09-01",
+        "endDate": "2026-06-30",
+        "role": "Design and development partner",
+        "platform": "Web",
+        "featured": false,
+        "draft": false,
+        "coverKey": "project-e2e-solar-atlas-3f1c2a7e-8d4b-4c1a-9e2f-6b7d8c9a0e11.jpg",
+        "coverAlt": "Solar Atlas cover",
+        "galleryKeys": [],
+        "videoMode": "none",
+        "links": [
+          { "id": "link-live", "label": "Live site", "url": "https://example.org/solar-atlas" },
+          { "id": "link-notes", "label": "Field notes", "url": "/articles" }
+        ],
+        "contributors": [
+          {
+            "id": "person-1",
+            "kind": "non-residence",
+            "name": "Ayu Pratama",
+            "role": "Lead developer"
+          },
+          {
+            "id": "person-2",
+            "kind": "non-residence",
+            "name": "Bima Santoso",
+            "role": "Interaction design"
+          }
+        ],
+        "organizations": [
+          { "name": "Example Observatory", "url": "https://example.org/observatory" }
+        ],
+        "outputs": [],
+        "theme": "sunburst",
+        "description": "Solar Atlas maps a year of sunlight across a campus, one building at a time.\n\nThe fixture keeps two paragraphs, so the page has to render both of them.",
+        "cta": { "label": "Open the atlas", "url": "https://example.org/solar-atlas/app" },
+        "services": ["Research", "Interface design", "Web development"],
+        "media": [
+          {
+            "id": "atlas-overview",
+            "kind": "image",
+            "size": "normal",
+            "key": "project-e2e-solar-atlas-5a2b3c4d-1e2f-4a3b-8c4d-5e6f7a8b9c22.jpg",
+            "width": 800,
+            "height": 450,
+            "alt": "Solar Atlas overview screen"
+          },
+          {
+            "id": "atlas-hero",
+            "kind": "image",
+            "size": "full",
+            "key": "project-e2e-solar-atlas-3f1c2a7e-8d4b-4c1a-9e2f-6b7d8c9a0e11.jpg",
+            "width": 960,
+            "height": 540,
+            "alt": "Solar Atlas full-bleed hero"
+          },
+          {
+            "id": "atlas-demo",
+            "kind": "video",
+            "size": "normal",
+            "key": "demo-e2e-solar-atlas-9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a99.mp4",
+            "width": 320,
+            "height": 180,
+            "alt": "Solar Atlas demo loop"
+          },
+          {
+            "id": "atlas-detail",
+            "kind": "image",
+            "size": "normal",
+            "key": "project-e2e-solar-atlas-7c8d9e0f-2a3b-4c5d-9e6f-7a8b9c0d1e33.jpg",
+            "width": 0,
+            "height": 0,
+            "alt": "Solar Atlas detail view"
+          }
+        ]
+      },
+      "body": [
+        {
+          "id": "atlas-body-1",
+          "type": "paragraph",
+          "content": [{ "type": "text", "text": "The body stays in the record.", "styles": {} }]
+        }
+      ]
+    },
+    {
+      "slug": "e2e-night-signal",
+      "updatedAt": "2026-05-12T08:00:00.000Z",
+      "project": {
+        "slug": "e2e-night-signal",
+        "title": "Night Signal",
+        "summary": "A dark-leaning fixture project with an internal call to action.",
+        "categories": ["mobile"],
+        "techStack": ["Flutter"],
+        "status": "in-progress",
+        "startDate": "2025-03-01",
+        "featured": false,
+        "draft": false,
+        "coverKey": "project-e2e-night-signal-1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c44.jpg",
+        "coverAlt": "Night Signal cover",
+        "galleryKeys": [],
+        "videoMode": "none",
+        "links": [
+          {
+            "id": "link-press",
+            "label": "Press kit",
+            "url": "https://example.org/night-signal/press"
+          }
+        ],
+        "contributors": [
+          {
+            "id": "person-1",
+            "kind": "non-residence",
+            "name": "Dewi Anggraini",
+            "role": "Producer"
+          }
+        ],
+        "organizations": [],
+        "outputs": [
+          {
+            "id": "output-1",
+            "type": "publication",
+            "label": "Signal paper",
+            "href": "/publications"
+          }
+        ],
+        "theme": "nebula",
+        "description": "Night Signal is a mobile listening companion for late shifts.",
+        "cta": { "label": "Talk to us", "url": "/contact" },
+        "services": ["Mobile engineering", "Sound design"],
+        "media": [
+          {
+            "id": "signal-hero",
+            "kind": "image",
+            "size": "full",
+            "key": "project-e2e-night-signal-1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c44.jpg",
+            "width": 960,
+            "height": 540,
+            "alt": "Night Signal title card"
+          },
+          {
+            "id": "signal-square",
+            "kind": "image",
+            "size": "normal",
+            "key": "project-e2e-night-signal-2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d55.jpg",
+            "width": 0,
+            "height": 0,
+            "alt": "Night Signal square frame"
+          },
+          {
+            "id": "signal-wide",
+            "kind": "image",
+            "size": "normal",
+            "key": "project-e2e-night-signal-3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e66.jpg",
+            "width": 800,
+            "height": 500,
+            "alt": "Night Signal wide frame"
+          }
+        ]
+      },
+      "body": []
+    },
+    {
+      "slug": "e2e-legacy-lantern",
+      "updatedAt": "2024-02-02T08:00:00.000Z",
+      "project": {
+        "slug": "e2e-legacy-lantern",
+        "title": "Legacy Lantern",
+        "summary": "A record saved before the detail page fields existed: the page falls back to this summary.",
+        "categories": ["game"],
+        "techStack": ["Unity", "C#"],
+        "status": "archived",
+        "startDate": "2023-01-15",
+        "endDate": "2024-02-01",
+        "featured": false,
+        "draft": false,
+        "coverKey": "project-e2e-legacy-lantern-4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f77.jpg",
+        "coverAlt": "Legacy Lantern cover",
+        "galleryKeys": ["project-e2e-legacy-lantern-5e6f7a8b-9c0d-4e1f-8a2b-4c5d6e7f8a88.jpg"],
+        "videoMode": "none",
+        "links": [],
+        "contributors": [{ "id": "person-1", "name": "Legacy Author" }],
+        "organizations": [],
+        "outputs": []
+      },
+      "body": []
+    }
+  ]
+}
