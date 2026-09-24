@@ -73,15 +73,23 @@ function sineOut(t: number) {
  * Fits a picture's frame to the picture once its size is known (the CMS
  * stores no dimensions): a full-bleed frame takes the picture's own shape
  * (bounded, so a panorama isn't a sliver), and a tall picture never goes
- * full bleed, it sits in the text column instead.
+ * full bleed or reaches into a margin: it keeps its own shape in the text
+ * column, with its caption beside it (the inset layout).
  */
 function shapeFigure(figure: Figure, img: HTMLImageElement) {
   if (!img.naturalWidth || !img.naturalHeight) return;
   const ratio = img.naturalWidth / img.naturalHeight;
-  figure.figure.style.setProperty("--ad-ratio", clamp(ratio, 1.3, 2.4).toFixed(4));
-  if (ratio < 1.05) {
-    figure.figure.dataset.shape = "tall";
-    if (figure.variant === "wide") figure.variant = "inset";
+  const style = figure.figure.style;
+  style.setProperty("--ad-ratio", clamp(ratio, 1.3, 2.4).toFixed(4));
+  style.setProperty("--ad-natural", clamp(ratio, 0.3, 4).toFixed(4));
+  if (ratio >= 1.05 || figure.variant === "pair") return;
+  figure.figure.dataset.shape = "tall";
+  if (figure.variant !== "inset") {
+    figure.variant = "inset";
+    figure.figure.dataset.variant = "inset";
+    // A full-bleed picture's inner parallax may already have moved it.
+    figure.media.style.transform = "";
+    figure.mediaWritten = "";
   }
 }
 

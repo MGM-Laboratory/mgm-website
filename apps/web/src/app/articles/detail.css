@@ -930,30 +930,39 @@ html[data-articles-world="gl"] .ad-story::before {
   width: 100%;
 }
 
-/* A tall picture never goes full bleed: it keeps to the text column. */
-.ad-figure[data-variant="wide"][data-shape="tall"] > .ad-frame {
-  --ad-frame-radius: var(--ad-radius);
-  grid-column: text-start / text-end;
-}
-
-.ad-figure[data-variant="wide"][data-shape="tall"] .ad-media {
-  aspect-ratio: auto;
-  max-height: none;
-}
-
-.ad-figure[data-variant="wide"][data-shape="tall"] .ad-img {
-  position: relative;
-  height: auto;
-  max-height: 80svh;
-  object-fit: contain;
-}
-
 .ad-figure[data-variant="wide"] .ad-img {
   position: absolute;
   inset: 0;
   height: 100%;
   max-height: none;
   object-fit: cover;
+}
+
+/* A tall picture keeps its own shape (no matte around it): as tall as the
+   screen allows, flush with the text column's far edge so its caption
+   stands right beside it (detail-motion.ts marks the shape once known). */
+.ad-figure[data-shape="tall"] > .ad-frame {
+  justify-self: end;
+  width: min(100%, 78svh * var(--ad-natural, 0.75));
+}
+
+.ad-figure[data-shape="tall"] .ad-img {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  object-fit: cover;
+}
+
+@media (max-width: 1239px) {
+  .ad-figure[data-shape="tall"] > .ad-frame {
+    justify-self: center;
+  }
+
+  .ad-figure[data-shape="tall"] > .ad-caption {
+    justify-self: center;
+    width: min(100%, 78svh * var(--ad-natural, 0.75));
+  }
 }
 
 @media (min-width: 1240px) {
