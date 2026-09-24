@@ -62,6 +62,8 @@ export type SmoothScrollOptions = {
   pageStep?: () => number;
   /** Whether Arrow Left and Right step like Arrow Up and Down (read per key press). */
   horizontalArrows?: () => boolean;
+  /** Scales every wheel delta (the articles list moves 2 px per wheel px, like unseen.co). */
+  wheelMultiplier?: number;
 };
 
 /** Starts the smooth scroller; resolves with its stop function. */
@@ -76,6 +78,7 @@ export async function startSmoothScroll(options: SmoothScrollOptions = {}): Prom
     smoothWheel: true,
     syncTouch: false,
     gestureOrientation: options.gestureOrientation ?? "vertical",
+    wheelMultiplier: options.wheelMultiplier ?? 1,
     // Wheel over a nested scroll area (the nav menu panel, when it
     // overflows) scrolls that area natively instead of the page.
     allowNestedScroll: true,
