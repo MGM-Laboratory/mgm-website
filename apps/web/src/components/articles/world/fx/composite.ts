@@ -93,6 +93,10 @@ const FRAGMENT = /* glsl */ `
     float r2 = dot(c, c);
     float lens = uLens * uDistort;
     float blur = uBlur / uViewport.y;
+    // Ten taps can't smear tens of pixels smoothly: each samples a mip of
+    // the scene about as coarse as the gap between taps, so the smear
+    // reads as one soft streak instead of grainy copies. At rest: level 0.
+    float lod = log2(max(1.0, abs(uBlur) * uPixelRatio * 1.6 / float(TAPS)));
     float jitter = worldHash(gl_FragCoord.xy + uGrainSeed);
 
     // Pulses bend the picture outward along their rings, and remember how
@@ -134,7 +138,7 @@ const FRAGMENT = /* glsl */ `
       // instead of splitting into rainbows.
       tapUv.y += blur * (fract(float(i) * 0.618034 + jitter) - 0.5);
       vec3 w = spectral(t);
-      sum += texture2D(tScene, tapUv).rgb * w;
+      sum += textureLod(tScene, tapUv, lod).rgb * w;
       weight += w;
     }
     vec3 color = sum / weight;

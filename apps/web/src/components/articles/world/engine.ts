@@ -3,6 +3,7 @@ import {
   Color,
   ColorManagement,
   Group,
+  LinearMipmapLinearFilter,
   LinearSRGBColorSpace,
   PerspectiveCamera,
   Scene,
@@ -99,6 +100,8 @@ const REST_DISTORT = -0.05;
 const SETTLE_DISTORT = REST_DISTORT * 12.5;
 /** Seconds the camera, fog and particles take to follow a route change. */
 const ROUTE_EASE_SECONDS = 1;
+/** The longest scroll smear, CSS px (a fast flick). */
+const MAX_BLUR = 22;
 /** Most sparks a theme front throws per frame, by tier (the ring buffer's size bounds them). */
 const FRONT_SPARKS: Record<QualityTier, number> = { high: 12, medium: 8, low: 5 };
 
@@ -151,6 +154,8 @@ export class LibraryEngine implements ArticlesWorldApi {
   private hadPointer = false;
   private pointerSpeed = 0;
   private blurAmount = 1;
+  /** Whether the scene target's storage holds its whole mip chain yet. */
+  private mipsAllocated = false;
   private readonly lensState = { distort: REST_DISTORT };
   private lensTween: gsap.core.Tween | null = null;
   private readonly camera: PerspectiveCamera;
@@ -262,7 +267,13 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.scene.add(this.envGroup, this.cardGroup);
 
     this.composite = createComposite(this.uniforms);
-    this.target = new WebGLRenderTarget(1, 1, { type: UnsignedByteType, depthBuffer: true });
+    // Mipmapped, so the scroll smear can sample coarser levels (composite.ts).
+    this.target = new WebGLRenderTarget(1, 1, {
+      type: UnsignedByteType,
+      depthBuffer: true,
+      minFilter: LinearMipmapLinearFilter,
+      generateMipmaps: true,
+    });
 
     this.magic = createCursorMagic({
       world: this.uniforms,
@@ -743,6 +754,7 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.setSize(width, height, false);
     this.target.setSize(Math.round(width * this.pixelRatio), Math.round(height * this.pixelRatio));
+    this.mipsAllocated = false;
 
     this.camera.aspect = width / height;
     this.camera.fov = (2 * Math.atan(height / 2 / CAMERA_DISTANCE) * 180) / Math.PI;
@@ -785,10 +797,17 @@ export class LibraryEngine implements ArticlesWorldApi {
     const k = 1 - Math.exp(-dt * 10);
     this.scrollSpeed += (perSecond - this.scrollSpeed) * k;
     const speedVh = this.scrollSpeed / this.height;
-    this.composite.uniforms.uBlur.value =
+    const blur =
       this.route.kind === "list"
-        ? Math.max(-34, Math.min(34, this.scrollSpeed * 0.011)) * this.blurAmount
+        ? Math.max(-MAX_BLUR, Math.min(MAX_BLUR, this.scrollSpeed * 0.0075)) * this.blurAmount
         : 0;
+    this.composite.uniforms.uBlur.value = blur;
+    // The smear samples the scene's mips (composite.ts): build them only
+    // while there is a smear to draw. A freshly sized target must allocate
+    // its whole mip chain on its first render (three sizes the storage by
+    // this flag then), so that frame builds them too.
+    this.target.texture.generateMipmaps = !this.mipsAllocated || Math.abs(blur) > 0.5;
+    this.mipsAllocated = true;
     this.composite.uniforms.uDistort.value = this.lensState.distort;
 
     // Route easing: the camera quiets down and the fog thickens on an article.
