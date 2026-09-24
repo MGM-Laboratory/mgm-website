@@ -17,6 +17,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Response } from "express";
+import { PROJECT_THEME_IDS } from "@repo/shared";
 import { z } from "zod";
 
 import type { Prisma } from "../generated/prisma/client.js";
@@ -46,6 +47,10 @@ const articleSchema = z.object({
     authorSlugs: z.array(z.string().min(1)).min(1),
     draft: z.boolean(),
     coverKey: z.string().min(1).max(500).optional(),
+    // The detail page palette, one of the project themes. Records saved
+    // before the field existed have none and get a stable pick from the
+    // slug on the page. Declared here because z.object strips unknown keys.
+    theme: z.enum(PROJECT_THEME_IDS).optional(),
   }),
   content: z.array(blockSchema),
 });
