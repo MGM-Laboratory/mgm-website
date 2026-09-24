@@ -222,7 +222,7 @@ export class CmsProjectsService {
     const sizes: Record<string, [number, number]> = {};
     const queue = [...wanted];
     const worker = async () => {
-      for (let key = queue.shift(); key; key = queue.shift()) {
+      for (let key = queue.shift(); key !== undefined; key = queue.shift()) {
         const size = await this.imageSize(key);
         if (size) sizes[key] = size;
       }

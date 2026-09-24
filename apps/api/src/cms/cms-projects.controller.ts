@@ -184,12 +184,26 @@ const VIDEO_KEY_PATTERN =
 const STATIC_KEY_PATTERN = /^static\/[\w./-]+$/;
 
 /** A media section's file must be of its own kind: an image section never
- *  serves a video key (or the reverse), and a poster is always an image. */
+ *  serves a video key (or the reverse), bundled `static/` files included,
+ *  only videos carry a poster, and a poster is always an image. */
+const STATIC_IMAGE_PATTERN = /\.(?:png|jpe?g|webp|avif|gif)$/i;
+const STATIC_VIDEO_PATTERN = /\.(?:mp4|webm)$/i;
+
+function isImageKey(key: string) {
+  return (
+    MEDIA_KEY_PATTERN.test(key) || (STATIC_KEY_PATTERN.test(key) && STATIC_IMAGE_PATTERN.test(key))
+  );
+}
+
+function isVideoKey(key: string) {
+  return (
+    VIDEO_KEY_PATTERN.test(key) || (STATIC_KEY_PATTERN.test(key) && STATIC_VIDEO_PATTERN.test(key))
+  );
+}
+
 function mediaKeyFits(kind: "image" | "video", key: string, posterKey?: string) {
-  if (STATIC_KEY_PATTERN.test(key)) return !posterKey || !VIDEO_KEY_PATTERN.test(posterKey);
-  if (kind === "image") return MEDIA_KEY_PATTERN.test(key) && !posterKey;
-  if (!VIDEO_KEY_PATTERN.test(key)) return false;
-  return !posterKey || MEDIA_KEY_PATTERN.test(posterKey) || STATIC_KEY_PATTERN.test(posterKey);
+  if (kind === "image") return isImageKey(key) && !posterKey;
+  return isVideoKey(key) && (!posterKey || isImageKey(posterKey));
 }
 
 function safeEqual(left: string, right: string) {
