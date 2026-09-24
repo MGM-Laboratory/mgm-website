@@ -364,8 +364,13 @@ export function MediaSections({
     const controller = new AbortController();
     controllers.current.set(id, controller);
     const { signal } = controller;
+    // Only ever patch this pick's job: a Replace starts a new job on the
+    // same row, and a cancelled run finishing late must not write its size
+    // or poster into the new file's job (the object URL identifies a pick).
     const patchJob = (patch: Partial<Job>) =>
-      setMeta(id, (row) => (row.job ? { ...row, job: { ...row.job, ...patch } } : row));
+      setMeta(id, (row) =>
+        row.job && row.job.url === job.url ? { ...row, job: { ...row.job, ...patch } } : row,
+      );
     const imageRoute = () => `/api/admin/projects/${encodeURIComponent(slugRef.current)}/media`;
     try {
       setMeta(id, { phase: "preparing", progress: undefined, error: undefined });

@@ -51,13 +51,14 @@ function dataUrlBytes(dataUrl: string) {
   return Math.floor((base64.length * 3) / 4) - padding;
 }
 
-/** Draws `source` into a canvas no larger than `maxDimension` and encodes it as JPEG. */
-function encodeJpeg(
+/** Draws `source` into a canvas no larger than `maxDimension` and encodes it (JPEG, or WebP to keep transparency). */
+function encodeImage(
   source: CanvasImageSource,
   width: number,
   height: number,
   maxDimension: number,
   quality: number,
+  keepAlpha: boolean,
 ) {
   const scale = Math.min(1, maxDimension / Math.max(width, height));
   const canvas = document.createElement("canvas");
@@ -68,8 +69,13 @@ function encodeJpeg(
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
   context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  // PNG and WebP sources may carry transparency, which JPEG would flatten
+  // onto black: those re-encode as WebP (the API accepts it). A browser
+  // without a WebP encoder hands back a PNG instead, which the size check
+  // in prepareImage then judges like any other encoding.
+  const type = keepAlpha ? "image/webp" : "image/jpeg";
   return {
-    dataUrl: canvas.toDataURL("image/jpeg", quality),
+    dataUrl: canvas.toDataURL(type, quality),
     width: canvas.width,
     height: canvas.height,
   };
@@ -80,8 +86,9 @@ export type PreparedImage = { dataUrl: string; width: number; height: number };
 /**
  * An image ready for the media route. A file that already fits (under the
  * byte ceiling, long edge within 3840 px) goes up untouched, keeping its
- * quality and any transparency. Anything larger is re-encoded as JPEG at the
- * highest quality, then the highest resolution, that fits.
+ * quality and any transparency. Anything larger is re-encoded (JPEG, or WebP
+ * for PNG and WebP sources so transparency survives) at the highest quality,
+ * then the highest resolution, that fits.
  */
 export async function prepareImage(file: File): Promise<PreparedImage> {
   const objectUrl = URL.createObjectURL(file);
@@ -93,9 +100,10 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
     if (file.size <= IMAGE_UPLOAD_MAX_BYTES && Math.max(width, height) <= IMAGE_MAX_EDGE) {
       return { dataUrl: await readAsDataUrl(file), width, height };
     }
+    const keepAlpha = file.type === "image/png" || file.type === "image/webp";
     for (const edge of [IMAGE_MAX_EDGE, 3200, 2560, 1920]) {
       for (const quality of [0.9, 0.82, 0.74]) {
-        const encoded = encodeJpeg(image, width, height, edge, quality);
+        const encoded = encodeImage(image, width, height, edge, quality, keepAlpha);
         if (dataUrlBytes(encoded.dataUrl) <= IMAGE_UPLOAD_MAX_BYTES) return encoded;
       }
     }
@@ -172,7 +180,7 @@ export async function probeVideo(source: string, { poster = false } = {}): Promi
         const seeked = waitFor(video, "seeked", 15_000);
         video.currentTime = Math.min(0.1, (probe.duration ?? 0.2) / 2);
         await seeked;
-        probe.poster = encodeJpeg(video, probe.width, probe.height, 2560, 0.85).dataUrl;
+        probe.poster = encodeImage(video, probe.width, probe.height, 2560, 0.85, false).dataUrl;
       } catch {
         // No poster is not fatal: the section still uploads, and the page
         // shows the video's own first frame instead.

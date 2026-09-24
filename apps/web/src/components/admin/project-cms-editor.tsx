@@ -1079,6 +1079,7 @@ export function ProjectEditor({
       project = { ...project, contributors };
 
       if (coverUpload) {
+        const previousCover = project.coverKey;
         const response = await fetch(
           `/api/admin/projects/${encodeURIComponent(project.slug)}/media`,
           {
@@ -1089,14 +1090,27 @@ export function ProjectEditor({
         );
         if (!response.ok) throw new Error(await responseError(response, "Cover upload failed."));
         const uploaded = (await response.json()) as { key: string };
-        project = { ...project, coverKey: uploaded.key };
+        project = {
+          ...project,
+          coverKey: uploaded.key,
+          // A section showing the old cover (always the case for sections
+          // derived from an older record) follows the new one; its size is
+          // measured again, since the crop may differ.
+          media: previousCover
+            ? project.media?.map((item) =>
+                item.kind === "image" && item.key === previousCover
+                  ? { ...item, key: uploaded.key, width: 0, height: 0 }
+                  : item,
+              )
+            : project.media,
+        };
       }
 
       // Media sections uploaded as they were added, so only their keys are
       // saved here. The gallery keeps mirroring the image sections for
-      // older consumers (the homepage showcase, the list card fallback);
-      // the demo video fields stay exactly as they were.
+      // older consumers (the homepage showcase, the list card fallback).
       const media = (project.media ?? []).map(cleanMediaItem);
+      project = { ...project, ...retireDemoVideo(project, media) };
       const galleryKeys = [
         ...new Set(
           media
@@ -1795,4 +1809,32 @@ async function responseError(response: Response, fallback: string) {
   } catch {
     return fallback;
   }
+}
+
+/**
+ * The old single demo video has no editor of its own any more: media
+ * sections replaced it. So the save retires it when sections exist. An
+ * uploaded demo that no section shows any longer is released (the API then
+ * deletes the file), and a URL or YouTube demo becomes an ordinary link,
+ * which editors can change or remove like any other.
+ */
+function retireDemoVideo(project: ProjectDraft, media: ProjectMediaItem[]): Partial<ProjectDraft> {
+  if (!media.length || project.videoMode === "none") return {};
+  const cleared = {
+    videoMode: "none" as const,
+    videoKey: undefined,
+    videoName: undefined,
+    videoSize: undefined,
+    videoUrl: undefined,
+  };
+  if (project.videoMode === "upload") {
+    const shown = media.some((item) => item.kind === "video" && item.key === project.videoKey);
+    return shown ? {} : cleared;
+  }
+  const url = project.videoUrl?.trim();
+  if (!url || project.links.some((link) => link.url === url)) return cleared;
+  return {
+    ...cleared,
+    links: [...project.links, { ...newLink(), label: "Demo video", url }],
+  };
 }
