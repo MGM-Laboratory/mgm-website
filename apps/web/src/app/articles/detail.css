@@ -908,9 +908,27 @@ html[data-articles-world="gl"] .ad-story::before {
 }
 
 .ad-figure[data-variant="wide"] .ad-media {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--ad-ratio, 16 / 9);
   max-height: 86svh;
   width: 100%;
+}
+
+/* A tall picture never goes full bleed: it keeps to the text column. */
+.ad-figure[data-variant="wide"][data-shape="tall"] > .ad-frame {
+  --ad-frame-radius: var(--ad-radius);
+  grid-column: text-start / text-end;
+}
+
+.ad-figure[data-variant="wide"][data-shape="tall"] .ad-media {
+  aspect-ratio: auto;
+  max-height: none;
+}
+
+.ad-figure[data-variant="wide"][data-shape="tall"] .ad-img {
+  position: relative;
+  height: auto;
+  max-height: 80svh;
+  object-fit: contain;
 }
 
 .ad-figure[data-variant="wide"] .ad-img {
@@ -968,11 +986,26 @@ html[data-articles-world="gl"] .ad-story::before {
 
 .ad-diptych .ad-figure {
   display: block;
+  grid-column: auto;
   margin: 0;
 }
 
 .ad-diptych .ad-caption {
   margin-top: 0.8rem;
+}
+
+/* A pair reads as one spread: both pictures in the same portrait frame. */
+.ad-diptych .ad-media {
+  aspect-ratio: 4 / 5;
+}
+
+.ad-diptych .ad-img {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  object-fit: cover;
 }
 
 .ad-diptych .ad-figure:nth-child(2) {
@@ -986,10 +1019,6 @@ html[data-articles-world="gl"] .ad-story::before {
 
   .ad-diptych .ad-figure:nth-child(2) {
     margin-top: 0;
-  }
-
-  .ad-figure[data-variant="wide"] .ad-media {
-    aspect-ratio: 4 / 3;
   }
 }
 
@@ -1034,7 +1063,8 @@ html[data-articles-world="gl"] .ad-story::before {
 
 .ad-source-chip {
   display: inline-flex;
-  max-width: 100%;
+  max-width: min(100%, 26rem);
+  min-width: 0;
   align-items: center;
   gap: 0.6rem;
   height: 2.25rem;

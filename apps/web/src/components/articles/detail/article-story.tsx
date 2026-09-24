@@ -264,14 +264,16 @@ function Sources({ sources }: { sources: StorySource[] }) {
       <ol className="ad-sources-list">
         {sources.map((source, index) => (
           <li className="ad-source" key={source.id} style={{ "--i": index } as CSSProperties}>
-            <p className="ad-citation">
-              {renderNodes(
-                typeof source.citation === "string"
-                  ? source.citation
-                  : source.citation.filter((node) => node.type !== "link"),
-                source.id,
-              )}
-            </p>
+            {inlineText(source.citation).trim() ? (
+              <p className="ad-citation">
+                {renderNodes(
+                  typeof source.citation === "string"
+                    ? source.citation
+                    : source.citation.filter((node) => node.type !== "link"),
+                  source.id,
+                )}
+              </p>
+            ) : null}
             {source.links.length ? (
               <p className="ad-source-links">
                 {source.links.map((link) => (

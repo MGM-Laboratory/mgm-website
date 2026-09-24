@@ -44,9 +44,11 @@ const PEEL_DEPTH = 300;
 const PEEL_TIP_DEG = 9;
 const PERSPECTIVE = 1600;
 const TILT_DEG = 2.2;
-const PARALLAX_FROM = -9;
-const PARALLAX_TO = 5;
-const PARALLAX_SCALE = 1.16;
+// The picture never shows its edge: the drift stays inside what the zoom overscans.
+const PARALLAX_FROM = -6;
+const PARALLAX_TO = 4;
+const PARALLAX_SCALE = 1.17;
+const PARALLAX_REST_SCALE = 1.12;
 
 function ease(k: number, dt: number) {
   return 1 - (1 - k) ** (60 * dt);
@@ -58,6 +60,34 @@ function clamp(value: number, min = 0, max = 1) {
 
 function sineOut(t: number) {
   return Math.sin((t * Math.PI) / 2);
+}
+
+/**
+ * Fits a picture's frame to the picture once its size is known (the CMS
+ * stores no dimensions): a full-bleed frame takes the picture's own shape
+ * (bounded, so a panorama isn't a sliver), and a tall picture never goes
+ * full bleed, it sits in the text column instead.
+ */
+function shapeFigure(figure: Figure, img: HTMLImageElement) {
+  if (!img.naturalWidth || !img.naturalHeight) return;
+  const ratio = img.naturalWidth / img.naturalHeight;
+  figure.figure.style.setProperty("--ad-ratio", clamp(ratio, 1.3, 2.4).toFixed(4));
+  if (ratio < 1.05) {
+    figure.figure.dataset.shape = "tall";
+    if (figure.variant === "wide") figure.variant = "inset";
+  }
+}
+
+/** A picture that failed to load leaves the story (a pair keeps its other half). */
+function dropFigure(figure: Figure) {
+  figure.figure.hidden = true;
+  const pair = figure.figure.closest<HTMLElement>(".ad-diptych");
+  if (
+    pair &&
+    [...pair.querySelectorAll<HTMLElement>("[data-ad-figure]")].every((item) => item.hidden)
+  ) {
+    pair.hidden = true;
+  }
 }
 
 export class StoryMotion {
@@ -90,15 +120,15 @@ export class StoryMotion {
     this.progress = root.querySelector<HTMLElement>("[data-ad-progress]");
     this.bar = document.querySelector<HTMLElement>("[data-ad-read-bar]");
 
-    for (const figure of root.querySelectorAll<HTMLElement>("[data-ad-figure]")) {
-      const frame = figure.querySelector<HTMLElement>("[data-ad-frame]");
-      const media = figure.querySelector<HTMLElement>("[data-ad-media]");
+    for (const element of root.querySelectorAll<HTMLElement>("[data-ad-figure]")) {
+      const frame = element.querySelector<HTMLElement>("[data-ad-frame]");
+      const media = element.querySelector<HTMLElement>("[data-ad-media]");
       if (!frame || !media) continue;
-      this.figures.push({
+      const figure: Figure = {
         frame,
         media,
-        figure,
-        variant: figure.dataset.variant ?? "inset",
+        figure: element,
+        variant: element.dataset.variant ?? "inset",
         top: 0,
         height: 0,
         left: 0,
@@ -110,15 +140,27 @@ export class StoryMotion {
         targetY: 0,
         written: "",
         mediaWritten: "",
-      });
+      };
+      this.figures.push(figure);
       const img = media.querySelector("img");
-      if (img && !img.complete) {
-        const onLoad = () => this.queueMeasure();
+      if (!img) continue;
+      if (img.complete) {
+        if (img.naturalWidth) shapeFigure(figure, img);
+        else if (img.currentSrc) dropFigure(figure);
+      } else {
+        const onLoad = () => {
+          shapeFigure(figure, img);
+          this.queueMeasure();
+        };
+        const onError = () => {
+          dropFigure(figure);
+          this.queueMeasure();
+        };
         img.addEventListener("load", onLoad);
-        img.addEventListener("error", onLoad);
+        img.addEventListener("error", onError);
         this.cleanups.push(() => {
           img.removeEventListener("load", onLoad);
-          img.removeEventListener("error", onLoad);
+          img.removeEventListener("error", onError);
         });
       }
     }
@@ -315,7 +357,7 @@ export class StoryMotion {
       // Inner parallax across the whole pass through the viewport.
       const t = clamp((vh - top) / (vh + height));
       const y = PARALLAX_FROM + (PARALLAX_TO - PARALLAX_FROM) * t;
-      const scale = PARALLAX_SCALE + (1 - PARALLAX_SCALE) * clamp(t * 1.6);
+      const scale = PARALLAX_SCALE + (PARALLAX_REST_SCALE - PARALLAX_SCALE) * clamp(t * 1.6);
       const media = `translate3d(0,${y.toFixed(2)}%,0) scale(${scale.toFixed(4)})`;
       if (media !== figure.mediaWritten) {
         figure.mediaWritten = media;
@@ -326,7 +368,8 @@ export class StoryMotion {
 
     let depth = 0;
     let tip = 0;
-    if (this.options.peel) {
+    // Side-by-side pictures would lean into each other: they only tilt.
+    if (this.options.peel && figure.variant !== "pair") {
       // "top bottom" to "bottom 70%": flat by the time its bottom is at 70%.
       const start = vh;
       const end = vh * 0.7 - height;

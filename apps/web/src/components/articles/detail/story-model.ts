@@ -140,16 +140,52 @@ function stripTrailingLabel(content: InlineContent): InlineContent {
   return nodes;
 }
 
+/** A bare web address written into the text (trailing punctuation left out). */
+const BARE_URL = /https?:\/\/[^\s<>"'()[\]]+[^\s<>"'()[\].,;:!?]/gi;
+
 function linksOf(content: InlineContent) {
-  if (typeof content === "string") return [];
   const links: { href: string; label: string }[] = [];
-  for (const node of content) {
-    if (node.type !== "link" || !node.href) continue;
-    const href = safeHref(node.href);
-    if (!href) continue;
-    links.push({ href, label: inlineText(node.content) || href });
+  const seen = new Set<string>();
+  const add = (raw: string, label: string) => {
+    const href = safeHref(raw);
+    if (!href || seen.has(href)) return;
+    seen.add(href);
+    links.push({ href, label });
+  };
+  const nodes: InlineNode[] =
+    typeof content === "string" ? [{ type: "text", text: content }] : content;
+  for (const node of nodes) {
+    if (node.type === "link") {
+      if (node.href) add(node.href, inlineText(node.content) || node.href);
+      continue;
+    }
+    for (const match of (node.text ?? "").matchAll(BARE_URL)) add(match[0], match[0]);
   }
   return links;
+}
+
+/**
+ * The citation with its bare addresses taken out (they become link chips).
+ * What is left of a citation that was only addresses ("A and B") is dropped.
+ */
+function withoutBareUrls(content: InlineContent): InlineContent {
+  const nodes: InlineNode[] =
+    typeof content === "string" ? [{ type: "text", text: content }] : content;
+  const out = nodes.map((node) =>
+    node.type === "text" && node.text
+      ? {
+          ...node,
+          text: node.text
+            .replace(BARE_URL, " ")
+            .replace(/\s+(and|,|;)\s+(?=(and|,|;|\s)*$)/gi, " ")
+            .replace(/\s{2,}/g, " "),
+        }
+      : node,
+  );
+  const rest = inlineText(out)
+    .replace(/\b(and|or)\b/gi, "")
+    .replace(/[\s,.;:]+/g, "");
+  return rest ? out : [];
 }
 
 /** Flattens nested blocks (BlockNote children) after their parent, with their depth. */
@@ -245,7 +281,7 @@ export function buildStory(slug: string, blocks: readonly ArticleBlock[]): Story
         if (SOURCE_LABEL.test(text) && (story.lede || index > 0)) {
           story.sources.push({
             id: block.id,
-            citation: stripTrailingLabel(stripLeading(content, SOURCE_LABEL)),
+            citation: withoutBareUrls(stripTrailingLabel(stripLeading(content, SOURCE_LABEL))),
             links: linksOf(content),
           });
           break;
