@@ -26,8 +26,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      statuses: write
     env:
       NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      # actions/checkout's default ref for a pull_request event is the
+      # synthetic merge commit, not the PR's actual head commit, but lhci
+      # doesn't know about GitHub Actions' own SHA env vars, it falls back to
+      # `git rev-list --no-merges -n1 HEAD`. Without this override, the
+      # status checks it posts land on that invisible merge commit instead
+      # of the commit the PR (and this ruleset) actually tracks. Falls back
+      # to github.sha for workflow_dispatch, where there's no PR/merge
+      # commit involved and github.sha is already correct.
+      LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -49,6 +59,22 @@ jobs:
 
       - name: Run Lighthouse CI
         run: pnpm dlx @lhci/cli@0.15.x autorun --config=.lighthouserc.json
+
+      # A separate, best-effort step: the gate below only reads this job's
+      # own exit code, which the autorun step above already determined via
+      # its assertions. `if: !cancelled()` makes it still run after autorun
+      # fails (a step only runs if the prior one succeeded by default), so a
+      # failing URL still gets a status showing what failed, not silence. If
+      # posting these per-URL GitHub status checks fails itself (bad token,
+      # revoked permission), continue-on-error keeps that failure from ever
+      # reaching the job's exit code, and therefore the gate, since it's
+      # purely additional visibility, not a merge signal.
+      - name: Post Lighthouse GitHub status checks
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: pnpm dlx @lhci/cli@0.15.x upload --target=temporary-public-storage --githubToken="$LHCI_GITHUB_TOKEN"
+        env:
+          LHCI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   gate:
     name: Lighthouse gate
