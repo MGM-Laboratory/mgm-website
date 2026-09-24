@@ -211,6 +211,16 @@ export const CARD_FRAGMENT = /* glsl */ `
     vec3 ink = mix(uCardInkLight, uCardInkDark, dark);
     vec3 soft = mix(uCardSoftLight, uCardSoftDark, dark);
     vec3 accent = mix(uCardAccentLight, uCardAccentDark, dark);
+    // Under the text (and the gap above it), a veil of translucent paper
+    // that quiets the library behind the lines: pale paper in light mode,
+    // the night's own fog in dark mode, so it only ever calms what shows
+    // through. It is part of the sheet (it bends, shades and folds with it)
+    // and grows a little on hover, the whole card lighting up.
+    float show = uCardHasText * uCardTextReveal * sides;
+    float veilA = mix(mix(0.5, 0.56, dark), mix(0.72, 0.7, dark), uCardHover) * show;
+    vec3 veil = mix(uCardPaperLight, uFogDark, dark);
+    veil = mix(veil, accent, uCardHover * mix(0.04, 0.12, dark));
+    veil *= 1.0 + shade * mix(0.25, 0.4, dark);
     vec4 color;
 
     if (sheet.y < (uCardLayout.x + uCardLayout.y) * 0.5) {
@@ -244,7 +254,10 @@ export const CARD_FRAGMENT = /* glsl */ `
       // The back of the sheet (seen as it flips over the fold) is paper
       // with the picture showing through.
       if (!gl_FrontFacing) rgb = mix(rgb, paper, 0.6) * 0.94;
-      color = vec4(rgb, edge);
+      // Below the picture's bottom edge the veil begins.
+      float v = veilA * step(uCardLayout.x - 1.0, sheet.y);
+      float a = edge + v * (1.0 - edge);
+      color = vec4((rgb * edge + veil * v * (1.0 - edge)) / max(a, 1e-4), a);
     } else {
       // The text strip: the description and the rule in the atlas's first
       // row, the title from its own row (rolled on hover), the arrow from
@@ -293,10 +306,14 @@ export const CARD_FRAGMENT = /* glsl */ `
         alpha = max(bar1, bar2) * mix(0.1, 0.2, pulse);
       }
 
-      alpha *= uCardHasText * uCardTextReveal * sides;
+      alpha *= show;
+      // The veil ends just past the rule, antialiased like the sides.
+      float v = veilA * clamp((uCardLayout.z + 1.5 - m.y) / fw.y + 0.5, 0.0, 1.0);
+      float a = alpha + v * (1.0 - alpha);
+      rgb = (rgb * alpha + veil * v * (1.0 - alpha)) / max(a, 1e-4);
       // Text on the back of the sheet would read mirrored: it fades instead.
-      if (!gl_FrontFacing) alpha *= 0.25;
-      color = vec4(rgb, alpha);
+      if (!gl_FrontFacing) a *= 0.25;
+      color = vec4(rgb, a);
     }
 
     // What is thrown back dissolves into the fog, never into the far plane.
