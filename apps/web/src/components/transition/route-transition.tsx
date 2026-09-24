@@ -514,16 +514,20 @@ export function RouteTransition() {
     [],
   );
 
+  // `data-route-transition` marks both curtain layers for the e2e suite,
+  // which asserts they never show on project zoom navigations.
   return (
     <>
       <div
         ref={whiteRef}
         aria-hidden
+        data-route-transition=""
         className="pointer-events-none invisible fixed inset-0 z-[999] bg-white opacity-0"
       />
       <div
         ref={overlayRef}
         aria-hidden
+        data-route-transition=""
         className="pointer-events-none invisible fixed inset-0 z-[999] opacity-0 bg-[var(--brand-blue)]"
       >
         <div className="absolute inset-0 flex items-center justify-center">
