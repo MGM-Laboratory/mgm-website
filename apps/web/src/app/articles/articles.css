@@ -1088,43 +1088,167 @@ html[data-articles-world="gl"] .article-card-meta {
 
 .articles-end {
   display: grid;
-  gap: 2rem;
+  min-height: calc(100dvh - var(--articles-head, 16rem) - 3vh);
+  grid-template-rows: 1fr auto auto 1fr auto;
   justify-items: center;
-  padding: 22vh 1.5rem 4vh;
+  padding: 8vh 1.5rem max(1.5rem, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.articles-end-copy,
+.articles-empty > :not(.articles-empty-pages, .articles-empty-action) {
+  /* A halo of fog keeps the copy legible over the busiest part of the library. */
+  text-shadow:
+    0 0 18px var(--world-fog),
+    0 0 42px var(--world-fog);
+}
+
+.articles-end-copy {
+  display: grid;
+  grid-row: 2;
+  gap: 0.55rem;
+  justify-items: center;
+}
+
+.articles-end-kicker {
+  color: var(--world-ink-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.articles-end-title {
+  max-width: 22ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.4vw, 3rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.articles-end-count {
+  max-width: 34rem;
+  color: var(--world-ink-soft);
+  text-wrap: balance;
+}
+
+.articles-home-stage {
+  grid-row: 3;
+  padding: 3.5rem 2rem;
 }
 
 .articles-home {
+  position: relative;
   display: inline-grid;
+  width: 15rem;
+  height: 5.5rem;
   place-items: center;
-  min-width: 12rem;
-  height: 4.5rem;
-  padding: 0 2.5rem;
   border-radius: 999px;
   background: var(--world-ink);
   color: var(--world-fog);
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 1.65rem;
   font-weight: 500;
   letter-spacing: -0.02em;
+  box-shadow: 0 30px 60px -30px var(--world-shadow);
+}
+
+.articles-home-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.articles-home-icon {
+  width: 1.8rem;
+  height: 1.8rem;
 }
 
 .articles-home:focus-visible {
   outline: 2px solid var(--world-accent);
-  outline-offset: 4px;
+  outline-offset: 8px;
+}
+
+/* The world draws the pill: the link keeps its place, its focus ring and its name. */
+.articles-home[data-home-gl] {
+  background: transparent;
+  box-shadow: none;
+}
+
+.articles-home[data-home-gl] .articles-home-face {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-articles-world="gl"]) .articles-home-stage {
+    animation: articles-float 5s ease-in-out infinite;
+  }
+
+  .articles-home:not([data-home-gl]) {
+    transition:
+      translate 0.5s cubic-bezier(0.3, 0.7, 0.4, 1),
+      scale 0.5s cubic-bezier(0.3, 0.7, 0.4, 1),
+      box-shadow 0.5s ease;
+  }
+
+  .articles-home:not([data-home-gl]):hover {
+    box-shadow:
+      0 0 0 10px color-mix(in srgb, var(--world-accent) 16%, transparent),
+      0 34px 70px -28px var(--world-shadow);
+    scale: 1.04;
+    translate: 0 -4px;
+  }
+
+  .articles-home:not([data-home-gl]):active {
+    scale: 0.94;
+    transition-duration: 0.12s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .articles-home:not([data-home-gl]):hover {
+    box-shadow: 0 0 0 4px var(--world-accent);
+  }
+}
+
+@keyframes articles-float {
+  50% {
+    translate: 0 -8px;
+  }
 }
 
 .articles-legal {
   display: flex;
-  gap: 1.5rem;
+  grid-row: 5;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.5rem;
   color: var(--world-ink-soft);
   font-size: 0.8125rem;
+}
+
+.articles-legal a {
+  border-radius: 2px;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition:
+    color 0.25s ease,
+    text-decoration-color 0.25s ease;
 }
 
 .articles-legal a:hover,
 .articles-legal a:focus-visible {
   color: var(--world-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration-color: currentColor;
+  outline: none;
+}
+
+.articles-legal a:focus-visible {
+  outline: 2px solid var(--world-accent);
+  outline-offset: 3px;
 }
 
 /* ------------------------------------------------------------------ compact head */

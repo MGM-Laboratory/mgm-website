@@ -1,16 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ArticleCard } from "@/components/articles/list/article-card";
 import { ArticlesEmpty } from "@/components/articles/list/articles-empty";
+import { ArticlesEnd } from "@/components/articles/list/articles-end";
 import { ArticlesHero } from "@/components/articles/list/articles-hero";
 import { requestArticleBatch } from "@/components/articles/list/index-request";
 import { queryKey, useListQuery } from "@/components/articles/list/use-list-query";
 import { getArticlesWorld } from "@/components/articles/world/world-registry";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
-import { LEGAL_LINKS } from "@/data/nav";
 import {
   ARTICLE_BATCH_SIZE,
   type ArticleCardData,
@@ -47,7 +46,8 @@ function mergeItems(known: ArticleCardData[], more: ArticleCardData[]) {
 
 /**
  * The /articles list: the fixed head (title, search, categories), the two
- * column river of cards and the end of the archive.
+ * column river of cards and, once the archive runs out, its end (the Home
+ * button and the legal links; there is no footer).
  *
  * The first batch comes from the server page (so the list works without
  * JavaScript and paints at once); further batches load from
@@ -227,18 +227,12 @@ export function ArticlesIndex({
       <div aria-hidden="true" className="articles-sentinel" ref={sentinelRef} />
 
       {showing && list.nextOffset === null && !list.failed ? (
-        <footer className="articles-end" data-articles-end="">
-          <Link className="articles-home" data-articles-home="" href="/">
-            Home
-          </Link>
-          <nav aria-label="Legal" className="articles-legal">
-            {LEGAL_LINKS.map((link) => (
-              <Link href={link.href} key={link.href}>
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </footer>
+        <ArticlesEnd
+          category={categoryName}
+          empty={list.items.length === 0}
+          q={query.settled.q}
+          total={list.total}
+        />
       ) : null}
     </div>
   );
