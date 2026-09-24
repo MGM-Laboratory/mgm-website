@@ -25,6 +25,9 @@ import {
 // (installProbes), so the DOM media and fallbacks run on every engine.
 // Everything here also holds for the WebGL paths (E2E_WEBGL=1).
 
+// An entrance plus a page of assertions per test, on slow CI runners.
+test.setTimeout(60_000);
+
 type ThemeId = keyof typeof PROJECT_THEMES;
 
 type ExpectedMedia = {
