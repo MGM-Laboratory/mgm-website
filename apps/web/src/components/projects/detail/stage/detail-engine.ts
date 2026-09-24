@@ -137,6 +137,8 @@ type Item = {
   texture: Texture | null;
   crop: CoverCrop | null;
   pictureWidth: number;
+  /** The device pixel ratio the current picture was prepared for. */
+  pictureRatio: number;
   pictureFailed: boolean;
   reload: boolean;
   // Video.
@@ -269,7 +271,29 @@ export class DetailEngine {
       this.dispose();
       return false;
     }
-    return !this.disposed;
+    // compileAsync resolves even when a program failed to link (the error
+    // only goes to the console): check every program, so a broken shader
+    // hands the media back to the page instead of claiming them and
+    // drawing nothing.
+    if (this.disposed || !this.programsLinked()) {
+      this.dispose();
+      return false;
+    }
+    return true;
+  }
+
+  private programsLinked() {
+    const renderer = this.renderer;
+    if (!renderer) return false;
+    const gl = renderer.getContext();
+    const materials = [...this.items.map((item) => item.material), this.screenMaterial];
+    return materials.every((material) => {
+      if (!material) return false;
+      const program = (
+        renderer.properties.get(material) as { currentProgram?: { program?: WebGLProgram } }
+      ).currentProgram?.program;
+      return Boolean(program && gl.getProgramParameter(program, gl.LINK_STATUS));
+    });
   }
 
   /** Starts the frame loop; the first frame claims every item and draws it. */
@@ -417,6 +441,7 @@ export class DetailEngine {
         texture: null,
         crop: null,
         pictureWidth: 0,
+        pictureRatio: 0,
         pictureFailed: false,
         reload: false,
         videoTexture: null,
@@ -540,11 +565,28 @@ export class DetailEngine {
       item.width = rect.width;
       item.height = rect.height;
       item.uniforms.u_radius.value = item.source.fullscreen ? 0 : readRadius(item.source.element);
-      if (item.texture && item.width > item.pictureWidth * RELOAD_GROWTH) item.reload = true;
+      if (this.pictureStale(item)) item.reload = true;
     }
   }
 
   // ------------------------------------------------------------- textures
+
+  /**
+   * The current picture no longer serves the item: it grew well past the
+   * size the picture was prepared at (or the screen's pixel ratio did), or
+   * its shape changed so the prepared crop no longer covers it (the edges
+   * would smear the crop's last pixels).
+   */
+  private pictureStale(item: Item) {
+    if (!item.pictureWidth) return false;
+    if (item.width > item.pictureWidth * RELOAD_GROWTH) return true;
+    if (this.pixelRatio > item.pictureRatio * RELOAD_GROWTH) return true;
+    const crop = item.crop ?? item.prepared?.crop;
+    if (!crop || !item.width || !item.height) return false;
+    const [ox, oy, sx, sy] = coverUvRect(crop, item.width, item.height);
+    const slack = 1e-3;
+    return ox < -slack || oy < -slack || ox + sx > 1 + slack || oy + sy > 1 + slack;
+  }
 
   private distanceOutside(item: Item, scroll: number) {
     const left = item.x - scroll;
@@ -605,6 +647,8 @@ export class DetailEngine {
     this.loads += 1;
     const generation = ++item.generation;
     const width = item.width;
+    const height = item.height;
+    const ratio = this.pixelRatio;
     const image = new Image();
     image.decoding = "async";
     image.src = src;
@@ -621,6 +665,12 @@ export class DetailEngine {
         releaseCover(item.prepared);
         item.prepared = cover;
         item.pictureWidth = width;
+        item.pictureRatio = ratio;
+        // The item changed shape while this was decoding: show it for now,
+        // and prepare again for the new shape.
+        if (Math.abs(item.width / Math.max(1, item.height) - width / Math.max(1, height)) > 0.01) {
+          item.reload = true;
+        }
       })
       .catch(() => {
         if (!this.disposed && generation === item.generation) this.failPicture(item);
