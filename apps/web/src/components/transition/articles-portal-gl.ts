@@ -36,6 +36,8 @@ const PIXEL_RATIO = { high: 1.5, low: 1 } as const;
 const FIELD_OF_VIEW = (48 * Math.PI) / 180;
 const SHEET_COLUMNS = 36;
 const SHEET_ROWS = 24;
+/** How much nearer the sheet comes while it dissolves (its apparent growth). */
+const SHEET_PASS = 0.16;
 
 /** Renderers that are really a CPU: those visitors get the DOM portal. */
 const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render|mesa offscreen/i;
@@ -723,7 +725,7 @@ export class PortalGl implements PortalFront {
 
     // 3. The sheet.
     if (frame.sheet > 0 && frame.hole < 1) {
-      const pose = sheetPose(frame.sheet, frame.time, tanHalf, aspect);
+      const pose = sheetPose(frame.sheet, frame.time, tanHalf, aspect, frame.hole);
       const p = this.sheet;
       gl.useProgram(p.program);
       compose(this.model, pose.rx, pose.ry, pose.rz, pose.x, pose.y, pose.z);
@@ -798,13 +800,16 @@ export class PortalGl implements PortalFront {
  *
  * It grows as its distance closes (the apparent size is 1/z, eased in, so
  * it accelerates at the end like something thrown at you), tumbles from a
- * loose spin to flat, and uncurls as it arrives.
+ * loose spin to flat, and uncurls as it arrives. While it dissolves
+ * (`pass`, 0..1) it keeps coming, past the camera, so the page opening
+ * under it seems to settle into place.
  */
-export function sheetPose(t: number, time: number, tanHalf: number, aspect: number) {
+export function sheetPose(t: number, time: number, tanHalf: number, aspect: number, pass = 0) {
   const near = 1;
   const k = Math.min(1, Math.max(0, t));
   const approach = k * k * (1.6 - 0.6 * k);
-  const scale = 0.1 + (1 - 0.1) * approach;
+  const through = Math.min(1, Math.max(0, pass));
+  const scale = (0.1 + (1 - 0.1) * approach) * (1 + SHEET_PASS * through * (2 - through));
   const z = -near / scale;
   const settle = 1 - approach;
   const drift = settle * settle;

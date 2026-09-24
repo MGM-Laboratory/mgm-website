@@ -779,7 +779,9 @@ export class PortalDom implements PortalFront {
       const k = fit(frame.sheet, 0, 1);
       const grow = ease.in2(k);
       const settle = 1 - grow;
-      const scale = 0.12 + 0.88 * grow;
+      // Dissolving, it keeps coming past the camera (the page settles under it).
+      const pass = fit(frame.hole, 0, 1);
+      const scale = (0.12 + 0.88 * grow) * (1 + 0.1 * pass * (2 - pass));
       const x = -w * 0.22 * settle * settle;
       const y = -h * 0.16 * settle * settle;
       this.sheet.style.opacity = Math.min(1, k * 5).toFixed(3);
