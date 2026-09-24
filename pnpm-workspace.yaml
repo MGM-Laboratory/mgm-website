@@ -2,11 +2,15 @@ packages:
   - "apps/*"
   - "packages/*"
 overrides:
-  # Prisma bundles these regardless of database provider; both are below
-  # patched versions for known advisories. Neither is exercised by this
-  # project's postgresql-only usage, but pin them past the fix anyway.
-  mysql2: ">=3.23.1"
-  deepmerge-ts: ">=8.0.0"
+  # Both are transitive deps of prisma, pinned to patched versions for known
+  # advisories: mysql2 is a dormant multi-database driver this project's
+  # postgresql-only usage never exercises. deepmerge-ts is not dormant,
+  # @prisma/config calls it directly while loading configuration regardless
+  # of provider, so it's a real vulnerable dependency, not a dead one.
+  # Exact versions on purpose, not a >= range, so a routine lockfile
+  # refresh can't silently pull in an unreviewed future major.
+  mysql2: "3.24.4"
+  deepmerge-ts: "8.0.2"
 allowBuilds:
   "@prisma/engines": true
   "@scarf/scarf": false
