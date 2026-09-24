@@ -24,6 +24,9 @@
  *   forward between the list and a project, or between two projects, to
  *   the overlay, but only while the overlay is mounted and motion is
  *   allowed (`claimsProjectPopstate`).
+ * - Busy: while the zoom runs, or a detail page's hand-off walks the
+ *   header palette, the adaptive header (hooks/use-header-tone.ts) hands
+ *   its colours back to the walk (`isProjectTransitionBusy`).
  *
  * Module state survives client-side navigation and resets on a hard load.
  * Promises resolve asynchronously, which keeps React Strict Mode's
@@ -51,6 +54,8 @@ export type ProjectReturn = {
 
 let pendingReturn: ProjectReturn | undefined;
 let detailHandoff = false;
+let zoomRunning = false;
+const transitionListeners = new Set<() => void>();
 let scrollResetSkip: string | null = null;
 let layers = 0;
 
@@ -193,9 +198,43 @@ export function claimsProjectPopstate(from: string, to: string) {
  * mid-wipe would otherwise race the hand-off's navigation and lose.
  */
 export function setDetailHandoffActive(active: boolean) {
+  const changed = detailHandoff !== active;
   detailHandoff = active;
+  if (changed) notifyTransitionChange();
 }
 
 export function isDetailHandoffActive() {
   return detailHandoff;
+}
+
+/**
+ * The zoom is running: from the moment it takes over until its `finish()`,
+ * which is later than `markProjectRevealStarted()` (the overlay still fades
+ * out and walks the header palette after that).
+ */
+export function setProjectZoomRunning(running: boolean) {
+  const changed = zoomRunning !== running;
+  zoomRunning = running;
+  if (changed) notifyTransitionChange();
+}
+
+/**
+ * Whether a project transition drives the header's colours right now: the
+ * zoom (its palette walk) or a detail page's next-project hand-off (its own
+ * walk). The adaptive header hands its colours back while this holds.
+ */
+export function isProjectTransitionBusy() {
+  return zoomRunning || detailHandoff;
+}
+
+/** Calls `listener` whenever `isProjectTransitionBusy()` may have changed. Returns the unsubscribe. */
+export function onProjectTransitionChange(listener: () => void) {
+  transitionListeners.add(listener);
+  return () => {
+    transitionListeners.delete(listener);
+  };
+}
+
+function notifyTransitionChange() {
+  for (const listener of [...transitionListeners]) listener();
 }

@@ -34,6 +34,7 @@ import {
   projectTransitionKind,
   PROJECTS_LIST_PATH,
   setProjectReturn,
+  setProjectZoomRunning,
   skipScrollReset,
   waitForProjectPage,
   isDetailHandoffActive,
@@ -839,6 +840,7 @@ export class ProjectZoom {
     this.run = run;
     this.block(true);
     acquireScrollLock(LOCK_OWNER);
+    setProjectZoomRunning(true);
     return run;
   }
 
@@ -874,6 +876,8 @@ export class ProjectZoom {
       clearProjectReturn();
       skipScrollReset(null);
     }
+    // Last: the adaptive header samples again from here (lib/project-transition.ts).
+    setProjectZoomRunning(false);
   }
 
   /** Lets go quickly: a short fade, then finish(). */
