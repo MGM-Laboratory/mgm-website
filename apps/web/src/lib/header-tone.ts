@@ -152,14 +152,14 @@ function sameColor(a: Rgb, b: Rgb) {
   return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) < 6;
 }
 
-function parseNumber(token: string, percentScale: number) {
-  if (token === "none") return 0;
-  return token.endsWith("%") ? (Number(token.slice(0, -1)) / 100) * percentScale : Number(token);
+function parseNumber(part: string, percentScale: number) {
+  if (part === "none") return 0;
+  return part.endsWith("%") ? (Number(part.slice(0, -1)) / 100) * percentScale : Number(part);
 }
 
-function parseAlphaToken(token: string | undefined) {
-  if (token === undefined) return 1;
-  return Math.min(1, Math.max(0, parseNumber(token, 1)));
+function parseAlphaPart(part: string | undefined) {
+  if (part === undefined) return 1;
+  return Math.min(1, Math.max(0, parseNumber(part, 1)));
 }
 
 function oklabToRgb(l: number, a: number, b: number): Rgb {
@@ -223,7 +223,7 @@ export function parseCssColor(input: string): Rgba | null {
     if (tokens.length < 3) return null;
     return {
       rgb: [parseNumber(tokens[0], 255), parseNumber(tokens[1], 255), parseNumber(tokens[2], 255)],
-      alpha: parseAlphaToken(alphaToken),
+      alpha: parseAlphaPart(alphaToken),
     };
   }
   if (name === "color" && tokens[0] === "srgb" && tokens.length >= 4) {
@@ -233,7 +233,7 @@ export function parseCssColor(input: string): Rgba | null {
         parseNumber(tokens[2], 1) * 255,
         parseNumber(tokens[3], 1) * 255,
       ],
-      alpha: parseAlphaToken(alphaPart),
+      alpha: parseAlphaPart(alphaPart),
     };
   }
   if (name === "oklab" && tokens.length >= 3) {
@@ -243,7 +243,7 @@ export function parseCssColor(input: string): Rgba | null {
         parseNumber(tokens[1], 0.4),
         parseNumber(tokens[2], 0.4),
       ),
-      alpha: parseAlphaToken(alphaPart),
+      alpha: parseAlphaPart(alphaPart),
     };
   }
   if (name === "oklch" && tokens.length >= 3) {
@@ -251,7 +251,7 @@ export function parseCssColor(input: string): Rgba | null {
     const hue = (parseNumber(tokens[2].replace("deg", ""), 1) * Math.PI) / 180;
     return {
       rgb: oklabToRgb(parseNumber(tokens[0], 1), chroma * Math.cos(hue), chroma * Math.sin(hue)),
-      alpha: parseAlphaToken(alphaPart),
+      alpha: parseAlphaPart(alphaPart),
     };
   }
   return parseThroughCanvas(input);
