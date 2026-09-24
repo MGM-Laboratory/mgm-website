@@ -1,10 +1,90 @@
 /*
- * The library world's own DOM pieces: the theme wave's view transition, and
- * (later) the custom cursor and anything else the world layers on the page.
+ * The library world's own DOM pieces: the theme wave's view transition and
+ * the library's cursor ring (components/articles/world/cursor).
  */
 
 html[data-theme-wave]::view-transition-old(root),
 html[data-theme-wave]::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+/* ------------------------------------------------------------------ cursor */
+
+.world-cursor {
+  /* The world's ink on the list, the article theme's colours on an article. */
+  --cursor-ink: var(--project-text, var(--world-ink, #0e1116));
+  --cursor-glow: var(--project-highlight, var(--world-accent, #3a6dc5));
+  --cursor-size: clamp(26px, 2.2vw, 42px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  will-change: transform;
+}
+
+.world-cursor[data-visible="true"] {
+  opacity: 1;
+}
+
+.world-cursor-ring {
+  position: absolute;
+  top: calc(var(--cursor-size) / -2);
+  left: calc(var(--cursor-size) / -2);
+  width: var(--cursor-size);
+  height: var(--cursor-size);
+  border: 1.5px solid var(--cursor-ink);
+  border-radius: 50%;
+  background: transparent;
+  transform: scale(1);
+  scale: 1;
+  transition:
+    transform 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    scale 0.2s cubic-bezier(0.19, 1, 0.22, 1),
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.45s ease,
+    opacity 0.35s ease;
+}
+
+/* Over links and buttons: a dot. */
+.world-cursor[data-state="link"] .world-cursor-ring {
+  transform: scale(0.24);
+  background-color: var(--cursor-ink);
+}
+
+/* Over a text field: a faint small ring (the caret is the cursor there). */
+.world-cursor[data-state="text"] .world-cursor-ring {
+  transform: scale(0.5);
+  opacity: 0.45;
+}
+
+/* Over an article card: a soft halo of light. */
+.world-cursor[data-state="card"] .world-cursor-ring {
+  transform: scale(2.4);
+  border-color: rgb(255 255 255 / 0.55);
+  background-color: color-mix(in srgb, var(--cursor-glow) 12%, rgb(255 255 255 / 0.14));
+  box-shadow:
+    0 0 24px 6px color-mix(in srgb, var(--cursor-glow) 22%, transparent),
+    inset 0 0 18px rgb(255 255 255 / 0.18);
+}
+
+.world-cursor[data-pressed="true"] .world-cursor-ring {
+  scale: 0.8;
+}
+
+/* A view transition freezes the page: a frozen ring would linger as a ghost. */
+html[data-theme-wave] .world-cursor {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-cursor {
+    display: none;
+  }
 }

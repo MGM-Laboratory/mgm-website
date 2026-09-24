@@ -13,6 +13,7 @@ import {
   resetWorldState,
   setWorldState,
 } from "@/components/articles/world/world-registry";
+import { mountWorldCursor } from "@/components/articles/world/cursor/world-cursor";
 import { qualityOverrides } from "@/components/articles/world/quality";
 import { runThemeWave } from "@/components/articles/world/theme-wave";
 import { articleDetailSlug, registerArticleWorldLayer } from "@/lib/article-transition";
@@ -214,14 +215,24 @@ export function ArticlesWorldHost() {
         });
     }
 
+    // The library's cursor ring: a fine pointer with motion allowed, in
+    // either mode (it is DOM, the world need not run).
+    let offCursor: (() => void) | null =
+      motionAllowed() && window.matchMedia("(hover: hover) and (pointer: fine)").matches
+        ? mountWorldCursor()
+        : null;
+
     const offReduced = onReducedMotion(() => {
       teardown();
+      offCursor?.();
+      offCursor = null;
       setWorldState("dom", null);
     });
 
     return () => {
       cancelled = true;
       offReduced();
+      offCursor?.();
       teardown();
       offLayer();
       resetWorldState();
