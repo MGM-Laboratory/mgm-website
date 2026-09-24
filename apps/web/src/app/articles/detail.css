@@ -43,6 +43,17 @@
   }
 }
 
+/* Big screens: the page opens up around a text column that keeps its
+   measure (the rail and the margin get the room). */
+@media (min-width: 1920px) {
+  .ad-root {
+    --ad-wide: 84rem;
+    --ad-rail: 18rem;
+    --ad-margin: 18rem;
+    --ad-gap: 4rem;
+  }
+}
+
 .ad-content {
   position: relative;
 }
