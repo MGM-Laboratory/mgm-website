@@ -14,7 +14,11 @@ import {
 
 import { CameraRig } from "@/components/articles/world/camera-rig";
 import { CardsLayer } from "@/components/articles/world/cards/cards-layer";
-import { createComposite, type Composite } from "@/components/articles/world/fx/composite";
+import {
+  PULSE_SLOTS,
+  createComposite,
+  type Composite,
+} from "@/components/articles/world/fx/composite";
 import {
   FRONT_BAND,
   FRONT_SECONDS,
@@ -198,6 +202,7 @@ export class LibraryEngine implements ArticlesWorldApi {
   /** Seconds since the dawn reached the window (negative: no flood). */
   private floodAge = -1;
   private readonly envGroupPoint = new Vector3();
+  private pulseSlot = 0;
   private themeTween: gsap.core.Tween | null = null;
   private readonly themeState = { value: 0 };
   private readonly fogLight = new Color();
@@ -313,6 +318,10 @@ export class LibraryEngine implements ArticlesWorldApi {
         this.blurAmount = amount;
       },
       pulse: (x, y, strength = 1) => {
+        // A ring on the screen pass (the oldest slot gives way) and a burst of motes.
+        const slots = this.composite.uniforms.uPulses.value;
+        slots[this.pulseSlot].set(x, y, this.time, Math.max(0.05, strength));
+        this.pulseSlot = (this.pulseSlot + 1) % PULSE_SLOTS;
         this.magic.burst(x, y, Math.round(26 * strength), 0.8 + strength * 0.4);
       },
       swarm: (x, y) => this.magic.swarm(x, y),

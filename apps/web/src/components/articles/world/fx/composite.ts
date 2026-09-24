@@ -26,6 +26,9 @@ import { WORLD_COMMON, type WorldUniforms } from "@/components/articles/world/wo
  * - Motion blur: a vertical smear along the scroll direction, as long as
  *   the list is fast. The same taps carry the spectral split, so a fast
  *   scroll fringes more at the edges, like a real lens.
+ * - Pulses: rings that ripple out from a click or an arrival, bending the
+ *   picture like a drop in still water; a ring of ink by day, of light by
+ *   night.
  * - The theme switch's front: by night-fall a band of deep ink with blue
  *   fire along its edge (and a brief chromatic shiver over the screen), by
  *   dawn a rim of gold with a warm haze behind it and a bloom from the
@@ -35,6 +38,11 @@ import { WORLD_COMMON, type WorldUniforms } from "@/components/articles/world/wo
  * - The transition wipe: a flat colour sweeping in from the right edge with
  *   a very soft front, which the list-to-article transition drives.
  */
+
+/** How many pulses can ripple at once (the oldest gives way). */
+export const PULSE_SLOTS = 4;
+/** How long a pulse's ring travels. */
+export const PULSE_SECONDS = 1.1;
 
 const VERTEX = /* glsl */ `
   varying vec2 vUv;
@@ -55,6 +63,10 @@ const FRAGMENT = /* glsl */ `
   uniform float uGrainSeed;
   /** The list's fixed head: left, right, bottom (CSS px) and how much it veils. */
   uniform vec4 uHead;
+  /** Pulses: x, y (CSS px), start (world seconds), strength (0 = free slot). */
+  uniform vec4 uPulses[${PULSE_SLOTS}];
+  uniform vec3 uPulseInk;
+  uniform vec3 uPulseLight;
   /** The theme front's looks. */
   uniform float uShiver;
   uniform float uBloom;
@@ -82,6 +94,28 @@ const FRAGMENT = /* glsl */ `
     float lens = uLens * uDistort;
     float blur = uBlur / uViewport.y;
     float jitter = worldHash(gl_FragCoord.xy + uGrainSeed);
+
+    // Pulses bend the picture outward along their rings, and remember how
+    // much ring passes here for the tint below.
+    vec2 bend = vec2(0.0);
+    float ring = 0.0;
+    for (int i = 0; i < ${PULSE_SLOTS}; i++) {
+      vec4 pulse = uPulses[i];
+      if (pulse.w <= 0.0) continue;
+      float t = (uTime - pulse.z) / ${PULSE_SECONDS.toFixed(2)};
+      if (t < 0.0 || t > 1.0) continue;
+      vec2 to = css - pulse.xy;
+      float dist = length(to);
+      float radius = (1.0 - pow(1.0 - t, 3.0)) * 460.0 * (0.6 + 0.4 * pulse.w);
+      float width = 10.0 + 46.0 * t;
+      // A crest with a trough behind it, like a ripple on water.
+      float x = (dist - radius) / width;
+      float crest = exp(-x * x) - 0.45 * exp(-pow(x + 1.6, 2.0));
+      float fade = (1.0 - t) * (1.0 - t) * min(pulse.w, 1.5);
+      bend += to / max(dist, 1.0) * crest * fade * 20.0;
+      ring += max(crest, 0.0) * fade;
+    }
+    uv -= bend / uViewport;
 
     // The chromatic shiver of a night-fall: the channels tremble apart for a moment.
     vec2 shiver = uShiver * vec2(sin(uTime * 71.0 + css.y * 0.021), cos(uTime * 53.0 + css.x * 0.013) * 0.35) * 0.006;
@@ -114,6 +148,13 @@ const FRAGMENT = /* glsl */ `
       float across = smoothstep(uHead.x - 90.0, uHead.x + 30.0, css.x)
                    * (1.0 - smoothstep(uHead.y - 30.0, uHead.y + 90.0, css.x));
       color = mix(color, worldFogColor(dark), under * across * uHead.w);
+    }
+
+    // Pulse rings: ink laid on the pale fog by day, light added by night.
+    if (ring > 0.0) {
+      float k = clamp(ring, 0.0, 1.0);
+      color = mix(color, uPulseInk, k * 0.3 * (1.0 - dark));
+      color += uPulseLight * k * 0.55 * dark;
     }
 
     // The theme front, just behind its edge (the DOM's clip runs a few
@@ -174,6 +215,9 @@ export type Composite = {
     uWipe: { value: number };
     uGrainSeed: { value: number };
     uHead: { value: Vector4 };
+    uPulses: { value: Vector4[] };
+    uPulseInk: { value: Color };
+    uPulseLight: { value: Color };
     uShiver: { value: number };
     uBloom: { value: number };
     uBloomAt: { value: Vector2 };
@@ -202,6 +246,9 @@ export function createComposite(world: WorldUniforms): Composite {
     uWipe: { value: 0 },
     uGrainSeed: { value: 0 },
     uHead: { value: new Vector4(0, 0, 0, 0) },
+    uPulses: { value: Array.from({ length: PULSE_SLOTS }, () => new Vector4(0, 0, -100, 0)) },
+    uPulseInk: { value: new Color("#1C2A4F") },
+    uPulseLight: { value: new Color(WORLD_PALETTE.dark.mote) },
     uShiver: { value: 0 },
     uBloom: { value: 0 },
     uBloomAt: { value: new Vector2() },
