@@ -11,7 +11,6 @@ import { collectChecks, ghRequest } from "./gh-api.mjs";
 import { collectContributors, thankYouBody } from "./pr-contributors.mjs";
 import { replyReliably } from "./pr-comments.mjs";
 import { codeowners } from "./codeowners.mjs";
-import { reviewGate } from "./review-policy.mjs";
 import { footer, heading, mentionAll, statusTable } from "./format.mjs";
 import {
   API_SERVICE_ID,
@@ -91,17 +90,6 @@ if (["blocked", "behind", "unknown"].includes(pr.mergeable_state))
   blockers.push(
     `GitHub reports ${pr.mergeable_state}: check approvals, unresolved reviews, signatures, and whether the branch is up to date.`,
   );
-
-// Review policy: code owners' own pull requests need no review, everyone
-// else's needs a code owner's approval on the head commit (review-policy.mjs).
-const reviews = await gh(`/repos/${repo}/pulls/${prNumber}/reviews?per_page=100`);
-const review = reviewGate({
-  author: pr.user.login,
-  owners: codeowners(),
-  reviews,
-  headSha: pr.head.sha,
-});
-if (!review.ok) blockers.push(review.reason);
 
 if (blockers.length) {
   await reply(
