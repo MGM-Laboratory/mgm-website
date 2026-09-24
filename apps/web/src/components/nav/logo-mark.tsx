@@ -67,12 +67,14 @@ export function LogoMark() {
   }
 
   return (
-    // The wordmark inherits the header ink (a project page's text colour
-    // there); the mark itself is a multicolour image and keeps its brand
-    // colours on every theme.
+    // The wordmark takes the logo zone's ink (the header ink, a project
+    // page's text colour, or whatever the adaptive header picked for what
+    // is behind it); the mark itself is a multicolour image and keeps its
+    // brand colours on every theme.
     <Link
       href="/"
       onMouseEnter={handleEnter}
+      data-header-zone="logo"
       className="header-focus flex items-center gap-2 rounded-md"
     >
       <div className="relative inline-flex size-7 items-center justify-center">

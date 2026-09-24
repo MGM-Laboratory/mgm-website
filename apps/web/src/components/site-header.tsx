@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/nav/logo-mark";
 import { NavMenu } from "@/components/nav/nav-menu";
+import { useHeaderTone } from "@/hooks/use-header-tone";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { waitForProjectReveal } from "@/lib/project-transition";
 import { waitForRouteReveal } from "@/lib/route-reveal";
@@ -28,11 +29,30 @@ const PROJECT_DETAIL_PATH = /^\/projects\/[^/]+\/?$/;
 export function SiteHeader() {
   const pathname = usePathname();
   if (pathname.startsWith("/admin")) return null;
+  return <HeaderBar pathname={pathname} />;
+}
 
+/**
+ * The bar itself, its own component so the adaptive tone hook only runs
+ * while the header is on screen (never on /admin, and it starts afresh when
+ * the header comes back from there).
+ *
+ * `data-header-zone` marks the zones the hook samples behind and colours:
+ * the logo and the right-hand controls (the Back pill is its own centre
+ * zone on wide screens). The controls wrapper also holds the nav menu's
+ * fixed overlay and panel, so it must never get a filter, transform or
+ * backdrop-filter (they would become its containing block).
+ */
+function HeaderBar({ pathname }: { pathname: string }) {
+  const headerRef = useRef<HTMLElement>(null);
+  useHeaderTone(headerRef);
   const onProjectDetail = PROJECT_DETAIL_PATH.test(pathname);
 
   return (
-    <header className="site-header fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between gap-4 px-6 sm:px-10">
+    <header
+      ref={headerRef}
+      className="site-header fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between gap-4 px-6 sm:px-10"
+    >
       <div aria-hidden className="site-header-glass" />
 
       <LogoMark />
@@ -41,7 +61,7 @@ export function SiteHeader() {
           on both layouts: centred in the bar on wide screens (absolutely
           positioned against the header), and an in-flow circle just left of
           the theme toggle at 812px and below. */}
-      <div className="flex items-center gap-2 sm:gap-4">
+      <div data-header-zone="controls" className="flex items-center gap-2 sm:gap-4">
         {onProjectDetail && <ProjectBackLink />}
         <ThemeToggle className="size-11 lg:size-8" />
         <NavMenu />

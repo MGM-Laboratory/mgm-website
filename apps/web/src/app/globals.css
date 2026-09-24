@@ -38,6 +38,15 @@
      the section surface it sits on so tiles never render as a literal
      white square against a dark background. */
   --pattern-canvas: var(--surface-muted);
+
+  /* Adaptive glass (site header, nav menu panel): the neutral ink and
+     surface of each tone, the site's own light and dark pairs. The glass
+     switches to these when the content behind it has the other tone
+     (hooks/use-header-tone.ts). */
+  --tone-light-ink: #0e1116;
+  --tone-light-surface: #f7f7f5;
+  --tone-dark-ink: #ededed;
+  --tone-dark-surface: #15181e;
 }
 
 .dark {
@@ -45,6 +54,54 @@
   --foreground: #ededed;
   --line: #262a33;
   --surface-muted: #15181e;
+}
+
+/* Colours the adaptive glass writes per zone (hooks/use-header-tone.ts).
+   Registered so they transition, the tints inside a gradient included. */
+@property --hz-logo-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e1116;
+}
+@property --hz-centre-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e1116;
+}
+@property --hz-controls-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e1116;
+}
+@property --hz-logo-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+@property --hz-centre-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+@property --hz-controls-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+@property --hz-logo-solid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7f7f5;
+}
+@property --hz-centre-solid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7f7f5;
+}
+@property --hz-controls-solid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7f7f5;
 }
 
 @theme inline {
@@ -70,25 +127,37 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
-   Site header (site-header.tsx). A frosted-glass bar: a translucent tint of
-   the page background with the content behind it blurred through.
+   Site header (site-header.tsx). A frosted-glass bar: a translucent tint
+   with the content behind it blurred through.
 
    Every colour comes from the --project-* variables a project detail page
    puts on :root while it is mounted, falling back to the site tokens, so
    the header wears the project's theme there and nothing changes elsewhere.
-   The consuming properties transition (0.5s) because those variables can
-   appear or disappear mid route-transition.
+   The consuming properties transition (0.5s or less) because those
+   variables can appear or disappear mid route-transition.
+
+   Adaptive zones: the bar has three zones (the logo, the centre with the
+   Back pill, the right-hand controls). Each reads its ink, its glass tint
+   and its opaque surface from --hz-<zone>-ink/-tint/-solid. Here they
+   default to the header's own colours, which is what renders without
+   JavaScript, before the first sample, and while a page transition walks
+   the palette. Once sampling has seen what is behind each zone,
+   hooks/use-header-tone.ts writes them inline (with data-hz-<zone>="flip"
+   when the ink left the preferred colour, and data-hz-<zone>-media over
+   imagery), and the registered properties ease there over 0.45s.
 
    The glass lives on its own layer (.site-header-glass), never on <header>:
    the nav menu's fixed overlay and panel are DOM descendants of the header,
    and a backdrop-filter on it would become their containing block (the
    panel would collapse into the 64px bar) and the backdrop root of the
-   overlay's own blur.
+   overlay's own blur. The same goes for the controls zone's wrapper: no
+   filter, transform or backdrop-filter on it, ever.
 
-   Tint alphas: the "Laboratory" caption is 70% ink, the weakest text here.
-   At 76% (light) and 80% (dark) it keeps at least 4.9:1 even over solid
-   black or white content scrolled underneath, and the blur averages most
-   real content well away from that worst case.
+   Static tint alphas: the "Laboratory" caption is 70% ink, the weakest text
+   here. At 76% (light) and 80% (dark) it keeps at least 4.9:1 even over
+   solid black or white content scrolled underneath, so these stay the
+   default. Sampling lowers the tint to --header-glass-alpha only where the
+   contrast rule holds.
 
    In @layer components so a caller's utility classes still win.
 --------------------------------------------------------------------------- */
@@ -98,6 +167,7 @@ body {
     --header-ink: var(--project-text, var(--foreground));
     --header-accent: var(--project-highlight, var(--focus));
     --header-tint: 76%;
+    --header-glass-alpha: 58%;
     --header-sheen: color-mix(in srgb, #fff 60%, transparent);
     /* Control hover wash: the project highlight when themed, otherwise the
        ink at the old black/5 (light) and white/10 (dark) strength. */
@@ -107,12 +177,32 @@ body {
       var(--project-highlight, var(--header-hover-base)) 16%,
       transparent
     );
+    --hz-logo-ink: var(--header-ink);
+    --hz-centre-ink: var(--header-ink);
+    --hz-controls-ink: var(--header-ink);
+    --hz-logo-tint: color-mix(in srgb, var(--header-surface) var(--header-tint), transparent);
+    --hz-centre-tint: color-mix(in srgb, var(--header-surface) var(--header-tint), transparent);
+    --hz-controls-tint: color-mix(in srgb, var(--header-surface) var(--header-tint), transparent);
+    --hz-logo-solid: var(--header-surface);
+    --hz-centre-solid: var(--header-surface);
+    --hz-controls-solid: var(--header-surface);
     color: var(--header-ink);
-    transition: color 0.5s ease;
+    transition:
+      color 0.5s ease,
+      --hz-logo-ink 0.45s ease,
+      --hz-centre-ink 0.45s ease,
+      --hz-controls-ink 0.45s ease,
+      --hz-logo-tint 0.45s ease,
+      --hz-centre-tint 0.45s ease,
+      --hz-controls-tint 0.45s ease,
+      --hz-logo-solid 0.45s ease,
+      --hz-centre-solid 0.45s ease,
+      --hz-controls-solid 0.45s ease;
   }
 
   .dark .site-header {
     --header-tint: 80%;
+    --header-glass-alpha: 62%;
     --header-sheen: color-mix(in srgb, #fff 7%, transparent);
     --header-hover-base: color-mix(in srgb, var(--foreground) 62%, transparent);
   }
@@ -127,41 +217,92 @@ body {
   }
 
   /* Menu open: the bar turns nearly solid so it reads as part of the
-     menu's chrome above the panel instead of a window onto the page. */
+     menu's chrome above the panel instead of a window onto the page
+     (sampling lifts it to the panel's own tint instead). */
   .site-header:has([aria-controls="site-nav-panel"][aria-expanded="true"]) {
     --header-tint: 94%;
   }
 
+  /* The tint is a gradient across the three zones, with a matching hairline
+     on the bottom edge. The stops sit just past the logo and just before
+     the controls (written by the sampler, sensible defaults here). With the
+     defaults above all three zones match, which is a plain uniform bar. */
   .site-header-glass {
     position: absolute;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-color: color-mix(in srgb, var(--header-surface) var(--header-tint), transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--header-ink) 9%, transparent);
+    background:
+      linear-gradient(
+          to right,
+          color-mix(in srgb, var(--hz-logo-ink) 9%, transparent) var(--hz-logo-stop, 15%),
+          color-mix(in srgb, var(--hz-centre-ink) 9%, transparent) 50%,
+          color-mix(in srgb, var(--hz-controls-ink) 9%, transparent) var(--hz-controls-stop, 85%)
+        )
+        bottom / 100% 1px no-repeat,
+      linear-gradient(
+        to right,
+        var(--hz-logo-tint) var(--hz-logo-stop, 15%),
+        var(--hz-centre-tint) 50%,
+        var(--hz-controls-tint) var(--hz-controls-stop, 85%)
+      );
     box-shadow: inset 0 1px 0 var(--header-sheen);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     backdrop-filter: blur(20px) saturate(180%);
-    transition:
-      background-color 0.5s ease,
-      border-color 0.5s ease,
-      box-shadow 0.5s ease;
+    transition: box-shadow 0.5s ease;
   }
 
   /* Without a blur behind it a translucent bar would show sharp content
-     through the text, so both fallbacks go fully opaque. */
+     through the text, so both fallbacks go fully opaque (and the sampler
+     stands down, leaving the header's own colours). */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .site-header-glass {
-      background-color: var(--header-surface);
+      background:
+        linear-gradient(color-mix(in srgb, var(--header-ink) 9%, transparent)) bottom / 100% 1px
+          no-repeat,
+        var(--header-surface);
     }
   }
 
   @media (prefers-reduced-transparency: reduce) {
     .site-header-glass {
-      background-color: var(--header-surface);
+      background:
+        linear-gradient(color-mix(in srgb, var(--header-ink) 9%, transparent)) bottom / 100% 1px
+          no-repeat,
+        var(--header-surface);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
+  }
+
+  /* Each zone's ink. The controls zone's wrapper also holds the nav menu's
+     overlay and panel, which set their own colours. */
+  .site-header [data-header-zone="logo"] {
+    color: var(--hz-logo-ink);
+    transition: text-shadow 0.45s ease;
+  }
+
+  .site-header [data-header-zone="controls"] {
+    color: var(--hz-controls-ink);
+  }
+
+  /* A zone whose ink left the preferred colour: its focus ring and hover
+     wash follow the ink instead of the theme accent. */
+  .site-header[data-hz-logo="flip"] [data-header-zone="logo"],
+  .site-header[data-hz-controls="flip"] [data-header-zone="controls"] {
+    --header-accent: currentColor;
+    --header-hover: color-mix(in srgb, currentColor 14%, transparent);
+  }
+
+  /* Over imagery a faint halo in the zone's own surface colour keeps the
+     glyph edges clean on busy pictures. On the buttons themselves, never
+     on the zone wrapper (see the containing-block note above). */
+  .site-header[data-hz-logo-media] [data-header-zone="logo"] {
+    text-shadow: 0 0 12px color-mix(in srgb, var(--hz-logo-solid) 60%, transparent);
+  }
+
+  .site-header[data-hz-controls-media] [data-header-zone="controls"] > .header-control {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--hz-controls-solid) 60%, transparent));
   }
 
   /* Header links and buttons: inherit the header ink, a hover wash, and a
@@ -169,7 +310,9 @@ body {
   .header-control {
     color: inherit;
     background-color: transparent;
-    transition: background-color 0.3s ease;
+    transition:
+      background-color 0.3s ease,
+      filter 0.45s ease;
   }
 
   @media (hover: hover) {
@@ -366,6 +509,24 @@ body {
 
     .project-back-icon-in {
       right: calc(50% - 0.6em);
+    }
+  }
+
+  /* Over content of the other tone the pill inverts to the zone's ink and
+     surface, so it stays a solid, readable shape on the glass: the centre
+     zone where it is centred, the controls zone where it sits beside them. */
+  @media (min-width: 813px) {
+    .site-header[data-hz-centre="flip"] .project-back {
+      --back-bg: var(--hz-centre-ink);
+      --back-ink: var(--hz-centre-solid);
+      --header-accent: var(--hz-centre-ink);
+    }
+  }
+
+  @media (max-width: 812px) {
+    .site-header[data-hz-controls="flip"] .project-back {
+      --back-bg: var(--hz-controls-ink);
+      --back-ink: var(--hz-controls-solid);
     }
   }
 
