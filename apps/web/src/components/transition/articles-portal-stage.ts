@@ -441,7 +441,9 @@ class Arch {
     const vh = window.innerHeight;
     // A little wider than the lifted sheet, its round head rising just
     // under the header: the sheet floats in the arch's light.
-    const width = Math.min(vw * 0.9, vh * 1.35);
+    // (On a wide screen its head flattens into a vault rather than hiding
+    // behind the sheet.)
+    const width = vw * 0.9;
     const top = vh * 0.035;
     const head = Math.min(width / 2, vh * 0.42);
     const diagonal = Math.hypot(vw, vh);
