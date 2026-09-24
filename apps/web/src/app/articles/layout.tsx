@@ -1,3 +1,4 @@
+import { ArticlesTransitionsHost } from "@/components/articles/transitions/articles-transitions-host";
 import { ArticlesWorldHost } from "@/components/articles/world/world-host";
 
 import "./articles.css";
@@ -15,6 +16,7 @@ export default function ArticlesLayout({ children }: LayoutProps<"/articles">) {
   return (
     <>
       <ArticlesWorldHost />
+      <ArticlesTransitionsHost />
       {children}
     </>
   );
