@@ -50,12 +50,21 @@ const FRAGMENT = /* glsl */ `
     vec3 river = themeTint(mix(uRiverLight, uRiverDark, dark), dark);
     float toWindow = smoothstep(0.0, 1.0, clamp(p.y / uFar, 0.0, 1.0));
     float light = band * (0.42 + 0.46 * flow + glints * 0.45) * (0.7 + 0.5 * toWindow);
-    vec3 color = mix(stone, river, clamp(light, 0.0, 1.0) * mix(0.75, 0.9, dark));
-    color += river * glints * band * mix(0.12, 0.5, dark);
+    float stream = clamp(light, 0.0, 1.0) * mix(0.75, 0.9, dark);
+    vec3 color = mix(stone, river, stream);
+    // Gold glints by day (white on white would never show), blue fire by night.
+    vec3 glint = mix(vec3(0.95, 0.78, 0.42), river * 1.6, dark);
+    color = mix(color, glint, glints * band * mix(0.55, 0.0, dark));
+    color += river * (glints * 0.9 + flow * 0.25) * band * dark;
     // Pools of lantern light on the marble.
     color += (stone * 0.8 + 0.1) * lanternLight(local, vec3(0.0, 1.0, 0.0), css) * mix(0.8, 1.3, dark);
     color += uFlood * vec3(0.35, 0.3, 0.2) * (0.4 + band);
-    gl_FragColor = vec4(libraryFog(color, vDepth, vWorld.y, dark), 1.0);
+    // The river is light: it carries through the fog further than the
+    // marble does, a luminous path running away to the window.
+    float shine = clamp(band * (0.5 + glints), 0.0, 1.0);
+    vec3 marble = libraryFog(color, vDepth, vWorld.y, dark);
+    vec3 lit = libraryFogReach(color, vDepth, vWorld.y, dark, 2.2);
+    gl_FragColor = vec4(mix(marble, lit, shine), 1.0);
   }
 `;
 
