@@ -119,12 +119,12 @@ function posterGrid(url: string) {
   return null;
 }
 
-function parsePosition(token: string | undefined, free: number) {
-  if (!token) return free / 2;
-  if (token.endsWith("%")) return (Number(token.slice(0, -1)) / 100) * free;
-  if (token.endsWith("px")) return Number(token.slice(0, -2));
-  if (token === "left" || token === "top") return 0;
-  if (token === "right" || token === "bottom") return free;
+function parsePosition(part: string | undefined, free: number) {
+  if (!part) return free / 2;
+  if (part.endsWith("%")) return (Number(part.slice(0, -1)) / 100) * free;
+  if (part.endsWith("px")) return Number(part.slice(0, -2));
+  if (part === "left" || part === "top") return 0;
+  if (part === "right" || part === "bottom") return free;
   return free / 2;
 }
 
