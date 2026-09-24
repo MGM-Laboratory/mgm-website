@@ -250,6 +250,13 @@ All other workflows still run on their explicit triggers: staging Docker builds 
 | GitGuardian                                              | 46505            |
 | Semgrep                                                  | 4965759          |
 
+**Never disable, even temporarily: `required_review_thread_resolution`, `require_code_owner_review`, and `require_last_push_approval` on the `pull_request` rule.** All three have already been toggled off and back on multiple times via the web UI's stale-resave problem above, `required_review_thread_resolution` alone across three separate incidents between 2026-09-21 and 2026-09-22, each one needing another edit later to restore it. Before saving any ruleset change, confirm none of these three dropped to `false`:
+
+```bash
+gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743 \
+  --jq '.rules[] | select(.type=="pull_request") | .parameters | {required_review_thread_resolution, require_code_owner_review, require_last_push_approval}'
+```
+
 ## Local
 
 `docker compose up` runs Postgres 17 + api (4000) + web (3000) with vars from `.env` / `.env.example`. `DOCKERHUB_NAMESPACE` in `.env.example` is the compose image namespace, but CI uses repo-level GitHub vars instead.
