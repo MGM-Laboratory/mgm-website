@@ -36,6 +36,7 @@ import {
   setProjectReturn,
   skipScrollReset,
   waitForProjectPage,
+  isDetailHandoffActive,
 } from "@/lib/project-transition";
 import { PROJECT_THEMES, type ProjectPalette } from "@/lib/project-themes";
 import { motionAllowed } from "@/lib/reduced-motion";
@@ -367,7 +368,7 @@ export class ProjectZoom {
   // ------------------------------------------------------------- triggers
 
   private readonly onClick = (event: MouseEvent) => {
-    if (this.run) {
+    if (this.run || isDetailHandoffActive()) {
       // Mid-transition every click is swallowed: nothing may navigate or
       // toggle under the overlay (the header stays visible above it).
       event.preventDefault();

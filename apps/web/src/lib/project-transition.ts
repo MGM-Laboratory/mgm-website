@@ -50,6 +50,7 @@ export type ProjectReturn = {
 };
 
 let pendingReturn: ProjectReturn | undefined;
+let detailHandoff = false;
 let scrollResetSkip: string | null = null;
 let layers = 0;
 
@@ -183,4 +184,18 @@ export function registerProjectTransitionLayer() {
 export function claimsProjectPopstate(from: string, to: string) {
   if (layers === 0 || !motionAllowed()) return false;
   return projectTransitionKind(from, to) !== null;
+}
+
+/**
+ * A detail page's next-project hand-off is covering the screen (its wipe
+ * runs and the navigation follows). While it does, the overlay swallows
+ * clicks like it does during its own zoom: a Back pill or menu link clicked
+ * mid-wipe would otherwise race the hand-off's navigation and lose.
+ */
+export function setDetailHandoffActive(active: boolean) {
+  detailHandoff = active;
+}
+
+export function isDetailHandoffActive() {
+  return detailHandoff;
 }
