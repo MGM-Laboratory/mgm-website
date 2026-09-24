@@ -6,6 +6,7 @@ import { ArticleCard } from "@/components/articles/list/article-card";
 import { ArticlesEmpty } from "@/components/articles/list/articles-empty";
 import { ArticlesEnd } from "@/components/articles/list/articles-end";
 import { ArticlesHero } from "@/components/articles/list/articles-hero";
+import { BackToTop } from "@/components/articles/list/back-to-top";
 import { requestArticleBatch } from "@/components/articles/list/index-request";
 import { queryKey, useListQuery } from "@/components/articles/list/use-list-query";
 import { getArticlesWorld } from "@/components/articles/world/world-registry";
@@ -234,6 +235,8 @@ export function ArticlesIndex({
           total={list.total}
         />
       ) : null}
+
+      <BackToTop />
     </div>
   );
 }
