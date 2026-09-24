@@ -544,7 +544,9 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.composite.dispose();
     this.target.dispose();
     this.renderer.dispose();
-    this.renderer.forceContextLoss();
+    // Hand the context back at once (browsers cap live contexts), unless
+    // the GPU already took it: a lost context has no extension to lose.
+    if (!this.renderer.getContext().isContextLost()) this.renderer.forceContextLoss();
     this.canvas.remove();
     if (process.env.NODE_ENV !== "production") {
       delete (window as { __articlesWorld?: unknown }).__articlesWorld;
