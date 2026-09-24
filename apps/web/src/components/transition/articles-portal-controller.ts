@@ -75,15 +75,30 @@ const STAGE_WAIT = 0.35;
 const GL_WAIT = 0.15;
 /** Held covered this long without the route committing: give up and uncover the page. */
 const COMMIT_CEILING = 8;
-/** In: how long the portal holds, once the page's content is in, for it to say it is ready. */
-const PAGE_READY = { gl: 0.6, dom: 0.4 } as const;
-/** In: ...and for the library world to decide its mode (its host fails over to the DOM at 6 s). */
-const WORLD_READY = { gl: 1.2, dom: 0.6 } as const;
-/** How long the portal holds after the commit for the destination's loading shell to go. */
-const ROUTE_READY = 1.2;
+/**
+ * Holding covered after the route commits, in seconds of visible time:
+ * - content: for the destination's loading shell to give way to its content;
+ * - page (in): once the content is in, for the page to say it is ready;
+ * - world (in): for the library world to decide its mode (its host fails
+ *   over to the DOM list at 6 s, far past this);
+ * - cap: whatever is still missing, the portal uncovers after this long.
+ * The DOM ones keep a visitor without WebGL (and the e2e suite, which
+ * clicks the header logo 3.2 s after entering the library) well inside
+ * three seconds for the whole way in.
+ */
+const HOLD = {
+  gl: { content: 1.2, page: 0.45, world: 1.2, cap: 1.5 },
+  dom: { content: 0.8, page: 0.3, world: 0.6, cap: 1.0 },
+} as const;
 /** The plain cover, when no stage could load. */
 const PLAIN_COVER = 0.35;
 const PLAIN_REVEAL = 0.4;
+/**
+ * The share of the reveal after which the page is the visitor's again:
+ * input, scroll and the header come back while the last motes fade and
+ * the library's camera settles (the page is fully visible by then).
+ */
+const INTERACTIVE = 0.75;
 /** Undoing a cover the route never followed. */
 const REWIND_SECONDS = 0.4;
 const WARM_IDLE_MS = 1500;
@@ -121,6 +136,8 @@ type Run = {
   /** No stage: the plain cover plays for the whole run. */
   plain: boolean;
   signalled: boolean;
+  /** The page is the visitor's again (the reveal's last beat still draws). */
+  released: boolean;
   /** In: the article's theme, read once its page has committed. */
   theme: ThemeColors | null;
   log: RunLog;
@@ -134,6 +151,7 @@ type RunLog = {
   committedAt: number | null;
   revealAt: number | null;
   signalAt: number | null;
+  releasedAt: number | null;
   finishedAt: number | null;
   started: number;
   aborted: boolean;
@@ -277,7 +295,7 @@ export class PortalController {
   // ------------------------------------------------------------- triggers
 
   private readonly onClick = (event: MouseEvent) => {
-    if (this.run) {
+    if (this.run && !this.run.released) {
       // Mid-portal every click is swallowed: nothing may navigate or
       // toggle under the cover, programmatic clicks included.
       event.preventDefault();
@@ -339,7 +357,7 @@ export class PortalController {
 
   /** A link through the portal is about to be used: load what it needs. */
   private readonly onIntent = (event: Event) => {
-    if (this.run || this.disposed) return;
+    if ((this.run && !this.run.released) || this.disposed) return;
     const pointerDown = event.type === "pointerdown";
     if (this.warmed && !pointerDown) return;
     const link = navigationTarget(event);
@@ -368,6 +386,8 @@ export class PortalController {
     href: string | null,
     noworld: boolean,
   ) {
+    // A run still fading out its last beat gives way at once.
+    if (this.run) this.finish(this.run);
     const instant = href === null;
     const dark = isDark();
     const run: Run = {
@@ -391,6 +411,7 @@ export class PortalController {
       stage: null,
       plain: false,
       signalled: false,
+      released: false,
       theme: null,
       log: {
         direction,
@@ -400,6 +421,7 @@ export class PortalController {
         committedAt: null,
         revealAt: null,
         signalAt: null,
+        releasedAt: null,
         finishedAt: null,
         started: performance.now(),
         aborted: false,
@@ -509,14 +531,15 @@ export class PortalController {
       case "reveal": {
         const seconds = run.stage?.revealSeconds ?? PLAIN_REVEAL;
         const signal = run.stage?.revealSignal ?? PLAIN_REVEAL * 0.5;
-        if (run.stage) run.stage.reveal(run.t, dt, world);
+        if (run.stage) run.stage.reveal(run.t, dt, run.released ? null : world);
         else this.setPlain(1 - fit(run.t, 0, PLAIN_REVEAL));
-        if (run.theme) this.tint.set(fit(run.t, 0, 0.7 * seconds));
+        if (run.theme && !run.released) this.tint.set(fit(run.t, 0, 0.7 * seconds));
         if (!run.signalled && run.t >= signal) {
           run.signalled = true;
           run.log.signalAt = now - run.log.started;
           markRouteRevealDone();
         }
+        if (!run.released && run.t >= INTERACTIVE * seconds) this.letGo(run);
         if (run.t >= seconds) this.finish(run);
         break;
       }
@@ -537,20 +560,19 @@ export class PortalController {
   /** Covered and waiting: may the destination be shown now? */
   private ready(run: Run, dt: number) {
     if (!run.committed) return false;
+    const hold = HOLD[run.stage?.renderer ?? "dom"];
     // The route commits with its loading shell when its content isn't
     // there yet: the content has arrived once the shell's sentinel is gone.
     const content =
-      !document.querySelector("[data-route-loading]") || run.sinceCommit >= ROUTE_READY;
-    if (!content) return false;
-    run.sinceContent += dt;
-    let ready = true;
-    if (run.direction === "in") {
-      const kind = run.stage?.renderer ?? "dom";
-      const page = isArticlePageReady() || run.sinceContent >= PAGE_READY[kind];
-      const world = getWorldMode() !== "pending" || run.sinceCommit >= WORLD_READY[kind];
+      !document.querySelector("[data-route-loading]") || run.sinceCommit >= hold.content;
+    if (content) run.sinceContent += dt;
+    let ready = content;
+    if (ready && run.direction === "in") {
+      const page = isArticlePageReady() || run.sinceContent >= hold.page;
+      const world = getWorldMode() !== "pending" || run.sinceCommit >= hold.world;
       ready = page && world;
     }
-    if (!ready) return false;
+    if (!ready && run.sinceCommit < hold.cap) return false;
     // One more frame, for the page (and the world) to lay out and draw.
     run.settleFrames += 1;
     return run.settleFrames > 1;
@@ -609,6 +631,34 @@ export class PortalController {
   }
 
   /**
+   * Hands the page back: input, scroll, the header and the library's
+   * camera. Runs at the reveal's interactive point, or from finish() for a
+   * run that ended before it. Idempotent per run.
+   */
+  private letGo(run: Run) {
+    if (run.released) return;
+    run.released = true;
+    run.log.releasedAt = performance.now() - run.log.started;
+    if (this.root) {
+      this.root.style.pointerEvents = "none";
+      this.root.style.touchAction = "";
+    }
+    releaseScrollLock(LOCK_OWNER);
+    // The page under the portal carries the palette the header ended on.
+    this.tint.release();
+    const world = this.worldTransition();
+    if (world) {
+      world.setLift(0);
+      world.setDolly(0);
+      world.setFogSwallow(0);
+    }
+    if (run.direction === "in") clearArticleArrival(run.target);
+    markRouteRevealDone();
+    // Last: the header samples again, and other transitions may run.
+    setArticleTransitionBusy(false);
+  }
+
+  /**
    * Ends a run, however it ended (revealed, undone, replaced by another,
    * unmounted): every lock, block, inline value, layer, note and signal it
    * held is released here.
@@ -625,19 +675,7 @@ export class PortalController {
     this.root?.remove();
     this.root = null;
     this.plainCover = null;
-    releaseScrollLock(LOCK_OWNER);
-    // The page under the portal carries the palette the header ended on.
-    this.tint.release();
-    const world = this.worldTransition();
-    if (world) {
-      world.setLift(0);
-      world.setDolly(0);
-      world.setFogSwallow(0);
-    }
-    if (run.direction === "in") clearArticleArrival(run.target);
-    markRouteRevealDone();
-    // Last: the header samples again, and other transitions may run.
-    setArticleTransitionBusy(false);
+    this.letGo(run);
   }
 
   // ------------------------------------------------------------- layers
