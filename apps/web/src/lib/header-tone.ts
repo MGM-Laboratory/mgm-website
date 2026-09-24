@@ -267,8 +267,12 @@ const CROSSOVER = Math.sqrt(1.05 * 0.05) - 0.05;
 const HYSTERESIS = 0.04;
 /** WCAG AA for text. */
 export const TEXT_CONTRAST = 4.5;
-/** Extra headroom over imagery: the samples are a downscaled estimate. */
-const MEDIA_MARGIN = 0.5;
+/**
+ * Extra headroom over imagery: the samples are a downscaled estimate, and
+ * a busy picture has bright or dark spots between them. Measured against
+ * screenshots, the model ran up to 0.45 optimistic over photographs.
+ */
+const MEDIA_MARGIN = 0.8;
 
 export type TonePalette = { ink: Rgb; surface: Rgb };
 
