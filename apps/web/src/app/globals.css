@@ -47,6 +47,8 @@
   --tone-light-surface: #f7f7f5;
   --tone-dark-ink: #ededed;
   --tone-dark-surface: #15181e;
+  /* The nav panel's glass tint before sampling raises it. */
+  --nav-glass-alpha: 74%;
 }
 
 .dark {
@@ -54,6 +56,7 @@
   --foreground: #ededed;
   --line: #262a33;
   --surface-muted: #15181e;
+  --nav-glass-alpha: 78%;
 }
 
 /* Colours the adaptive glass writes per zone (hooks/use-header-tone.ts).
@@ -102,6 +105,21 @@
   syntax: "<color>";
   inherits: true;
   initial-value: #f7f7f5;
+}
+@property --nav-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e1116;
+}
+@property --nav-surface {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7f7f5;
+}
+@property --nav-alpha {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 74%;
 }
 
 @theme inline {
@@ -561,6 +579,82 @@ body {
   from {
     opacity: 0;
     translate: 0 1em;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Nav menu glass (nav/nav-menu.tsx). The panel is the same frosted glass as
+   the header, a little denser because it carries more text. It wears one
+   tone, light or dark: the site's own by default, and the other one when
+   sampling finds content of that tone behind it (data-tone, with
+   --nav-alpha raised where the weakest text needs it). The panel re-points
+   the site tokens its contents already use (--foreground, --background,
+   --surface-muted, --line) at that tone, so every link, card and label
+   follows without per-element colours. The overlay beside the panel is a
+   lighter glass that dims the page and blurs it.
+
+   GSAP owns the panel's and the overlay's transform and opacity, so the
+   transitions here only ever name colours.
+--------------------------------------------------------------------------- */
+@layer components {
+  .nav-panel {
+    --nav-ink: var(--tone-light-ink);
+    --nav-surface: var(--tone-light-surface);
+    --nav-alpha: var(--nav-glass-alpha);
+    --foreground: var(--nav-ink);
+    --background: var(--nav-surface);
+    --surface-muted: var(--nav-surface);
+    --line: color-mix(in srgb, var(--nav-ink) 12%, transparent);
+    color: var(--foreground);
+    background-color: color-mix(in srgb, var(--nav-surface) var(--nav-alpha), transparent);
+    box-shadow: inset 1px 0 0 color-mix(in srgb, #fff 18%, transparent);
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+    backdrop-filter: blur(28px) saturate(170%);
+    transition:
+      --nav-ink 0.45s ease,
+      --nav-surface 0.45s ease,
+      --nav-alpha 0.45s ease;
+  }
+
+  .dark .nav-panel,
+  .nav-panel[data-tone="dark"] {
+    --nav-ink: var(--tone-dark-ink);
+    --nav-surface: var(--tone-dark-surface);
+  }
+
+  .nav-panel[data-tone="light"] {
+    --nav-ink: var(--tone-light-ink);
+    --nav-surface: var(--tone-light-surface);
+  }
+
+  .nav-overlay {
+    background-color: color-mix(in srgb, var(--background) 42%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .nav-panel {
+      background-color: var(--nav-surface);
+    }
+
+    .nav-overlay {
+      background-color: color-mix(in srgb, var(--background) 80%, transparent);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .nav-panel {
+      background-color: var(--nav-surface);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .nav-overlay {
+      background-color: color-mix(in srgb, var(--background) 88%, transparent);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
 }
 

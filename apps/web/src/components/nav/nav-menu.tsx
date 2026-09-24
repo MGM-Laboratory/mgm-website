@@ -254,7 +254,8 @@ export function NavMenu() {
     const layers = layerRefs.current.filter((el): el is HTMLDivElement => !!el);
     const items = itemRefs.current.filter((el): el is HTMLDivElement => !!el);
 
-    gsap.set(layers, { xPercent: 100 });
+    // The layers faded out under the glass panel last time (below).
+    gsap.set(layers, { xPercent: 100, autoAlpha: 1 });
     gsap.set(panel, { xPercent: 100 });
     gsap.set(items, { autoAlpha: 0, yPercent: 120, rotate: 8 });
 
@@ -266,6 +267,13 @@ export function NavMenu() {
     const lastLayerAt = layers.length ? (layers.length - 1) * 0.07 : 0;
     const panelAt = lastLayerAt + (layers.length ? 0.08 : 0);
     tl.to(panel, { xPercent: 0, duration: 0.65, ease: "power4.out" }, panelAt);
+    // The panel is glass: a brand layer left resting behind it would become
+    // its colour. Once the panel has all but landed (power4.out is about 90%
+    // of the way there by 0.3 s), the layers fade and the page behind shows
+    // through the glass instead.
+    if (layers.length) {
+      tl.to(layers, { autoAlpha: 0, duration: 0.35, ease: "power1.out" }, panelAt + 0.3);
+    }
 
     const itemsAt = panelAt + 0.65 * 0.15;
     tl.to(
@@ -542,12 +550,17 @@ export function NavMenu() {
           to preserve and stack onto whatever transform a CSS class already
           put on the element rather than replacing it, which is why the
           off-screen position below comes from GSAP alone (xPercent), never
-          from a CSS transform class). */}
+          from a CSS transform class).
+
+          The overlay stops at the panel's left edge (and is absent where
+          the panel is full width): the panel is glass too, and an overlay
+          under it would tint the page before the panel's own glass does,
+          leaving nothing of the page's colours to come through. */}
       <div
         ref={overlayRef}
         onClick={closeMenu}
         aria-hidden
-        className="invisible fixed inset-x-0 top-16 bottom-0 z-40 bg-white/70 opacity-0 backdrop-blur-md dark:bg-black/55"
+        className="nav-overlay invisible fixed top-16 right-0 bottom-0 left-0 z-40 opacity-0 max-sm:hidden sm:right-[420px] lg:right-[460px]"
       />
 
       {/* The blurred backdrop's own left side is otherwise empty — each
@@ -581,9 +594,9 @@ export function NavMenu() {
           ref={panelRef}
           aria-hidden={!open}
           inert={!open ? true : undefined}
-          className="invisible pointer-events-auto absolute inset-0 flex flex-col overflow-y-auto border-l border-[var(--line)] bg-[var(--surface-muted)] px-6 pt-[clamp(0.6rem,2.5dvh,1.25rem)] pb-[clamp(0.5rem,2dvh,1rem)] text-foreground opacity-0 sm:px-10"
+          className="nav-panel invisible pointer-events-auto absolute inset-0 flex flex-col overflow-y-auto border-l border-[var(--line)] px-6 pt-[clamp(0.6rem,2.5dvh,1.25rem)] pb-[clamp(0.5rem,2dvh,1rem)] text-foreground opacity-0 sm:px-10"
         >
-          <p className="text-[11px] font-semibold tracking-[0.2em] text-foreground/40 uppercase">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-foreground/65 uppercase">
             Menu
           </p>
 
@@ -631,7 +644,7 @@ export function NavMenu() {
                         ref={(el) => {
                           numberRefs.current[i] = el;
                         }}
-                        className="font-mono text-[0.45em] text-foreground/30 tabular-nums transition-colors group-hover:text-[var(--nav-item-accent)] group-focus:text-[var(--nav-item-accent)]"
+                        className="font-mono text-[0.45em] text-foreground/65 tabular-nums transition-colors group-hover:text-[var(--nav-item-accent)] group-focus:text-[var(--nav-item-accent)]"
                       >
                         {pad(i + 1)}
                       </span>
@@ -676,7 +689,7 @@ export function NavMenu() {
                         ref={(el) => {
                           numberRefs.current[i] = el;
                         }}
-                        className="font-mono text-[0.45em] text-foreground/30 tabular-nums transition-colors group-hover:text-[var(--nav-item-accent)] group-focus:text-[var(--nav-item-accent)]"
+                        className="font-mono text-[0.45em] text-foreground/65 tabular-nums transition-colors group-hover:text-[var(--nav-item-accent)] group-focus:text-[var(--nav-item-accent)]"
                       >
                         {pad(i + 1)}
                       </span>
@@ -692,7 +705,7 @@ export function NavMenu() {
                         ref={(el) => {
                           chevronRefs.current[i] = el;
                         }}
-                        className="size-[0.7em] text-foreground/40"
+                        className="size-[0.7em] text-foreground/65"
                       />
                     </button>
                   )}
@@ -734,14 +747,14 @@ export function NavMenu() {
 
           <div className="mt-auto flex flex-col gap-[clamp(0.2rem,0.6dvh,0.5rem)] pt-[clamp(0.25rem,0.7dvh,0.75rem)] text-[clamp(0.7rem,1.7dvh,0.95rem)]">
             <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)]">
-              <p className="text-[11px] font-semibold tracking-wide text-foreground/40 uppercase">
+              <p className="text-[11px] font-semibold tracking-wide text-foreground/65 uppercase">
                 Let&apos;s Talk
               </p>
               <EmailReveal email={CONTACT_EMAIL} />
             </div>
 
             <div className="flex flex-col gap-[clamp(0.3rem,0.8dvh,0.6rem)] border-t border-[var(--line)] pt-[clamp(0.25rem,0.8dvh,0.6rem)]">
-              <p className="text-[11px] font-semibold tracking-wide text-foreground/40 uppercase">
+              <p className="text-[11px] font-semibold tracking-wide text-foreground/65 uppercase">
                 Socials
               </p>
               <div className="flex flex-wrap items-center gap-[clamp(0.6rem,1.6dvh,1.1rem)]">
@@ -762,7 +775,7 @@ export function NavMenu() {
                       onFocus={() => socialHoverIn(i)}
                       onBlur={() => socialHoverOut(i)}
                       style={accentStyle}
-                      className="text-foreground/60 transition-colors hover:text-[var(--social-accent)] focus:text-[var(--social-accent)]"
+                      className="text-foreground/65 transition-colors hover:text-[var(--social-accent)] focus:text-[var(--social-accent)]"
                     >
                       {Icon && (
                         <Icon
@@ -778,9 +791,9 @@ export function NavMenu() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-[clamp(0.75rem,2dvh,1.25rem)] border-t border-[var(--line)] pt-[clamp(0.2rem,0.6dvh,0.4rem)] text-[clamp(0.6rem,1.5dvh,0.75rem)] text-foreground/40">
+            <div className="flex flex-wrap items-center gap-[clamp(0.75rem,2dvh,1.25rem)] border-t border-[var(--line)] pt-[clamp(0.2rem,0.6dvh,0.4rem)] text-[clamp(0.6rem,1.5dvh,0.75rem)] text-foreground/65">
               <span className="whitespace-nowrap">
-                <span className="text-foreground/60">Malang (ID)</span> {wibTime ?? "--:--"}
+                <span className="text-foreground/80">Malang (ID)</span> {wibTime ?? "--:--"}
               </span>
               {LEGAL_LINKS.map((l) => (
                 <Link
