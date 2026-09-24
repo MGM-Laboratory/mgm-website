@@ -64,11 +64,14 @@ export type Story = {
   intro: StoryBlock[];
   sections: StorySection[];
   sources: StorySource[];
+  /** The sources' heading, in the article's own language (the label its author wrote). */
+  sourcesTitle: string;
   /** Words across the whole document, for the reading time. */
   words: number;
 };
 
-const SOURCE_LABEL = /^\s*sources?\s*:\s*/i;
+// English articles end with "Source:", Indonesian ones with "Sumber:".
+const SOURCE_LABEL = /^\s*(sources?|sumber)\s*:\s*/i;
 const VARIANTS: readonly FigureVariant[] = ["wide", "inset", "offset"];
 
 // CMS-authored URLs are trusted but rendered publicly: non-web schemes are
@@ -210,9 +213,10 @@ function imageOf(block: ArticleBlock): StoryImage | undefined {
 }
 
 export function buildStory(slug: string, blocks: readonly ArticleBlock[]): Story {
-  const story: Story = { intro: [], sections: [], sources: [], words: 0 };
+  const story: Story = { intro: [], sections: [], sources: [], sourcesTitle: "", words: 0 };
   let current: StoryBlock[] = story.intro;
   let figures = 0;
+  let indonesianSources = false;
   const rotation = hashSlug(slug) % VARIANTS.length;
   const entries = flatten(blocks);
 
@@ -278,7 +282,9 @@ export function buildStory(slug: string, blocks: readonly ArticleBlock[]): Story
       case "paragraph":
       default: {
         if (!content || !text.trim()) break;
-        if (SOURCE_LABEL.test(text) && (story.lede || index > 0)) {
+        const label = SOURCE_LABEL.exec(text);
+        if (label && (story.lede || index > 0)) {
+          if (/sumber/i.test(label[1])) indonesianSources = true;
           story.sources.push({
             id: block.id,
             citation: withoutBareUrls(stripTrailingLabel(stripLeading(content, SOURCE_LABEL))),
@@ -299,6 +305,11 @@ export function buildStory(slug: string, blocks: readonly ArticleBlock[]): Story
       }
     }
   }
+  story.sourcesTitle = indonesianSources
+    ? "Sumber"
+    : story.sources.length > 1
+      ? "Sources"
+      : "Source";
   return story;
 }
 

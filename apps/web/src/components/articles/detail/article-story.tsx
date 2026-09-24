@@ -255,11 +255,11 @@ function linkLabel(href: string, label: string) {
   return href.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 }
 
-function Sources({ sources }: { sources: StorySource[] }) {
+function Sources({ sources, title }: { sources: StorySource[]; title: string }) {
   return (
     <section aria-labelledby="article-sources" className="ad-sources" data-ad-reveal="sources">
       <h2 className="ad-sources-title" id="article-sources">
-        {sources.length > 1 ? "Sources" : "Source"}
+        {title}
       </h2>
       <ol className="ad-sources-list">
         {sources.map((source, index) => (
@@ -350,7 +350,7 @@ export function ArticleStory({ story }: { story: Story }) {
       {story.sections.map((section) => (
         <Section key={section.id} section={section} total={story.sections.length} />
       ))}
-      {story.sources.length ? <Sources sources={story.sources} /> : null}
+      {story.sources.length ? <Sources sources={story.sources} title={story.sourcesTitle} /> : null}
     </div>
   );
 }
