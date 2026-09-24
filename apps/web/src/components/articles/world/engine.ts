@@ -152,6 +152,7 @@ export class LibraryEngine implements ArticlesWorldApi {
   private frameTarget = 0;
   private frameHalf = 0;
   private framesSinceMeasure = 0;
+  private head: HTMLElement | null = null;
   private influenceTarget = 1;
   private detailTarget = 0;
   private offFrame: (() => void) | null = null;
@@ -497,6 +498,7 @@ export class LibraryEngine implements ArticlesWorldApi {
    */
   private measureFrame(snap: boolean) {
     this.framesSinceMeasure = 0;
+    this.head = document.querySelector<HTMLElement>("[data-articles-head]");
     const width = this.width;
     const centre = width / 2;
     let extent = 0;
@@ -521,6 +523,28 @@ export class LibraryEngine implements ArticlesWorldApi {
       this.frameHalf = this.frameTarget;
       this.environment.setNaveHalfWidth(this.frameHalf / this.uniforms.uEnvScale.value);
     }
+  }
+
+  /**
+   * Follows the list's fixed head (it slides away in transitions) so the
+   * screen pass can keep a veil of mist behind it.
+   */
+  private veilHead() {
+    const veil = this.composite.uniforms.uHead.value;
+    const head = this.head?.isConnected ? this.head : null;
+    if (!head) {
+      veil.w = 0;
+      return;
+    }
+    const rect = head.getBoundingClientRect();
+    const opacity = Number.parseFloat(head.style.opacity || "1");
+    const strength = rect.height > 0 && rect.right > 0 && rect.left < this.width ? 0.78 : 0;
+    veil.set(
+      rect.left,
+      rect.right,
+      rect.bottom,
+      strength * (Number.isFinite(opacity) ? opacity : 1),
+    );
   }
 
   /**
@@ -660,6 +684,7 @@ export class LibraryEngine implements ArticlesWorldApi {
 
     this.framesSinceMeasure += 1;
     if (this.framesSinceMeasure > 40) this.measureFrame(false);
+    this.veilHead();
     if (Math.abs(this.frameTarget - this.frameHalf) > 0.25) {
       this.frameHalf += (this.frameTarget - this.frameHalf) * follow(0.35, dt);
       this.environment.setNaveHalfWidth(this.frameHalf / u.uEnvScale.value);

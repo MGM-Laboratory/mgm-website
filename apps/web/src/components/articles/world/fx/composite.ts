@@ -7,6 +7,7 @@ import {
   Scene,
   ShaderMaterial,
   Vector2,
+  Vector4,
   type Texture,
 } from "three";
 
@@ -46,6 +47,8 @@ const FRAGMENT = /* glsl */ `
   uniform vec3 uWipeColor;
   uniform float uWipe;
   uniform float uGrainSeed;
+  /** The list's fixed head: left, right, bottom (CSS px) and how much it veils. */
+  uniform vec4 uHead;
   varying vec2 vUv;
 
   #define TAPS 10
@@ -83,6 +86,16 @@ const FRAGMENT = /* glsl */ `
     vec3 color = sum / weight;
 
     float dark = darkAt();
+    // A bank of mist behind the list's head (and the site header above it):
+    // whatever the world draws there (a lantern, the moon, a card folding
+    // away) stays a whisper under the title, the search and the filters.
+    if (uHead.w > 0.0) {
+      vec2 css = worldFragCss();
+      float under = 1.0 - smoothstep(uHead.z - 70.0, uHead.z + 24.0, css.y);
+      float across = smoothstep(uHead.x - 90.0, uHead.x + 30.0, css.x)
+                   * (1.0 - smoothstep(uHead.y - 30.0, uHead.y + 90.0, css.x));
+      color = mix(color, worldFogColor(dark), under * across * uHead.w);
+    }
     float vig = smoothstep(0.95, 0.25, length(c * vec2(1.0, 1.12)));
     float vignette = mix(mix(0.94, 1.0, vig), mix(0.52, 1.0, vig), dark);
     color *= mix(1.0, vignette, uLens);
@@ -113,6 +126,7 @@ export type Composite = {
     uWipeColor: { value: Color };
     uWipe: { value: number };
     uGrainSeed: { value: number };
+    uHead: { value: Vector4 };
   };
   resolution: Vector2;
   dispose(): void;
@@ -133,6 +147,7 @@ export function createComposite(world: WorldUniforms): Composite {
     uWipeColor: { value: new Color("#000000") },
     uWipe: { value: 0 },
     uGrainSeed: { value: 0 },
+    uHead: { value: new Vector4(0, 0, 0, 0) },
   };
   const material = new ShaderMaterial({
     uniforms: { ...world, ...uniforms },
