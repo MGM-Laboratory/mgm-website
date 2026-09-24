@@ -41,7 +41,18 @@ const SURFACE = /* glsl */ `
   }
 
   float frontAt() {
-    return mix(-0.3, 1.32, uEmerge);
+    return mix(-0.06, 1.18, uEmerge);
+  }
+
+  /** The emergence's own waves fade out over its last stretch (nothing pops at the end). */
+  float emergeFade() {
+    return 1.0 - smoothstep(0.82, 1.0, uEmerge);
+  }
+
+  /** The front's line wanders like a real wave's (px along it, 0..1 across). */
+  float frontWander(vec2 px) {
+    float along = px.y + px.x * 0.18;
+    return sin(along * 0.011 + uClock * 1.7) * 0.014 + sin(along * 0.029 - uClock * 2.4 + 1.3) * 0.006;
   }
 
   /**
@@ -66,21 +77,23 @@ const SURFACE = /* glsl */ `
     if (uEmerge < 0.999) {
       // d/dpx of frontCoord (uv.y runs up, px.y down).
       vec2 ds = vec2(0.84 / size.x, -0.16 / size.y);
-      float s = frontCoord(uv);
+      float fade = emergeFade();
+      float s = frontCoord(uv) + frontWander(px);
       float f = frontAt();
-      float e = (s - f) / 0.055;
-      float crest = 34.0 * exp(-e * e);
+      // The crest rides just behind the lip, tall and steep in front.
+      float e = (s - f + 0.018) / 0.05;
+      float crest = 46.0 * fade * exp(-e * e);
       h += crest;
-      g += crest * (-2.0 * e / 0.055) * ds;
+      g += crest * (-2.0 * e / 0.05) * ds;
       float behind = max(f - s, 0.0);
-      float wake = 11.0 * sin(behind * 46.0) * exp(-behind * 5.5);
-      float wakeD = 11.0 * exp(-behind * 5.5) * (46.0 * cos(behind * 46.0) - 5.5 * sin(behind * 46.0));
+      float damp = exp(-behind * 6.0) * fade;
+      float wake = 12.0 * sin(behind * 44.0) * damp;
+      float wakeD = 12.0 * damp * (44.0 * cos(behind * 44.0) - 6.0 * sin(behind * 44.0));
       float isBehind = step(s, f);
       h += wake * isBehind;
       g += -wakeD * isBehind * ds;
-      float sunkT = clamp((s - f + 0.02) / 0.16, 0.0, 1.0);
-      float sunk = sunkT * sunkT * (3.0 - 2.0 * sunkT);
-      h -= 90.0 * sunk;
+      float sunkT = clamp((s - f + 0.01) / 0.14, 0.0, 1.0);
+      h -= 120.0 * fade * sunkT * sunkT * (3.0 - 2.0 * sunkT);
     }
 
     // Ripples: rings spreading from where the pointer passed or clicked.
@@ -174,27 +187,45 @@ export const COVER_FRAGMENT = /* glsl */ `
       picture(uv + bend - split).b
     );
 
-    // Emergence: drawn only behind the front, wet and tinted just behind it.
+    // Emergence: drawn only behind the front. At the lip a line of light,
+    // just behind it whitewater laced with foam, then a wet, tinted picture
+    // that clears as the water runs off; spray flies ahead of the lip.
     float alpha = 1.0;
     if (uEmerge < 0.999) {
       vec2 fuv = vec2(uv.x, 1.0 - uv.y);
-      float sCoord = frontCoord(fuv);
       float f = frontAt();
-      float n = worldNoise(px * vec2(0.022, 0.05) + vec2(0.0, uClock * 0.6));
-      float n2 = worldNoise(px * 0.09 - uClock * 1.3);
-      float edge = sCoord - f + (n - 0.5) * 0.05 + (n2 - 0.5) * 0.018;
-      alpha = smoothstep(0.012, -0.012, edge);
-      float wet = smoothstep(-0.26, 0.0, edge) * alpha;
-      color = mix(color, color * 0.72 + uThemeTint * 0.28, wet * 0.55);
-      // Foam along the front, and spray just ahead of it.
-      float foam = exp(-pow(edge / 0.016, 2.0)) * (0.55 + 0.45 * n2);
-      vec2 cell = floor(px / 3.0);
-      float spray = step(0.972, worldHash(cell + floor(uClock * 14.0)))
-        * smoothstep(0.07, 0.0, edge) * step(0.0, edge);
-      vec3 foamColor = mix(vec3(1.0, 0.995, 0.975), vec3(0.78, 0.86, 1.0), dark);
-      color = mix(color, foamColor, clamp(foam * 0.95, 0.0, 1.0));
-      color += foamColor * spray * 0.9;
-      alpha = max(alpha, clamp(foam * 1.2 + spray, 0.0, 1.0));
+      float lace = (worldNoise(px * vec2(0.03, 0.075) + vec2(uClock * 0.8, 0.0)) - 0.5) * 0.022
+        + (worldNoise(px * 0.11 - uClock * 1.6) - 0.5) * 0.008;
+      float edge = frontCoord(fuv) + frontWander(px) - f + lace;
+      alpha = smoothstep(0.005, -0.005, edge);
+      float fade = emergeFade();
+      vec3 foamColor = mix(vec3(1.0, 0.996, 0.982), vec3(0.8, 0.88, 1.0), dark);
+
+      // Wet: tinted toward the theme and a little glassy, clearing behind.
+      float wet = smoothstep(-0.24, -0.01, edge) * alpha * fade;
+      vec3 soaked = mix(color, uThemeTint, 0.3) * 0.9 + 0.05;
+      color = mix(color, soaked, wet * 0.7);
+
+      // Whitewater: foam cells behind the lip, thinning as they fall back.
+      float water = smoothstep(-0.085, -0.004, edge) * alpha;
+      float cells = 0.62 * worldNoise(px * vec2(0.07, 0.048) + vec2(-uClock * 2.2, uClock * 0.7))
+        + 0.38 * worldNoise(px * 0.2 + vec2(uClock * 1.4, -uClock * 2.6));
+      float foam = water * smoothstep(0.6 - water * 0.45, 0.86 - water * 0.3, cells);
+      color = mix(color, foamColor, clamp(foam * 0.88, 0.0, 1.0) * fade);
+
+      // The lip itself, a bright thread along the front.
+      float lip = exp(-pow(edge / 0.0055, 2.0)) * fade;
+      color = mix(color, foamColor, lip * 0.95);
+
+      // Spray: round droplets a little ahead of the lip, flickering.
+      vec2 cellPx = px / 7.0;
+      vec2 cell = floor(cellPx);
+      vec2 spot = vec2(worldHash(cell + 3.1), worldHash(cell + 7.7)) * 0.6 + 0.2;
+      float blob = smoothstep(0.26, 0.08, length(fract(cellPx) - spot));
+      float drop = step(0.955, worldHash(cell + floor(uClock * 9.0))) * blob
+        * smoothstep(0.05, 0.0, edge) * step(0.0, edge) * fade;
+      color += foamColor * drop;
+      alpha = max(alpha, clamp(lip * 1.2 + drop * 0.9, 0.0, 1.0));
     }
 
     // A small sheen off the slopes (light from the top left).

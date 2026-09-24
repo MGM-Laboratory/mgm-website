@@ -39,7 +39,8 @@ import { coverFit, loadCoverBitmap } from "./cover-texture";
 
 const SEGMENTS_X = 128;
 const SEGMENTS_Y = 52;
-const EMERGE_SECONDS = 2.5;
+// The wave rushes in and spends itself: fast at first, settling at the far edge.
+const EMERGE_SECONDS = 2.6;
 /** Pointer ripples: at most one per this many seconds, after this much travel (px). */
 const RIPPLE_EVERY = 0.07;
 const RIPPLE_TRAVEL = 22;
@@ -146,7 +147,7 @@ export class ArticleCoverLayer implements WorldLayer {
     this.emergeTween = gsap.to(this.state, {
       emerge: 1,
       duration: EMERGE_SECONDS,
-      ease: "power2.inOut",
+      ease: "power2.out",
     });
   }
 
