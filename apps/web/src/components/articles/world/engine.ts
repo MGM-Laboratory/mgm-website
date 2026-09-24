@@ -151,6 +151,9 @@ export class LibraryEngine implements ArticlesWorldApi {
     });
     this.renderer.outputColorSpace = LinearSRGBColorSpace;
     this.renderer.autoClear = true;
+    // One frame is several render calls (scene, screen pass, overlay):
+    // count them together, reset at the start of each frame.
+    this.renderer.info.autoReset = false;
 
     this.uniforms = createWorldUniforms();
     this.uniforms.uDark.value = options.dark ? 1 : 0;
@@ -237,6 +240,7 @@ export class LibraryEngine implements ArticlesWorldApi {
           composite: this.composite.uniforms,
           rig: this.rig,
           info: () => this.renderer.info,
+          stats: () => this.stats(),
         },
       });
     }
@@ -325,6 +329,21 @@ export class LibraryEngine implements ArticlesWorldApi {
     return [Math.round(fog.r * 255), Math.round(fog.g * 255), Math.round(fog.b * 255)];
   }
 
+  /** What the last frame cost (dev probe and the verification scripts). */
+  stats() {
+    const { render, memory, programs } = this.renderer.info;
+    return {
+      tier: this.tier,
+      pixelRatio: this.pixelRatio,
+      calls: render.calls,
+      triangles: render.triangles,
+      points: render.points,
+      geometries: memory.geometries,
+      textures: memory.textures,
+      programs: programs?.length ?? 0,
+    };
+  }
+
   pause() {
     this.paused = true;
   }
@@ -411,6 +430,7 @@ export class LibraryEngine implements ArticlesWorldApi {
 
   private readonly frame = (_time: number, dt: number) => {
     if (this.paused || this.disposed) return;
+    this.renderer.info.reset();
     this.time += dt;
     const u = this.uniforms;
     u.uTime.value = this.time;
