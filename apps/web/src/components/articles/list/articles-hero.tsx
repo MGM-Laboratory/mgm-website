@@ -22,6 +22,10 @@ const TITLE = "Articles";
  * filtered list survives going into an article and back, a reload and a
  * shared link. The head's bottom is published as `--articles-head`: the
  * grid starts under it and the world folds the cards just below it.
+ *
+ * The title's letters, the search and the pills are the entrance's pieces
+ * (list-entrance.ts): hidden (visibility only) while the page waits for
+ * its entrance, never the head itself, which the transitions move.
  */
 export function ArticlesHero({
   activeCategory,

@@ -9,6 +9,11 @@ import { ArticlesHero } from "@/components/articles/list/articles-hero";
 import { BackToTop } from "@/components/articles/list/back-to-top";
 import { startDomReveal } from "@/components/articles/list/dom-reveal";
 import { requestArticleBatch } from "@/components/articles/list/index-request";
+import {
+  entranceKind,
+  startListEntrance,
+  whenWorldDecided,
+} from "@/components/articles/list/list-entrance";
 import { queryKey, useListQuery } from "@/components/articles/list/use-list-query";
 import { getArticlesWorld } from "@/components/articles/world/world-registry";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
@@ -18,6 +23,12 @@ import {
   type ArticleCategory,
   type ArticleIndexQuery,
 } from "@/lib/article-index";
+import {
+  ARTICLES_LIST_PATH,
+  clearArticleArrival,
+  markArticlePageReady,
+  peekArticleArrival,
+} from "@/lib/article-transition";
 import { scrollPageTo } from "@/lib/page-scroll";
 import { motionAllowed } from "@/lib/reduced-motion";
 
@@ -25,6 +36,8 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 
 /** Placeholder sheets shown for a batch in flight. */
 const PLACEHOLDERS = 4;
+/** The longest the page waits (visible or not) before telling a transition it is ready. */
+const READY_CEILING_MS = 2600;
 
 export type ArticlesIndexInitial = {
   items: ArticleCardData[];
@@ -75,6 +88,8 @@ export function ArticlesIndex({
 }) {
   const query = useListQuery();
   const currentKey = queryKey(query.settled);
+  // Read during render: how the list is being entered (lib/article-transition.ts).
+  const [arrival] = useState(() => peekArticleArrival(ARTICLES_LIST_PATH));
   const [list, setList] = useState<ListState>(() => ({
     items: initial.items,
     total: initial.total,
@@ -84,6 +99,7 @@ export function ArticlesIndex({
   }));
   const [loadingMore, setLoadingMore] = useState(false);
   const [retry, setRetry] = useState(0);
+  const pageRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const swapRef = useRef(0);
@@ -106,11 +122,46 @@ export function ArticlesIndex({
     };
   }, []);
 
-  // The DOM list (no world) reveals its cards as they scroll in.
+  // The entrance and the DOM reveal, before the first paint (and before
+  // the root layout's scroll reset, which runs after).
   useIsomorphicLayoutEffect(() => {
+    const page = pageRef.current;
     const grid = gridRef.current;
-    if (!grid) return;
-    return startDomReveal(grid, { instant: !motionAllowed() });
+    if (!page || !grid) return;
+    const kind = entranceKind({ arrival, returning: false, motion: motionAllowed() });
+    if (arrival) clearArticleArrival(ARTICLES_LIST_PATH);
+    const entrance = startListEntrance(page, kind);
+    const stopReveal = startDomReveal(grid, { instant: kind === "return" || kind === "instant" });
+    return () => {
+      entrance.dispose();
+      stopReveal();
+    };
+    // Mount only: the arrival note was read during the first render.
+  }, []);
+
+  // Tell a transition bringing the list in that it can show it: once the
+  // world has decided and the cards have registered (their effects ran
+  // first) and been measured. Bounded.
+  useEffect(() => {
+    const signal = { cancelled: false };
+    let settled = false;
+    const report = () => {
+      if (settled || signal.cancelled) return;
+      settled = true;
+      markArticlePageReady(ARTICLES_LIST_PATH);
+    };
+    void (async () => {
+      await whenWorldDecided(signal);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      if (signal.cancelled) return;
+      getArticlesWorld()?.cards.measure();
+      report();
+    })();
+    const ceiling = window.setTimeout(report, READY_CEILING_MS);
+    return () => {
+      signal.cancelled = true;
+      window.clearTimeout(ceiling);
+    };
   }, []);
 
   // While the list scrolls, the DOM hover stands down (a card sliding under
@@ -230,7 +281,7 @@ export function ArticlesIndex({
         : `${list.total} ${list.total === 1 ? "article" : "articles"}${categoryName ? ` in ${categoryName}` : ""}${query.settled.q ? ` matching “${query.settled.q}”` : ""}.`;
 
   return (
-    <div className="articles-page" data-articles-page="">
+    <div className="articles-page" data-articles-page="" data-entrance="pending" ref={pageRef}>
       <ArticlesHero
         activeCategory={query.live.category}
         all={initial.all}

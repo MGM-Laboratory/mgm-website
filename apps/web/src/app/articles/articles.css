@@ -100,6 +100,18 @@ html:has([data-articles-page]) body {
   color: var(--world-ink);
 }
 
+/*
+ * The entrance's pieces wait hidden (visibility only: GSAP owns their
+ * transforms) until list-entrance.ts plays them; <noscript> in page.tsx
+ * shows them without JavaScript.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-articles-page][data-entrance="pending"]
+    :is([data-title-char], [data-entrance-piece="search"], [data-entrance-piece="pills"]) {
+    visibility: hidden;
+  }
+}
+
 /* ------------------------------------------------------------------ head */
 
 .articles-head {
