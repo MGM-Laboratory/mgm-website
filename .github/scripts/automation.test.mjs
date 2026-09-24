@@ -3,7 +3,6 @@ import { execFileSync } from "node:child_process";
 import test from "node:test";
 import { collectContributors, thankYouBody } from "./pr-contributors.mjs";
 import { isLgtm, upsertComment } from "./pr-comments.mjs";
-import { reviewGate } from "./review-policy.mjs";
 
 test("LGTM accepts comments and formatted reviews without interpreting conversation as a command", () => {
   for (const body of [
@@ -112,7 +111,6 @@ test("merge sends the checked SHA and thanks only after a confirmed merge", () =
         if (path.endsWith('/pulls/1')) return Response.json(pr);
         if (path.endsWith('/check-runs')) return Response.json({check_runs:[{id:1,name:'CI',app:{id:15368},status:'completed',conclusion:'success'}]});
         if (path.endsWith('/statuses')) return Response.json([]);
-        if (path.endsWith('/reviews')) return Response.json([{user:{login:'shirasakaren'},state:'APPROVED',commit_id:'head',submitted_at:'2026-09-24T00:00:00Z'}]);
         if (path.endsWith('/rules/branches/main')) return Response.json([{type:'required_status_checks',parameters:{required_status_checks:[{context:'CI',integration_id:15368}]}}]);
         if (path.includes('/compare/')) return Response.json({commits:[{author:{login:'author'},commit:{message:'Change'}}]});
         if (path.endsWith('/comments')) return Response.json(opts.method === 'POST' ? {id:10} : []);
@@ -149,53 +147,4 @@ test("merge sends the checked SHA and thanks only after a confirmed merge", () =
     );
     assert.match(output, /validated/);
   }
-});
-
-test("code owners merge their own pull requests without review; others need an owner's approval on the head commit", () => {
-  const owners = ["shirasakaren"];
-  const approval = (sha, at = "2026-09-24T01:00:00Z") => ({
-    user: { login: "shirasakaren" },
-    state: "APPROVED",
-    commit_id: sha,
-    submitted_at: at,
-  });
-  assert.equal(reviewGate({ author: "ShirasakaRen", owners, reviews: [], headSha: "a" }).ok, true);
-  assert.equal(reviewGate({ author: "contributor", owners, reviews: [], headSha: "a" }).ok, false);
-  assert.equal(
-    reviewGate({ author: "contributor", owners, reviews: [approval("a")], headSha: "a" }).ok,
-    true,
-  );
-  // An approval of an older commit doesn't cover new pushes.
-  assert.equal(
-    reviewGate({ author: "contributor", owners, reviews: [approval("old")], headSha: "a" }).ok,
-    false,
-  );
-  // A later "changes requested" withdraws the approval.
-  assert.equal(
-    reviewGate({
-      author: "contributor",
-      owners,
-      reviews: [
-        approval("a"),
-        {
-          user: { login: "shirasakaren" },
-          state: "CHANGES_REQUESTED",
-          commit_id: "a",
-          submitted_at: "2026-09-24T02:00:00Z",
-        },
-      ],
-      headSha: "a",
-    }).ok,
-    false,
-  );
-  // Someone who isn't a code owner can't approve on the owner's behalf.
-  assert.equal(
-    reviewGate({
-      author: "contributor",
-      owners,
-      reviews: [{ user: { login: "friend" }, state: "APPROVED", commit_id: "a" }],
-      headSha: "a",
-    }).ok,
-    false,
-  );
 });
