@@ -166,6 +166,8 @@ const INTERACTIVE_SHARE = 0.75;
 /** Where the library's camera starts on the way in, and ends on the way out. */
 const ASCENT = { lift: -0.8, dolly: 2600 };
 const FALL = { lift: -0.5, dolly: 3000 };
+/** Out, over a library the world draws: how far the fog floods in over it before the sheet lands. */
+const OUT_FLOOD = 0.88;
 
 // ------------------------------------------------------------------ styles
 
@@ -933,6 +935,10 @@ class Stage implements PortalStage {
         world.setDolly(FALL.dolly * fall);
         world.setLift(FALL.lift * h * fall);
         world.setFogSwallow(ease.in2(fit(t, 0, 0.9 * C)));
+        // The fog floods in over everything the library draws, the layers
+        // its own fog doesn't reach (a card, an article's cover) included,
+        // as the sheet closes in.
+        f.flood = OUT_FLOOD * ease.inOut2(fit(t, 0.2 * C, 0.92 * C));
       } else {
         f.flood = ease.in2(fit(t, 0.05 * C, 0.8 * C));
       }
