@@ -101,6 +101,22 @@ html:has([data-articles-page]) body {
 }
 
 /*
+ * The list grows as batches load. The wheel smoothing (Lenis) re-reads the
+ * page's height only when <html> resizes, and the root layout pins <html>
+ * to the viewport (h-full), so its scroll limit stayed at whatever height
+ * it last saw and the wheel stopped short of the newest batches and the
+ * end of the archive. Here <html> takes its content's height instead (the
+ * body still fills the screen), so every batch that lands moves the limit.
+ */
+html:has([data-articles-page]) {
+  height: auto;
+}
+
+html:has([data-articles-page]) body {
+  min-height: 100dvh;
+}
+
+/*
  * The entrance's pieces wait hidden (visibility only: GSAP owns their
  * transforms) until list-entrance.ts plays them; <noscript> in page.tsx
  * shows them without JavaScript.
