@@ -293,10 +293,10 @@ type SheetPose = {
 class PageSheet {
   private readonly layers: Array<{ element: HTMLElement; saved: Saved }> = [];
   private readonly pins: Array<{ element: HTMLElement; saved: Saved }> = [];
-  private readonly base: HTMLElement;
-  private readonly veil: HTMLElement;
-  private readonly wash: HTMLElement;
-  private readonly rim: HTMLElement;
+  private readonly base = fixedLayer(-1);
+  private readonly veil = fixedLayer(46);
+  private readonly wash = document.createElement("div");
+  private readonly rim = document.createElement("div");
   private readonly canvases: Array<{ element: HTMLElement; saved: Saved }> = [];
   private body: Saved | null = null;
   private readonly perspective: number;
@@ -307,6 +307,18 @@ class PageSheet {
     const width = html.clientWidth || window.innerWidth;
     const height = window.innerHeight;
     this.perspective = Math.max(width, height) * 1.15;
+    // Everything it changes is recorded as it goes, so a failure half way
+    // gives back exactly what was taken.
+    try {
+      this.mount(palette, dark, width, height);
+    } catch (error) {
+      this.dispose();
+      throw error;
+    }
+  }
+
+  private mount(palette: PortalPalette, dark: boolean, width: number, height: number) {
+    const html = document.documentElement;
     const wrapper = document.getElementById("smooth-wrapper");
 
     // A themed page paints the same colour on <html> and <body>, and the
@@ -325,7 +337,6 @@ class PageSheet {
       document.body.style.setProperty("background", "transparent");
     }
 
-    this.base = fixedLayer(-1);
     this.base.style.background = paper;
     document.body.appendChild(this.base);
     this.addLayer(this.base, "50% 50%", `inset(0 round ${SHEET_RADIUS}px)`);
@@ -352,8 +363,6 @@ class PageSheet {
     }
 
     // The veil: paper washing over the page, and light at its edges.
-    this.veil = fixedLayer(46);
-    this.wash = document.createElement("div");
     Object.assign(this.wash.style, {
       position: "absolute",
       inset: "0",
@@ -361,7 +370,6 @@ class PageSheet {
       background: `${GRAIN}, ${palette.paper}`,
       backgroundBlendMode: dark ? "soft-light" : "multiply",
     });
-    this.rim = document.createElement("div");
     const leak = dark ? palette.glow : palette.halo;
     Object.assign(this.rim.style, {
       position: "absolute",
@@ -839,6 +847,15 @@ class Stage implements PortalStage {
     this.coverSeconds = setup.instant ? 0 : timing.cover;
     this.revealSeconds = timing.reveal;
     this.revealSignal = timing.signal;
+    try {
+      this.mount(setup);
+    } catch (error) {
+      this.end();
+      throw error;
+    }
+  }
+
+  private mount(setup: PortalStageSetup) {
     this.front.begin(this.scene());
 
     if (setup.direction === "in") {

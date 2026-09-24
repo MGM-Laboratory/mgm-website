@@ -243,6 +243,7 @@ export class PortalController {
   private warmed = false;
   private warmTimer = 0;
   private disposed = false;
+  private readonly reducedQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   // Verification hooks (dev builds only).
   private slowdown = 1;
   private forceDom = false;
@@ -260,6 +261,7 @@ export class PortalController {
     window.addEventListener("focusin", this.onIntent, true);
     window.addEventListener("resize", this.onResize);
     document.addEventListener("visibilitychange", this.onVisibility);
+    this.reducedQuery.addEventListener("change", this.onMotionChange);
     this.scheduleWarm(pathname);
     if (process.env.NODE_ENV !== "production") {
       Object.assign(window, { __articlesPortal: this.debugView() });
@@ -276,6 +278,7 @@ export class PortalController {
     window.removeEventListener("focusin", this.onIntent, true);
     window.removeEventListener("resize", this.onResize);
     document.removeEventListener("visibilitychange", this.onVisibility);
+    this.reducedQuery.removeEventListener("change", this.onMotionChange);
     window.clearTimeout(this.warmTimer);
     if (this.run) this.finish(this.run);
     if (process.env.NODE_ENV !== "production") {
@@ -377,6 +380,14 @@ export class PortalController {
 
   private readonly onResize = () => {
     this.run?.stage?.resize();
+  };
+
+  /** Reduced motion switched on mid-run: finish at once, still going where the visitor asked. */
+  private readonly onMotionChange = () => {
+    const run = this.run;
+    if (!this.reducedQuery.matches || !run) return;
+    if (!run.pushed && run.href && !run.aborting) this.push(run);
+    this.finish(run);
   };
 
   private readonly onVisibility = () => {
@@ -482,6 +493,15 @@ export class PortalController {
     }
     dt = Math.min(dt, 0.5) / this.slowdown;
     run.t += dt;
+    try {
+      this.step(run, dt, now);
+    } catch (error) {
+      this.recover(run, error);
+    }
+  };
+
+  /** One frame of the run (the tick guards it). */
+  private step(run: Run, dt: number, now: number) {
     const world = this.worldTransition();
 
     if (run.stage?.lost && !run.plain) {
@@ -565,7 +585,34 @@ export class PortalController {
         break;
       }
     }
-  };
+  }
+
+  /**
+   * Something in the stage threw (an unusual page, a driver quirk): the
+   * page is given back from under it and the plain cover carries the run
+   * on to the destination. A second failure ends the run outright, so a
+   * fault can never leave the site locked under a cover.
+   */
+  private recover(run: Run, error: unknown) {
+    if (process.env.NODE_ENV !== "production") console.error("[articles-portal]", error);
+    if (this.run !== run) return;
+    if (run.plain) {
+      if (!run.pushed && run.href) this.push(run);
+      this.finish(run);
+      return;
+    }
+    run.plain = true;
+    run.log.renderer = "plain";
+    const stage = run.stage;
+    run.stage = null;
+    try {
+      stage?.end();
+    } catch {
+      // Its layers go with the portal's own layer in finish().
+    }
+    this.setPlain(run.phase === "load" || run.phase === "rewind" ? 0 : 1);
+    if (run.phase === "load") this.enter(run, "cover");
+  }
 
   /** Covered and waiting: may the destination be shown now? */
   private ready(run: Run, dt: number) {
@@ -793,14 +840,19 @@ export class PortalController {
     const stages = this.stageModule;
     if (!stages || !this.root || run.stage) return;
     const gl = run.dom || !this.gl || this.gl.isLost ? null : this.gl;
-    run.stage = stages.createPortalStage({
-      direction: run.direction,
-      instant: run.phase === "hold",
-      dark: run.dark,
-      tier: tier(),
-      root: this.root,
-      gl,
-    });
+    try {
+      run.stage = stages.createPortalStage({
+        direction: run.direction,
+        instant: run.phase === "hold",
+        dark: run.dark,
+        tier: tier(),
+        root: this.root,
+        gl,
+      });
+    } catch (error) {
+      this.recover(run, error);
+      return;
+    }
     run.log.renderer = run.stage.renderer;
     // The stage has drawn its first frame: an instant cover hands over.
     if (run.phase === "hold") this.setPlain(0);
