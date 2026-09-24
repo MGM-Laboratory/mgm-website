@@ -211,7 +211,7 @@ On a fresh load, after the route curtain or after the project zoom, the page wai
 
 ### Media
 
-- DOM `<img>` (width and height attributes, async decoding, the first two eager at high priority) and `<video muted loop playsInline preload="metadata">` with an optional poster.
+- DOM `<img>` (width and height attributes, async decoding, the first two eager at high priority) and `<video muted loop playsInline>` with an optional poster. A video with a poster preloads only its metadata; one without preloads enough to show a first frame (`preload="auto"`, starting at 0.001 s), since Safari otherwise shows nothing until playback.
 - The horizontal stage clips everything, so native lazy loading can't look ahead. Images within 2.5 viewports of the travel are switched to eager.
 - A video plays only while visible, in a visible tab, after the entrance has begun, and not during a hand-off. A pause and play button per video (shown on hover and focus, kept visible once paused) meets WCAG 2.2.2. Reduced motion doesn't autoplay: the poster shows and the button starts the video.
 - The WebGL stage (`detail/stage/*`) starts at once in the horizontal layout when motion is allowed. Items it draws hide their DOM frame with `visibility`, so videos keep decoding as its textures. A lost context, reduced motion switched on or the stacked layout hand the DOM media back.
