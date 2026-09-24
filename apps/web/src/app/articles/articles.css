@@ -794,10 +794,9 @@ html:not([data-articles-world="gl"]) .articles-veil {
   margin: calc(var(--slot-pad) * -1);
   padding: var(--slot-pad);
   content-visibility: auto;
+  /* The content box (padding comes on top): the cover, the 12 px gap and the strip. */
   contain-intrinsic-block-size: auto
-    calc(
-      var(--card-w) * 0.4 + 12px + var(--meta-size) * 2.461 + 0.55rem + 1px + var(--slot-pad) * 2
-    );
+    calc(var(--card-w) * 0.4 + 12px + var(--meta-size) * 2.461 + 0.55rem + 1px);
 }
 
 .article-card {
@@ -952,6 +951,68 @@ html[data-articles-world="gl"] .article-card-cover {
 
 html[data-articles-world="gl"] .article-card-meta {
   border-bottom-color: transparent;
+}
+
+/* ------------------------------------------------------------------ placeholders */
+
+.article-slot.is-placeholder .article-card-cover {
+  background:
+    linear-gradient(
+        100deg,
+        transparent 30%,
+        color-mix(in srgb, var(--world-ink) 7%, transparent) 50%,
+        transparent 70%
+      )
+      0 0 / 250% 100% no-repeat,
+    color-mix(in srgb, var(--world-ink) 5%, var(--world-fog));
+}
+
+.article-slot.is-placeholder .article-card-meta {
+  border-bottom-color: color-mix(in srgb, var(--world-ink) 12%, transparent);
+}
+
+.article-card-bone {
+  display: block;
+  height: 0.62em;
+  margin-top: 0.34em;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--world-ink) 9%, transparent);
+}
+
+.article-card-bone.is-title {
+  width: 58%;
+}
+
+.article-card-bone.is-subtitle {
+  width: 82%;
+  height: 0.5em;
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .article-slot.is-placeholder .article-card-cover {
+    animation: articles-shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes articles-shimmer {
+  from {
+    background-position:
+      130% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      -30% 0,
+      0 0;
+  }
+}
+
+html[data-articles-world="gl"]
+  .article-slot.is-placeholder
+  :is(.article-card-cover, .article-card-bone) {
+  opacity: 0;
+  animation: none;
 }
 
 /* ------------------------------------------------------------------ empty */

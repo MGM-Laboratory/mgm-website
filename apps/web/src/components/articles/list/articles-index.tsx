@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { ArticleCard } from "@/components/articles/list/article-card";
+import { ArticleCard, ArticleCardPlaceholder } from "@/components/articles/list/article-card";
 import { ArticlesEmpty } from "@/components/articles/list/articles-empty";
 import { ArticlesEnd } from "@/components/articles/list/articles-end";
 import { ArticlesHero } from "@/components/articles/list/articles-hero";
@@ -21,6 +21,9 @@ import { scrollPageTo } from "@/lib/page-scroll";
 import { motionAllowed } from "@/lib/reduced-motion";
 
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+/** Placeholder sheets shown for a batch in flight. */
+const PLACEHOLDERS = 4;
 
 export type ArticlesIndexInitial = {
   items: ArticleCardData[];
@@ -52,9 +55,10 @@ function mergeItems(known: ArticleCardData[], more: ArticleCardData[]) {
  *
  * The first batch comes from the server page (so the list works without
  * JavaScript and paints at once); further batches load from
- * /api/articles-cms/index while the visitor nears the end of what is
- * loaded, until the list runs out. The library world draws only the cards
- * near the screen (cards-layer.ts).
+ * /api/articles-cms/index well before the visitor nears the end, with
+ * placeholder sheets standing in while one is in flight, until the list
+ * runs out. The library world draws only the cards near the screen
+ * (cards-layer.ts).
  *
  * A new query (the URL: category, search) swaps the list: the cards on
  * screen sink into the fog one after another, the scroll resets while
@@ -77,6 +81,7 @@ export function ArticlesIndex({
     key: queryKey(initialQuery),
     failed: false,
   }));
+  const [loadingMore, setLoadingMore] = useState(false);
   const [retry, setRetry] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const swapRef = useRef(0);
@@ -138,9 +143,11 @@ export function ArticlesIndex({
   const loadMore = useCallback(async () => {
     if (loadingRef.current || list.nextOffset === null || list.key !== currentKey) return;
     loadingRef.current = true;
+    setLoadingMore(true);
     const key = list.key;
     const batch = await requestArticleBatch(query.settled, list.nextOffset, ARTICLE_BATCH_SIZE);
     loadingRef.current = false;
+    setLoadingMore(false);
     if (!batch) return;
     setList((current) =>
       current.key !== key
@@ -155,7 +162,8 @@ export function ArticlesIndex({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.nextOffset, list.key, currentKey]);
 
-  // Pre-load the next batch while the visitor is still well above the end.
+  // Load the next batch while the visitor is still well above the end
+  // (more than two viewports ahead), so a card is never waited for.
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || list.nextOffset === null) return;
@@ -163,7 +171,7 @@ export function ArticlesIndex({
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) void loadMore();
       },
-      { rootMargin: "0px 0px 180% 0px" },
+      { rootMargin: "0px 0px 260% 0px" },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -204,7 +212,7 @@ export function ArticlesIndex({
       </p>
 
       <section
-        aria-busy={searching}
+        aria-busy={searching || loadingMore}
         aria-label="Articles"
         className="articles-grid"
         data-articles-grid=""
@@ -212,6 +220,14 @@ export function ArticlesIndex({
         {list.items.map((article, index) => (
           <ArticleCard article={article} index={index} key={article.slug} />
         ))}
+        {loadingMore && showing
+          ? Array.from(
+              { length: Math.min(PLACEHOLDERS, Math.max(0, list.total - list.items.length)) },
+              (_, i) => (
+                <ArticleCardPlaceholder index={list.items.length + i} key={`placeholder-${i}`} />
+              ),
+            )
+          : null}
       </section>
 
       {showing && list.items.length === 0 ? (
