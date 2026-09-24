@@ -22,6 +22,12 @@
  * - otherwise the stack is walked down, compositing translucent background
  *   colours, to the first opaque one, then the body and html backgrounds.
  *   Canvases fall through to what is under them.
+ * - pixels that are painted but can't be read (an iframe, embed or object,
+ *   a loaded cross-origin picture or playing video, a CSS url() picture)
+ *   make the point unknown: the rule then has to pass over both black and
+ *   white there, which lifts the tint towards the static floor exactly
+ *   where the content is unknown. A picture that hasn't loaded paints
+ *   nothing, so its container still decides.
  */
 
 import {
@@ -275,6 +281,23 @@ export function pageBaseColor(): Rgb {
  * What the page shows at viewport point (x, y), ignoring every element
  * `skip` accepts (the header and the menu themselves).
  */
+/**
+ * Painted pixels the probe can't read: a loaded cross-origin picture, a
+ * playing cross-origin video, an embedded document. Guessing the colour
+ * under them would be optimistic, so the point counts as unknown.
+ */
+function unreadable(element: Element) {
+  if (element instanceof HTMLImageElement) return element.complete && element.naturalWidth > 0;
+  if (element instanceof HTMLVideoElement) {
+    // A same-origin poster still loading is sampled again once it arrives.
+    if (element.poster && isSameOrigin(element.poster)) return false;
+    return element.readyState >= 2 || Boolean(element.poster);
+  }
+  return false;
+}
+
+const UNKNOWN: Rgb = [128, 128, 128];
+
 export function probePoint(
   x: number,
   y: number,
@@ -293,13 +316,24 @@ export function probePoint(
       const color = hintColor(hint);
       if (color) return { color: compositeLayers(color, layers), media };
     }
+    if (
+      element instanceof HTMLIFrameElement ||
+      element instanceof HTMLEmbedElement ||
+      element instanceof HTMLObjectElement
+    ) {
+      return { color: UNKNOWN, media: true, unknown: true };
+    }
     if (element instanceof HTMLImageElement || element instanceof HTMLVideoElement) {
       const sample =
         element instanceof HTMLImageElement
           ? sampleImageAt(element, x, y)
           : sampleVideoAt(element, x, y);
       first = false;
-      if (!sample || sample.alpha <= 0) continue;
+      if (!sample) {
+        if (unreadable(element)) return { color: UNKNOWN, media: true, unknown: true };
+        continue;
+      }
+      if (sample.alpha <= 0) continue;
       media = true;
       layers.push(sample);
       if (sample.alpha >= OPAQUE) break;
@@ -310,6 +344,10 @@ export function probePoint(
       continue;
     }
     const style = getComputedStyle(element);
+    // A CSS picture (url()) paints over the element's own background colour.
+    if (style.backgroundImage.includes("url(")) {
+      return { color: UNKNOWN, media: true, unknown: true };
+    }
     if (first) {
       first = false;
       const text = textLayer(element, style);

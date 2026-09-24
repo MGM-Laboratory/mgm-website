@@ -26,6 +26,9 @@
  *    whichever contrasts more).
  * 5. If even that ink misses 4.5:1 somewhere, the tint's alpha rises until
  *    it doesn't (a fully opaque tint always passes).
+ * Points whose pixels can't be read (an embedded document, a cross-origin
+ * picture) must pass over both black and white, which lifts the tint to
+ * about the static floor where they are.
  */
 
 export type Rgb = readonly [number, number, number];
@@ -40,8 +43,13 @@ export type HeaderToneZone = {
   readonly points: readonly HeaderTonePoint[];
 };
 
-/** What one point behind the glass shows. `media`: an image, a video or a canvas drew it. */
-export type HeaderToneSample = { color: Rgb; media: boolean };
+/**
+ * What one point behind the glass shows. `media`: an image, a video or a
+ * canvas drew it. `unknown`: something is painted there that can't be read
+ * (an embedded document, a cross-origin picture), so the rule must hold
+ * over black and over white alike.
+ */
+export type HeaderToneSample = { color: Rgb; media: boolean; unknown?: boolean };
 
 /**
  * A page that knows better than DOM probing what shows behind the header
@@ -276,6 +284,9 @@ const MEDIA_MARGIN = 0.8;
 
 export type TonePalette = { ink: Rgb; surface: Rgb };
 
+const BLACK: Rgb = [0, 0, 0];
+const WHITE: Rgb = [255, 255, 255];
+
 export type TonePreferences = {
   /** The ink and surface the zone wears when they read (theme or site colours). */
   preferred: TonePalette;
@@ -362,8 +373,13 @@ export function decideTone(
       contrast: contrastRatio(preferred.ink, preferred.surface),
     };
   }
-  const backdrops = samples.map((sample) => saturateRgb(sample.color, saturate));
-  const blend = luminance(meanColor(backdrops));
+  const known = samples
+    .filter((sample) => !sample.unknown)
+    .map((sample) => saturateRgb(sample.color, saturate));
+  // Unknown points only ever make the rule stricter: the text has to hold
+  // over black and over white there. They don't vote on the tone.
+  const backdrops = samples.some((sample) => sample.unknown) ? [...known, BLACK, WHITE] : known;
+  const blend = known.length ? luminance(meanColor(known)) : luminance(preferred.surface);
   let tone: Tone = blend >= CROSSOVER ? "light" : "dark";
   if (options.previous && Math.abs(blend - CROSSOVER) < HYSTERESIS) tone = options.previous;
 
