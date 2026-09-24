@@ -376,7 +376,9 @@ test.describe("project detail page", () => {
       await link.focus();
       await expect(link).toBeInViewport({ timeout: 5_000 });
       await link.press("Enter");
-      await expect(page).toHaveURL(new RegExp(`/projects/${next.slug}$`), { timeout: 15_000 });
+      await expect(page).toHaveURL((url) => url.pathname === `/projects/${next.slug}`, {
+        timeout: 15_000,
+      });
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(next.project.title);
 
       expect(await everLocked(page)).toBe(false);

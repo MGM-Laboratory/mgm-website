@@ -31,7 +31,8 @@ import {
 // slow CI runners.
 test.setTimeout(120_000);
 
-const detailUrl = (record: FixtureRecord) => new RegExp(`/projects/${record.slug}$`);
+const detailUrl = (record: FixtureRecord) => (url: URL) =>
+  url.pathname === `/projects/${record.slug}`;
 const listUrl = /\/projects$/;
 
 function themeBackground(record: FixtureRecord) {
