@@ -1,6 +1,9 @@
 import { ArticlesWorldHost } from "@/components/articles/world/world-host";
 
 import "./articles.css";
+import "./world.css";
+import "./detail.css";
+import "./transitions.css";
 
 /**
  * Every articles route lives inside the library world. The host comes

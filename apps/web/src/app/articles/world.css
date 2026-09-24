@@ -1,0 +1,10 @@
+/*
+ * The library world's own DOM pieces: the theme wave's view transition, and
+ * (later) the custom cursor and anything else the world layers on the page.
+ */
+
+html[data-theme-wave]::view-transition-old(root),
+html[data-theme-wave]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}

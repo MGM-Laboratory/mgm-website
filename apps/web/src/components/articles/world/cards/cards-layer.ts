@@ -124,6 +124,11 @@ export class CardsLayer implements CardsLayerApi {
   private readonly softLight = new Color(WORLD_PALETTE.light.inkSoft);
   private readonly softDark = new Color(WORLD_PALETTE.dark.inkSoft);
   private visible = true;
+  private holds = 0;
+  private heldScroll = 0;
+  /** Cards whose DOM went while a hold was active: drawn until the hold ends. */
+  private readonly orphans = new Set<Entry>();
+  private lastScroll = 0;
   private hovered: string | null = null;
   private measureQueued = false;
   private readonly resizeObserver: ResizeObserver;
@@ -153,9 +158,37 @@ export class CardsLayer implements CardsLayerApi {
     this.entries.set(card.slug, entry);
     return () => {
       if (this.entries.get(card.slug) !== entry) return;
-      this.sleep(entry);
       this.entries.delete(card.slug);
+      if (this.holds > 0) this.orphans.add(entry);
+      else this.sleep(entry);
     };
+  }
+
+  hold() {
+    if (this.holds === 0) this.heldScroll = this.lastScroll;
+    this.holds += 1;
+    let held = true;
+    return () => {
+      if (!held) return;
+      held = false;
+      this.holds -= 1;
+      if (this.holds > 0) return;
+      for (const entry of this.orphans) this.sleep(entry);
+      this.orphans.clear();
+    };
+  }
+
+  rectOf(slug: string) {
+    const entry =
+      this.entries.get(slug) ?? [...this.orphans].find((item) => item.card.slug === slug);
+    if (!entry) return null;
+    const scroll = this.holds > 0 ? this.heldScroll : this.lastScroll;
+    return new DOMRect(
+      entry.cover.left,
+      entry.cover.top - scroll,
+      entry.cover.width,
+      entry.cover.height,
+    );
   }
 
   setHovered(slug: string | null) {
@@ -168,6 +201,8 @@ export class CardsLayer implements CardsLayerApi {
   }
 
   measure() {
+    // Held cards keep the rects they had: their DOM may be gone or moving.
+    if (this.holds > 0) return;
     for (const entry of this.entries.values()) {
       entry.cover = docRect(entry.card.cover);
       entry.meta = docRect(entry.card.meta);
@@ -221,14 +256,19 @@ export class CardsLayer implements CardsLayerApi {
   }
 
   /** Per frame, after the scroll step: wake, sleep and place every card. */
-  update(scrollY: number) {
+  update(liveScrollY: number) {
     if (this.disposed) return;
-    if (this.measureQueued) {
+    this.lastScroll = liveScrollY;
+    // While held (a transition carries the list away), the cards stay where
+    // they were, whatever the page underneath does with its scroll.
+    const scrollY = this.holds > 0 ? this.heldScroll : liveScrollY;
+    if (this.measureQueued && this.holds === 0) {
       this.measureQueued = false;
       this.measure();
     }
     const { width, height } = this.options.viewport();
     const zones = foldZones(width, height);
+    for (const entry of this.orphans) this.place(entry, scrollY, zones);
     for (const entry of this.entries.values()) {
       const top = entry.cover.top - scrollY;
       const bottom = entry.meta.top + entry.meta.height - scrollY;
@@ -248,7 +288,9 @@ export class CardsLayer implements CardsLayerApi {
     this.resizeObserver.disconnect();
     window.removeEventListener("resize", this.queueMeasure);
     for (const entry of this.entries.values()) this.sleep(entry);
+    for (const entry of this.orphans) this.sleep(entry);
     this.entries.clear();
+    this.orphans.clear();
     this.geometry.dispose();
   }
 

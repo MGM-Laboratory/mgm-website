@@ -22,6 +22,10 @@ import { WORLD_PALETTE, hexToUnit } from "@/components/articles/world/palette";
 import type {
   ArticlesWorldApi,
   QualityTier,
+  WorldFrame,
+  WorldFxApi,
+  WorldGL,
+  WorldLayer,
   WorldRoute,
   WorldTransitionApi,
 } from "@/components/articles/world/world-api";
@@ -55,6 +59,10 @@ const CAMERA_DISTANCE = 2000;
 /** Most device pixels drawn per frame, whatever the screen. */
 const MAX_PIXELS = 2560 * 1600;
 const TIER_PIXEL_RATIO: Record<QualityTier, number> = { high: 1.75, medium: 1.35, low: 1 };
+/** The lens at rest (about 17 px of fringe in a 1440 px corner, like unseen.co's). */
+const REST_DISTORT = -0.05;
+/** A first visit starts this warped and settles (unseen's 5 to 0.4 is 12.5 times). */
+const SETTLE_DISTORT = REST_DISTORT * 12.5;
 
 export type LibraryEngineOptions = {
   tier: QualityTier;
@@ -67,9 +75,31 @@ export class LibraryEngine implements ArticlesWorldApi {
   readonly tier: QualityTier;
   readonly cards: CardsLayer;
   readonly transition: WorldTransitionApi;
+  readonly fx: WorldFxApi;
+  readonly gl: WorldGL;
 
   private readonly renderer: WebGLRenderer;
   private readonly scene = new Scene();
+  private readonly overlay = new Scene();
+  private readonly layers: { layer: WorldLayer; order: number }[] = [];
+  private frameState: WorldFrame = {
+    time: 0,
+    dt: 0,
+    scrollY: 0,
+    scrollSpeed: 0,
+    width: 1,
+    height: 1,
+    pixelRatio: 1,
+    pointer: null,
+    pointerSpeed: 0,
+    scrolling: false,
+  };
+  private pointer: { x: number; y: number } | null = null;
+  private pointerPrevious: { x: number; y: number } | null = null;
+  private pointerSpeed = 0;
+  private blurAmount = 1;
+  private readonly lensState = { distort: REST_DISTORT };
+  private lensTween: gsap.core.Tween | null = null;
   private readonly camera: PerspectiveCamera;
   private readonly rig: CameraRig;
   private readonly uniforms: WorldUniforms;
@@ -158,6 +188,36 @@ export class LibraryEngine implements ArticlesWorldApi {
         this.uniforms.uSwallow.value = amount;
       },
       setCardsVisible: (visible) => this.cards.setVisible(visible),
+      setLift: (px) => {
+        this.rig.offset.y = px;
+      },
+      setDolly: (px) => {
+        this.rig.offset.z = px;
+      },
+    };
+
+    this.fx = {
+      settleLens: (seconds = 1.5) => {
+        this.lensTween?.kill();
+        this.lensState.distort = SETTLE_DISTORT;
+        this.lensTween = gsap.to(this.lensState, {
+          distort: REST_DISTORT,
+          duration: seconds,
+          ease: "power2.out",
+        });
+      },
+      setBlurAmount: (amount) => {
+        this.blurAmount = amount;
+      },
+      pulse: () => {},
+    };
+
+    this.gl = {
+      scene: this.scene,
+      overlay: this.overlay,
+      camera: this.camera,
+      renderer: this.renderer,
+      uniforms: this.uniforms,
     };
 
     this.canvas.addEventListener("webglcontextlost", this.handleContextLost);
@@ -180,6 +240,22 @@ export class LibraryEngine implements ArticlesWorldApi {
         },
       });
     }
+  }
+
+  addLayer(layer: WorldLayer, order = 0) {
+    const entry = { layer, order };
+    this.layers.push(entry);
+    this.layers.sort((a, b) => a.order - b.order);
+    return () => {
+      const index = this.layers.indexOf(entry);
+      if (index < 0) return;
+      this.layers.splice(index, 1);
+      layer.dispose();
+    };
+  }
+
+  frameInfo() {
+    return this.frameState;
   }
 
   setRoute(route: WorldRoute) {
@@ -262,6 +338,8 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.disposed = true;
     this.offFrame?.();
     this.offFrame = null;
+    for (const { layer } of this.layers.splice(0)) layer.dispose();
+    this.lensTween?.kill();
     this.waveTween?.kill();
     this.themeTween?.kill();
     window.removeEventListener("resize", this.resize);
@@ -288,12 +366,14 @@ export class LibraryEngine implements ArticlesWorldApi {
   };
 
   private readonly onPointerMove = (event: PointerEvent) => {
+    this.pointer = { x: event.clientX, y: event.clientY };
     if (event.pointerType === "touch") return;
     this.rig.pointer.x = (event.clientX / this.width) * 2 - 1;
     this.rig.pointer.y = -((event.clientY / this.height) * 2 - 1);
   };
 
   private readonly onPointerLeave = () => {
+    this.pointer = null;
     this.rig.pointer.x = 0;
     this.rig.pointer.y = 0;
   };
@@ -346,11 +426,39 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.scrollSpeed += (perSecond - this.scrollSpeed) * k;
     const speedVh = this.scrollSpeed / this.height;
     this.composite.uniforms.uBlur.value =
-      this.route.kind === "list" ? Math.max(-34, Math.min(34, this.scrollSpeed * 0.011)) : 0;
+      this.route.kind === "list"
+        ? Math.max(-34, Math.min(34, this.scrollSpeed * 0.011)) * this.blurAmount
+        : 0;
+    this.composite.uniforms.uDistort.value = this.lensState.distort;
+
+    if (this.pointer && this.pointerPrevious) {
+      const moved = Math.hypot(
+        this.pointer.x - this.pointerPrevious.x,
+        this.pointer.y - this.pointerPrevious.y,
+      );
+      this.pointerSpeed += (moved / Math.max(dt, 1 / 240) - this.pointerSpeed) * k;
+    } else {
+      this.pointerSpeed *= 1 - k;
+    }
+    this.pointerPrevious = this.pointer ? { ...this.pointer } : null;
+
+    this.frameState = {
+      time: this.time,
+      dt,
+      scrollY,
+      scrollSpeed: this.scrollSpeed,
+      width: this.width,
+      height: this.height,
+      pixelRatio: this.pixelRatio,
+      pointer: this.pointer,
+      pointerSpeed: this.pointerSpeed,
+      scrolling: Math.abs(this.scrollSpeed) > 30,
+    };
 
     this.rig.update(dt);
     this.environment.update(this.time, dt, speedVh);
     this.cards.update(scrollY);
+    for (const { layer } of this.layers) layer.update(this.frameState);
 
     const fog = new Color().setRGB(...hexToUnit(WORLD_PALETTE.light.fog));
     fog.lerp(new Color().setRGB(...hexToUnit(WORLD_PALETTE.dark.fog)), u.uDark.value);
@@ -362,5 +470,11 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.renderer.setRenderTarget(null);
     this.composite.uniforms.tScene.value = this.target.texture;
     this.renderer.render(this.composite.scene, this.composite.camera);
+    if (this.overlay.children.length) {
+      this.renderer.autoClear = false;
+      this.renderer.clearDepth();
+      this.renderer.render(this.overlay, this.camera);
+      this.renderer.autoClear = true;
+    }
   };
 }

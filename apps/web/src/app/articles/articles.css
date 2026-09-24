@@ -458,11 +458,3 @@ html[data-articles-world="gl"] .article-card-meta {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-
-/* ------------------------------------------------------------------ theme wave */
-
-html[data-theme-wave]::view-transition-old(root),
-html[data-theme-wave]::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
