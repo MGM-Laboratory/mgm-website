@@ -200,13 +200,15 @@ html:has([data-articles-page]) body {
 
 .articles-grid {
   --card-w: min(88vw, 30rem);
+  --meta-size: clamp(0.875rem, calc(var(--card-w) * 0.0318), 1.375rem);
   --card-gap: 2.25rem;
   display: grid;
   grid-template-columns: var(--card-w);
   justify-content: center;
   column-gap: var(--card-gap);
   row-gap: var(--card-gap);
-  padding-top: calc(var(--articles-head, 17rem) - 4rem + 2.25rem);
+  /* The first row rests just under the fold line (cards-layer.ts FOLD_GAP). */
+  padding-top: calc(var(--articles-head, 17rem) - 4rem + 7vh + 4px);
 }
 
 @media (min-width: 768px) {
@@ -238,8 +240,18 @@ html:has([data-articles-page]) body {
 
 /* ------------------------------------------------------------------ card */
 
+.article-slot {
+  --slot-pad: 18px;
+  margin: calc(var(--slot-pad) * -1);
+  padding: var(--slot-pad);
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto
+    calc(
+      var(--card-w) * 0.4 + 12px + var(--meta-size) * 2.461 + 0.55rem + 1px + var(--slot-pad) * 2
+    );
+}
+
 .article-card {
-  --meta-size: clamp(0.875rem, calc(var(--card-w) * 0.0318), 1.375rem);
   position: relative;
   display: block;
   min-width: 0;
