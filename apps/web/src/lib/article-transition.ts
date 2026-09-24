@@ -145,13 +145,16 @@ export function isArticleWorldMounted() {
 /**
  * Whether an articles host handles a browser back or forward between these
  * paths, so the route curtain stays out of it. In-world kinds need the
- * world mounted, portal kinds the portal; both need motion allowed.
+ * world mounted and motion allowed. Portal kinds need only the portal: it
+ * lets a reduced-motion visit navigate natively itself, and the curtain
+ * (installed while motion was allowed, if the preference changed since)
+ * must never cover a way into or out of the library.
  */
 export function claimsArticlePopstate(from: string, to: string) {
-  if (!motionAllowed()) return false;
   const kind = articleTransitionKind(from, to);
   if (!kind) return false;
   if (kind === "portal-in" || kind === "portal-out") return portalLayers > 0;
+  if (!motionAllowed()) return false;
   return worldLayers > 0;
 }
 
@@ -194,6 +197,15 @@ export function markArticlePageReady(pathname: string) {
   if (ready.done || ready.pathname !== pathname) return;
   ready.done = true;
   flush(ready.waiters);
+}
+
+/**
+ * Whether the expected page has said it is ready (or none is expected).
+ * For hosts that poll from their own visible-time clock instead of a timer
+ * (the portal: a background tab must not run its bounded waits out).
+ */
+export function isArticlePageReady() {
+  return ready.done;
 }
 
 /** Resolves when the expected page is ready, or after `timeoutMs`. */
