@@ -73,9 +73,14 @@ export const PILL_FRAGMENT = /* glsl */ `
     float fresnel = pow(1.0 - ndv, 4.0);
     vec3 key = normalize(vec3(-0.45, 0.62, 0.64));
     float lambert = max(dot(n, key), 0.0);
-    float spec = pow(max(dot(n, normalize(key + v)), 0.0), 140.0);
+    // The flat cap carries the label: its highlights stay soft so the
+    // printed "Home" never washes out as the pill tilts toward the cursor
+    // (the rounded rim keeps the full gloss, which is where lacquer reads).
+    float cap = step(0.5, vNormalLocal.z) * uHomeHasLabel;
+    float specK = mix(1.0, 0.28, cap);
+    float spec = pow(max(dot(n, normalize(key + v)), 0.0), 140.0) * specK;
     vec3 cursorLight = normalize(uHomeCursor - vViewPosition);
-    float glint = pow(max(dot(n, normalize(cursorLight + v)), 0.0), 260.0) * uHomeCursorOn;
+    float glint = pow(max(dot(n, normalize(cursorLight + v)), 0.0), 260.0) * uHomeCursorOn * specK;
     vec3 r = reflect(-v, n);
 
     // Light scheme: black lacquer mirroring the white library.
