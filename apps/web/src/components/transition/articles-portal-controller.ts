@@ -103,7 +103,14 @@ const PLAIN_REVEAL = 0.4;
 const INTERACTIVE = 0.75;
 /** Undoing a cover the route never followed. */
 const REWIND_SECONDS = 0.4;
-const WARM_IDLE_MS = 1500;
+/**
+ * Idle warming, once the page has settled. On a library page any link may
+ * leave it, so everything loads (the WebGL layer too). Elsewhere only the
+ * stage's script loads, later: every page links into the library (the
+ * menu does), a touch has no hover to warm on, and building the WebGL
+ * layer (a context and three programs) waits for real intent.
+ */
+const WARM_IDLE_MS = { library: 1500, elsewhere: 2500 } as const;
 
 type Phase = "load" | "cover" | "hold" | "reveal" | "rewind";
 
@@ -253,10 +260,11 @@ export class PortalController {
     window.addEventListener("popstate", this.onPopState);
     window.addEventListener("pointerover", this.onIntent, { capture: true, passive: true });
     window.addEventListener("pointerdown", this.onIntent, { capture: true, passive: true });
+    window.addEventListener("touchstart", this.onIntent, { capture: true, passive: true });
     window.addEventListener("focusin", this.onIntent, true);
     window.addEventListener("resize", this.onResize);
     document.addEventListener("visibilitychange", this.onVisibility);
-    if (isArticlesPath(pathname)) this.scheduleWarm();
+    this.scheduleWarm(pathname);
     if (process.env.NODE_ENV !== "production") {
       Object.assign(window, { __articlesPortal: this.debugView() });
     }
@@ -268,6 +276,7 @@ export class PortalController {
     window.removeEventListener("popstate", this.onPopState);
     window.removeEventListener("pointerover", this.onIntent, true);
     window.removeEventListener("pointerdown", this.onIntent, true);
+    window.removeEventListener("touchstart", this.onIntent, true);
     window.removeEventListener("focusin", this.onIntent, true);
     window.removeEventListener("resize", this.onResize);
     document.removeEventListener("visibilitychange", this.onVisibility);
@@ -292,7 +301,7 @@ export class PortalController {
         this.finish(run);
       }
     }
-    if (isArticlesPath(pathname)) this.scheduleWarm();
+    this.scheduleWarm(pathname);
   }
 
   // ------------------------------------------------------------- triggers
@@ -850,17 +859,24 @@ export class PortalController {
     return this.glLoading;
   }
 
-  /** On a library page any link may leave it: load the way out once the page has settled. */
-  private scheduleWarm() {
+  /** Loads what the portal needs once the page has settled (see WARM_IDLE_MS). */
+  private scheduleWarm(pathname: string) {
     if (this.warmed) return;
+    const library = isArticlesPath(pathname);
+    if (!library && this.stageModule) return;
     window.clearTimeout(this.warmTimer);
-    this.warmTimer = window.setTimeout(() => {
-      const warm = () => {
-        if (!this.disposed && !this.run && motionAllowed()) this.warm();
-      };
-      if ("requestIdleCallback" in window) window.requestIdleCallback(warm, { timeout: 3000 });
-      else warm();
-    }, WARM_IDLE_MS);
+    this.warmTimer = window.setTimeout(
+      () => {
+        const warm = () => {
+          if (this.disposed || this.run || !motionAllowed()) return;
+          if (library) this.warm();
+          else void this.ensureStage();
+        };
+        if ("requestIdleCallback" in window) window.requestIdleCallback(warm, { timeout: 3000 });
+        else warm();
+      },
+      library ? WARM_IDLE_MS.library : WARM_IDLE_MS.elsewhere,
+    );
   }
 
   private debugView() {

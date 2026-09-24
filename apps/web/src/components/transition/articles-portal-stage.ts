@@ -834,6 +834,8 @@ class Stage implements PortalStage {
         this.frame.rise = 1;
         this.frame.ghost = 1;
         this.frame.amount = 1;
+        // The screen turns to fog at once, with the stream already rising in it.
+        this.frame.stream = 1.6;
       } else {
         this.arch = new Arch(this.palette, setup.dark);
         this.sheet = new PageSheet(this.palette, setup.dark);
