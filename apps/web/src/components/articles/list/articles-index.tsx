@@ -188,10 +188,19 @@ export function ArticlesIndex({
       </section>
 
       {list.items.length === 0 ? (
-        <div className="articles-empty">
-          <p className="articles-empty-title">No articles match</p>
-          <p className="articles-empty-body">Try a different word, or open every category.</p>
-        </div>
+        query.category || query.q ? (
+          <div className="articles-empty">
+            <p className="articles-empty-title">No articles match</p>
+            <p className="articles-empty-body">Try a different word, or open every category.</p>
+          </div>
+        ) : (
+          <div className="articles-empty">
+            <p className="articles-empty-title">No articles yet</p>
+            <p className="articles-empty-body">
+              The first write-ups from the lab are on their way.
+            </p>
+          </div>
+        )
       ) : null}
 
       <div aria-hidden="true" className="articles-sentinel" ref={sentinelRef} />

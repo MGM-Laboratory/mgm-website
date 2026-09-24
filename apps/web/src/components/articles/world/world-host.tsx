@@ -29,6 +29,9 @@ const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render|m
 
 let probed: boolean | null = null;
 
+/** Visible time the engine may take to start before the visit falls back to the DOM list. */
+const START_FAILSAFE_MS = 6000;
+
 /**
  * three@0.186 is WebGL2-only. Needs a hardware context: a major performance
  * caveat fails the probe outright, and a renderer string that names a
@@ -105,6 +108,26 @@ export function ArticlesWorldHost() {
     ) {
       setWorldState("dom", null);
     } else {
+      // The DOM cards stay hidden while the mode is pending (so the swap to
+      // WebGL never shows): if the engine hasn't started after this much
+      // visible time (a stalled chunk, a hung import), the visit goes DOM.
+      // Visible time only: a background tab freezes frames, not timers
+      // (docs/animation-system.md gotcha #18).
+      let waited = 0;
+      let last = performance.now();
+      const failsafe = window.setInterval(() => {
+        const now = performance.now();
+        if (!document.hidden) waited += now - last;
+        last = now;
+        if (engine || cancelled) window.clearInterval(failsafe);
+        else if (waited > START_FAILSAFE_MS) {
+          window.clearInterval(failsafe);
+          cancelled = true;
+          setWorldState("dom", null);
+        }
+      }, 250);
+      offs.push(() => window.clearInterval(failsafe));
+
       import("@/components/articles/world/engine")
         .then(({ LibraryEngine }) => {
           if (cancelled) return;
