@@ -13,7 +13,8 @@ import { requestHeaderToneSample } from "@/lib/header-tone";
  *   drifts and settles inside its frame).
  * - A picture under a resting pointer leans a hair toward it.
  * - The rail (wide screens) fills its progress line, lights the section
- *   being read, and steps aside while a picture passes behind it.
+ *   being read, and steps aside while a picture, or a caption set in its
+ *   column, passes through its band.
  * - The slim progress bar (narrow screens) fills.
  *
  * Offsets are cached in document space and re-measured on resize, font and
@@ -24,11 +25,17 @@ type Figure = {
   frame: HTMLElement;
   media: HTMLElement;
   figure: HTMLElement;
+  caption: HTMLElement | null;
   variant: string;
   top: number;
   height: number;
   left: number;
   width: number;
+  /** The caption's box: top in document space, left in viewport space. */
+  capTop: number;
+  capHeight: number;
+  capLeft: number;
+  capWidth: number;
   visible: boolean;
   tiltX: number;
   tiltY: number;
@@ -128,11 +135,16 @@ export class StoryMotion {
         frame,
         media,
         figure: element,
+        caption: element.querySelector<HTMLElement>(".ad-caption"),
         variant: element.dataset.variant ?? "inset",
         top: 0,
         height: 0,
         left: 0,
         width: 0,
+        capTop: 0,
+        capHeight: 0,
+        capLeft: 0,
+        capWidth: 0,
         visible: false,
         tiltX: 0,
         tiltY: 0,
@@ -250,6 +262,14 @@ export class StoryMotion {
       figure.height = frame.offsetHeight;
       figure.left = rect.left + frame.offsetLeft;
       figure.width = frame.offsetWidth;
+      // Layout offsets, so a caption still rising into place reads at rest.
+      const caption = figure.caption;
+      if (caption) {
+        figure.capTop = rect.top + scrollY + caption.offsetTop;
+        figure.capHeight = caption.offsetHeight;
+        figure.capLeft = rect.left + caption.offsetLeft;
+        figure.capWidth = caption.offsetWidth;
+      }
     }
     for (const section of this.sections) {
       const element = this.root.querySelector<HTMLElement>(`[data-ad-section="${section.number}"]`);
@@ -304,16 +324,23 @@ export class StoryMotion {
       }
     }
 
-    // The rail steps aside while a picture that reaches into it passes.
+    // The rail steps aside while a picture that reaches into it passes, or
+    // a caption set in its column (an offset picture's) goes through it.
     if (this.rail && this.railBand.bottom > this.railBand.top) {
       let covered = false;
       for (const figure of this.figures) {
-        if (figure.variant === "inset") continue;
-        const top = figure.top - scrollY;
-        const bottom = top + figure.height;
-        const overlapsX =
-          figure.left < this.railBand.right && figure.left + figure.width > this.railBand.left;
-        if (overlapsX && top < this.railBand.bottom + 24 && bottom > this.railBand.top - 24) {
+        if (figure.figure.hidden) continue;
+        if (
+          (figure.variant !== "inset" &&
+            this.crossesRail(figure.left, figure.width, figure.top - scrollY, figure.height)) ||
+          (figure.caption &&
+            this.crossesRail(
+              figure.capLeft,
+              figure.capWidth,
+              figure.capTop - scrollY,
+              figure.capHeight,
+            ))
+        ) {
           covered = true;
           break;
         }
@@ -326,6 +353,14 @@ export class StoryMotion {
       }
     }
   };
+
+  /** Whether a box (viewport px) overlaps the rail's band, with a little room. */
+  private crossesRail(left: number, width: number, top: number, height: number) {
+    const band = this.railBand;
+    if (width <= 0 || height <= 0) return false;
+    if (left >= band.right || left + width <= band.left) return false;
+    return top < band.bottom + 24 && top + height > band.top - 24;
+  }
 
   private moveFigure(figure: Figure, scrollY: number, dt: number) {
     const vh = this.vh;
