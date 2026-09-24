@@ -29,6 +29,15 @@ jobs:
       statuses: write
     env:
       NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      # actions/checkout's default ref for a pull_request event is the
+      # synthetic merge commit, not the PR's actual head commit, but lhci
+      # doesn't know about GitHub Actions' own SHA env vars, it falls back to
+      # `git rev-list --no-merges -n1 HEAD`. Without this override, the
+      # status checks it posts land on that invisible merge commit instead
+      # of the commit the PR (and this ruleset) actually tracks. Falls back
+      # to github.sha for workflow_dispatch, where there's no PR/merge
+      # commit involved and github.sha is already correct.
+      LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
