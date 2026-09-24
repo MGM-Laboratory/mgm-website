@@ -15,7 +15,12 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
-import { PROJECT_CATEGORY_LABELS, projectMediaUrl, type CmsProjectRecord } from "@/lib/project-cms";
+import {
+  PROJECT_CATEGORY_LABELS,
+  projectMediaUrl,
+  projectThemeId,
+  type CmsProjectRecord,
+} from "@/lib/project-cms";
 
 /** How long each featured project holds the image before the next one crossfades in. */
 const AUTOPLAY_DELAY = 6;
@@ -38,6 +43,11 @@ type Slide = { key: string; image: string; alt: string };
  * whose "melt" shader transition was far louder than this section calls
  * for; the images, the 6s autoplay, and the arrow/dot controls are
  * unchanged. Renders nothing if no project is currently featured.
+ *
+ * "View project" opts into the project zoom transition
+ * (components/transition/project-transition.tsx): the image box is the
+ * frame it zooms from (`data-project-transition-frame` names the project
+ * showing) and the active slide's picture is the one it carries in.
  */
 export function FeaturedProjectsSection({
   records,
@@ -170,6 +180,7 @@ export function FeaturedProjectsSection({
         {active ? (
           <div className="reveal-card mt-14 grid gap-8 opacity-0 sm:gap-10 lg:grid-cols-2 lg:items-center lg:gap-14">
             <div
+              data-project-transition-frame={active.slug}
               aria-label="Featured project images"
               aria-roledescription="carousel"
               className="relative h-80 overflow-hidden rounded-2xl bg-[var(--surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white/70 sm:h-96"
@@ -199,6 +210,7 @@ export function FeaturedProjectsSection({
                     // the section approaches, not on every homepage visit.
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
+                      data-project-transition-image={slide.key}
                       alt={slide.alt}
                       className="h-full w-full object-cover"
                       decoding="async"
@@ -263,6 +275,9 @@ export function FeaturedProjectsSection({
               <p className="mt-4 text-foreground/65">{active.project.summary}</p>
               <Link
                 href={`/projects/${active.slug}`}
+                data-project-transition=""
+                data-project-slug={active.slug}
+                data-project-theme={projectThemeId(active.project)}
                 className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90"
               >
                 View project

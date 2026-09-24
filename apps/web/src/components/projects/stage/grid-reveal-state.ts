@@ -17,6 +17,14 @@ export const gridRevealState = {
   y: 0,
 };
 
+/**
+ * Covers on screen at the reveal hold their opening's first frame until
+ * the list is this opaque (about 0.24 s into the 0.9 s fade): started on
+ * the reveal's first frame, the edge smear and most of the focus hunt
+ * played on a nearly transparent list and read as a washed-out blur.
+ */
+export const OPENING_MIN_REVEAL_OPACITY = 0.6;
+
 export function resetGridRevealState() {
   gridRevealState.started = false;
   gridRevealState.opacity = 0;

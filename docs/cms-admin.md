@@ -42,7 +42,7 @@ The API stores each collection as a slug-keyed JSONB `data` record. Prisma defin
 | Members           | `/member`, `/member/[slug]`             | profile photo crop/upload and structured profile fields                             |
 | Articles          | `/articles`, `/articles/[slug]`         | BlockNote body and cover uploads                                                    |
 | Publications      | `/publications`, `/publications/[slug]` | paper PDF, author photos, citations, preview metadata                               |
-| Projects          | `/projects`, `/projects/[slug]`         | contributor photos, gallery media, MP4/WebM demo video                              |
+| Projects          | `/projects`, `/projects/[slug]`         | detail page theme, CTA and services, ordered image and video media sections         |
 | Research          | `/research`, `/research/[slug]`         | initiative detail, linked outcomes, cover upload                                    |
 | Careers           | `/careers`, detail, apply               | openings, BlockNote detail, application inbox and CV files                          |
 | Events            | `/events`, `/events/[slug]`             | event media, registrations, calendar export, map-link resolution                    |
@@ -66,6 +66,29 @@ Large bodies must be streamed through the Next proxy, not parsed into `request.f
 Publication papers carry a visibility flag of their own. The API serves a paper only when the record states `paperHidden: false`, and answers 404 for every other record, so a hidden paper cannot be read from a known storage key. Papers that predate the flag, and every fresh upload, start hidden: the publication page keeps showing the DOI alone until an editor switches the Paper (PDF) card to Visible.
 
 When adding a media type, enforce the byte limit at the API, preserve the stream through the Next route handler, validate the file type, and ensure deletion cleans up the object as well as the JSON record.
+
+### Project detail fields
+
+A project record also carries the fields its detail page (`/projects/[slug]`, see [`projects-page.md`](projects-page.md)) is built from. Their schema lives in the shared package (`packages/shared/src/schemas/project-detail.ts`), so the API and the admin editor enforce the same limits. Every field is optional, which keeps older records and preview seeding valid.
+
+| Field         | Shape                                                                       | Limit                        |
+| ------------- | --------------------------------------------------------------------------- | ---------------------------- |
+| `theme`       | one of 20 preset ids (`apps/web/src/lib/project-themes.ts`)                 | preset ids only              |
+| `description` | detail page copy, paragraphs separated by a blank line                      | 520 characters               |
+| `cta`         | `{ label, url }`, a web URL or a site path                                  | label 28 characters          |
+| `services`    | short labels                                                                | 8 labels, 32 characters each |
+| `media`       | ordered sections `{ id, kind, size, key, width, height, alt?, posterKey? }` | 40 sections                  |
+
+- A media section is an image or a video (`kind`) shown at the `normal` or `full` size. Image keys come from the project image upload and video keys from the demo video upload. A video may carry a `posterKey`, an image key. The API refuses a section whose file is of the other kind.
+- `width` and `height` are the file's pixel size, recorded by the editor at upload so the page lays out before anything loads. Older records don't store sizes. For them a single-record read (`GET /cms/projects/:slug`) adds `mediaSizes`, measured once per image key with sharp and cached for 30 days, since keys never change.
+- A record without media sections derives them on the page: the cover at the full size, then the gallery at the normal size, then an uploaded demo video. A missing theme falls back to a stable pick from the slug, a missing description to the summary, and missing services to the tech stack.
+- The editor still writes `galleryKeys` from the image sections, so older readers (the homepage showcase, the list card) keep finding images.
+- Media-section videos play through the same video route as the demo video. A video is public when a published record uses it as its demo video or in a media section.
+- Saving deletes a stored file only when the record no longer references it anywhere: cover, gallery, media sections, posters, or an image block in the body. So pruning a picture from the gallery or the sections never breaks a body that still shows it. Deleting a project removes all of them.
+- The BlockNote body stays in the record and in the editor, but the detail page doesn't render it. The editor folds it into a collapsed "Write-up (archive)" section.
+- The media sections manager uploads a file as soon as it's added, so a file added and never saved stays in storage (there is no delete endpoint for unsaved uploads). Images over 5.5 MB are scaled to a 3840 px long edge and re-encoded as JPEG, because a base64 image just under 6 MB already exceeds the API's 8 MB request limit. Videos get their size, duration and a poster frame read in the browser before they stream through the video route.
+- Once a project has media sections, saving retires the old single demo video: an uploaded demo that no section shows is released (and its file deleted), and a URL or YouTube demo becomes an ordinary "Demo video" link. Replacing the cover also replaces any section that showed the old cover.
+- Removing every section saves an empty list, and an empty list derives again from the cover. To show fewer images, keep at least one section.
 
 ## Content seeding and failure behavior
 

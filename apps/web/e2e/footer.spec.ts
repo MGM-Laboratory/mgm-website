@@ -31,14 +31,21 @@ test.describe("footer", () => {
       await expect(link).toHaveAttribute("rel", "noopener noreferrer");
     }
 
+    // The header is frosted glass, a translucent tint of its surface colour,
+    // so the footer is compared against that opaque surface (resolved
+    // through a probe inside the header), not the header's own background.
     await expect
       .poll(() =>
         page.evaluate(() => {
           const footer = document.querySelector("footer");
           const header = document.querySelector("header");
-          return footer && header
-            ? getComputedStyle(footer).backgroundColor === getComputedStyle(header).backgroundColor
-            : false;
+          if (!footer || !header) return false;
+          const probe = document.createElement("span");
+          probe.style.backgroundColor = "var(--header-surface)";
+          header.append(probe);
+          const surface = getComputedStyle(probe).backgroundColor;
+          probe.remove();
+          return getComputedStyle(footer).backgroundColor === surface;
         }),
       )
       .toBe(true);

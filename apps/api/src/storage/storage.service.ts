@@ -86,6 +86,26 @@ export class StorageService {
     return signedUrl;
   }
 
+  /**
+   * Reads a stored object into memory, refusing anything larger than
+   * `maxBytes` (checked against the reported length before reading) and
+   * giving up after `timeoutMs`.
+   */
+  async readFile(key: string, maxBytes: number, timeoutMs = 15_000): Promise<Buffer> {
+    // S3Client has no request timeout of its own: a stalled read would hold
+    // its caller (and its worker slot) forever.
+    const response = await this.client.send(
+      new GetObjectCommand({ Bucket: this.requireBucket(), Key: key }),
+      { abortSignal: AbortSignal.timeout(timeoutMs) },
+    );
+    if ((response.ContentLength ?? 0) > maxBytes) {
+      throw new Error(`Object ${key} is larger than ${maxBytes} bytes`);
+    }
+    const bytes = await response.Body?.transformToByteArray();
+    if (!bytes) throw new Error(`Object ${key} has no body`);
+    return Buffer.from(bytes);
+  }
+
   async deleteFile(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.requireBucket(), Key: key }));
   }

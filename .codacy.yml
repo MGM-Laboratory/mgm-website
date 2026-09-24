@@ -9,3 +9,9 @@
 # scans the same files and finds nothing wrong.
 exclude_paths:
   - "apps/api/prisma/migrations/**"
+  # The e2e suite's CMS fixture server: a test-only process bound to 127.0.0.1
+  # that serves the committed fixture records and files to the web server under
+  # test (never deployed, no user input beyond the test runner's own requests).
+  # Its fs reads, path checks and redirects to itself trip the generic Node
+  # security rules meant for production servers.
+  - "apps/web/e2e/fixtures/**"

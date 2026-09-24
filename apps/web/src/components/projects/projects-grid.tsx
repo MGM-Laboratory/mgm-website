@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 
 import { ProjectCard } from "@/components/projects/project-card";
+import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import {
   gridRevealState,
   resetGridRevealState,
@@ -11,6 +12,11 @@ import {
 import { ProjectsStage } from "@/components/projects/stage/projects-stage";
 import { getStageMode, waitForStageMode } from "@/components/projects/stage/stage-registry";
 import type { CmsProjectRecord } from "@/lib/project-cms";
+import {
+  clearProjectReturn,
+  peekProjectReturn,
+  type ProjectReturn,
+} from "@/lib/project-transition";
 import { markGridRevealStarted, waitForProjectsIntro } from "@/lib/projects-intro";
 import { onReducedMotion } from "@/lib/reduced-motion";
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
@@ -30,6 +36,44 @@ const STAGE_SETTLE_MS = 700;
 const INTRO_FAILSAFE_MS = 13_000;
 const RISE_PX = 28;
 const REVEAL_LOCK_OWNER = "projects-grid-reveal";
+// Back from a project with no remembered position (or one that no longer
+// shows the card), the card's top lands at this share of the viewport
+// height, as on lusion.co.
+const RETURN_CARD_TOP = 0.25;
+// A remembered position is kept only while it still shows this share of
+// the card's cover below the header.
+const RETURN_MIN_SHOWN = 0.5;
+
+/**
+ * Scrolls the list back to where a return note wants it: the remembered
+ * position, or the returned-to card's top at a quarter of the viewport.
+ * A jump (never through the page's smooth scroller, which is either
+ * missing or locked at this point).
+ */
+function restoreReturnScroll(section: HTMLElement, note: ProjectReturn) {
+  const viewport = window.innerHeight;
+  const card = section.querySelector<HTMLElement>(
+    `a[data-project-slug="${CSS.escape(note.slug)}"]`,
+  );
+  const frame = card?.querySelector<HTMLElement>("[data-project-transition-frame]") ?? card;
+  let top = note.scrollY ?? 0;
+  if (frame) {
+    const rect = frame.getBoundingClientRect();
+    const documentTop = rect.top + window.scrollY;
+    const fallback = documentTop - viewport * RETURN_CARD_TOP;
+    if (note.scrollY === undefined) {
+      top = fallback;
+    } else {
+      // The list may have changed since it was left (a new project, a
+      // resize): the remembered position must still show the card.
+      const at = documentTop - note.scrollY;
+      const shown = Math.min(at + rect.height, viewport) - Math.max(at, SITE_HEADER_HEIGHT);
+      if (shown < rect.height * RETURN_MIN_SHOWN) top = fallback;
+    }
+  }
+  const max = document.documentElement.scrollHeight - viewport;
+  window.scrollTo({ top: Math.round(Math.max(0, Math.min(top, max))), behavior: "instant" });
+}
 
 /**
  * The full project index: every published project, two cards per row on
@@ -44,9 +88,16 @@ const REVEAL_LOCK_OWNER = "projects-grid-reveal";
  * so visitors without JavaScript still see every project. The hide only
  * applies when motion is allowed: reduced motion has no reveal to wait
  * for, so those visitors see the list in the server HTML right away.
+ *
+ * Coming back from a project (a return note, lib/project-transition.ts),
+ * the list shows at once, unlocked, scrolled back to the project's card
+ * (in this layout effect, before the root layout's scroll reset, which the
+ * note's sender has told to stand down), so the zoom overlay can land on it.
  */
 export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
   const sectionRef = useRef<HTMLElement>(null);
+  // Read during render, like the hero: the overlay clears it on landing.
+  const [returnNote] = useState(peekProjectReturn);
 
   useIsomorphicLayoutEffect(() => {
     const section = sectionRef.current;
@@ -66,8 +117,30 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       reveal.opacity = 1;
       apply();
       markGridRevealStarted();
+      if (!returnNote) return;
+      // Reduced motion back from a project: only the position comes back.
+      // A link's own navigation scrolls to the top after this effect, so
+      // the jump is repeated on the next frame.
+      restoreReturnScroll(section, returnNote);
+      clearProjectReturn();
+      const frame = requestAnimationFrame(() => restoreReturnScroll(section, returnNote));
+      return () => cancelAnimationFrame(frame);
+    }
+
+    if (returnNote && !returnNote.restoreOnly) {
+      // Back from a project through the zoom: the list arrives as it was
+      // left, shown and unlocked. The overlay clears the note once it has
+      // landed on the card.
+      reveal.started = true;
+      reveal.opacity = 1;
+      reveal.y = 0;
+      apply();
+      markGridRevealStarted();
+      restoreReturnScroll(section, returnNote);
       return;
     }
+    // A reduced-motion note that outlived its preference: drop it.
+    if (returnNote) clearProjectReturn();
 
     // While the intro hides the list, it takes no clicks, no keyboard focus
     // and stays out of the accessibility tree (opacity alone hides none of
@@ -178,8 +251,12 @@ export function ProjectsGrid({ records }: { records: CmsProjectRecord[] }) {
       hold(false);
       tween?.kill();
       for (const stop of stops) stop();
+      // Leaving before the reveal: settle the signal so the cards' pending
+      // waits (each already cancelled) resolve and let this page go,
+      // instead of holding it until some later visit reveals.
+      if (!reveal.started) markGridRevealStarted();
     };
-  }, []);
+  }, [returnNote]);
 
   return (
     <>

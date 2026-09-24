@@ -73,6 +73,15 @@ For high-contrast dark sections (testimonials, dramatic stats, big quote breaks)
 - No tinted page backgrounds. The page background is white. Always.
 - No drop shadows on colored fills (a yellow chip with a yellow shadow is forbidden).
 
+### 2.5 Project detail themes (a scoped exception)
+
+Each project detail page (`/projects/[slug]`) wears one of 20 preset themes, picked per project in the admin editor. This is the one place the closed palette and the untinted page background don't apply: the page, the ambient topography and the site header on that page take the project's own colours, the way a case study carries its client's identity. Everywhere else the rules above hold.
+
+- The presets live in `apps/web/src/lib/project-themes.ts`. Four of them are built from the brand colours (Laboratory, Sunburst, Signal, Grove). Editors choose from the list and never enter free colours.
+- Every theme has a light and a dark variant, and the page follows the site's light or dark mode.
+- Every variant is contrast-checked: text on the background at least 7:1, button and hover labels at least 4.5:1, muted text at least 4.5:1, the highlight and icons at least 3:1. Re-check whenever a colour changes.
+- The theme is scoped to the page: its variables exist only while that page is mounted, and leaving it hands the header back to the site tokens.
+
 ---
 
 ## 3. Typography

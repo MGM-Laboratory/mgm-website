@@ -34,6 +34,32 @@
 | `/projects` cover left blurred, zoomed or clipped                       | Scroll the whole list slowly and with flicks, then back up and down again, and hover cards while scrolling: every cover ends sharp at rest (read `window.__projectsStage` in dev), no card shows its DOM and WebGL covers at once |
 | PDF viewer toolbar visual order diverges from keyboard tab order        | Tab through the open PDF viewer at &lt;640px and confirm focus moves top-to-bottom, matching what's visually first. Don't reorder with CSS `order-*` without reordering the DOM to match                                          |
 
+## The e2e suite and its CMS fixture API
+
+CI's e2e job (`.github/workflows/e2e.yaml`) builds and serves the web app with no API behind it. The suite brings its own for the project pages: `apps/web/e2e/fixtures/cms-fixture-server.mjs`, a small Node server with no dependencies. `playwright.config.ts` starts it as a second `webServer` and sets the web server's `CMS_API_URL` to it, so local runs and CI need nothing extra.
+
+- **What it serves.** Only the public project reads: the list, the feed, one record (404 for an unknown slug) with the `mediaSizes` it measures from the files, and the media and video redirects to its own `/files/<key>`, with Range support. The records live in `e2e/fixtures/cms/projects.json`, the files in `e2e/fixtures/cms/media/`.
+- **Everything else fails like a missing API.** Any other request gets its connection dropped with no response. A server-side `fetch()` then rejects exactly as it does when nothing listens on the port. A 404 would change some pages: several readers treat a 404 as "empty" and a failed fetch as an error (`/api/careers-cms` answers 200 for one and 503 for the other). Checked route by route: every public page renders the same status, text and images with the fixture as with no API, except `/projects` and the projects row on `/about`, which show the fixture projects.
+- **The homepage is unchanged.** Every record has `featured: false`, so the featured projects section stays empty. Full-page homepage screenshots, light and dark, are pixel-identical with and without the fixture, so the `visual.spec.ts` baselines still hold.
+- **The records.** Two rich ones with explicit themes (Solar Atlas on `sunburst`, Night Signal on `nebula`), with CTAs, services, links and media sections that mix normal and full images and one 2 s video. The third is shaped like a record saved before the detail page existed: a cover and a gallery only. Media keys follow the API's patterns (`project-<slug>-<uuid>.jpg`, `demo-<slug>-<uuid>.mp4`), because the site's media routes check them. Keep new media tiny: the whole folder is about 110 KB.
+- **Ports.** It listens on 127.0.0.1, on `CMS_FIXTURE_PORT` (4000 by default, where CI's build points). Its readiness path, `/__cms-fixture`, is one only the fixture answers. A real API on the port answers it with a 404, so the run stops with a clear error instead of reading real records.
+- **The specs.** `project-detail.spec.ts` and `project-transitions.spec.ts`, with shared helpers in `e2e/support/projects.ts`. They derive every expectation from `projects.json`. The route curtain's two layers carry `data-route-transition`, and the transition specs sample them every frame to prove the curtain never shows on a project zoom. Outside CI, both skip when the server under test isn't reading the fixture (a reused dev server).
+- **WebGL is off in these specs.** Playwright's Chromium starts with SwiftShader enabled, and `failIfMajorPerformanceCaveat` doesn't reject it. Headless Chromium therefore takes the WebGL paths, rendered in software (its renderer reads "SwiftShader"). Firefox and WebKit may take them too, on whatever GPU they find. A full-screen zoom rendered that way took up to 19 s on a busy machine, because GSAP's lag smoothing stretches every frame past 500 ms. So the specs make every WebGL context request fail, and the DOM fallbacks run on every engine in local runs and in CI alike. Set `E2E_WEBGL=1` to keep the WebGL paths on a machine with a GPU.
+- **Keyboard on WebKit.** WebKit on macOS moves focus to links only with Alt+Tab, as Safari does by default. The specs press Alt+Tab there and Tab everywhere else.
+
+Running the suite locally the way CI does, from the repo root:
+
+```sh
+NEXT_PUBLIC_API_URL=http://localhost:4010/api CI=true pnpm --filter web build
+cd apps/web
+CI=true PORT=3457 CMS_FIXTURE_PORT=4010 npx playwright test --retries=0 --workers=2
+```
+
+- Pick ports nothing else uses. The dev server holds 3000 and a local API usually holds 4000. `CI=true` makes Playwright start its own servers. Without it, Playwright reuses whatever already answers on `PORT`, and the dev server there reads the real CMS.
+- Set `NEXT_PUBLIC_API_URL` on the build. Otherwise `next build` reads `apps/web/.env.local`, which points at production.
+- The visual baselines exist for Linux only, so `visual.spec.ts` skips on macOS and Windows.
+- To check a spec for flakiness, repeat it: `--repeat-each=3 --workers=2 --retries=0`.
+
 ## Type & lint gates
 
 `pnpm typecheck` (web: `next typegen && tsc --noEmit`) and `pnpm lint` (web: eslint; api: oxlint) must be clean before declaring done: these are also the CI gates. `pnpm test` runs api vitest only (web has no test script).

@@ -50,18 +50,44 @@ function insideNestedScroller(node: Element | null) {
   return false;
 }
 
+/** Per-page tuning; every field defaults to the /projects behaviour. */
+export type SmoothScrollOptions = {
+  /** Wheel easing: Lenis damps with lambda = lerp × 60 per second. */
+  lerp?: number;
+  /** "both" also scrolls the page on sideways trackpad swipes. */
+  gestureOrientation?: "vertical" | "both";
+  /** Caps each wheel event's delta (px), the way lusion clamps its wheel. */
+  maxWheelDelta?: number;
+  /** Page Up, Page Down and Space step (px); defaults to most of a screen height. */
+  pageStep?: () => number;
+  /** Whether Arrow Left and Right step like Arrow Up and Down (read per key press). */
+  horizontalArrows?: () => boolean;
+};
+
 /** Starts the smooth scroller; resolves with its stop function. */
-export async function startSmoothScroll(): Promise<() => void> {
+export async function startSmoothScroll(options: SmoothScrollOptions = {}): Promise<() => void> {
   const { default: Lenis } = await import("lenis");
+  const lerp = options.lerp ?? WHEEL_LERP;
+  const maxWheelDelta = options.maxWheelDelta;
 
   const lenis = new Lenis({
     autoRaf: false,
-    lerp: WHEEL_LERP,
+    lerp,
     smoothWheel: true,
     syncTouch: false,
+    gestureOrientation: options.gestureOrientation ?? "vertical",
     // Wheel over a nested scroll area (the nav menu panel, when it
     // overflows) scrolls that area natively instead of the page.
     allowNestedScroll: true,
+    // Lenis reads the deltas after this hook runs, so clamping them here
+    // caps each wheel event.
+    virtualScroll: maxWheelDelta
+      ? (data) => {
+          data.deltaX = Math.max(-maxWheelDelta, Math.min(maxWheelDelta, data.deltaX));
+          data.deltaY = Math.max(-maxWheelDelta, Math.min(maxWheelDelta, data.deltaY));
+          return true;
+        }
+      : undefined,
   });
 
   // The route-change handler and the hero both reset the window scroll
@@ -101,13 +127,21 @@ export async function startSmoothScroll(): Promise<() => void> {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest(KEY_OWNERS) || insideNestedScroller(target)) return;
 
-    const page = window.innerHeight * PAGE_STEP;
+    const page = options.pageStep?.() ?? window.innerHeight * PAGE_STEP;
     let step = 0;
     switch (event.key) {
       case "ArrowDown":
         step = ARROW_STEP;
         break;
       case "ArrowUp":
+        step = -ARROW_STEP;
+        break;
+      case "ArrowRight":
+        if (!options.horizontalArrows?.()) return;
+        step = ARROW_STEP;
+        break;
+      case "ArrowLeft":
+        if (!options.horizontalArrows?.()) return;
         step = -ARROW_STEP;
         break;
       case "PageDown":
@@ -133,7 +167,7 @@ export async function startSmoothScroll(): Promise<() => void> {
     event.preventDefault();
     // Not "programmatic": repeated presses keep adding to the target, the
     // same way wheel notches do.
-    lenis.scrollTo(lenis.targetScroll + step, { programmatic: false, lerp: WHEEL_LERP });
+    lenis.scrollTo(lenis.targetScroll + step, { programmatic: false, lerp });
   };
   window.addEventListener("keydown", onKeyDown);
 

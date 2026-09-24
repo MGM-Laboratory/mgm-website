@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -10,7 +10,13 @@ import { startHeroPlay } from "@/components/projects/hero-play";
 import { CompetencyMotifShape } from "@/components/sections/competency-motif";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { scrollPageTo } from "@/lib/page-scroll";
-import { beginProjectsIntro, finishProjectsIntro } from "@/lib/projects-intro";
+import { peekProjectReturn } from "@/lib/project-transition";
+import {
+  beginProjectsIntro,
+  finishProjectsIntro,
+  markGridRevealStarted,
+} from "@/lib/projects-intro";
+import { onReducedMotion } from "@/lib/reduced-motion";
 import { waitForRouteReveal } from "@/lib/route-reveal";
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 
@@ -105,6 +111,11 @@ function countInkOffsets(count: number) {
  * The entrance plays alone: from mount until it completes, the page is held
  * at the top with scrolling locked and the project list waits
  * (lib/projects-intro.ts); the grid fades the list in once the intro ends.
+ *
+ * Coming back from a project through the zoom transition (a return note,
+ * lib/project-transition.ts), the page arrives as it was left: the hero is
+ * finished at once, nothing is locked and the list shows straight away,
+ * while the overlay zooms back out onto the project's card.
  */
 export function ProjectsHero({ count }: { count: number }) {
   const rootRef = useRef<HTMLElement>(null);
@@ -121,6 +132,11 @@ export function ProjectsHero({ count }: { count: number }) {
   if (skipEntranceForInternalNavRef.current === null) {
     skipEntranceForInternalNavRef.current = hasAppAlreadyBooted();
   }
+  // Also read during render: the overlay clears the note once it lands.
+  const [returning] = useState(() => {
+    const note = peekProjectReturn();
+    return Boolean(note && !note.restoreOnly);
+  });
 
   useIsomorphicLayoutEffect(() => {
     const root = rootRef.current;
@@ -141,13 +157,12 @@ export function ProjectsHero({ count }: { count: number }) {
     // over (see the intro below); any other visit makes sure the browser
     // has it back, since reloading a visit that held the page arrives
     // with the entry still set to "manual".
-    if ((reduced || count === 0) && history.scrollRestoration === "manual") {
+    if ((reduced || returning || count === 0) && history.scrollRestoration === "manual") {
       ScrollTrigger.clearScrollMemory("auto");
     }
-    if (reduced) {
-      // Nothing to wait for: the list shows at once and nothing is locked.
-      finishProjectsIntro();
-      gsap.set(chars, { yPercent: 0, opacity: 1 });
+    // The finished hero, as reduced motion shows it from the start.
+    const showFinal = () => {
+      gsap.set(chars, { yPercent: 0, rotation: 0, opacity: 1 });
       gsap.set(numberWrap, { yPercent: 0, opacity: 1 });
       gsap.set(arrow, { opacity: 1 });
       gsap.set(arrowPath, { drawSVG: "100%" });
@@ -155,7 +170,22 @@ export function ProjectsHero({ count }: { count: number }) {
       // No play: the eye stays a still, centered dot.
       gsap.set(q(".projects-hero-pupil"), { autoAlpha: 1 });
       enteredRef.current = true;
+    };
+    if (reduced) {
+      // Nothing to wait for: the list shows at once and nothing is locked.
+      finishProjectsIntro();
+      showFinal();
       return;
+    }
+    if (returning) {
+      // Back from a project: no intro, no lock, the list reveals at once
+      // (the grid sets its final state) and the idle play starts, parked
+      // while the overlay's scroll lock covers the page.
+      finishProjectsIntro();
+      markGridRevealStarted();
+      showFinal();
+      const stopReturnPlay = startHeroPlay(root, { slots: HERO_SLOTS, count });
+      return () => stopReturnPlay();
     }
 
     // Hide the pre-hydration state right away so nothing peeks through the
@@ -311,8 +341,30 @@ export function ProjectsHero({ count }: { count: number }) {
             { drawSVG: "0% 50%", duration: 0.35, ease: "power3.out" },
             1.35,
           );
+        // The first 0.1 s is an empty beat before the letters rise. Arriving
+        // through the curtain, the page has just been blank under the
+        // reveal already, so the rise starts at once.
+        if (skipEntranceForInternalNavRef.current === true) tl.time(0.1);
       });
     };
+
+    // Reduced motion switched on mid-intro: the entrance jumps to its end
+    // (its onComplete ends the intro, and the play it starts stays off
+    // under reduced motion), or, before it has started, the hero shows
+    // finished and the intro ends here. Either way the page unlocks now
+    // instead of animating on after the visitor asked for no motion.
+    const offReduced = onReducedMotion(() => {
+      if (cancelled || enteredRef.current) return;
+      if (tl) {
+        tl.progress(1);
+        return;
+      }
+      cancelled = true;
+      window.clearTimeout(fontTimer);
+      showFinal();
+      endIntro();
+      arrowLink?.removeAttribute("tabindex");
+    });
 
     if (skipEntranceForInternalNavRef.current === true) {
       // Arrived behind the transition curtain: play once it has fully
@@ -325,6 +377,7 @@ export function ProjectsHero({ count }: { count: number }) {
 
     return () => {
       cancelled = true;
+      offReduced();
       window.clearTimeout(fontTimer);
       // Leaving mid-intro (or Strict Mode's rehearsal unmount) must never
       // strand the lock or a list that waits for an intro nobody will end.
@@ -338,7 +391,7 @@ export function ProjectsHero({ count }: { count: number }) {
       stopPlay?.();
       arrowLink?.removeAttribute("tabindex");
     };
-  }, [count]);
+  }, [count, returning]);
 
   return (
     <section ref={rootRef} className="relative pt-[4em] pb-[clamp(2.5rem,7vh,5rem)] md:pt-[12vh]">
@@ -374,6 +427,7 @@ export function ProjectsHero({ count }: { count: number }) {
             {RESIDENTS.map(({ key, shape }) => (
               <span
                 key={key}
+                data-resident={key}
                 className="projects-hero-resident absolute bottom-0 left-0 block size-[0.42em]"
               >
                 <span className="projects-hero-resident-body invisible relative block size-full">
@@ -416,7 +470,7 @@ export function ProjectsHero({ count }: { count: number }) {
           className="projects-hero-number absolute overflow-hidden font-mono text-[clamp(0.875rem,4vw,4rem)] leading-none font-medium text-[#0e1116] motion-safe:opacity-0 dark:text-white"
           style={countInkOffsets(count)}
         >
-          <span className="sr-only">{count} projects</span>
+          <span className="sr-only">{count === 1 ? "1 project" : `${count} projects`}</span>
           <span aria-hidden="true" className="projects-hero-number-text inline-block tabular-nums">
             {count}
           </span>

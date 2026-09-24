@@ -1,0 +1,49 @@
+name: Review policy
+
+# Pull requests opened by a code owner need no review; every other author's
+# pull request needs a code owner's approval on its latest commit
+# (docs/ci-cd.md § Governance). A required check, so the rule holds for
+# GitHub's own merge button as well as /merge. Re-evaluated on every push and
+# every review.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+concurrency:
+  group: review-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  review-policy:
+    name: Review policy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # The base branch's copy of CODEOWNERS and the policy script: never the
+      # pull request's own, which could rewrite its gate.
+      - name: Checkout base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Check the review policy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -f .github/scripts/review-policy-check.mjs ]; then
+            node .github/scripts/review-policy-check.mjs
+          else
+            # Only while the pull request that introduces the policy is open.
+            echo "The review policy isn't on the base branch yet: nothing to enforce."
+          fi

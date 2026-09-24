@@ -21,7 +21,11 @@ import {
   type PreparedCover,
 } from "@/components/projects/stage/cover-textures";
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
-import { gridRevealState } from "@/components/projects/stage/grid-reveal-state";
+import {
+  gridRevealState,
+  OPENING_MIN_REVEAL_OPACITY,
+} from "@/components/projects/stage/grid-reveal-state";
+import { createScrollDeltaFilter } from "@/components/projects/stage/scroll-jump";
 import { isScrollIdle, trackScrollIdle } from "@/components/projects/stage/scroll-idle";
 import { Spring } from "@/components/projects/stage/spring";
 import {
@@ -200,6 +204,13 @@ const EXPO_END = 1 - 2 ** -10;
 const expoOut = (x: number) => (x >= 1 ? 1 : (1 - 2 ** (-10 * x)) / EXPO_END);
 const expoOutRate = (x: number) => (x >= 1 ? 0 : (10 * Math.LN2 * 2 ** (-10 * x)) / EXPO_END);
 
+/**
+ * The card the project zoom overlay is landing on (coming back from its
+ * project): its cover stays hidden until the overlay swaps it in, so the
+ * stage neither takes it over nor draws it until the attribute goes.
+ */
+const isLanding = (card: Card) => card.frame.dataset.projectLanding !== undefined;
+
 function releaseCover(cover: PreparedCover | null) {
   if (!cover) return;
   if ("close" in cover.source) cover.source.close();
@@ -241,6 +252,7 @@ export class CoverEngine {
   private lastRevealY = Number.NaN;
 
   private lastScroll: number | null = null;
+  private readonly scrollMotion = createScrollDeltaFilter();
   private lens = 0;
   private velocity = 0;
   private readonly bow = new Spring(...BOW_SPRING);
@@ -311,7 +323,9 @@ export class CoverEngine {
       if (card.state === "prepared") this.upload(card);
       // Once the list is showing (a stage that got ready late), the frame
       // loop decides when each card can be taken over.
-      if (card.state === "uploaded" && !gridRevealState.started) this.attach(card);
+      if (card.state === "uploaded" && !gridRevealState.started && !isLanding(card)) {
+        this.attach(card);
+      }
     }
     this.renderDirty = true;
     return true;
@@ -783,10 +797,9 @@ export class CoverEngine {
     const scrollY = window.scrollY;
     const moved = this.lastScroll === null ? 0 : scrollY - this.lastScroll;
     this.lastScroll = scrollY;
-    // A jump of more than a screen in one frame is a teleport (End key, an
-    // anchor, a programmatic jump), not motion: it moves the covers but
-    // feeds none of the scroll physics.
-    const delta = Math.abs(moved) > vh ? 0 : moved;
+    // A jump (End, an anchor, a focus scroll) moves the covers but feeds
+    // none of the scroll physics (stage/scroll-jump.ts).
+    const delta = this.scrollMotion(moved, vh);
 
     // Lens.
     this.lens = Math.min(1, (this.lens + Math.abs(delta) / vh) * Math.exp(-LENS_DECAY * dt));
@@ -850,11 +863,18 @@ export class CoverEngine {
         this.loadCover(card);
       }
       if (card.state === "prepared" && !this.uploadedThisFrame) this.upload(card);
-      if (card.state === "uploaded") {
+      const landing = isLanding(card);
+      if (card.state === "uploaded" && !landing) {
         if (!revealed || !inRange) this.attach(card);
         else if (still) this.attachAtRest(card);
       }
       if (card.state !== "attached" || !card.mesh || !card.uniforms) {
+        card.inRange = inRange;
+        continue;
+      }
+      if (landing) {
+        if (card.mesh.visible) active = true;
+        card.mesh.visible = false;
         card.inRange = inRange;
         continue;
       }
@@ -867,9 +887,10 @@ export class CoverEngine {
         card.mesh.visible = false;
         continue;
       }
-      // It starts once enough of the frame is on screen; until then the
-      // card holds the opening's first frame, still and sharp.
-      if (card.opening === "armed" && inRange) {
+      // It starts once enough of the frame is on screen (and, at the
+      // reveal, once the list has faded mostly in); until then the card
+      // holds the opening's first frame, still and sharp.
+      if (card.opening === "armed" && inRange && alpha >= OPENING_MIN_REVEAL_OPACITY) {
         const onScreen = Math.min(bottom, vh) - Math.max(top, 0);
         if (onScreen >= OPENING_VISIBLE_SHARE * card.height) this.beginOpening(card);
       }

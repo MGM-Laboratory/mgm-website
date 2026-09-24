@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowUp,
   CalendarBlank,
+  CaretDown,
   Check,
   FloppyDisk,
   ImageSquare,
@@ -14,14 +15,12 @@ import {
   Tag,
   Trash,
   User,
-  VideoCamera,
   X,
-  YoutubeLogo,
 } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Cropper, { type Area } from "react-easy-crop";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { Member } from "@/data/members";
@@ -29,7 +28,6 @@ import type { ArticleBlock } from "@/lib/article-cms";
 import {
   draftToProject,
   emptyProjectDraft,
-  formatVideoSize,
   isProjectSlug,
   projectMediaUrl,
   projectToDraft,
@@ -38,19 +36,33 @@ import {
   PROJECT_CATEGORY_LABELS,
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
-  PROJECT_VIDEO_MODES,
   type CmsProjectRecord,
   type ProjectCategory,
   type ProjectContributor,
   type ProjectContributorKind,
   type ProjectDraft,
   type ProjectLink,
+  type ProjectMediaItem,
   type ProjectOrganization,
   type ProjectOutputLink,
   type ProjectStatus,
-  type ProjectVideoMode,
 } from "@/lib/project-cms";
 import { PhotoCropDialog, type PhotoCropPosition } from "@/components/admin/photo-crop-dialog";
+import { DetailPageFields } from "@/components/admin/project-editor/detail-page-fields";
+import {
+  MediaSections,
+  type MediaUploadStatus,
+} from "@/components/admin/project-editor/media-sections";
+import { Field, inputClass, textareaClass } from "@/components/admin/project-editor/ui";
+import {
+  cleanMediaItem,
+  detailErrorsFromApi,
+  hasDetailErrors,
+  noDetailErrors,
+  validateDetailFields,
+  type DetailErrors,
+  type DetailField,
+} from "@/components/admin/project-editor/validation";
 
 const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
   ssr: false,
@@ -60,11 +72,6 @@ const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
     </div>
   ),
 });
-
-const inputClass =
-  "h-10 w-full rounded-xl border border-[#d9dfeb] bg-white px-3 text-sm text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
-const textareaClass =
-  "min-h-24 w-full rounded-xl border border-[#d9dfeb] bg-white px-3 py-2.5 text-sm leading-6 text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
 
 const RESIDENCE_AFFILIATION = "MGM Laboratory, University of Brawijaya";
 
@@ -77,28 +84,6 @@ const OUTPUT_TYPES: { id: ProjectOutputLink["type"]; label: string }[] = [
 /** Site paths (a single leading slash) and http(s) URLs only, like the API. */
 function isSafeLink(value: string) {
   return /^https?:\/\//i.test(value) || /^\/(?!\/)/.test(value);
-}
-
-function Field({
-  children,
-  label,
-  hint,
-}: {
-  children: React.ReactNode;
-  label: string;
-  hint?: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-        {label}
-      </span>
-      {children}
-      {hint ? (
-        <p className="mt-1.5 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">{hint}</p>
-      ) : null}
-    </div>
-  );
 }
 
 function EditRow({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
@@ -197,25 +182,6 @@ function TagListEditor({
       ) : null}
     </div>
   );
-}
-
-async function fitImage(source: string, maxDimension: number, quality: number) {
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const element = new window.Image();
-    element.onload = () => resolve(element);
-    element.onerror = () => reject(new Error("This image could not be prepared."));
-    element.src = source;
-  });
-  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Your browser could not prepare this image.");
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = "high";
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", quality);
 }
 
 async function cropCover(source: string, crop: Area) {
@@ -331,87 +297,6 @@ function CoverCropDialog({
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-type GalleryItem = { id: string; dataUrl?: string; key?: string };
-
-function GalleryEditor({
-  items,
-  onAdd,
-  onRemove,
-}: {
-  items: GalleryItem[];
-  onAdd: (dataUrl: string) => void;
-  onRemove: (id: string) => void;
-}) {
-  const fileInput = useRef<HTMLInputElement>(null);
-  const pickFiles = async (files: FileList | null) => {
-    if (!files?.length) return;
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) continue;
-      const reader = new FileReader();
-      const raw = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error("This image could not be read."));
-        reader.readAsDataURL(file);
-      });
-      try {
-        onAdd(await fitImage(raw, 1600, 0.85));
-      } catch (error) {
-        toast.error("Image could not be prepared", {
-          description: error instanceof Error ? error.message : undefined,
-        });
-      }
-    }
-  };
-  return (
-    <div>
-      <div className="flex flex-wrap gap-3">
-        {items.map((item) => (
-          <div
-            className="group relative size-24 shrink-0 overflow-hidden rounded-xl bg-[#e8ecf4] dark:bg-[#1a202b]"
-            key={item.id}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              alt=""
-              className="size-full object-cover"
-              src={item.dataUrl ?? projectMediaUrl(item.key)}
-            />
-            <button
-              aria-label="Remove image"
-              className="absolute right-1 top-1 grid size-6 place-items-center rounded-lg bg-[#0e1116]/70 text-white opacity-0 transition group-hover:opacity-100"
-              onClick={() => onRemove(item.id)}
-              type="button"
-            >
-              <X size={13} weight="bold" />
-            </button>
-          </div>
-        ))}
-        <button
-          className="grid size-24 shrink-0 place-items-center rounded-xl border border-dashed border-[#c6cedd] text-[#8490a5] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/15 dark:text-white/40"
-          onClick={() => fileInput.current?.click()}
-          type="button"
-        >
-          <Plus size={20} />
-        </button>
-      </div>
-      <input
-        accept="image/*"
-        className="hidden"
-        multiple
-        onChange={(event) => {
-          void pickFiles(event.target.files);
-          event.currentTarget.value = "";
-        }}
-        ref={fileInput}
-        type="file"
-      />
-      <p className="mt-2 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">
-        These images fill the card carousel and the detail page gallery, in this order.
-      </p>
     </div>
   );
 }
@@ -870,6 +755,28 @@ function OutputEditor({
   );
 }
 
+/**
+ * What the unsaved-changes check compares. Media section sizes are left out:
+ * measuring an older record's sections fills them in without an edit, and
+ * the next save stores them.
+ */
+function editorSignature(
+  draft: ProjectDraft,
+  body: ArticleBlock[],
+  contributorPhotos: string[] = [],
+  removedContributorPhotos: string[] = [],
+) {
+  return JSON.stringify({
+    draft: {
+      ...draft,
+      media: (draft.media ?? []).map((item) => ({ ...item, width: 0, height: 0 })),
+    },
+    body,
+    contributorPhotos,
+    removedContributorPhotos,
+  });
+}
+
 function newLink(): ProjectLink {
   return { id: crypto.randomUUID(), label: "", url: "" };
 }
@@ -905,10 +812,9 @@ export function ProjectEditor({
   const [body, setBody] = useState<ArticleBlock[]>(initial.body);
   const [coverUpload, setCoverUpload] = useState<string>();
   const [coverToEdit, setCoverToEdit] = useState<string>();
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() =>
-    initial.draft.galleryKeys.map((key) => ({ id: crypto.randomUUID(), key })),
-  );
-  const [videoFile, setVideoFile] = useState<File>();
+  const [mediaStatus, setMediaStatus] = useState<MediaUploadStatus>({ busy: 0, failed: 0 });
+  // The detail page no longer renders the write-up, so it starts folded away.
+  const [writeUpOpen, setWriteUpOpen] = useState(false);
   const [contributorPhotos, setContributorPhotos] = useState<
     Record<string, ContributorPhotoUpload>
   >({});
@@ -918,30 +824,23 @@ export function ProjectEditor({
   const [photoToEdit, setPhotoToEdit] = useState<{ contributorId: string; image: string }>();
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
+  // Detail page validation: client errors show once a save was attempted
+  // (or the field was left); API 400s land on their field until it changes.
+  const [revealDetailErrors, setRevealDetailErrors] = useState(false);
+  const [apiDetailErrors, setApiDetailErrors] = useState<DetailErrors>(noDetailErrors);
+  const editorRoot = useRef<HTMLDivElement>(null);
   const [originalRecordSlug] = useState(initialRecord?.slug);
   const fileInput = useRef<HTMLInputElement>(null);
-  const videoInput = useRef<HTMLInputElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const photoTarget = useRef<string | undefined>(undefined);
 
-  const [baseline, setBaseline] = useState(() =>
-    JSON.stringify({
-      draft: initial.draft,
-      body: initial.body,
-      galleryKeys: initial.draft.galleryKeys,
-      videoFile: undefined,
-      contributorPhotos: [],
-      removedContributorPhotos: [],
-    }),
-  );
-  const signature = JSON.stringify({
+  const [baseline, setBaseline] = useState(() => editorSignature(initial.draft, initial.body));
+  const signature = editorSignature(
     draft,
     body,
-    galleryKeys: galleryItems.map((item) => item.key ?? item.id),
-    videoFile: videoFile?.name,
-    contributorPhotos: Object.keys(contributorPhotos).sort(),
-    removedContributorPhotos: Object.keys(removedContributorPhotos).sort(),
-  });
+    Object.keys(contributorPhotos).sort((left, right) => left.localeCompare(right)),
+    Object.keys(removedContributorPhotos).sort((left, right) => left.localeCompare(right)),
+  );
   const isDirty = Boolean(coverUpload) || baseline !== signature;
   useEffect(() => {
     onDirtyChange(isDirty);
@@ -960,12 +859,55 @@ export function ProjectEditor({
     () => coverUpload ?? projectMediaUrl(draft.coverKey),
     [coverUpload, draft.coverKey],
   );
-  const videoLimitMb = Math.floor(videoLimitBytes / 1024 / 1024);
-
   const updateDraft = <K extends keyof ProjectDraft>(key: K, value: ProjectDraft[K]) => {
     if (status === "saved") setStatus("idle");
     setDraft((current) => ({ ...current, [key]: value }));
   };
+  // Media sections change from async upload callbacks, so they update
+  // through the latest draft rather than the render that started them.
+  const updateMedia = useCallback((update: (items: ProjectMediaItem[]) => ProjectMediaItem[]) => {
+    setStatus((current) => (current === "saved" ? "idle" : current));
+    setDraft((current) => {
+      const items = current.media ?? [];
+      const next = update(items);
+      return next === items ? current : { ...current, media: next };
+    });
+    setApiDetailErrors((current) =>
+      current.media || Object.keys(current.mediaRows).length
+        ? { ...current, media: undefined, mediaRows: {} }
+        : current,
+    );
+  }, []);
+  const mediaUploadSlug = isProjectSlug(draft.slug) ? draft.slug : "draft";
+  const detailErrors = useMemo(() => validateDetailFields(draft), [draft]);
+  const detailFieldsOf: Record<"theme" | "description" | "cta" | "services", DetailField[]> = {
+    theme: ["theme"],
+    description: ["description"],
+    cta: ["ctaLabel", "ctaUrl"],
+    services: ["services"],
+  };
+  const updateDetail = <K extends "theme" | "description" | "cta" | "services">(
+    key: K,
+    value: ProjectDraft[K],
+  ) => {
+    updateDraft(key, value);
+    setApiDetailErrors((current) => {
+      const fields = detailFieldsOf[key];
+      if (!fields.some((field) => current[field])) return current;
+      const next = { ...current };
+      for (const field of fields) delete next[field];
+      return next;
+    });
+  };
+  /** Brings the first field flagged invalid into view once errors render. */
+  const focusFirstInvalid = () => {
+    window.requestAnimationFrame(() => {
+      const field = editorRoot.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+      field?.scrollIntoView({ block: "center" });
+      field?.focus({ preventScroll: true });
+    });
+  };
+
   const updateTitle = (title: string) => {
     setDraft((current) => ({
       ...current,
@@ -1010,21 +952,6 @@ export function ProjectEditor({
     setCoverToEdit(undefined);
   };
 
-  const chooseVideo = (file?: File) => {
-    if (!file) return;
-    if (file.type !== "video/mp4" && file.type !== "video/webm") {
-      toast.error("The demo video must be an MP4 or WebM file.");
-      return;
-    }
-    if (file.size > videoLimitBytes) {
-      toast.error(`The video must be under ${videoLimitMb} MB.`);
-      return;
-    }
-    setVideoFile(file);
-    if (!draft.videoName) updateDraft("videoName", file.name);
-    if (status === "saved") setStatus("idle");
-  };
-
   const openContributorPhotoPicker = (contributorId: string, file?: File) => {
     if (!file || !file.type.startsWith("image/")) return;
     const reader = new FileReader();
@@ -1051,59 +978,79 @@ export function ProjectEditor({
     if (status === "saved") setStatus("idle");
   };
 
-  const save = async (overrideDraft?: ProjectDraft) => {
+  /** Resolves true once the record is saved, false when validation or the request stops it. */
+  const save = async (overrideDraft?: ProjectDraft): Promise<boolean> => {
     let project = draftToProject(overrideDraft ?? draft);
     if (!project.title || !project.slug) {
       toast.error("Title and project URL are required.");
-      return;
+      return false;
     }
     if (!isProjectSlug(project.slug)) {
       toast.error("Project URL is not valid", {
         description: "Use lowercase letters, numbers, and hyphens.",
       });
-      return;
+      return false;
     }
     if (!project.summary.trim()) {
-      toast.error("Add a short description.");
-      return;
+      toast.error("Add a short summary.");
+      return false;
     }
     if (!project.categories.length) {
       toast.error("Choose at least one category.");
-      return;
+      return false;
     }
     if (project.startDate && project.endDate && project.endDate < project.startDate) {
       toast.error("The end date cannot be earlier than the start date.");
-      return;
-    }
-    if ((project.videoMode === "url" || project.videoMode === "youtube") && !project.videoUrl) {
-      toast.error("Add a video URL for this mode.");
-      return;
+      return false;
     }
     for (const link of project.links) {
       if (!link.label.trim() || !link.url.trim()) {
         toast.error("Every link needs a label and a URL.");
-        return;
+        return false;
       }
       if (!isSafeLink(link.url)) {
         toast.error("Links must be site paths or https:// URLs.");
-        return;
+        return false;
       }
     }
     for (const organization of project.organizations) {
       if (organization.url && !isSafeLink(organization.url)) {
         toast.error("Organization websites must use https:// URLs.");
-        return;
+        return false;
       }
     }
     for (const output of project.outputs) {
       if (!output.label.trim() || !output.href.trim()) {
         toast.error("Every linked output needs a label and a link.");
-        return;
+        return false;
       }
       if (!isSafeLink(output.href)) {
         toast.error("Linked outputs must use site paths or https:// URLs.");
-        return;
+        return false;
       }
+    }
+    if (mediaStatus.busy) {
+      toast.error("Media is still uploading", {
+        description: "Save once every section has finished uploading.",
+      });
+      return false;
+    }
+    if (mediaStatus.failed || project.media?.some((item) => !item.key)) {
+      toast.error("Some media sections have no file", {
+        description: "Retry or remove the sections whose upload failed.",
+      });
+      document.getElementById("project-media-sections")?.scrollIntoView({ block: "start" });
+      return false;
+    }
+    const detailCheck = validateDetailFields(overrideDraft ?? draft);
+    if (hasDetailErrors(detailCheck)) {
+      setRevealDetailErrors(true);
+      const { mediaRows, ...fields } = detailCheck;
+      toast.error("Check the detail page fields", {
+        description: Object.values(fields).find(Boolean) ?? Object.values(mediaRows)[0],
+      });
+      focusFirstInvalid();
+      return false;
     }
 
     setStatus("saving");
@@ -1132,6 +1079,7 @@ export function ProjectEditor({
       project = { ...project, contributors };
 
       if (coverUpload) {
+        const previousCover = project.coverKey;
         const response = await fetch(
           `/api/admin/projects/${encodeURIComponent(project.slug)}/media`,
           {
@@ -1142,51 +1090,35 @@ export function ProjectEditor({
         );
         if (!response.ok) throw new Error(await responseError(response, "Cover upload failed."));
         const uploaded = (await response.json()) as { key: string };
-        project = { ...project, coverKey: uploaded.key };
-      }
-
-      const galleryKeys: string[] = [];
-      for (const item of galleryItems) {
-        if (item.key) {
-          galleryKeys.push(item.key);
-          continue;
-        }
-        if (!item.dataUrl) continue;
-        const response = await fetch(
-          `/api/admin/projects/${encodeURIComponent(project.slug)}/media`,
-          {
-            body: JSON.stringify({ image: item.dataUrl }),
-            headers: { "content-type": "application/json" },
-            method: "POST",
-          },
-        );
-        if (!response.ok)
-          throw new Error(await responseError(response, "Gallery image upload failed."));
-        const uploaded = (await response.json()) as { key: string };
-        galleryKeys.push(uploaded.key);
-      }
-      project = { ...project, galleryKeys };
-
-      if (project.videoMode === "upload" && videoFile) {
-        const response = await fetch(
-          `/api/admin/projects/${encodeURIComponent(project.slug)}/video`,
-          {
-            body: videoFile,
-            headers: { "content-type": videoFile.type },
-            method: "POST",
-          },
-        );
-        if (!response.ok) throw new Error(await responseError(response, "Video upload failed."));
-        const uploaded = (await response.json()) as { key: string; size: number };
         project = {
           ...project,
-          videoKey: uploaded.key,
-          videoName: project.videoName?.trim() || videoFile.name,
-          videoSize: uploaded.size,
+          coverKey: uploaded.key,
+          // A section showing the old cover (always the case for sections
+          // derived from an older record) follows the new one; its size is
+          // measured again, since the crop may differ.
+          media: previousCover
+            ? project.media?.map((item) =>
+                item.kind === "image" && item.key === previousCover
+                  ? { ...item, key: uploaded.key, width: 0, height: 0 }
+                  : item,
+              )
+            : project.media,
         };
-      } else if (project.videoMode !== "upload") {
-        project = { ...project, videoKey: undefined, videoName: undefined, videoSize: undefined };
       }
+
+      // Media sections uploaded as they were added, so only their keys are
+      // saved here. The gallery keeps mirroring the image sections for
+      // older consumers (the homepage showcase, the list card fallback).
+      const media = (project.media ?? []).map(cleanMediaItem);
+      project = { ...project, ...retireDemoVideo(project, media) };
+      const galleryKeys = [
+        ...new Set(
+          media
+            .filter((item) => item.kind === "image" && item.key !== project.coverKey)
+            .map((item) => item.key),
+        ),
+      ].slice(0, 20);
+      project = { ...project, media, galleryKeys };
 
       const response = await fetch(
         `/api/admin/projects/${encodeURIComponent(originalRecordSlug ?? project.slug)}`,
@@ -1203,20 +1135,10 @@ export function ProjectEditor({
       setSlugTouched(true);
       setBody(savedRecord.body);
       setCoverUpload(undefined);
-      setGalleryItems(savedDraft.galleryKeys.map((key) => ({ id: crypto.randomUUID(), key })));
-      setVideoFile(undefined);
       setContributorPhotos({});
       setRemovedContributorPhotos({});
-      setBaseline(
-        JSON.stringify({
-          draft: savedDraft,
-          body: savedRecord.body,
-          galleryKeys: savedDraft.galleryKeys,
-          videoFile: undefined,
-          contributorPhotos: [],
-          removedContributorPhotos: [],
-        }),
-      );
+      setApiDetailErrors(noDetailErrors());
+      setBaseline(editorSignature(savedDraft, savedRecord.body));
       onSaved(savedRecord);
       window.dispatchEvent(new CustomEvent("mgm:project-updated", { detail: savedRecord }));
       const channel = new BroadcastChannel("mgm-project-cms");
@@ -1229,22 +1151,33 @@ export function ProjectEditor({
           ? "Saved as a draft. Publish it when the project is ready to go public."
           : `${savedRecord.project.title} is live at /projects/${savedRecord.project.slug}.`,
       });
+      return true;
     } catch (saveError) {
       setStatus("error");
       const message =
         saveError instanceof Error ? saveError.message : "The changes could not be saved.";
       setError(message);
       toast.error("Project was not saved", { description: message });
+      const fieldErrors = detailErrorsFromApi(message, project.media ?? []);
+      if (fieldErrors) {
+        setApiDetailErrors(fieldErrors);
+        focusFirstInvalid();
+      }
+      return false;
     }
   };
 
   // The Publication card's switch and button both flip and save in one
   // step, so publishing never depends on remembering the separate
   // "Save project" action above.
-  const togglePublish = () => {
+  const togglePublish = async () => {
     const nextDraft: ProjectDraft = { ...draft, draft: !draft.draft };
     setDraft(nextDraft);
-    void save(nextDraft);
+    // A refused or failed save puts the switch back, so it always shows
+    // the state the record is actually in.
+    if (!(await save(nextDraft))) {
+      setDraft((current) => ({ ...current, draft: !nextDraft.draft }));
+    }
   };
 
   const remove = async () => {
@@ -1268,7 +1201,7 @@ export function ProjectEditor({
   };
 
   return (
-    <div>
+    <div ref={editorRoot}>
       <div className="mt-10 flex flex-wrap items-start justify-between gap-5 border-b border-[#dee4ef] pb-7 dark:border-white/10">
         <div>
           <p className="font-mono text-[10px] font-bold tracking-[0.16em] text-brand-red uppercase">
@@ -1370,162 +1303,119 @@ export function ProjectEditor({
               value={draft.title}
             />
             <textarea
-              aria-label="Short description"
+              aria-describedby="project-summary-hint"
+              aria-label="Summary"
               className="mt-3 w-full resize-none bg-transparent text-base leading-7 text-[#5d687d] outline-none placeholder:text-[#c2c9d6] dark:text-white/55 dark:placeholder:text-white/20"
               onChange={(event) => updateDraft("summary", event.target.value)}
-              placeholder="A short description shown on the card and at the top of the project page"
+              placeholder="A one or two sentence summary of the project"
               rows={2}
               value={draft.summary}
             />
-          </div>
-
-          <div className="mt-5 space-y-2">
-            <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
-              Demo video
+            <p
+              className="mt-1 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35"
+              id="project-summary-hint"
+            >
+              <span className="font-semibold text-[#687187] dark:text-white/50">Summary.</span> Used
+              on project cards, in search results and in link previews. The detail page shows the
+              description below, and falls back to this summary while that is empty.
             </p>
-            <div className="flex h-10 items-center gap-1 rounded-xl border border-[#d9dfeb] bg-white p-1 dark:border-white/10 dark:bg-white/[0.045]">
-              {PROJECT_VIDEO_MODES.map((mode) => {
-                const labels: Record<ProjectVideoMode, string> = {
-                  none: "None",
-                  upload: "Upload",
-                  url: "Video URL",
-                  youtube: "YouTube",
-                };
-                return (
-                  <button
-                    aria-pressed={draft.videoMode === mode}
-                    className={`h-8 flex-1 rounded-lg text-xs font-semibold transition ${draft.videoMode === mode ? "bg-[#171b25] text-white dark:bg-white/90 dark:text-[#171b25]" : "text-[#768096] hover:text-[#171b25] dark:text-white/45 dark:hover:text-white"}`}
-                    key={mode}
-                    onClick={() => updateDraft("videoMode", mode)}
-                    type="button"
-                  >
-                    {labels[mode]}
-                  </button>
-                );
-              })}
-            </div>
-            {draft.videoMode === "upload" ? (
-              <div className="rounded-2xl border border-[#dfe4ee] bg-white p-4 dark:border-white/10 dark:bg-white/[0.035]">
-                {videoFile || draft.videoKey ? (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-red-50 text-brand-red dark:bg-brand-red/15">
-                      <VideoCamera size={20} weight="duotone" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">
-                        {videoFile?.name ?? draft.videoName ?? "demo video"}
-                      </span>
-                      <span className="mt-0.5 block font-mono text-[11px] text-[#8490a5]">
-                        {videoFile
-                          ? `${formatVideoSize(videoFile.size)} · not uploaded yet`
-                          : (formatVideoSize(draft.videoSize) ?? "uploaded")}
-                      </span>
-                    </span>
-                    <button
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-white hover:text-brand-blue dark:text-white/60 dark:hover:bg-white/10"
-                      onClick={() => videoInput.current?.click()}
-                      type="button"
-                    >
-                      Replace
-                    </button>
-                    <button
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-brand-red-50 hover:text-brand-red dark:text-white/60 dark:hover:bg-brand-red/15"
-                      onClick={() => {
-                        setVideoFile(undefined);
-                        updateDraft("videoKey", undefined);
-                        updateDraft("videoName", undefined);
-                        updateDraft("videoSize", undefined);
-                      }}
-                      type="button"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    className="grid w-full place-items-center gap-2 rounded-xl border border-dashed border-brand-red/40 bg-brand-red/[0.04] px-4 py-10 text-center transition hover:border-brand-red hover:bg-brand-red/[0.07]"
-                    onClick={() => videoInput.current?.click()}
-                    type="button"
-                  >
-                    <VideoCamera className="text-brand-red" size={30} weight="duotone" />
-                    <span className="text-sm font-semibold text-brand-red">
-                      Upload the demo video
-                    </span>
-                    <span className="font-mono text-[10px] tracking-[0.12em] text-[#8490a5] uppercase">
-                      MP4 or WebM · up to {videoLimitMb} MB
-                    </span>
-                  </button>
-                )}
-                <input
-                  accept="video/mp4,video/webm"
-                  className="hidden"
-                  onChange={(event) => {
-                    chooseVideo(event.target.files?.[0]);
-                    event.currentTarget.value = "";
-                  }}
-                  ref={videoInput}
-                  type="file"
-                />
-              </div>
-            ) : draft.videoMode === "url" ? (
-              <Field hint="A direct file link (S3, CDN) or a Vimeo URL." label="Video URL">
-                <input
-                  className={inputClass}
-                  onChange={(event) => updateDraft("videoUrl", event.target.value)}
-                  placeholder="https://player.vimeo.com/video/... or https://.../demo.mp4"
-                  value={draft.videoUrl ?? ""}
-                />
-              </Field>
-            ) : draft.videoMode === "youtube" ? (
-              <Field label="YouTube URL">
-                <div className="flex items-center gap-1.5">
-                  <YoutubeLogo className="shrink-0 text-[#8490a5]" size={16} />
-                  <input
-                    className={inputClass}
-                    onChange={(event) => updateDraft("videoUrl", event.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    value={draft.videoUrl ?? ""}
-                  />
-                </div>
-              </Field>
-            ) : null}
           </div>
 
-          <div className="mt-5 rounded-2xl border border-[#dfe4ee] bg-white p-1 shadow-[0_18px_45px_-35px_rgba(20,32,58,0.5)] dark:border-white/10 dark:bg-white/[0.03]">
-            <BlocknoteEditor
-              initialContent={body}
-              mediaBase="/api/projects-cms/media"
-              onChange={setBody}
-              uploadPath={`/api/admin/projects/${encodeURIComponent(draft.slug || "draft")}/media`}
+          <div className="mt-8">
+            <DetailPageFields
+              apiErrors={apiDetailErrors}
+              draft={draft}
+              errors={detailErrors}
+              onChange={updateDetail}
+              revealAll={revealDetailErrors}
+            >
+              <div className="space-y-3">
+                {draft.links.map((link) => (
+                  <LinkEditor
+                    key={link.id}
+                    link={link}
+                    onChange={(next) =>
+                      updateDraft(
+                        "links",
+                        draft.links.map((item) => (item.id === next.id ? next : item)),
+                      )
+                    }
+                    onRemove={() =>
+                      updateDraft(
+                        "links",
+                        draft.links.filter((item) => item.id !== link.id),
+                      )
+                    }
+                  />
+                ))}
+              </div>
+              <div className={draft.links.length ? "mt-3" : undefined}>
+                <AddButton onClick={() => updateDraft("links", [...draft.links, newLink()])}>
+                  Add link
+                </AddButton>
+              </div>
+            </DetailPageFields>
+          </div>
+
+          <div className="mt-5">
+            <MediaSections
+              generalError={apiDetailErrors.media ?? detailErrors.media}
+              items={draft.media ?? []}
+              onChange={updateMedia}
+              onStatusChange={setMediaStatus}
+              published={Boolean(initialRecord && !initialRecord.project.draft)}
+              rowErrors={{ ...detailErrors.mediaRows, ...apiDetailErrors.mediaRows }}
+              uploadSlug={mediaUploadSlug}
+              videoLimitBytes={videoLimitBytes}
             />
           </div>
-          <p className="mt-3 text-xs text-[#9ba4b5] dark:text-white/35">
-            Type <span className="font-semibold">/</span> for blocks, drag the ⋮⋮ handle to
-            rearrange, and drop images straight into the page.
-          </p>
 
-          <div className="mt-8 space-y-5">
-            <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
-              <div>
-                <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
-                  Gallery
-                </p>
-                <p className="mt-1 text-xs leading-5 text-[#8490a5] dark:text-white/40">
-                  Additional screenshots and shots for the card carousel and the detail page
-                  gallery.
+          <section className="mt-5 rounded-2xl border border-[#dfe4ee] bg-white shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+            <button
+              aria-controls="project-write-up"
+              aria-expanded={writeUpOpen}
+              className="group flex w-full items-start justify-between gap-4 rounded-2xl p-4 text-left transition hover:bg-[#f8fafd] focus-visible:ring-4 focus-visible:ring-brand-blue/15 focus-visible:outline-none dark:hover:bg-white/[0.03]"
+              onClick={() => setWriteUpOpen((current) => !current)}
+              type="button"
+            >
+              <span className="min-w-0">
+                <span className="block font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
+                  Write-up (archive)
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-[#8490a5] dark:text-white/40">
+                  Kept with the project for reference. The detail page shows the description, media
+                  sections, services and links instead.
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2 pt-0.5 text-xs font-semibold text-[#5d687d] dark:text-white/55">
+                {body.length ? `${body.length} block${body.length === 1 ? "" : "s"}` : "Empty"}
+                <CaretDown
+                  aria-hidden="true"
+                  className="transition group-aria-expanded:rotate-180"
+                  size={14}
+                  weight="bold"
+                />
+              </span>
+            </button>
+            {writeUpOpen ? (
+              <div className="px-4 pb-4" id="project-write-up">
+                <div className="rounded-2xl border border-[#dfe4ee] bg-white p-1 shadow-[0_18px_45px_-35px_rgba(20,32,58,0.5)] dark:border-white/10 dark:bg-white/[0.03]">
+                  <BlocknoteEditor
+                    initialContent={body}
+                    mediaBase="/api/projects-cms/media"
+                    onChange={setBody}
+                    uploadPath={`/api/admin/projects/${encodeURIComponent(draft.slug || "draft")}/media`}
+                  />
+                </div>
+                <p className="mt-3 text-xs text-[#9ba4b5] dark:text-white/35">
+                  Type <span className="font-semibold">/</span> for blocks, drag the ⋮⋮ handle to
+                  rearrange, and drop images straight into the page.
                 </p>
               </div>
-              <GalleryEditor
-                items={galleryItems}
-                onAdd={(dataUrl) =>
-                  setGalleryItems((current) => [...current, { id: crypto.randomUUID(), dataUrl }])
-                }
-                onRemove={(id) =>
-                  setGalleryItems((current) => current.filter((item) => item.id !== id))
-                }
-              />
-            </div>
+            ) : null}
+          </section>
 
+          <div className="mt-8 space-y-5">
             <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
               <div className="flex items-center justify-between">
                 <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
@@ -1613,35 +1503,6 @@ export function ProjectEditor({
                 }
               >
                 Add organization
-              </AddButton>
-            </div>
-
-            <div className="space-y-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
-              <p className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35">
-                Links
-              </p>
-              <div className="space-y-3">
-                {draft.links.map((link) => (
-                  <LinkEditor
-                    key={link.id}
-                    link={link}
-                    onChange={(next) =>
-                      updateDraft(
-                        "links",
-                        draft.links.map((item) => (item.id === next.id ? next : item)),
-                      )
-                    }
-                    onRemove={() =>
-                      updateDraft(
-                        "links",
-                        draft.links.filter((item) => item.id !== link.id),
-                      )
-                    }
-                  />
-                ))}
-              </div>
-              <AddButton onClick={() => updateDraft("links", [...draft.links, newLink()])}>
-                Add link
               </AddButton>
             </div>
 
@@ -1948,4 +1809,32 @@ async function responseError(response: Response, fallback: string) {
   } catch {
     return fallback;
   }
+}
+
+/**
+ * The old single demo video has no editor of its own any more: media
+ * sections replaced it. So the save retires it when sections exist. An
+ * uploaded demo that no section shows any longer is released (the API then
+ * deletes the file), and a URL or YouTube demo becomes an ordinary link,
+ * which editors can change or remove like any other.
+ */
+function retireDemoVideo(project: ProjectDraft, media: ProjectMediaItem[]): Partial<ProjectDraft> {
+  if (!media.length || project.videoMode === "none") return {};
+  const cleared = {
+    videoMode: "none" as const,
+    videoKey: undefined,
+    videoName: undefined,
+    videoSize: undefined,
+    videoUrl: undefined,
+  };
+  if (project.videoMode === "upload") {
+    const shown = media.some((item) => item.kind === "video" && item.key === project.videoKey);
+    return shown ? {} : cleared;
+  }
+  const url = project.videoUrl?.trim();
+  if (!url || project.links.some((link) => link.url === url)) return cleared;
+  return {
+    ...cleared,
+    links: [...project.links, { ...newLink(), label: "Demo video", url }],
+  };
 }
