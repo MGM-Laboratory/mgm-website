@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { ArrowDownRight } from "lucide-react";
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from "react";
 
-import { onWorldState } from "@/components/articles/world/world-registry";
+import { getWorldMode, onWorldState } from "@/components/articles/world/world-registry";
 import type { ArticleCardData } from "@/lib/article-index";
+
+const subscribeWorldMode = (onChange: () => void) => onWorldState(() => onChange());
+const serverWorldMode = () => "pending" as const;
 
 /**
  * One article in the list: a real link with the cover (5:2), the title and
@@ -21,6 +24,12 @@ import type { ArticleCardData } from "@/lib/article-index";
  * The slot around the link is what `content-visibility: auto` applies to,
  * padded so the DOM hover and the focus ring are never clipped by its paint
  * containment; the world measures the slot while the card is far away.
+ *
+ * While the world draws the cards the DOM picture is not rendered at all:
+ * the world decodes its own covers, only for cards near the screen, and a
+ * lazy <img> would otherwise start a download for every card a fast scroll
+ * passes (the whole archive's covers, queued ahead of everything else).
+ * The server markup keeps it, for no-JS and the DOM list.
  */
 export function ArticleCard({ article, index }: { article: ArticleCardData; index: number }) {
   const slotRef = useRef<HTMLDivElement>(null);
@@ -31,6 +40,7 @@ export function ArticleCard({ article, index }: { article: ArticleCardData; inde
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const arrowRef = useRef<HTMLSpanElement>(null);
   const { slug, coverUrl, title, subtitle } = article;
+  const worldMode = useSyncExternalStore(subscribeWorldMode, getWorldMode, serverWorldMode);
 
   useEffect(() => {
     const slot = slotRef.current;
@@ -108,7 +118,7 @@ export function ArticleCard({ article, index }: { article: ArticleCardData; inde
         ref={linkRef}
       >
         <div className="article-card-cover" data-card-cover="" ref={coverRef}>
-          {coverUrl ? (
+          {coverUrl && worldMode !== "gl" ? (
             // The world decodes the same URL for its texture (same origin,
             // immutable), so this stays a plain image, never /_next/image.
             // eslint-disable-next-line @next/next/no-img-element
