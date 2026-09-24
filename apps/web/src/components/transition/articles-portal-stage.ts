@@ -786,7 +786,8 @@ export class PortalDom implements PortalFront {
       this.sheet.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) rotate(${(-12 * settle).toFixed(2)}deg) scale(${scale.toFixed(4)})`;
       if (frame.hole > 0) {
         const reach = Math.hypot(w, h) * 0.62;
-        const r = ease.inOut2(frame.hole) * reach * 1.1;
+        // The hole is already eased (see reveal): it opens at an even pace.
+        const r = frame.hole * reach * 1.1;
         const mask = `radial-gradient(circle at 50% 50%, transparent ${r.toFixed(1)}px, #000 ${(r + 48).toFixed(1)}px)`;
         this.sheet.style.maskImage = mask;
         this.sheet.style.setProperty("-webkit-mask-image", mask);
@@ -962,6 +963,9 @@ class Stage implements PortalStage {
     } else {
       f.sheet = 1;
       f.amount = 0;
+      // The sheet covers everything now: what it opens onto is the
+      // destination itself, never the fog it flew out of.
+      f.flood = 0;
       if (this.focus) this.focus.style.opacity = "1";
     }
     this.front.draw(f);
@@ -990,6 +994,7 @@ class Stage implements PortalStage {
       if (world) this.ascend(world, t / (INTERACTIVE_SHARE * R));
     } else {
       f.sheet = 1;
+      f.flood = 0;
       f.hole = ease.inOut2(fit(t, 0, 0.95 * R));
       if (this.focus) this.focus.style.opacity = (1 - ease.out1(fit(t, 0.1 * R, R))).toFixed(3);
       // A world still here means the way out was undone (back before the
