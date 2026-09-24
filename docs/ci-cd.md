@@ -167,7 +167,7 @@ Commenting `/preview` on a PR (maintainers/collaborators only) deploys a throwaw
 
 Commenting `/merge` on a PR (maintainers/CODEOWNERS only) runs `merge.yml`, entirely API-driven, no PR code is ever checked out:
 
-1. Checks every check-run and commit status against the PR's head commit, plus GitHub's own `mergeable` flag. Anything failing, still running, or a merge conflict → replies with what's blocking it and stops. Nothing is changed.
+1. Checks every check-run and commit status against the PR's head commit, plus GitHub's own `mergeable` flag, and the review policy: a pull request whose author isn't a code owner needs a code owner's approval on its head commit. Anything failing, still running, unapproved, or a merge conflict → replies with what's blocking it and stops. Nothing is changed.
 2. If everything's green: merges with a merge commit (not squash: this repo keeps granular history, see `docs/repo-history.md`), pinned to the exact head SHA it just checked.
 3. Only after GitHub confirms the merge, posts one combined comment thanking and tagging every GitHub-linked contributor represented in the PR commits (a small stats table, then the LGTM GIF).
 4. Deletes the head branch only if it's genuinely safe: same repo (not a fork), not the default branch, and no other open PR still points at it.
@@ -250,11 +250,11 @@ All other workflows still run on their explicit triggers: staging Docker builds 
 | GitGuardian                                              | 46505            |
 | Semgrep                                                  | 4965759          |
 
-**Never disable, even temporarily: `required_review_thread_resolution`, `require_code_owner_review`, and `require_last_push_approval` on the `pull_request` rule.** All three have already been toggled off and back on multiple times via the web UI's stale-resave problem above, `required_review_thread_resolution` alone across three separate incidents between 2026-09-21 and 2026-09-22, each one needing another edit later to restore it. Before saving any ruleset change, confirm none of these three dropped to `false`:
+**Review policy (set by the repository owner on 2026-09-24).** Pull requests opened by a code owner (`CODEOWNERS`: `@shirasakaren`) merge without anyone else's review. Every other author's pull request needs an approving review from a code owner on its latest commit. GitHub rulesets can't express "reviews required unless the author is a code owner", and GitHub never lets authors approve their own pull requests, so the `pull_request` rule requires no reviews (`required_approving_review_count: 0`, with `require_code_owner_review`, `require_last_push_approval` and `required_review_thread_resolution` all `false`) and `/merge` enforces the policy instead (`.github/scripts/review-policy.mjs`, called from `pr-merge.mjs`). Check the rule after any ruleset edit:
 
 ```bash
 gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743 \
-  --jq '.rules[] | select(.type=="pull_request") | .parameters | {required_review_thread_resolution, require_code_owner_review, require_last_push_approval}'
+  --jq '.rules[] | select(.type=="pull_request") | .parameters | {required_approving_review_count, require_code_owner_review, require_last_push_approval, required_review_thread_resolution}'
 ```
 
 ## Local
