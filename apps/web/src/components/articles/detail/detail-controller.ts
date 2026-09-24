@@ -44,6 +44,10 @@ import { NextThreshold } from "./next-threshold";
 
 /** How long a pending cover waits for the world's picture before the DOM one plays. */
 const GL_COVER_WAIT_MS = 1400;
+/** A world picture that arrives later than that may still take over, up to this long. */
+const LATE_GL_COVER_MS = 12000;
+/** How long the DOM emergence takes to settle (detail.css, ad-sea-settle). */
+const DOM_EMERGE_MS = 2700;
 const FONT_WAIT_MS = 1200;
 const REVEAL_WAIT_MS = 9000;
 /** The page reports ready once laid out and its cover decoded, or after this. */
@@ -103,6 +107,8 @@ export class ArticleController {
   private domCover: DomCover | null = null;
   private coverKind: "pending" | "gl" | "dom" = "pending";
   private coverEmerged = false;
+  /** The DOM cover stays for the visit (reduced motion, a lost world). */
+  private coverFinal = false;
   private offTone: (() => void) | null = null;
   private readonly cleanups: (() => void)[] = [];
   private disposed = false;
@@ -231,14 +237,16 @@ export class ArticleController {
     this.world = null;
     this.offTone?.();
     this.offTone = null;
-    if (mode === "dom" && this.coverKind === "gl") {
+    if (mode !== "dom") return;
+    this.coverFinal = true;
+    if (this.coverKind === "gl") {
       // The world went away (a lost context): the DOM picture takes over, settled.
       this.glCover = null;
       delete this.figure?.dataset.cover;
       this.coverKind = "dom";
       this.useDomCover().emerge(true);
     }
-    if (mode === "dom") for (const resolve of this.glWaiters.splice(0)) resolve(null);
+    for (const resolve of this.glWaiters.splice(0)) resolve(null);
   }
 
   /** What the page draws through the world behind a header point, if anything. */
@@ -268,11 +276,11 @@ export class ArticleController {
     const world = this.world;
     const url = this.o.data.coverUrl;
     if (!world || !url || !this.frame || this.reduced || !this.fine || !this.lenisOn) return;
-    if (this.glCover || this.glCoverLoading || this.coverKind === "dom") return;
+    if (this.glCover || this.glCoverLoading || this.coverFinal) return;
     this.glCoverLoading = true;
     void import("@/components/articles/world/detail/cover-layer").then(({ ArticleCoverLayer }) => {
       this.glCoverLoading = false;
-      if (this.disposed || this.world !== world || this.coverKind === "dom" || !this.frame) return;
+      if (this.disposed || this.world !== world || this.coverFinal || !this.frame) return;
       const theme = PROJECT_THEMES[this.o.data.themeId];
       const layer = new ArticleCoverLayer(world, {
         frame: this.frame,
@@ -284,7 +292,7 @@ export class ArticleController {
       layer.attach();
       void layer.ready.then((ok) => {
         if (this.disposed || this.glCover !== layer) return;
-        if (!ok || this.coverKind === "dom") {
+        if (!ok || this.coverFinal) {
           layer.dispose();
           this.glCover = null;
           for (const resolve of this.glWaiters.splice(0)) resolve(null);
@@ -327,16 +335,30 @@ export class ArticleController {
     const layer = instant ? null : await this.glCoverWithin(GL_COVER_WAIT_MS);
     if (this.disposed) return;
     if (layer && this.glCover === layer) {
-      this.coverKind = "gl";
-      if (this.figure) this.figure.dataset.cover = "gl";
-      layer.emerge();
+      this.showGlCover(layer, false);
       return;
     }
-    // The world's picture didn't make it in time (or can't run here).
+    // The world's picture isn't there yet (a first visit still loading the
+    // world) or can't be: the DOM cover emerges now, and a world picture
+    // that arrives later takes over once the DOM one has settled, so the
+    // water stays interactive.
     this.coverKind = "dom";
-    this.glCover?.dispose();
-    this.glCover = null;
     this.useDomCover().emerge(instant);
+    if (instant || this.coverFinal) return;
+    const settled = performance.now() + DOM_EMERGE_MS;
+    const late = await this.glCoverWithin(LATE_GL_COVER_MS);
+    if (!late || this.disposed || this.coverFinal || this.glCover !== late) return;
+    await delay(Math.max(0, settled - performance.now()));
+    if (this.disposed || this.coverFinal || this.glCover !== late) return;
+    this.showGlCover(late, true);
+    this.domCover?.dispose();
+    this.domCover = null;
+  }
+
+  private showGlCover(layer: ArticleCoverLayer, settled: boolean) {
+    this.coverKind = "gl";
+    if (this.figure) this.figure.dataset.cover = "gl";
+    layer.emerge(settled);
   }
 
   // ---------------------------------------------------------------- entrance
@@ -428,6 +450,7 @@ export class ArticleController {
     this.motion?.stopMotion();
     this.threshold?.dispose();
     this.threshold = null;
+    this.coverFinal = true;
     if (this.coverKind === "gl") {
       this.glCover?.dispose();
       this.glCover = null;
