@@ -43,6 +43,8 @@ export function createWorldUniforms() {
     uThemeDark: { value: new Color(WORLD_PALETTE.dark.fog) },
     /** CSS px per environment unit (the library is modelled in its own units). */
     uEnvScale: { value: 64 },
+    /** 0 on the list, 1 on an article (eased): thicker fog, quieter life. (WP2) */
+    uDetail: { value: 0 },
   };
 }
 
@@ -66,6 +68,7 @@ uniform float uTheme;
 uniform vec3 uThemeLight;
 uniform vec3 uThemeDark;
 uniform float uEnvScale;
+uniform float uDetail;
 
 float worldHash(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);

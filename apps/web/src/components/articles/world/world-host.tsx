@@ -13,6 +13,7 @@ import {
   resetWorldState,
   setWorldState,
 } from "@/components/articles/world/world-registry";
+import { qualityOverrides } from "@/components/articles/world/quality";
 import { runThemeWave } from "@/components/articles/world/theme-wave";
 import { articleDetailSlug, registerArticleWorldLayer } from "@/lib/article-transition";
 import { registerHeaderToneProvider } from "@/lib/header-tone";
@@ -129,13 +130,17 @@ export function ArticlesWorldHost() {
       offs.push(() => window.clearInterval(failsafe));
 
       import("@/components/articles/world/engine")
-        .then(({ LibraryEngine }) => {
+        .then(async ({ LibraryEngine }) => {
           if (cancelled) return;
-          let created: ArticlesWorldApi;
+          const overrides = qualityOverrides(window.location.search);
+          let created: InstanceType<typeof LibraryEngine>;
           try {
             created = new LibraryEngine({
-              tier: qualityTier(),
+              tier: overrides.tier ?? qualityTier(),
               dark: isDark(),
+              route: routeFor(window.location.pathname),
+              lockQuality: overrides.tier !== null || overrides.pixelRatio !== null,
+              pixelRatio: overrides.pixelRatio,
               onContextLost: () => {
                 teardown();
                 setWorldState("dom", null);
@@ -146,6 +151,10 @@ export function ArticlesWorldHost() {
             return;
           }
           engine = created;
+          // Warm the shaders before the first frame (and before the pages
+          // hand their cards over), so the world arrives without a hitch.
+          await created.start();
+          if (cancelled || engine !== created) return;
           created.setRoute(routeFor(window.location.pathname));
 
           // A toggle click stages a wave; the class change it commits plays it.

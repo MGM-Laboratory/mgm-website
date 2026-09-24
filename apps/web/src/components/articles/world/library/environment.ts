@@ -168,6 +168,8 @@ function archGeometry(span: number, rise: number, thickness: number, depth: numb
 export type LibraryEnvironment = {
   group: Group;
   update(time: number, dt: number, scrollSpeed: number): void;
+  /** Thins the library for a weaker device (the quality governor steps down). */
+  setTier(tier: QualityTier): void;
   dispose(): void;
 };
 
@@ -632,6 +634,12 @@ export function createLibraryEnvironment(
         floatMesh.setMatrixAt(index, matrix);
       });
       floatMesh.instanceMatrix.needsUpdate = true;
+    },
+    setTier(next) {
+      const limits = TIER_COUNTS[next];
+      pages.count = Math.min(counts.pages, limits.pages);
+      floatMesh.count = Math.min(counts.floaters, limits.floaters);
+      moteGeometry.setDrawRange(0, Math.min(counts.motes, limits.motes));
     },
     dispose() {
       for (const item of disposables) item.dispose();

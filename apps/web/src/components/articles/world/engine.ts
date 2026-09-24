@@ -19,6 +19,7 @@ import {
   type LibraryEnvironment,
 } from "@/components/articles/world/library/environment";
 import { WORLD_PALETTE, hexToUnit } from "@/components/articles/world/palette";
+import { QualityGovernor, type QualityLevel } from "@/components/articles/world/quality";
 import type {
   ArticlesWorldApi,
   QualityTier,
@@ -31,6 +32,11 @@ import type {
 } from "@/components/articles/world/world-api";
 import { createWorldUniforms, type WorldUniforms } from "@/components/articles/world/world-glsl";
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
+import {
+  isArticleCoverActive,
+  isArticleTransitionBusy,
+  onArticleTransitionChange,
+} from "@/lib/article-transition";
 import type { ProjectPalette } from "@/lib/project-themes";
 
 /**
@@ -48,7 +54,18 @@ import type { ProjectPalette } from "@/lib/project-themes";
  * after every "scroll" callback (Lenis) in the same tick, so the canvas and
  * the DOM never disagree by a frame (docs/animation-system.md gotcha #17).
  * The scene renders to an 8-bit target, then the screen pass (lens, motion
- * blur, grain, the transition wipe) draws it to the canvas.
+ * blur, grain, the transition wipe) draws it to the canvas. Nothing in the
+ * per-frame path allocates.
+ *
+ * Quality: the start level comes from a device guess; the governor
+ * (quality.ts) then watches real frame times and steps the pixel ratio and
+ * the tier down while frames miss.
+ *
+ * Routes: the list wears the full lens and the lively camera; an article
+ * wears grain only, a quieter camera and thicker fog. While an articles
+ * transition runs, the lens and the cards belong to it (it drives them
+ * through `transition`), so a route change mid-transition only moves the
+ * eased targets, and the rest applies when the transition lets go.
  *
  * Colour: the whole pipeline stays in display sRGB (colour management off,
  * raw textures), like the project cover stage, so palette hex values show
@@ -58,21 +75,35 @@ import type { ProjectPalette } from "@/lib/project-themes";
 const CAMERA_DISTANCE = 2000;
 /** Most device pixels drawn per frame, whatever the screen. */
 const MAX_PIXELS = 2560 * 1600;
-const TIER_PIXEL_RATIO: Record<QualityTier, number> = { high: 1.75, medium: 1.35, low: 1 };
 /** The lens at rest (about 17 px of fringe in a 1440 px corner, like unseen.co's). */
 const REST_DISTORT = -0.05;
 /** A first visit starts this warped and settles (unseen's 5 to 0.4 is 12.5 times). */
 const SETTLE_DISTORT = REST_DISTORT * 12.5;
+/** Seconds the camera, fog and particles take to follow a route change. */
+const ROUTE_EASE_SECONDS = 1;
 
 export type LibraryEngineOptions = {
   tier: QualityTier;
   dark: boolean;
+  route: WorldRoute;
   onContextLost: () => void;
+  /** Locks the governor (the `?worldtier=` and `?worlddpr=` overrides). */
+  lockQuality?: boolean;
+  /** Pixel ratio override. */
+  pixelRatio?: number | null;
 };
+
+function transitionOwnsTheLens() {
+  return isArticleTransitionBusy() || isArticleCoverActive();
+}
+
+/** Frame-rate independent smoothing: reaches ~63% of the way in `seconds`. */
+function follow(seconds: number, dt: number) {
+  return 1 - Math.exp(-dt / Math.max(seconds, 1e-3));
+}
 
 export class LibraryEngine implements ArticlesWorldApi {
   readonly canvas: HTMLCanvasElement;
-  readonly tier: QualityTier;
   readonly cards: CardsLayer;
   readonly transition: WorldTransitionApi;
   readonly fx: WorldFxApi;
@@ -82,7 +113,8 @@ export class LibraryEngine implements ArticlesWorldApi {
   private readonly scene = new Scene();
   private readonly overlay = new Scene();
   private readonly layers: { layer: WorldLayer; order: number }[] = [];
-  private frameState: WorldFrame = {
+  private readonly pointerState = { x: 0, y: 0 };
+  private readonly frameState: WorldFrame = {
     time: 0,
     dt: 0,
     scrollY: 0,
@@ -94,8 +126,9 @@ export class LibraryEngine implements ArticlesWorldApi {
     pointerSpeed: 0,
     scrolling: false,
   };
-  private pointer: { x: number; y: number } | null = null;
-  private pointerPrevious: { x: number; y: number } | null = null;
+  private hasPointer = false;
+  private readonly pointerPrevious = { x: 0, y: 0 };
+  private hadPointer = false;
   private pointerSpeed = 0;
   private blurAmount = 1;
   private readonly lensState = { distort: REST_DISTORT };
@@ -108,25 +141,43 @@ export class LibraryEngine implements ArticlesWorldApi {
   private readonly cardGroup = new Group();
   private readonly composite: Composite;
   private target: WebGLRenderTarget;
+  private readonly governor: QualityGovernor;
+  private level: QualityLevel;
+  private readonly pixelRatioOverride: number | null;
   private width = 1;
   private height = 1;
   private pixelRatio = 1;
-  private route: WorldRoute = { kind: "list" };
+  private route: WorldRoute;
+  private influenceTarget = 1;
+  private detailTarget = 0;
   private offFrame: (() => void) | null = null;
+  private offBusy: (() => void) | null = null;
   private paused = false;
   private disposed = false;
   private time = 0;
+  private lastFrameAt = 0;
   private lastScroll = 0;
   private scrollSpeed = 0;
   private readonly waveState = { radius: 0 };
   private waveTween: gsap.core.Tween | null = null;
   private themeTween: gsap.core.Tween | null = null;
+  private readonly themeState = { value: 0 };
+  private readonly fogLight = new Color();
+  private readonly fogDark = new Color();
+  private readonly scratch = new Color();
+  private readonly scratchTheme = new Color();
+  private readonly clearColor = new Color();
   private readonly onContextLost: () => void;
 
   constructor(options: LibraryEngineOptions) {
-    this.tier = options.tier;
     this.onContextLost = options.onContextLost;
+    this.pixelRatioOverride = options.pixelRatio ?? null;
     ColorManagement.enabled = false;
+
+    this.governor = new QualityGovernor(options.tier, (level) => this.applyLevel(level), {
+      locked: options.lockQuality,
+    });
+    this.level = this.governor.level;
 
     this.canvas = document.createElement("canvas");
     this.canvas.setAttribute("aria-hidden", "true");
@@ -157,11 +208,13 @@ export class LibraryEngine implements ArticlesWorldApi {
 
     this.uniforms = createWorldUniforms();
     this.uniforms.uDark.value = options.dark ? 1 : 0;
+    this.fogLight.setRGB(...hexToUnit(WORLD_PALETTE.light.fog));
+    this.fogDark.setRGB(...hexToUnit(WORLD_PALETTE.dark.fog));
 
     this.camera = new PerspectiveCamera(25, 1, 50, 80000);
     this.rig = new CameraRig(this.camera, CAMERA_DISTANCE);
 
-    this.environment = createLibraryEnvironment(this.uniforms, this.tier);
+    this.environment = createLibraryEnvironment(this.uniforms, this.level.tier);
     this.envGroup.add(this.environment.group);
     this.scene.add(this.envGroup, this.cardGroup);
 
@@ -223,14 +276,24 @@ export class LibraryEngine implements ArticlesWorldApi {
       uniforms: this.uniforms,
     };
 
+    this.route = options.route;
+    this.applyRoute(true);
+    this.rig.influence = this.influenceTarget;
+    this.uniforms.uDetail.value = this.detailTarget;
+    // When a transition lets go, the route it left the world on takes over
+    // the lens and the cards.
+    this.offBusy = onArticleTransitionChange(() => {
+      if (!transitionOwnsTheLens()) this.applyRoute(false);
+    });
+
     this.canvas.addEventListener("webglcontextlost", this.handleContextLost);
     window.addEventListener("resize", this.resize);
     window.addEventListener("pointermove", this.onPointerMove, { passive: true });
-    document.documentElement.addEventListener("pointerleave", this.onPointerLeave);
+    document.addEventListener("mouseout", this.onMouseOut);
+    window.addEventListener("blur", this.onPointerLeave);
     this.resize();
     document.body.appendChild(this.canvas);
     this.lastScroll = window.scrollY;
-    this.offFrame = addFrameCallback("render", this.frame);
 
     if (process.env.NODE_ENV !== "production") {
       Object.assign(window, {
@@ -244,6 +307,31 @@ export class LibraryEngine implements ArticlesWorldApi {
         },
       });
     }
+  }
+
+  get tier(): QualityTier {
+    return this.level.tier;
+  }
+
+  /**
+   * Compiles every program the first frames need (off the main thread where
+   * the driver can), then starts the frame loop. The host publishes the
+   * world only after this, so its first frame doesn't hitch.
+   */
+  async start() {
+    const warm = (async () => {
+      try {
+        await this.renderer.compileAsync(this.scene, this.camera);
+        await this.renderer.compileAsync(this.composite.scene, this.composite.camera);
+      } catch {
+        // A failed warm-up is not fatal: programs then compile on first draw.
+      }
+    })();
+    // Never wait on a slow driver for long: the rest compiles on first draw.
+    await Promise.race([warm, new Promise((resolve) => window.setTimeout(resolve, 2500))]);
+    if (this.disposed) return;
+    this.lastFrameAt = performance.now();
+    this.offFrame = addFrameCallback("render", this.frame);
   }
 
   addLayer(layer: WorldLayer, order = 0) {
@@ -264,10 +352,7 @@ export class LibraryEngine implements ArticlesWorldApi {
 
   setRoute(route: WorldRoute) {
     this.route = route;
-    const detail = route.kind === "detail";
-    this.rig.influence = detail ? 0.35 : 1;
-    this.composite.uniforms.uLens.value = detail ? 0 : 1;
-    this.cards.setVisible(!detail);
+    this.applyRoute(false);
   }
 
   setScheme(dark: boolean, options?: { wave?: { x: number; y: number } }) {
@@ -306,41 +391,44 @@ export class LibraryEngine implements ArticlesWorldApi {
       u.uThemeLight.value.setRGB(...hexToUnit(theme.light.bg));
       u.uThemeDark.value.setRGB(...hexToUnit(theme.dark.bg));
     }
-    const state = { value: u.uTheme.value };
-    this.themeTween = gsap.to(state, {
+    this.themeState.value = u.uTheme.value;
+    this.themeTween = gsap.to(this.themeState, {
       value: theme ? 1 : 0,
       duration: seconds,
       ease: "power2.inOut",
       onUpdate: () => {
-        u.uTheme.value = state.value;
+        u.uTheme.value = this.themeState.value;
       },
     });
   }
 
-  colorAt(): [number, number, number] {
-    const dark = this.uniforms.uDark.value;
-    const light = new Color(WORLD_PALETTE.light.fog);
-    const darkColor = new Color(WORLD_PALETTE.dark.fog);
-    const fog = light.lerp(darkColor, dark);
-    const theme = this.uniforms.uThemeLight.value
-      .clone()
-      .lerp(this.uniforms.uThemeDark.value, dark);
-    fog.lerp(theme, this.uniforms.uTheme.value);
-    return [Math.round(fog.r * 255), Math.round(fog.g * 255), Math.round(fog.b * 255)];
+  colorAt(x: number, y: number): [number, number, number] {
+    const u = this.uniforms;
+    const dark = this.darkAtPoint(x, y);
+    this.scratch.copy(this.fogLight).lerp(this.fogDark, dark);
+    this.scratchTheme.copy(u.uThemeLight.value).lerp(u.uThemeDark.value, dark);
+    this.scratch.lerp(this.scratchTheme, u.uTheme.value);
+    return [
+      Math.round(this.scratch.r * 255),
+      Math.round(this.scratch.g * 255),
+      Math.round(this.scratch.b * 255),
+    ];
   }
 
   /** What the last frame cost (dev probe and the verification scripts). */
   stats() {
     const { render, memory, programs } = this.renderer.info;
     return {
-      tier: this.tier,
+      tier: this.level.tier,
       pixelRatio: this.pixelRatio,
+      settled: this.governor.settled,
       calls: render.calls,
       triangles: render.triangles,
       points: render.points,
       geometries: memory.geometries,
       textures: memory.textures,
       programs: programs?.length ?? 0,
+      layers: this.layers.length,
     };
   }
 
@@ -349,7 +437,10 @@ export class LibraryEngine implements ArticlesWorldApi {
   }
 
   resume() {
+    if (!this.paused) return;
     this.paused = false;
+    this.lastFrameAt = performance.now();
+    this.governor.rest();
   }
 
   dispose() {
@@ -357,13 +448,16 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.disposed = true;
     this.offFrame?.();
     this.offFrame = null;
+    this.offBusy?.();
+    this.offBusy = null;
     for (const { layer } of this.layers.splice(0)) layer.dispose();
     this.lensTween?.kill();
     this.waveTween?.kill();
     this.themeTween?.kill();
     window.removeEventListener("resize", this.resize);
     window.removeEventListener("pointermove", this.onPointerMove);
-    document.documentElement.removeEventListener("pointerleave", this.onPointerLeave);
+    document.removeEventListener("mouseout", this.onMouseOut);
+    window.removeEventListener("blur", this.onPointerLeave);
     this.canvas.removeEventListener("webglcontextlost", this.handleContextLost);
     this.cards.dispose();
     this.environment.dispose();
@@ -379,20 +473,59 @@ export class LibraryEngine implements ArticlesWorldApi {
 
   // ---------------------------------------------------------------- internals
 
+  /** The scheme at a viewport point, the way darkAt() sees it (without the ragged edge). */
+  private darkAtPoint(x: number, y: number) {
+    const u = this.uniforms;
+    const wave = u.uWave.value;
+    if (wave.w < 0.5) return u.uDark.value;
+    const distance = Math.hypot(x - wave.x, y - wave.y) - wave.z;
+    const t = Math.min(1, Math.max(0, (26 - distance) / 52));
+    const k = t * t * (3 - 2 * t);
+    return u.uWaveFrom.value + (u.uWaveTo.value - u.uWaveFrom.value) * k;
+  }
+
+  /**
+   * Dresses the world for the route. The camera, fog and particle targets
+   * always move (they ease); the lens and the cards only when no transition
+   * holds them, or on the first frame.
+   */
+  private applyRoute(initial: boolean) {
+    const detail = this.route.kind === "detail";
+    this.influenceTarget = detail ? 0.35 : 1;
+    this.detailTarget = detail ? 1 : 0;
+    if (!initial && transitionOwnsTheLens()) return;
+    this.composite.uniforms.uLens.value = detail ? 0 : 1;
+    this.cards.setVisible(!detail);
+  }
+
+  private applyLevel(level: QualityLevel) {
+    const tierChanged = level.tier !== this.level.tier;
+    this.level = level;
+    if (tierChanged) this.environment.setTier(level.tier);
+    this.resize();
+  }
+
   private readonly handleContextLost = (event: Event) => {
     event.preventDefault();
     this.onContextLost();
   };
 
   private readonly onPointerMove = (event: PointerEvent) => {
-    this.pointer = { x: event.clientX, y: event.clientY };
+    this.pointerState.x = event.clientX;
+    this.pointerState.y = event.clientY;
+    this.hasPointer = true;
     if (event.pointerType === "touch") return;
     this.rig.pointer.x = (event.clientX / this.width) * 2 - 1;
     this.rig.pointer.y = -((event.clientY / this.height) * 2 - 1);
   };
 
+  /** The pointer left the window (mouseout to nowhere). */
+  private readonly onMouseOut = (event: MouseEvent) => {
+    if (!event.relatedTarget) this.onPointerLeave();
+  };
+
   private readonly onPointerLeave = () => {
-    this.pointer = null;
+    this.hasPointer = false;
     this.rig.pointer.x = 0;
     this.rig.pointer.y = 0;
   };
@@ -400,9 +533,9 @@ export class LibraryEngine implements ArticlesWorldApi {
   private readonly resize = () => {
     const width = Math.max(1, window.innerWidth);
     const height = Math.max(1, window.innerHeight);
-    const cap = TIER_PIXEL_RATIO[this.tier];
+    const cap = this.pixelRatioOverride ?? this.level.pixelRatio;
     const budget = Math.sqrt(MAX_PIXELS / (width * height));
-    this.pixelRatio = Math.max(0.75, Math.min(window.devicePixelRatio || 1, cap, budget));
+    this.pixelRatio = Math.max(0.5, Math.min(window.devicePixelRatio || 1, cap, budget));
     this.width = width;
     this.height = height;
     this.renderer.setPixelRatio(this.pixelRatio);
@@ -430,6 +563,9 @@ export class LibraryEngine implements ArticlesWorldApi {
 
   private readonly frame = (_time: number, dt: number) => {
     if (this.paused || this.disposed) return;
+    const now = performance.now();
+    this.governor.sample(now - this.lastFrameAt);
+    this.lastFrameAt = now;
     this.renderer.info.reset();
     this.time += dt;
     const u = this.uniforms;
@@ -451,39 +587,45 @@ export class LibraryEngine implements ArticlesWorldApi {
         : 0;
     this.composite.uniforms.uDistort.value = this.lensState.distort;
 
-    if (this.pointer && this.pointerPrevious) {
-      const moved = Math.hypot(
-        this.pointer.x - this.pointerPrevious.x,
-        this.pointer.y - this.pointerPrevious.y,
+    // Route easing: the camera quiets down and the fog thickens on an article.
+    const r = follow(ROUTE_EASE_SECONDS / 3, dt);
+    this.rig.influence += (this.influenceTarget - this.rig.influence) * r;
+    u.uDetail.value += (this.detailTarget - u.uDetail.value) * r;
+
+    if (this.hasPointer && this.hadPointer) {
+      const step = Math.hypot(
+        this.pointerState.x - this.pointerPrevious.x,
+        this.pointerState.y - this.pointerPrevious.y,
       );
-      this.pointerSpeed += (moved / Math.max(dt, 1 / 240) - this.pointerSpeed) * k;
+      this.pointerSpeed += (step / Math.max(dt, 1 / 240) - this.pointerSpeed) * k;
     } else {
       this.pointerSpeed *= 1 - k;
     }
-    this.pointerPrevious = this.pointer ? { ...this.pointer } : null;
+    this.hadPointer = this.hasPointer;
+    this.pointerPrevious.x = this.pointerState.x;
+    this.pointerPrevious.y = this.pointerState.y;
 
-    this.frameState = {
-      time: this.time,
-      dt,
-      scrollY,
-      scrollSpeed: this.scrollSpeed,
-      width: this.width,
-      height: this.height,
-      pixelRatio: this.pixelRatio,
-      pointer: this.pointer,
-      pointerSpeed: this.pointerSpeed,
-      scrolling: Math.abs(this.scrollSpeed) > 30,
-    };
+    const frame = this.frameState;
+    frame.time = this.time;
+    frame.dt = dt;
+    frame.scrollY = scrollY;
+    frame.scrollSpeed = this.scrollSpeed;
+    frame.width = this.width;
+    frame.height = this.height;
+    frame.pixelRatio = this.pixelRatio;
+    frame.pointer = this.hasPointer ? this.pointerState : null;
+    frame.pointerSpeed = this.pointerSpeed;
+    frame.scrolling = Math.abs(this.scrollSpeed) > 30;
 
     this.rig.update(dt);
     this.environment.update(this.time, dt, speedVh);
     this.cards.update(scrollY);
-    for (const { layer } of this.layers) layer.update(this.frameState);
+    for (const { layer } of this.layers) layer.update(frame);
 
-    const fog = new Color().setRGB(...hexToUnit(WORLD_PALETTE.light.fog));
-    fog.lerp(new Color().setRGB(...hexToUnit(WORLD_PALETTE.dark.fog)), u.uDark.value);
-    fog.lerp(u.uThemeLight.value.clone().lerp(u.uThemeDark.value, u.uDark.value), u.uTheme.value);
-    this.renderer.setClearColor(fog, 1);
+    this.clearColor.copy(this.fogLight).lerp(this.fogDark, u.uDark.value);
+    this.scratchTheme.copy(u.uThemeLight.value).lerp(u.uThemeDark.value, u.uDark.value);
+    this.clearColor.lerp(this.scratchTheme, u.uTheme.value);
+    this.renderer.setClearColor(this.clearColor, 1);
 
     this.renderer.setRenderTarget(this.target);
     this.renderer.render(this.scene, this.camera);
