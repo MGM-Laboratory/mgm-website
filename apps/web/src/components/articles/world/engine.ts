@@ -850,6 +850,7 @@ export class LibraryEngine implements ArticlesWorldApi {
 
     this.rig.update(dt);
     this.environment.update(this.time, dt, speedVh);
+    this.environment.trackWindow(this.camera, this.width, this.height);
     this.cards.update(scrollY);
     this.magic.setQuiet(u.uDetail.value);
     this.magic.setEnabled(!transitionOwnsTheLens());

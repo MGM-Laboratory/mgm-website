@@ -130,7 +130,13 @@ const WINDOW_FRAGMENT = /* glsl */ `
     float moon = smoothstep(A * 0.36, A * 0.33, length(mp));
     float halo = exp(-dot(mp, mp) / (A * A * 0.5));
     float stars = step(0.985, worldHash(floor(q * 5.0))) * (0.5 + 0.5 * sin(uTime * 2.0 + q.x * 7.0));
-    vec3 night = uMoonLight * (0.32 + 0.28 * high) + uMoonLight * halo * 0.45 + vec3(1.0) * moon * 0.85 + stars * 0.25;
+    // A deep night sky, bluer and brighter toward the moon, each leaded
+    // quarry a slightly different glass (indigo to cold blue).
+    vec2 quarry = floor(vec2(q.x + q.y, q.x - q.y) * 1.3);
+    float pane = worldHash(quarry + 7.0);
+    vec3 sky = mix(vec3(0.04, 0.07, 0.2), vec3(0.13, 0.22, 0.5), high);
+    sky *= mix(vec3(0.85, 0.8, 1.1), vec3(1.05, 1.1, 1.0), pane);
+    vec3 night = sky + uMoonLight * halo * 0.62 + vec3(1.0) * moon * 0.92 + stars * 0.45;
     vec3 light = themeTint(mix(sun, night, dark), dark);
     light += uFlood * vec3(0.4, 0.34, 0.22);
 
@@ -159,6 +165,9 @@ const HALO_FRAGMENT = /* glsl */ `
     vec2 p = (vUv - vec2(0.5, 0.52)) * vec2(1.0, 1.35);
     float r2 = dot(p, p);
     float g = exp(-r2 * 7.0) * 0.8 + exp(-r2 * 26.0) * 0.6;
+    // Faded to nothing at the quad's edges (the wide term alone never gets there).
+    vec2 e = abs(vUv - 0.5) * 2.0;
+    g *= (1.0 - smoothstep(0.55, 1.0, e.x)) * (1.0 - smoothstep(0.55, 1.0, e.y));
     g *= (0.92 + 0.08 * sin(uTime * 0.35)) * (1.0 - uSwallow) * (1.0 + uFlood * 1.5);
     g *= 1.0 - uDetail * 0.6;
     vec3 color = themeTint(mix(uSunLight, uMoonLight * 0.55, dark), dark);
@@ -213,6 +222,8 @@ export type GreatWindow = {
   group: Group;
   /** The heart of the window's light (library units), where the dawn flood blooms from. */
   anchor: Vector3;
+  /** The window's apex (library units): with the anchor, its size on screen. */
+  apex: Vector3;
   setNaveHalf(half: number): void;
   setRayCount(count: number): void;
   dispose(): void;
@@ -325,6 +336,7 @@ export function createGreatWindow(
   return {
     group,
     anchor: new Vector3(0, FLOOR_Y + SILL + height * 0.62, far),
+    apex: new Vector3(0, FLOOR_Y + SILL + height, far),
     setNaveHalf(half) {
       const a = Math.max(0.3, half - 0.3) * 0.82;
       pane.scale.set(2 * a, height, 1);

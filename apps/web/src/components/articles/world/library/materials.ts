@@ -61,6 +61,7 @@ const FRAGMENT = /* glsl */ `
   ${LIBRARY_COMMON}
   uniform float uRim;
   uniform float uGloss;
+  uniform float uReach;
   varying vec3 vColL;
   varying vec3 vColD;
   varying vec3 vWorld;
@@ -89,14 +90,14 @@ const FRAGMENT = /* glsl */ `
     color += (base + uGloss) * lanternLight(vLocal, n, css) * mix(1.0, 1.6, dark);
     // The dawn flood washes everything toward the light.
     color += uFlood * vec3(1.0, 0.93, 0.78) * 0.35;
-    gl_FragColor = vec4(libraryFog(color, vDepth, vWorld.y, dark), 1.0);
+    gl_FragColor = vec4(libraryFogReach(color, vDepth, vWorld.y, dark, uReach), 1.0);
   }
 `;
 
 export function solidMaterial(
   world: WorldUniforms,
   library: LibraryUniforms,
-  options: { rim?: number; gloss?: number } = {},
+  options: { rim?: number; gloss?: number; reach?: number } = {},
 ) {
   return new ShaderMaterial({
     uniforms: {
@@ -104,6 +105,7 @@ export function solidMaterial(
       ...library,
       uRim: { value: options.rim ?? 0.6 },
       uGloss: { value: options.gloss ?? 0 },
+      uReach: { value: options.reach ?? 1 },
     },
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,

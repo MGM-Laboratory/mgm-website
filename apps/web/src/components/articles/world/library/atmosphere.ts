@@ -37,6 +37,7 @@ const BACKDROP_FRAGMENT = /* glsl */ `
     float lift = exp(-dot(p, p) * 3.2);
     vec3 glow = mix(vec3(1.0, 0.98, 0.93), vec3(0.22, 0.36, 0.72), dark);
     fog += lift * mix(0.035, 0.055, dark) * glow * (1.0 + uFlood * 2.0) * (1.0 - uDetail * 0.7);
+    fog += windowScatter(worldFragCss(), dark);
     gl_FragColor = vec4(fog, 1.0);
   }
 `;
@@ -90,6 +91,12 @@ const SHEET_FRAGMENT = /* glsl */ `
     vec3 fog = worldFogColor(dark);
     vec3 veil = mix(fog + vec3(0.035, 0.03, 0.02), fog + vec3(0.02, 0.035, 0.07), dark);
     veil += uFlood * vec3(0.05, 0.04, 0.02);
+    // Mist in front of the window is lit by it: it glows, and thins, rather
+    // than laying grey gauze over the glass.
+    vec3 scatter = windowScatter(worldFragCss(), dark);
+    float lit = clamp(libraryLuma(scatter) * mix(28.0, 9.0, dark), 0.0, 1.0);
+    veil += scatter * 2.2;
+    a *= 1.0 - lit * 0.55;
     gl_FragColor = vec4(veil, a * mix(0.55, 0.7, dark));
   }
 `;

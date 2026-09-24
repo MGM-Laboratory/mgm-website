@@ -1,4 +1,4 @@
-import { Group, type Vector3 } from "three";
+import { Group, Vector3, type Camera } from "three";
 
 import { createAtmosphere } from "@/components/articles/world/library/atmosphere";
 import { createDrift } from "@/components/articles/world/library/drift";
@@ -40,6 +40,8 @@ export type LibraryEnvironment = {
   /** The heart of the great window's light, in the group's own units. */
   windowAnchor: Vector3;
   update(time: number, dt: number, scrollSpeed: number): void;
+  /** Finds the great window on screen (after the camera moved), for the light it scatters. */
+  trackWindow(camera: Camera, width: number, height: number): void;
   /** Moves the walls to ±`half` library units from the nave's axis. */
   setNaveHalfWidth(half: number): void;
   /** Thins the library for a weaker device (the quality governor steps down). */
@@ -57,9 +59,12 @@ export function createLibraryEnvironment(
 
   const stackMaterial = solidMaterial(uniforms, library, { rim: 1, gloss: 0.04 });
   const stoneMaterial = solidMaterial(uniforms, library, { rim: 0.6 });
+  // The arches carry further through the fog than the stacks: nested
+  // silhouettes receding to the window, high over the list.
+  const vaultMaterial = solidMaterial(uniforms, library, { rim: 4, reach: 1.9 });
 
   const stacks = createStacks(stackMaterial, { bays: layout.bays, bookMin: layout.bookMin });
-  const vault = createVault(stoneMaterial, { bays: layout.bays });
+  const vault = createVault(vaultMaterial, { bays: layout.bays });
   const windowLight = createGreatWindow(uniforms, library, {
     bays: layout.bays,
     rays: layout.shafts,
@@ -90,6 +95,8 @@ export function createLibraryEnvironment(
 
   let half = 6;
   let flow = 0;
+  const centre = new Vector3();
+  const apex = new Vector3();
 
   const setNaveHalfWidth = (next: number) => {
     half = next;
@@ -113,6 +120,18 @@ export function createLibraryEnvironment(
       library.uFlow.value = flow;
       drift.update(time, half);
     },
+    trackWindow(camera, width, height) {
+      group.updateMatrixWorld();
+      centre.copy(windowLight.anchor);
+      group.localToWorld(centre).project(camera);
+      apex.copy(windowLight.apex);
+      group.localToWorld(apex).project(camera);
+      const x = (centre.x * 0.5 + 0.5) * width;
+      const y = (0.5 - centre.y * 0.5) * height;
+      // The apex stands 0.38 of the window's height above its heart.
+      const halfHeight = (Math.abs(apex.y - centre.y) * 0.5 * height) / 0.76;
+      library.uWindowScreen.value.set(x, y, Math.max(40, halfHeight), 0);
+    },
     setNaveHalfWidth(next) {
       if (Math.abs(next - half) > 1e-3) setNaveHalfWidth(next);
     },
@@ -132,6 +151,7 @@ export function createLibraryEnvironment(
       drift.dispose();
       stackMaterial.dispose();
       stoneMaterial.dispose();
+      vaultMaterial.dispose();
       group.clear();
     },
   };

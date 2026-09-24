@@ -1,4 +1,4 @@
-import { Color } from "three";
+import { Color, Vector4 } from "three";
 
 import {
   LANTERN_AMP,
@@ -27,6 +27,11 @@ export function createLibraryUniforms() {
     uFlood: { value: 0 },
     /** The river's flow phase (advances faster while the list scrolls). */
     uFlow: { value: 0 },
+    /**
+     * The great window on screen, for the light it scatters into the fog:
+     * centre (CSS px), half its width on screen (CSS px), unused.
+     */
+    uWindowScreen: { value: new Vector4(0, 0, 200, 0) },
   };
 }
 
@@ -42,6 +47,7 @@ uniform vec3 uLanternLight;
 uniform vec3 uLanternDark;
 uniform float uFlood;
 uniform float uFlow;
+uniform vec4 uWindowScreen;
 
 const float LANTERN_STEP = ${f(LANTERN_STEP)};
 const float LANTERN_Z0 = ${f(LANTERN_Z0)};
@@ -121,11 +127,36 @@ vec3 themeTint(vec3 color, float dark) {
  * on an article a much thicker one, so body text always sits on something
  * close to the page colour.
  */
-vec3 libraryFog(vec3 color, float depth, float worldY, float dark) {
-  float f = worldFogAmount(depth, worldY);
+/**
+ * The window's light scattered in the fog toward the eye: the mist glows
+ * around the window (warm white by day, moonlight blue by night), so what
+ * stands far off in its direction becomes a silhouette against luminous
+ * air instead of fading into a flat grey. Added to the fog colour, so it
+ * weighs as much as the fog does.
+ */
+vec3 windowScatter(vec2 css, float dark) {
+  vec2 d = (css - uWindowScreen.xy) / max(uWindowScreen.z, 1.0);
+  d.y *= 0.62;
+  float r2 = dot(d, d);
+  float g = exp(-r2 * 0.55) * 0.7 + exp(-r2 * 0.09) * 0.3;
+  g *= (1.0 - uSwallow) * (1.0 - uDetail * 0.75) * (1.0 + uFlood * 1.5);
+  vec3 day = vec3(0.035, 0.03, 0.012);
+  vec3 night = vec3(0.05, 0.085, 0.19);
+  return mix(day, night, dark) * g;
+}
+
+vec3 libraryFogReach(vec3 color, float depth, float worldY, float dark, float reach) {
+  // reach > 1 lets a surface carry further through the fog (a silhouette
+  // against the light behind it): its depth past the fog's start counts less.
+  float f = worldFogAmount(uFogStart + (depth - uFogStart) / reach, worldY);
   float veil = mix(0.2, 0.08, dark);
   f = max(f, veil);
   f = mix(f, 1.0 - (1.0 - f) * 0.28, uDetail);
-  return mix(color, worldFogColor(dark), clamp(f, 0.0, 1.0));
+  vec3 fog = worldFogColor(dark) + windowScatter(worldFragCss(), dark);
+  return mix(color, fog, clamp(f, 0.0, 1.0));
+}
+
+vec3 libraryFog(vec3 color, float depth, float worldY, float dark) {
+  return libraryFogReach(color, depth, worldY, dark, 1.0);
 }
 `;
