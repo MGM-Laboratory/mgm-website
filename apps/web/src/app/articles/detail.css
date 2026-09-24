@@ -1219,6 +1219,87 @@ html[data-articles-world="gl"] .ad-story::before {
   text-transform: uppercase;
 }
 
+.ad-next-hint-plain {
+  display: none;
+}
+
+/* The next article's cover, waiting faintly in the fog behind its title. */
+.ad-next-ghost {
+  position: absolute;
+  top: 50%;
+  right: max(var(--ad-gutter), 50% - var(--ad-wide) / 2);
+  width: min(44%, 36rem);
+  aspect-ratio: 5 / 2;
+  overflow: hidden;
+  border-radius: var(--ad-radius);
+  opacity: 0.2;
+  translate: 0 -10%;
+  rotate: -3deg;
+  -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent);
+  mask-image: radial-gradient(closest-side, #000 55%, transparent);
+  pointer-events: none;
+  transition:
+    opacity 0.8s ease,
+    rotate 1.2s var(--ad-ease);
+}
+
+.ad-next-ghost img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.7);
+}
+
+@media (hover: hover) {
+  .ad-next:hover .ad-next-ghost {
+    opacity: 0.32;
+    rotate: -1.5deg;
+  }
+}
+
+@media (max-width: 767px) {
+  .ad-next-ghost {
+    top: auto;
+    bottom: 12%;
+    width: 78%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The invitation breathes while it waits. */
+  .ad-next-hint-pull {
+    animation: ad-breathe 2.8s ease-in-out infinite;
+  }
+
+  @keyframes ad-breathe {
+    50% {
+      opacity: 0.62;
+    }
+  }
+
+  /* Still while the pull is on (the flood's copy of it never breathes). */
+  .ad-next[data-pulling] .ad-next-hint-pull,
+  .ad-flood .ad-next-hint-pull {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-next-hint-pull,
+  .ad-next-bar {
+    display: none;
+  }
+
+  .ad-next-hint-plain {
+    display: inline;
+  }
+
+  .ad-next-ghost {
+    transition: none;
+  }
+}
+
 .ad-next-bar {
   position: relative;
   display: block;

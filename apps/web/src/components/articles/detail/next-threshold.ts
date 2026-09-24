@@ -423,6 +423,7 @@ export class NextThreshold {
       if (this.visible) {
         this.visible = false;
         if (this.flood) this.flood.root.style.visibility = "hidden";
+        delete this.o.section.dataset.pulling;
         this.writeTexts(this.base, 0, 0, 0, 0);
       }
       return;
@@ -431,6 +432,7 @@ export class NextThreshold {
     if (!this.visible) {
       this.visible = true;
       flood.root.style.visibility = "visible";
+      this.o.section.dataset.pulling = "";
       this.measureTravel();
     }
     // The copy sits exactly over the threshold's own block.
@@ -475,6 +477,7 @@ export class NextThreshold {
     if (!this.visible) {
       this.visible = true;
       flood.root.style.visibility = "visible";
+      this.o.section.dataset.pulling = "";
       this.measureTravel();
     }
     const walk = walkHeaderPalette(palette);

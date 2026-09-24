@@ -24,6 +24,13 @@ export function NextThreshold({ next }: { next: DetailNext }) {
       href={`/articles/${next.slug}`}
       prefetch={false}
     >
+      {next.coverUrl ? (
+        // The next article's cover, waiting faintly in the fog behind its title.
+        <span aria-hidden="true" className="ad-next-ghost">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img alt="" decoding="async" loading="lazy" src={next.coverUrl} />
+        </span>
+      ) : null}
       <span aria-hidden="true" className="ad-next-inner" data-ad-next-inner="">
         <span className="ad-next-label" data-ad-next-label="">
           <span className="ad-next-label-in">
@@ -38,7 +45,11 @@ export function NextThreshold({ next }: { next: DetailNext }) {
         </span>
         <span className="ad-next-foot">
           <span className="ad-next-hint" data-ad-next-hint="">
-            <span className="ad-next-hint-in">(Keep scrolling)</span>
+            <span className="ad-next-hint-in">
+              {/* Reduced motion has no pull: the threshold is a plain link. */}
+              <span className="ad-next-hint-pull">(Keep scrolling)</span>
+              <span className="ad-next-hint-plain">(Read it next)</span>
+            </span>
           </span>
           <span className="ad-next-bar">
             <span className="ad-next-bar-fill" data-ad-next-bar="" />
