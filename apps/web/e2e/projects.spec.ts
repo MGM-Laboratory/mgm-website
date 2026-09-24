@@ -1,10 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// CI runs the web build without an API, so /projects renders its empty
-// state there, while a local run against the CMS renders the full list.
-// These checks hold for both: the page loads cleanly, the hero reads as a
-// heading with its count, and the intro (which locks the page and hides
-// the list only while the hero's entrance plays) always lets go.
+// The suite's CMS fixture API (e2e/fixtures/cms) serves three projects, so
+// /projects renders its list here, while a reused local server can show a
+// real CMS's list or, with no API at all, the empty state. These checks
+// hold for all of them: the page loads cleanly, the hero reads as a heading
+// with its count, and the intro (which locks the page and hides the list
+// only while the hero's entrance plays) always lets go.
 
 const htmlOverflow = (page: Page) => page.evaluate(() => document.documentElement.style.overflow);
 const listOpacity = (page: Page) =>
