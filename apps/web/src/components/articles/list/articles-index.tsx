@@ -9,15 +9,18 @@ import { ArticlesHero } from "@/components/articles/list/articles-hero";
 import { BackToTop } from "@/components/articles/list/back-to-top";
 import { startDomReveal } from "@/components/articles/list/dom-reveal";
 import { requestArticleBatch } from "@/components/articles/list/index-request";
+import { forgetList, recallList, rememberList } from "@/components/articles/list/list-cache";
 import {
   entranceKind,
   startListEntrance,
   whenWorldDecided,
 } from "@/components/articles/list/list-entrance";
+import { restoreReturnScroll } from "@/components/articles/list/return-scroll";
 import { queryKey, useListQuery } from "@/components/articles/list/use-list-query";
 import { getArticlesWorld } from "@/components/articles/world/world-registry";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
 import {
+  ARTICLE_BATCH_MAX,
   ARTICLE_BATCH_SIZE,
   type ArticleCardData,
   type ArticleCategory,
@@ -26,16 +29,37 @@ import {
 import {
   ARTICLES_LIST_PATH,
   clearArticleArrival,
+  clearArticleReturn,
   markArticlePageReady,
+  noteArticleArrival,
   peekArticleArrival,
+  peekArticleReturn,
+  setArticleReturn,
+  type ArticleReturn,
 } from "@/lib/article-transition";
+import { skipScrollReset } from "@/lib/project-transition";
 import { scrollPageTo } from "@/lib/page-scroll";
 import { motionAllowed } from "@/lib/reduced-motion";
 
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+// Dev probe: stage the notes a transition would leave, to exercise the
+// list's return mode and entrance without the transitions.
+if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
+  Object.assign(window, {
+    __articlesList: {
+      setReturn: setArticleReturn,
+      noteArrival: noteArticleArrival,
+      skipScrollReset,
+      forget: forgetList,
+    },
+  });
+}
+
 /** Placeholder sheets shown for a batch in flight. */
 const PLACEHOLDERS = 4;
+/** Batches the return mode may load looking for the card it came back to. */
+const RETURN_BATCHES = 8;
 /** The longest the page waits (visible or not) before telling a transition it is ready. */
 const READY_CEILING_MS = 2600;
 
@@ -78,6 +102,11 @@ function mergeItems(known: ArticleCardData[], more: ArticleCardData[]) {
  * screen sink into the fog one after another, the scroll resets while
  * nothing shows, and the new cards rise from nearer. A newer query
  * supersedes one in flight.
+ *
+ * Back from an article (a return note) the list renders every batch it had
+ * (list-cache.ts) and restores its scroll in a layout effect, so the card
+ * the visitor opened is in view when the transition brings the list back;
+ * it tells the transition it is ready (`markArticlePageReady`) only then.
  */
 export function ArticlesIndex({
   initial,
@@ -90,13 +119,19 @@ export function ArticlesIndex({
   const currentKey = queryKey(query.settled);
   // Read during render: how the list is being entered (lib/article-transition.ts).
   const [arrival] = useState(() => peekArticleArrival(ARTICLES_LIST_PATH));
-  const [list, setList] = useState<ListState>(() => ({
-    items: initial.items,
-    total: initial.total,
-    nextOffset: initial.nextOffset,
-    key: queryKey(initialQuery),
-    failed: false,
-  }));
+  const [returnNote] = useState(peekArticleReturn);
+  const [list, setList] = useState<ListState>(() => {
+    const key = queryKey(initialQuery);
+    const recalled = returnNote ? recallList(key, initial.items) : null;
+    if (recalled) return { ...recalled, failed: false };
+    return {
+      items: initial.items,
+      total: initial.total,
+      nextOffset: initial.nextOffset,
+      key,
+      failed: false,
+    };
+  });
   const [loadingMore, setLoadingMore] = useState(false);
   const [retry, setRetry] = useState(0);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -104,6 +139,8 @@ export function ArticlesIndex({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const swapRef = useRef(0);
   const loadingRef = useRef(false);
+  const restoreRef = useRef<{ note: ArticleReturn; done: () => void } | null>(null);
+  const restoredRef = useRef<Promise<void>>(Promise.resolve());
 
   // Smooth wheel scrolling (fine pointers, motion allowed): unseen's list
   // glides with a slow ease and moves about 2 px per wheel px.
@@ -122,26 +159,88 @@ export function ArticlesIndex({
     };
   }, []);
 
-  // The entrance and the DOM reveal, before the first paint (and before
-  // the root layout's scroll reset, which runs after).
+  // The entrance, the DOM reveal and the return restore, before the first
+  // paint (and before the root layout's scroll reset, which runs after).
   useIsomorphicLayoutEffect(() => {
     const page = pageRef.current;
     const grid = gridRef.current;
     if (!page || !grid) return;
-    const kind = entranceKind({ arrival, returning: false, motion: motionAllowed() });
+    const returning = Boolean(returnNote && !returnNote.restoreOnly);
+    const kind = entranceKind({ arrival, returning, motion: motionAllowed() });
     if (arrival) clearArticleArrival(ARTICLES_LIST_PATH);
     const entrance = startListEntrance(page, kind);
     const stopReveal = startDomReveal(grid, { instant: kind === "return" || kind === "instant" });
+
+    let frame = 0;
+    if (returnNote) {
+      clearArticleReturn();
+      if (restoreReturnScroll(returnNote)) {
+        // A native link (reduced motion) scrolls to the top after this effect.
+        if (returnNote.restoreOnly) {
+          frame = requestAnimationFrame(() => restoreReturnScroll(returnNote));
+        }
+      } else {
+        // The card isn't in what is loaded: load on until it is (bounded).
+        restoredRef.current = new Promise<void>((resolve) => {
+          restoreRef.current = { note: returnNote, done: resolve };
+        });
+      }
+    }
     return () => {
+      cancelAnimationFrame(frame);
       entrance.dispose();
       stopReveal();
     };
-    // Mount only: the arrival note was read during the first render.
+    // Mount only: the notes were read during the first render.
   }, []);
 
+  // Return mode, card not loaded yet: fetch batches until it turns up.
+  useEffect(() => {
+    const pending = restoreRef.current;
+    if (!pending) return;
+    let cancelled = false;
+    void (async () => {
+      let items = list.items;
+      let total = list.total;
+      let nextOffset = list.nextOffset;
+      for (let i = 0; i < RETURN_BATCHES && nextOffset !== null; i += 1) {
+        if (items.some((item) => item.slug === pending.note.slug)) break;
+        const batch = await requestArticleBatch(query.settled, nextOffset, ARTICLE_BATCH_MAX);
+        if (cancelled) return;
+        if (!batch) break;
+        items = mergeItems(items, batch.items);
+        total = batch.total;
+        nextOffset = batch.nextOffset;
+      }
+      if (cancelled) return;
+      if (items.length === list.items.length) {
+        restoreRef.current = null;
+        pending.done();
+        return;
+      }
+      setList((current) => ({ ...current, items, total, nextOffset }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once for the pending restore.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ...and restore as soon as it is in the DOM.
+  useIsomorphicLayoutEffect(() => {
+    const pending = restoreRef.current;
+    if (!pending) return;
+    if (!list.items.some((item) => item.slug === pending.note.slug) && list.nextOffset !== null)
+      return;
+    restoreRef.current = null;
+    restoreReturnScroll(pending.note);
+    pending.done();
+  }, [list]);
+
   // Tell a transition bringing the list in that it can show it: once the
-  // world has decided and the cards have registered (their effects ran
-  // first) and been measured. Bounded.
+  // world has decided, the cards have registered (their effects ran first)
+  // and been measured, and any return restore is done. Bounded.
   useEffect(() => {
     const signal = { cancelled: false };
     let settled = false;
@@ -152,6 +251,7 @@ export function ArticlesIndex({
     };
     void (async () => {
       await whenWorldDecided(signal);
+      await restoredRef.current;
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       if (signal.cancelled) return;
       getArticlesWorld()?.cards.measure();
@@ -181,6 +281,11 @@ export function ArticlesIndex({
       window.clearTimeout(timer);
     };
   }, []);
+
+  // Keep what is loaded for a return from an article.
+  useEffect(() => {
+    if (list.key === currentKey && !list.failed) rememberList(list);
+  }, [list, currentKey]);
 
   // A new query replaces the list: the cards on screen sink into the fog,
   // the scroll resets while nothing shows, the new first batch rises.
