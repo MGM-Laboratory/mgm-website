@@ -7,6 +7,7 @@ import {
   PerspectiveCamera,
   Scene,
   UnsignedByteType,
+  Vector3,
   WebGLRenderTarget,
   WebGLRenderer,
 } from "three";
@@ -14,6 +15,14 @@ import {
 import { CameraRig } from "@/components/articles/world/camera-rig";
 import { CardsLayer } from "@/components/articles/world/cards/cards-layer";
 import { createComposite, type Composite } from "@/components/articles/world/fx/composite";
+import {
+  FRONT_BAND,
+  FRONT_SECONDS,
+  frontEase,
+  frontEdge,
+  frontReach,
+  type ThemeFront,
+} from "@/components/articles/world/fx/theme-front";
 import {
   createLibraryEnvironment,
   type LibraryEnvironment,
@@ -86,6 +95,8 @@ const REST_DISTORT = -0.05;
 const SETTLE_DISTORT = REST_DISTORT * 12.5;
 /** Seconds the camera, fog and particles take to follow a route change. */
 const ROUTE_EASE_SECONDS = 1;
+/** Most sparks a theme front throws per frame, by tier (the ring buffer's size bounds them). */
+const FRONT_SPARKS: Record<QualityTier, number> = { high: 12, medium: 8, low: 5 };
 
 export type LibraryEngineOptions = {
   tier: QualityTier;
@@ -169,8 +180,24 @@ export class LibraryEngine implements ArticlesWorldApi {
   private lastFrameAt = 0;
   private lastScroll = 0;
   private scrollSpeed = 0;
-  private readonly waveState = { radius: 0 };
-  private waveTween: gsap.core.Tween | null = null;
+  /** The theme switch's front in flight (setScheme with a wave). */
+  private readonly wave = {
+    active: false,
+    /** The page's DOM flips behind a clip that follows the front (a view transition). */
+    masked: false,
+    x: 0,
+    y: 0,
+    elapsed: 0,
+    reach: 1,
+    to: 0,
+    flooding: false,
+    /** How far the front must spread to reach the great window on screen. */
+    floodAt: 0,
+  };
+  private readonly frontState: ThemeFront = { x: 0, y: 0, radius: 0, time: 0, to: 0 };
+  /** Seconds since the dawn reached the window (negative: no flood). */
+  private floodAge = -1;
+  private readonly envGroupPoint = new Vector3();
   private themeTween: gsap.core.Tween | null = null;
   private readonly themeState = { value: 0 };
   private readonly fogLight = new Color();
@@ -378,33 +405,54 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.applyRoute(false);
   }
 
-  setScheme(dark: boolean, options?: { wave?: { x: number; y: number } }) {
+  setScheme(dark: boolean, options?: { wave?: { x: number; y: number }; masked?: boolean }) {
     const target = dark ? 1 : 0;
     const u = this.uniforms;
-    this.waveTween?.kill();
-    if (!options?.wave) {
-      u.uWave.value.w = 0;
+    // A wave cut short lands where it was going first, like the page's DOM
+    // does (a second view transition starts from the first one's end).
+    if (this.wave.active) this.endWave();
+    if (!options?.wave || u.uDark.value === target) {
       u.uDark.value = target;
       return;
     }
     const { x, y } = options.wave;
-    const reach = Math.hypot(Math.max(x, this.width - x), Math.max(y, this.height - y)) + 260;
+    const wave = this.wave;
+    wave.active = true;
+    wave.masked = options.masked ?? false;
+    wave.x = x;
+    wave.y = y;
+    wave.elapsed = 0;
+    wave.reach = frontReach(x, y, this.width, this.height);
+    wave.to = target;
+    wave.flooding = false;
     u.uWaveFrom.value = u.uDark.value;
     u.uWaveTo.value = target;
     u.uWave.value.set(x, y, 0, 1);
-    this.waveState.radius = 0;
-    this.waveTween = gsap.to(this.waveState, {
-      radius: reach,
-      duration: 1.6,
-      ease: "power2.inOut",
-      onUpdate: () => {
-        u.uWave.value.z = this.waveState.radius;
-      },
-      onComplete: () => {
-        u.uDark.value = target;
-        u.uWave.value.w = 0;
-      },
-    });
+    // Where the dawn floods from: the heart of the great window on screen.
+    this.envGroupPoint.copy(this.environment.windowAnchor);
+    this.environment.group.localToWorld(this.envGroupPoint).project(this.camera);
+    const bloom = this.composite.uniforms.uBloomAt.value;
+    bloom.set(
+      (this.envGroupPoint.x * 0.5 + 0.5) * this.width,
+      (0.5 - this.envGroupPoint.y * 0.5) * this.height,
+    );
+    wave.floodAt = Math.hypot(bloom.x - x, bloom.y - y);
+  }
+
+  /**
+   * The theme front in flight (the DOM's clip follows it every frame), or
+   * null when no switch is running.
+   */
+  waveFront(): ThemeFront | null {
+    const wave = this.wave;
+    if (!wave.active) return null;
+    const front = this.frontState;
+    front.x = wave.x;
+    front.y = wave.y;
+    front.radius = this.uniforms.uWave.value.z;
+    front.time = this.time;
+    front.to = wave.to;
+    return front;
   }
 
   setTheme(theme: { light: ProjectPalette; dark: ProjectPalette } | null, seconds = 0.8) {
@@ -475,7 +523,6 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.offBusy = null;
     for (const { layer } of this.layers.splice(0)) layer.dispose();
     this.lensTween?.kill();
-    this.waveTween?.kill();
     this.themeTween?.kill();
     window.removeEventListener("resize", this.resize);
     window.removeEventListener("pointermove", this.onPointerMove);
@@ -497,15 +544,74 @@ export class LibraryEngine implements ArticlesWorldApi {
 
   // ---------------------------------------------------------------- internals
 
-  /** The scheme at a viewport point, the way darkAt() sees it (without the ragged edge). */
+  /**
+   * The scheme at a viewport point, the way darkAt() sees it. While the
+   * page's DOM flips behind a view-transition clip, the only live DOM on
+   * screen is the part the front has already reached, so what sits behind
+   * it is the new scheme wherever it shows.
+   */
   private darkAtPoint(x: number, y: number) {
     const u = this.uniforms;
     const wave = u.uWave.value;
     if (wave.w < 0.5) return u.uDark.value;
-    const distance = Math.hypot(x - wave.x, y - wave.y) - wave.z;
-    const t = Math.min(1, Math.max(0, (26 - distance) / 52));
+    if (this.wave.masked) return u.uWaveTo.value;
+    const distance = Math.hypot(x - wave.x, y - wave.y) + frontEdge(x, y, this.time) - wave.z;
+    const t = Math.min(1, Math.max(0, (FRONT_BAND - distance) / (2 * FRONT_BAND)));
     const k = t * t * (3 - 2 * t);
     return u.uWaveFrom.value + (u.uWaveTo.value - u.uWaveFrom.value) * k;
+  }
+
+  /** The front lands: the scheme it brought is the resting one now. */
+  private endWave() {
+    const u = this.uniforms;
+    this.wave.active = false;
+    this.wave.masked = false;
+    u.uDark.value = this.wave.to;
+    u.uWave.value.w = 0;
+    this.composite.uniforms.uShiver.value = 0;
+  }
+
+  /**
+   * Moves a theme front one frame: its radius (the DOM's clip reads it
+   * back), the sparks racing along its edge, a night-fall's chromatic
+   * shiver, and the dawn's flood of light once it reaches the window.
+   */
+  private updateWave(dt: number) {
+    const wave = this.wave;
+    const fx = this.composite.uniforms;
+    if (wave.active) {
+      wave.elapsed += dt;
+      const p = Math.min(1, wave.elapsed / FRONT_SECONDS);
+      const radius = wave.reach * frontEase(p);
+      this.uniforms.uWave.value.z = radius;
+      const falling = wave.to > 0.5;
+      fx.uShiver.value = falling ? Math.sin(Math.PI * Math.min(1, p / 0.55)) ** 2 * 0.85 : 0;
+      if (!falling && !wave.flooding && radius >= wave.floodAt) {
+        wave.flooding = true;
+        this.floodAge = 0;
+      }
+      // Sparks along the part of the edge on screen, as many as its length
+      // asks for, capped by the tier.
+      const arc = Math.min(Math.PI * 2 * radius, 2 * (this.width + this.height));
+      const cap = FRONT_SPARKS[this.level.tier];
+      const front = this.waveFront();
+      if (front) this.magic.front(front, Math.min(cap, arc * dt * 0.32), this.width, this.height);
+      if (p >= 1) this.endWave();
+    }
+    const flood = this.environment.uniforms.uFlood;
+    if (this.floodAge >= 0) {
+      this.floodAge += dt;
+      const age = this.floodAge;
+      const rise = Math.min(1, age / 0.35);
+      const value = age < 0.35 ? rise * rise * (3 - 2 * rise) : Math.exp(-(age - 0.35) / 0.7);
+      flood.value = value;
+      fx.uBloom.value = value * 0.9;
+      if (age > 4) {
+        this.floodAge = -1;
+        flood.value = 0;
+        fx.uBloom.value = 0;
+      }
+    }
   }
 
   /**
@@ -717,6 +823,7 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.cards.update(scrollY);
     this.magic.setQuiet(u.uDetail.value);
     this.magic.setEnabled(!transitionOwnsTheLens());
+    this.updateWave(dt);
     this.magic.update(frame, this.frameHalf);
     for (const { layer } of this.layers) layer.update(frame);
 

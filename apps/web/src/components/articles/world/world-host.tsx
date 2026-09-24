@@ -14,8 +14,10 @@ import {
   setWorldState,
 } from "@/components/articles/world/world-registry";
 import { mountWorldCursor } from "@/components/articles/world/cursor/world-cursor";
+// Type only (erased): the engine and three.js stay in the dynamic import.
+import type { LibraryEngine } from "@/components/articles/world/engine";
 import { qualityOverrides } from "@/components/articles/world/quality";
-import { runThemeWave } from "@/components/articles/world/theme-wave";
+import { runThemeWave, themeWaveMasksDom } from "@/components/articles/world/theme-wave";
 import { articleDetailSlug, registerArticleWorldLayer } from "@/lib/article-transition";
 import { registerHeaderToneProvider } from "@/lib/header-tone";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
@@ -97,6 +99,23 @@ export function ArticlesWorldHost() {
     let engine: ArticlesWorldApi | null = null;
     const offs: (() => void)[] = [];
 
+    // The theme switch, staged for the whole visit: with the world up, a
+    // front from the toggle that the world and the page's DOM follow
+    // together (the class change the switch commits starts the world's
+    // half); in the DOM list, the page's half alone. Under reduced motion
+    // the toggle switches at once.
+    let waveSource: LibraryEngine | null = null;
+    let pendingWave: { dark: boolean; origin: { x: number; y: number }; masked: boolean } | null =
+      null;
+    const offSwitch = registerThemeSwitchHandler((request) => {
+      if (!motionAllowed()) return false;
+      pendingWave = waveSource
+        ? { dark: request.next === "dark", origin: request.origin, masked: themeWaveMasksDom() }
+        : null;
+      runThemeWave(request, waveSource);
+      return true;
+    });
+
     const teardown = () => {
       for (const off of offs.splice(0)) off();
       engine?.dispose();
@@ -158,18 +177,21 @@ export function ArticlesWorldHost() {
           if (cancelled || engine !== created) return;
           created.setRoute(routeFor(window.location.pathname));
 
-          // A toggle click stages a wave; the class change it commits plays it.
-          let pendingWave: { dark: boolean; origin: { x: number; y: number } } | null = null;
-
-          // Follow the site scheme from any source (the toggle, the OS, another tab).
+          // Follow the site scheme from any source (the toggle, the OS,
+          // another tab). Only a real flip counts: other code may touch
+          // <html>'s classes, and a stray mutation must not cut a wave short.
+          let lastDark = isDark();
+          created.setScheme(lastDark);
           const observer = new MutationObserver(() => {
-            if (!engine) return;
             const dark = isDark();
-            if (pendingWave && pendingWave.dark === dark) {
-              engine.setScheme(dark, { wave: pendingWave.origin });
+            if (dark === lastDark) return;
+            lastDark = dark;
+            const wave = pendingWave;
+            if (wave && wave.dark === dark) {
+              created.setScheme(dark, { wave: wave.origin, masked: wave.masked });
               pendingWave = null;
             } else {
-              engine.setScheme(dark);
+              created.setScheme(dark);
             }
           });
           observer.observe(document.documentElement, {
@@ -177,16 +199,11 @@ export function ArticlesWorldHost() {
             attributeFilter: ["class"],
           });
           offs.push(() => observer.disconnect());
-
-          // Stage the header toggle's switch as a wave from the toggle.
-          offs.push(
-            registerThemeSwitchHandler((request) => {
-              if (!engine || !motionAllowed()) return false;
-              pendingWave = { dark: request.next === "dark", origin: request.origin };
-              runThemeWave(request);
-              return true;
-            }),
-          );
+          waveSource = created;
+          offs.push(() => {
+            waveSource = null;
+            pendingWave = null;
+          });
 
           // The adaptive header reads the fog behind it (the canvas is
           // invisible to hit testing).
@@ -231,6 +248,7 @@ export function ArticlesWorldHost() {
 
     return () => {
       cancelled = true;
+      offSwitch();
       offReduced();
       offCursor?.();
       teardown();

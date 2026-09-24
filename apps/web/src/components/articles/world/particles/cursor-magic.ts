@@ -1,5 +1,6 @@
 import { Vector3, type PerspectiveCamera } from "three";
 
+import { frontRadiusAlong, type ThemeFront } from "@/components/articles/world/fx/theme-front";
 import { createPaperFlock, type PaperFlock } from "@/components/articles/world/particles/paper";
 import { createSparks, type Sparks } from "@/components/articles/world/particles/sparks";
 import type { QualityTier, WorldFrame } from "@/components/articles/world/world-api";
@@ -52,8 +53,8 @@ export type CursorMagic = {
   burst(x: number, y: number, count: number, speed?: number): void;
   /** A swarm of paper from a viewport point. */
   swarm(x: number, y: number): void;
-  /** Sparks along a theme switch's front (viewport px, radius px). */
-  front(x: number, y: number, radius: number, width: number, height: number, amount: number): void;
+  /** Sparks along a theme switch's front, on its ragged edge (viewport px). */
+  front(wave: ThemeFront, amount: number, width: number, height: number): void;
   setTier(tier: QualityTier): void;
   /** On an article: a gentler hand (fewer motes and flyers, smaller swarms). */
   setQuiet(quiet: number): void;
@@ -309,25 +310,36 @@ export function createCursorMagic(options: {
       paper.burst(point.x, point.y, point.z, count);
       api.burst(x, y, Math.round(8 * (1 - quiet * 0.5)), 0.6);
     },
-    front(x, y, radius, width, height, amount) {
+    front(wave, amount, width, height) {
       const n = Math.round(amount * (1 - quiet * 0.4));
-      for (let i = 0; i < n; i++) {
+      let emitted = 0;
+      // Only sparks that land on screen count (the front is mostly off it
+      // at the start and the end of its sweep).
+      for (let tries = 0; tries < n * 3 && emitted < n; tries++) {
         const angle = rb(0, Math.PI * 2);
-        const px = x + Math.cos(angle) * radius;
-        const py = y + Math.sin(angle) * radius;
-        if (px < -20 || py < -20 || px > width + 20 || py > height + 20) continue;
+        const ux = Math.cos(angle);
+        const uy = Math.sin(angle);
+        const r = frontRadiusAlong(wave.x, wave.y, ux, uy, wave.radius, wave.time) - rb(2, 18);
+        const px = wave.x + ux * r;
+        const py = wave.y + uy * r;
+        if (r <= 0 || px < -10 || py < -10 || px > width + 10 || py > height + 10) continue;
+        emitted += 1;
         sparks.unproject(px, py, TRAIL_Z + rb(-20, 40), point);
-        const along = rb(160, 420) * (rand() < 0.5 ? -1 : 1);
-        const out = rb(40, 160);
+        // Racing along the edge and a little behind it: beyond the front
+        // the page is still the old scheme's snapshot, which would cut them.
+        const along = rb(180, 460) * (rand() < 0.5 ? -1 : 1);
+        const inward = rb(20, 110);
+        const sx = -uy * along - ux * inward;
+        const sy = ux * along - uy * inward;
         sparks.emit(
           point.x,
           point.y,
           point.z,
-          -Math.sin(angle) * along + Math.cos(angle) * out,
-          -(Math.cos(angle) * along + Math.sin(angle) * out),
+          sx,
+          -sy,
           rb(-40, 40),
-          rb(0.45, 0.95),
-          rb(16, 30),
+          rb(0.35, 0.8),
+          rb(12, 26),
           "front",
         );
       }

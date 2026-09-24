@@ -1,5 +1,6 @@
 import { Color, Vector2, Vector4 } from "three";
 
+import { FRONT_BAND, FRONT_EDGE_GLSL } from "@/components/articles/world/fx/theme-front";
 import { WORLD_PALETTE } from "@/components/articles/world/palette";
 
 /**
@@ -92,17 +93,20 @@ vec2 worldFragCss() {
   return vec2(gl_FragCoord.x, uResolution.y - gl_FragCoord.y) / uPixelRatio;
 }
 
-/** How far a theme wave's front is from this fragment (negative inside it). */
+${FRONT_EDGE_GLSL}
+
+/**
+ * How far a theme wave's front is from this fragment (negative inside it).
+ * The edge is fx/theme-front.ts's, which the DOM's clip follows too.
+ */
 float waveDistance(vec2 css) {
-  float edge = (worldNoise(css * 0.009 + uTime * 0.15) - 0.5) * 140.0
-             + (worldNoise(css * 0.031 - uTime * 0.4) - 0.5) * 36.0;
-  return distance(css, uWave.xy) + edge - uWave.z;
+  return distance(css, uWave.xy) + frontEdge(css) - uWave.z;
 }
 
 /** The dark amount at this fragment: the resting scheme, or the wave's. */
 float darkAt() {
   if (uWave.w < 0.5) return uDark;
-  float k = smoothstep(26.0, -26.0, waveDistance(worldFragCss()));
+  float k = smoothstep(${FRONT_BAND.toFixed(1)}, -${FRONT_BAND.toFixed(1)}, waveDistance(worldFragCss()));
   return mix(uWaveFrom, uWaveTo, k);
 }
 

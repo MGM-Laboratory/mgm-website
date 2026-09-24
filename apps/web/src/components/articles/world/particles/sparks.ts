@@ -96,8 +96,13 @@ const FRAGMENT = /* glsl */ `
     vec3 light = mix(uGoldLight, uGlintLight, core);
     vec3 night = mix(uBlueDark, uEmberDark, step(0.66, vSeed)) * (1.0 + core * 0.9);
     vec3 color = mix(light, night, dark);
-    // Front sparks take the switch's colour: blue fire into the dark, dawn gold into the light.
-    if (vKind > 1.5 && vKind < 2.5) color = mix(uFrontDawn, uFrontInk, dark) * (1.0 + core);
+    // Front sparks take the switch's colour (by where it is going, not by
+    // the half-turned pixel they sit on): blue fire into the dark, dawn
+    // gold into the light.
+    if (vKind > 1.5 && vKind < 2.5) {
+      vec3 dawn = mix(uFrontDawn, uGlintLight, core * 0.8);
+      color = mix(dawn, uFrontInk * (1.0 + core), uWaveTo);
+    }
     if (vKind > 2.5) color = mix(vec3(0.05, 0.07, 0.14), uBlueDark, dark);
     float fog = smoothstep(2600.0, 9000.0, vDepth);
     float a = shape * vFade * (1.0 - fog) * uOpacity;

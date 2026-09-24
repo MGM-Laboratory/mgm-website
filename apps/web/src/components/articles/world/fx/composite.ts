@@ -11,6 +11,8 @@ import {
   type Texture,
 } from "three";
 
+import { FRONT_AHEAD } from "@/components/articles/world/fx/theme-front";
+import { WORLD_PALETTE } from "@/components/articles/world/palette";
 import { WORLD_COMMON, type WorldUniforms } from "@/components/articles/world/world-glsl";
 
 /**
@@ -24,6 +26,10 @@ import { WORLD_COMMON, type WorldUniforms } from "@/components/articles/world/wo
  * - Motion blur: a vertical smear along the scroll direction, as long as
  *   the list is fast. The same taps carry the spectral split, so a fast
  *   scroll fringes more at the edges, like a real lens.
+ * - The theme switch's front: by night-fall a band of deep ink with blue
+ *   fire along its edge (and a brief chromatic shiver over the screen), by
+ *   dawn a rim of gold with a warm haze behind it and a bloom from the
+ *   great window as it floods with light.
  * - Vignette and animated grain, weighted by scheme (a dirty vignette on
  *   white fog reads as smudge, so the light world keeps it faint).
  * - The transition wipe: a flat colour sweeping in from the right edge with
@@ -49,6 +55,15 @@ const FRAGMENT = /* glsl */ `
   uniform float uGrainSeed;
   /** The list's fixed head: left, right, bottom (CSS px) and how much it veils. */
   uniform vec4 uHead;
+  /** The theme front's looks. */
+  uniform float uShiver;
+  uniform float uBloom;
+  uniform vec2 uBloomAt;
+  uniform vec3 uFireInk;
+  uniform vec3 uFireDawn;
+  uniform vec3 uInkDeep;
+  /** How far ahead of the front the DOM's clip runs (CSS px). */
+  uniform float uFrontAhead;
   varying vec2 vUv;
 
   #define TAPS 10
@@ -61,11 +76,15 @@ const FRAGMENT = /* glsl */ `
 
   void main() {
     vec2 uv = vUv;
+    vec2 css = worldFragCss();
     vec2 c = uv - 0.5;
     float r2 = dot(c, c);
     float lens = uLens * uDistort;
     float blur = uBlur / uViewport.y;
     float jitter = worldHash(gl_FragCoord.xy + uGrainSeed);
+
+    // The chromatic shiver of a night-fall: the channels tremble apart for a moment.
+    vec2 shiver = uShiver * vec2(sin(uTime * 71.0 + css.y * 0.021), cos(uTime * 53.0 + css.x * 0.013) * 0.35) * 0.006;
 
     vec3 sum = vec3(0.0);
     vec3 weight = vec3(0.0);
@@ -74,6 +93,7 @@ const FRAGMENT = /* glsl */ `
       // Barrel: each wavelength bends by its own amount (red not at all,
       // blue the most), so the corners fringe and the centre stays sharp.
       vec2 tapUv = uv + c * r2 * lens * t;
+      tapUv += shiver * (t - 0.5);
       // Motion blur along the scroll direction. The blur position of a tap
       // is shuffled against its wavelength (golden-ratio steps), so every
       // colour spreads over the whole smear and a fast scroll blurs
@@ -90,12 +110,39 @@ const FRAGMENT = /* glsl */ `
     // whatever the world draws there (a lantern, the moon, a card folding
     // away) stays a whisper under the title, the search and the filters.
     if (uHead.w > 0.0) {
-      vec2 css = worldFragCss();
       float under = 1.0 - smoothstep(uHead.z - 70.0, uHead.z + 24.0, css.y);
       float across = smoothstep(uHead.x - 90.0, uHead.x + 30.0, css.x)
                    * (1.0 - smoothstep(uHead.y - 30.0, uHead.y + 90.0, css.x));
       color = mix(color, worldFogColor(dark), under * across * uHead.w);
     }
+
+    // The theme front, just behind its edge (the DOM's clip runs a few
+    // pixels ahead, so all of this shows through the new page).
+    if (uWave.w > 0.5) {
+      float d = waveDistance(css);
+      float fleck = worldNoise(css * 0.07 + uTime * 1.3);
+      float feather = d + (fleck - 0.5) * 22.0;
+      float behind = smoothstep(uFrontAhead, -8.0, feather);
+      float falling = step(uWaveFrom, uWaveTo - 0.5);
+      // Night-fall: a band of rich ink behind the front, blue fire on it.
+      float ink = behind * smoothstep(-260.0, -40.0, feather);
+      float fire = exp(-pow((d + 6.0) / 7.0, 2.0)) * (0.55 + 0.9 * fleck);
+      vec3 night = mix(color, uInkDeep, ink * 0.7);
+      night += uFireInk * fire * 0.85 + vec3(0.7, 0.8, 1.0) * pow(fire, 3.0) * 0.35;
+      // Dawn: a gold rim, and warm haze lingering behind it.
+      float haze = behind * smoothstep(-260.0, -40.0, feather);
+      float rim = exp(-pow((d + 5.0) / 10.0, 2.0)) * (0.6 + 0.7 * fleck);
+      vec3 dawn = color + uFireDawn * haze * 0.22;
+      dawn = mix(dawn, vec3(1.0, 0.97, 0.88), rim * 0.55) + uFireDawn * rim * 0.35;
+      color = mix(dawn, night, falling);
+    }
+    // The window floods with light as the dawn reaches it: a bloom over the nave.
+    if (uBloom > 0.0) {
+      vec2 b = (css - uBloomAt) / uViewport.y;
+      float glow = exp(-dot(b, b) * 3.0) * 0.8 + exp(-dot(b, b) * 0.6) * 0.35;
+      color += uFireDawn * glow * uBloom * 0.4 + vec3(uBloom * 0.05);
+    }
+
     float vig = smoothstep(0.95, 0.25, length(c * vec2(1.0, 1.12)));
     float vignette = mix(mix(0.94, 1.0, vig), mix(0.52, 1.0, vig), dark);
     color *= mix(1.0, vignette, uLens);
@@ -104,7 +151,7 @@ const FRAGMENT = /* glsl */ `
     if (uWipe > 0.0) {
       float soft = 0.6;
       float front = (1.0 - uWipe) * (1.0 + soft);
-      float m = smoothstep(front - soft, front, uv.x);
+      float m = smoothstep(front - soft, front, vUv.x);
       if (uWipe >= 1.0) m = 1.0;
       color = mix(color, uWipeColor, m);
     }
@@ -127,6 +174,13 @@ export type Composite = {
     uWipe: { value: number };
     uGrainSeed: { value: number };
     uHead: { value: Vector4 };
+    uShiver: { value: number };
+    uBloom: { value: number };
+    uBloomAt: { value: Vector2 };
+    uFireInk: { value: Color };
+    uFireDawn: { value: Color };
+    uInkDeep: { value: Color };
+    uFrontAhead: { value: number };
   };
   resolution: Vector2;
   dispose(): void;
@@ -148,6 +202,13 @@ export function createComposite(world: WorldUniforms): Composite {
     uWipe: { value: 0 },
     uGrainSeed: { value: 0 },
     uHead: { value: new Vector4(0, 0, 0, 0) },
+    uShiver: { value: 0 },
+    uBloom: { value: 0 },
+    uBloomAt: { value: new Vector2() },
+    uFireInk: { value: new Color(WORLD_PALETTE.dark.front) },
+    uFireDawn: { value: new Color(WORLD_PALETTE.light.front) },
+    uInkDeep: { value: new Color("#081133") },
+    uFrontAhead: { value: FRONT_AHEAD },
   };
   const material = new ShaderMaterial({
     uniforms: { ...world, ...uniforms },

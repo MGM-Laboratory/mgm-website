@@ -1,4 +1,4 @@
-import { Group } from "three";
+import { Group, type Vector3 } from "three";
 
 import { createAtmosphere } from "@/components/articles/world/library/atmosphere";
 import { createDrift } from "@/components/articles/world/library/drift";
@@ -37,6 +37,8 @@ import type { WorldUniforms } from "@/components/articles/world/world-glsl";
 export type LibraryEnvironment = {
   group: Group;
   uniforms: LibraryUniforms;
+  /** The heart of the great window's light, in the group's own units. */
+  windowAnchor: Vector3;
   update(time: number, dt: number, scrollSpeed: number): void;
   /** Moves the walls to ±`half` library units from the nave's axis. */
   setNaveHalfWidth(half: number): void;
@@ -104,6 +106,7 @@ export function createLibraryEnvironment(
   return {
     group,
     uniforms: library,
+    windowAnchor: windowLight.anchor,
     update(time, dt, scrollSpeed) {
       // The river runs toward the window; scrolling the list speeds it up.
       flow += dt * (0.35 + Math.min(Math.abs(scrollSpeed), 6) * 1.1);

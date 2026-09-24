@@ -211,6 +211,8 @@ const RAY_FRAGMENT = /* glsl */ `
 
 export type GreatWindow = {
   group: Group;
+  /** The heart of the window's light (library units), where the dawn flood blooms from. */
+  anchor: Vector3;
   setNaveHalf(half: number): void;
   setRayCount(count: number): void;
   dispose(): void;
@@ -322,6 +324,7 @@ export function createGreatWindow(
 
   return {
     group,
+    anchor: new Vector3(0, FLOOR_Y + SILL + height * 0.62, far),
     setNaveHalf(half) {
       const a = Math.max(0.3, half - 0.3) * 0.82;
       pane.scale.set(2 * a, height, 1);

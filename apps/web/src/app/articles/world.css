@@ -1,12 +1,33 @@
 /*
- * The library world's own DOM pieces: the theme wave's view transition and
- * the library's cursor ring (components/articles/world/cursor).
+ * The library world's own DOM pieces: the theme switch's view transition
+ * (components/articles/world/theme-wave.ts) and the library's cursor ring
+ * (components/articles/world/cursor).
  */
 
+/*
+ * The theme switch: the old page stays put as a still snapshot and the new
+ * one shows only behind the front. The clip starts closed here; the front's
+ * own clip (an animation on the same pseudo-element) takes over at once.
+ */
 html[data-theme-wave]::view-transition-old(root),
 html[data-theme-wave]::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+html[data-theme-wave]::view-transition-new(root) {
+  clip-path: var(--articles-wave-clip, none);
+}
+
+/* Without view transitions: the page eases into the new scheme's colours. */
+html[data-theme-fade] :is(.site-header, [data-articles-page], [data-article-detail]),
+html[data-theme-fade] :is(.site-header, [data-articles-page], [data-article-detail]) * {
+  transition:
+    color 0.9s ease,
+    background-color 0.9s ease,
+    border-color 0.9s ease,
+    fill 0.9s ease,
+    stroke 0.9s ease !important;
 }
 
 /* ------------------------------------------------------------------ cursor */
