@@ -215,6 +215,7 @@ On a fresh load, after the route curtain or after the project zoom, the page wai
 - The horizontal stage clips everything, so native lazy loading can't look ahead. Images within 2.5 viewports of the travel are switched to eager.
 - A video plays only while visible, in a visible tab, after the entrance has begun, and not during a hand-off. A pause and play button per video (shown on hover and focus, kept visible once paused) meets WCAG 2.2.2. Reduced motion doesn't autoplay: the poster shows and the button starts the video.
 - The WebGL stage (`detail/stage/*`) starts at once in the horizontal layout when motion is allowed. Items it draws hide their DOM frame with `visibility`, so videos keep decoding as its textures. A lost context, reduced motion switched on or the stacked layout hand the DOM media back.
+- The controller tells the site header what its media show behind the bar (`registerHeaderToneProvider`, see `docs/navigation-menu.md`, Adaptive ink), since hit testing can't see the hidden DOM frames. Full items run behind the 64 px header, so a dark first item turns the header's ink light over it.
 - The DOM fallback plays lusion's emerge in CSS: the frame's clip opens from `inset(20%)` to 0 while the picture settles from 1.667× to 1×, over 1 s of expo out, replaying on every re-entry. The highlight colour shows until the file loads, then crossfades to it. Scroll speed bends the frames a little (a lean plus lusion's arch, edges down and centre up) and they spring back to exactly nothing at rest.
 
 ### Next project
