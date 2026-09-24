@@ -7,7 +7,8 @@
  * size the card shows them at. The bytes come from the HTTP cache when the
  * DOM card's <img> already fetched them (the media route is immutable).
  * Decodes run through a small queue, nearest card first, so a fast scroll
- * never waits behind pictures it has already passed.
+ * never waits behind pictures it has already passed; a card that falls
+ * asleep aborts its download, handing the slot to one on screen.
  *
  * The text strip is drawn into one canvas per card as an alpha atlas (the
  * shader colours it with the current scheme's ink, so the strip follows a
@@ -34,12 +35,19 @@ const ATLAS_PAD = 4;
  * non-literal fetch() URL and can't be suppressed inline for JavaScript;
  * this is a browser reading its own page's images.
  */
-function readBlob(path: string): Promise<Blob | null> {
+function readBlob(path: string, signal?: AbortSignal): Promise<Blob | null> {
   return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve(null);
+      return;
+    }
     const request = new XMLHttpRequest();
     request.responseType = "blob";
+    // A stalled response frees its slot rather than holding it forever.
+    request.timeout = 30_000;
     request.onload = () => resolve(request.status === 200 ? (request.response as Blob) : null);
-    request.onerror = request.onabort = () => resolve(null);
+    request.onerror = request.onabort = request.ontimeout = () => resolve(null);
+    signal?.addEventListener("abort", () => request.abort(), { once: true });
     request.open("GET", path);
     request.send();
   });
@@ -79,7 +87,8 @@ export type LoadedCover = {
  * Decodes a cover for a frame of `frameWidth` x `frameHeight` CSS px at
  * `pixelRatio`. Keeps the whole picture (the shader crops it to cover the
  * frame, and the hover zoom needs no extra pixels), downscaled so its
- * covering size is about the frame's device size.
+ * covering size is about the frame's device size. `signal` aborts the
+ * download (and skips the decode) once the card no longer wants it.
  */
 export async function loadCover(
   url: string,
@@ -87,11 +96,12 @@ export async function loadCover(
   frameHeight: number,
   pixelRatio: number,
   maxTextureSize: number,
+  signal?: AbortSignal,
 ): Promise<LoadedCover | null> {
   const path = coverPath(url);
   if (!path || typeof createImageBitmap !== "function") return null;
-  const blob = await readBlob(path);
-  if (!blob) return null;
+  const blob = await readBlob(path, signal);
+  if (!blob || signal?.aborted) return null;
   let full: ImageBitmap;
   try {
     full = await createImageBitmap(blob, { imageOrientation: "from-image" });
@@ -121,34 +131,45 @@ export async function loadCover(
 }
 
 type QueuedDecode = {
-  run: () => Promise<void>;
+  run: (signal: AbortSignal) => Promise<void>;
   priority: () => number;
   cancelled: boolean;
+  controller: AbortController;
 };
 
 /**
  * Runs cover decodes a few at a time, lowest `priority()` first (the
  * distance of the card from the screen, read when a slot frees up).
+ * Cancelling a job that is already running aborts it through its signal.
  */
 export class DecodeQueue {
   private readonly waiting: QueuedDecode[] = [];
   private running = 0;
 
+  private readonly active = new Set<QueuedDecode>();
+
   constructor(private readonly concurrency = 3) {}
 
-  /** Queues `run`; returns a cancel function (a cancelled job never starts). */
-  add(run: () => Promise<void>, priority: () => number) {
-    const job: QueuedDecode = { run, priority, cancelled: false };
+  /** Queues `run`; returns a cancel function (a waiting job never starts, a running one is aborted). */
+  add(run: (signal: AbortSignal) => Promise<void>, priority: () => number) {
+    const job: QueuedDecode = {
+      run,
+      priority,
+      cancelled: false,
+      controller: new AbortController(),
+    };
     this.waiting.push(job);
     this.pump();
     return () => {
       job.cancelled = true;
+      job.controller.abort();
     };
   }
 
   clear() {
     for (const job of this.waiting) job.cancelled = true;
     this.waiting.length = 0;
+    for (const job of this.active) job.controller.abort();
   }
 
   private pump() {
@@ -171,11 +192,13 @@ export class DecodeQueue {
       if (best < 0) return;
       const [job] = this.waiting.splice(best, 1);
       this.running += 1;
+      this.active.add(job);
       void job
-        .run()
+        .run(job.controller.signal)
         .catch(() => {})
         .finally(() => {
           this.running -= 1;
+          this.active.delete(job);
           this.pump();
         });
     }

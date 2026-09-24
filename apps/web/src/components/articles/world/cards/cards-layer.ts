@@ -240,7 +240,13 @@ export class CardsLayer implements CardsLayerApi {
     accentLight: new Color(WORLD_PALETTE.light.accent),
     accentDark: new Color(WORLD_PALETTE.dark.accent),
   };
-  private readonly decodes = new DecodeQueue(3);
+  /**
+   * Cover downloads in flight at once. The media route is latency-bound (a
+   * cover can take a second or more to start arriving), so this runs about
+   * as wide as the browser's connections to one host, one kept free for the
+   * list's batches.
+   */
+  private readonly decodes = new DecodeQueue(5);
   private visible = true;
   private holds = 0;
   private heldScroll = 0;
@@ -786,7 +792,7 @@ export class CardsLayer implements CardsLayerApi {
     if (!url || entry.card.placeholder) return;
     const token = entry.loadToken;
     entry.cancelDecode = this.decodes.add(
-      () => this.loadCover(entry, url, token),
+      (signal) => this.loadCover(entry, url, token, signal),
       () => {
         const top = entry.sheet.top - this.lastScroll;
         const height = window.innerHeight;
@@ -795,7 +801,7 @@ export class CardsLayer implements CardsLayerApi {
     );
   }
 
-  private async loadCover(entry: Entry, url: string, token: number) {
+  private async loadCover(entry: Entry, url: string, token: number, signal: AbortSignal) {
     const material = entry.material;
     if (!material || token !== entry.loadToken) return;
     const { renderer } = this.options;
@@ -805,6 +811,7 @@ export class CardsLayer implements CardsLayerApi {
       entry.cover.height,
       this.options.pixelRatio(),
       renderer.capabilities.maxTextureSize,
+      signal,
     );
     if (!loaded || token !== entry.loadToken || !entry.awake || this.disposed) {
       loaded?.bitmap.close();
