@@ -10,11 +10,14 @@ import { LogoMark } from "@/components/nav/logo-mark";
 import { NavMenu } from "@/components/nav/nav-menu";
 import { useHeaderTone } from "@/hooks/use-header-tone";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
+import { articleListHref, waitForArticleReveal } from "@/lib/article-transition";
 import { waitForProjectReveal } from "@/lib/project-transition";
 import { waitForRouteReveal } from "@/lib/route-reveal";
 
 /** A single project's detail page, `/projects/<slug>` (not the index). */
 const PROJECT_DETAIL_PATH = /^\/projects\/[^/]+\/?$/;
+/** A single article, `/articles/<slug>` (not the list). */
+const ARTICLE_DETAIL_PATH = /^\/articles\/[^/]+\/?$/;
 
 // Rendered outside the ScrollSmoother wrapper (see layout.tsx) and kept
 // `fixed` — a `sticky` header inside smooth-scrolled content doesn't stick,
@@ -47,6 +50,7 @@ function HeaderBar({ pathname }: { pathname: string }) {
   const headerRef = useRef<HTMLElement>(null);
   useHeaderTone(headerRef);
   const onProjectDetail = PROJECT_DETAIL_PATH.test(pathname);
+  const onArticleDetail = ARTICLE_DETAIL_PATH.test(pathname);
 
   return (
     <header
@@ -63,6 +67,7 @@ function HeaderBar({ pathname }: { pathname: string }) {
           the theme toggle at 812px and below. */}
       <div data-header-zone="controls" className="flex items-center gap-2 sm:gap-4">
         {onProjectDetail && <ProjectBackLink />}
+        {onArticleDetail && <ArticleBackLink />}
         <ThemeToggle className="size-11 lg:size-8" />
         <NavMenu />
       </div>
@@ -108,6 +113,15 @@ function ProjectBackLink() {
       aria-label="Back to projects"
       className="project-back"
     >
+      <BackPillContent />
+    </Link>
+  );
+}
+
+/** The pill's arrows and label (shared by the project and article pills). */
+function BackPillContent() {
+  return (
+    <>
       <ArrowLeft
         aria-hidden
         strokeWidth={2.25}
@@ -119,6 +133,45 @@ function ProjectBackLink() {
         strokeWidth={2.25}
         className="project-back-icon project-back-icon-in"
       />
+    </>
+  );
+}
+
+/**
+ * The same "Back" pill on an article page, back to the articles list as the
+ * visitor left it (its filters, see `articleListHref`). The articles
+ * transitions take its click (`data-article-back`) and play the list's
+ * return; its entrance waits for whichever cover brought the article in.
+ */
+function ArticleBackLink() {
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  const [arrivedInternally] = useState(hasAppAlreadyBooted);
+  // Read once when the pill appears: the list address the visitor opened
+  // this article from (the plain list on a fresh load).
+  const [href] = useState(articleListHref);
+
+  useLayoutEffect(() => {
+    const link = linkRef.current;
+    if (!link || !arrivedInternally) return;
+    let cancelled = false;
+    link.dataset.waiting = "";
+    void Promise.all([waitForRouteReveal(), waitForArticleReveal()]).then(() => {
+      if (!cancelled) delete link.dataset.waiting;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [arrivedInternally]);
+
+  return (
+    <Link
+      ref={linkRef}
+      href={href}
+      data-article-back=""
+      aria-label="Back to articles"
+      className="project-back"
+    >
+      <BackPillContent />
     </Link>
   );
 }
