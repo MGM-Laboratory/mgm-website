@@ -141,13 +141,13 @@ type Timing = {
 };
 
 const TIMING: Record<"gl" | "dom", Record<PortalDirection, Timing>> = {
-  // About 2.6 s in (1.15 + the wait + 1.45) and 2.3 s out (1.25 + 1.0).
+  // About 2.6 s in (1.05 + the wait + 1.4) and 2.3 s out (1.25 + 1.0).
   gl: {
-    in: { cover: 1.15, reveal: 1.45, signal: 0.6 },
+    in: { cover: 1.05, reveal: 1.4, signal: 0.55 },
     out: { cover: 1.25, reveal: 1.0, signal: 0.4 },
   },
-  // Short enough for the e2e budget: in about 1.25 s plus the wait, out
-  // about 1.15 s plus the wait.
+  // Shorter still: in about 1.2 s plus the wait, out about 1.15 s plus
+  // the wait (the e2e suite runs here, on a software renderer).
   dom: {
     in: { cover: 0.62, reveal: 0.6, signal: 0.26 },
     out: { cover: 0.6, reveal: 0.55, signal: 0.22 },
@@ -618,14 +618,29 @@ export class PortalDom implements PortalFront {
         }),
       );
       // The ghost of the library's window, where the real one will stand.
+      // It has no sill: a mask sinks its light into the fog below.
       const vh = this.height;
+      const glow = 70;
       this.ghost = add(
         layer({
           left: "50%",
-          top: `${vh * 0.15}px`,
+          top: `${vh * 0.15 - glow}px`,
+          width: `${vh * 0.38 + glow * 2}px`,
+          height: `${vh * 0.45 + glow}px`,
+          marginLeft: `${-vh * 0.19 - glow}px`,
+          opacity: "0",
+          willChange: "opacity",
+        }),
+      );
+      const sink = "linear-gradient(to bottom, #000 55%, transparent 96%)";
+      this.ghost.style.setProperty("mask-image", sink);
+      this.ghost.style.setProperty("-webkit-mask-image", sink);
+      this.ghost.appendChild(
+        layer({
+          left: `${glow}px`,
+          top: `${glow}px`,
           width: `${vh * 0.38}px`,
-          height: `${vh * 0.45}px`,
-          marginLeft: `${-vh * 0.19}px`,
+          height: `${vh * 0.45 + glow}px`,
           borderRadius: `${vh * 0.19}px ${vh * 0.19}px 0 0`,
           background: dark
             ? `radial-gradient(80% 70% at 50% 40%, ${hexA(palette.halo, 0.25)}, transparent)`
@@ -633,8 +648,6 @@ export class PortalDom implements PortalFront {
           boxShadow: dark
             ? `0 0 0 1.5px ${hexA(palette.rim, 0.75)}, 0 0 26px 6px ${hexA(palette.glow, 0.6)}`
             : `0 0 0 1.5px ${hexA(palette.rim, 0.9)}, 0 0 50px 18px ${hexA(palette.glow, 0.8)}`,
-          opacity: "0",
-          willChange: "opacity",
         }),
       );
     } else {

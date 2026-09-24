@@ -141,8 +141,10 @@ void main() {
     float d = w.y > 0.66
       ? length(vec2(w.x, w.y - 0.66)) - 0.19
       : max(abs(w.x) - 0.19, 0.4 - w.y);
-    float inner = exp(-max(d, 0.0) * 7.0);
-    float ring = exp(-abs(d) * mix(70.0, 45.0, u_dark));
+    // It has no sill: its light sinks into the fog toward the floor.
+    float sink = smoothstep(0.34, 0.6, w.y);
+    float inner = exp(-max(d, 0.0) * 7.0) * mix(0.35, 1.0, sink);
+    float ring = exp(-abs(d) * mix(70.0, 45.0, u_dark)) * sink;
     float breathe = 0.85 + 0.15 * sin(t * 2.3);
     color = mix(color, u_glow, inner * mix(0.5, 0.18, u_dark) * u_ghost * breathe);
     color = mix(color, u_rim, ring * mix(0.55, 0.85, u_dark) * u_ghost * mix(1.0, flicker, u_dark));
