@@ -192,7 +192,7 @@ export function ProjectDetail({ data }: { data: DetailData }) {
       slug: data.slug,
       arrived,
       palette,
-      nextPalette: next ? PROJECT_THEMES[next.themeId][scheme] : undefined,
+      nextThemeId: next?.themeId,
       onNavigateNext: navigateNext,
       onPrefetchNext: prefetchNext,
       elements: {

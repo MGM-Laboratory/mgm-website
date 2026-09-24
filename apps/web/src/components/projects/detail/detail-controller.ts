@@ -10,11 +10,16 @@ import {
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
 import { scrollPageTo } from "@/lib/page-scroll";
-import type { ProjectPalette } from "@/lib/project-themes";
-import { markProjectPageReady, waitForProjectReveal } from "@/lib/project-transition";
+import { PROJECT_THEMES, type ProjectPalette } from "@/lib/project-themes";
+import type { ProjectThemeId } from "@/lib/project-cms";
+import {
+  markProjectPageReady,
+  setDetailHandoffActive,
+  waitForProjectReveal,
+} from "@/lib/project-transition";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 import { waitForRouteReveal } from "@/lib/route-reveal";
-import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
+import { acquireScrollLock, isScrollLocked, releaseScrollLock } from "@/lib/scroll-lock";
 
 import { clamp, expoInOut, expoOut, fit, mix, quintInOut } from "./detail-math";
 import { dismissScrollHint, isScrollHintDismissed } from "./detail-session";
@@ -111,8 +116,8 @@ export type DetailControllerOptions = {
   /** Entered from the previous project's hand-off (see detail-session.ts). */
   arrived: boolean;
   palette: ProjectPalette;
-  /** The next project's palette (same scheme): the header walks to it during the hand-off. */
-  nextPalette?: ProjectPalette;
+  /** The next project's theme: the header walks to its palette during the hand-off. */
+  nextThemeId?: ProjectThemeId;
   /** Plays the navigation once the hand-off has covered the screen. */
   onNavigateNext(): void;
   onPrefetchNext(): void;
@@ -209,6 +214,8 @@ export class DetailController {
 
   private stage: DetailStageHandle | null = null;
   private stageState: "off" | "starting" | "on" | "failed" = "off";
+  /** Bumped by every start and stop: a start that finds it changed was superseded. */
+  private stageToken = 0;
   private palette: ProjectPalette;
 
   private frames = 0;
@@ -294,6 +301,7 @@ export class DetailController {
     this.stopStage("off");
     releaseScrollLock(ENTRANCE_LOCK);
     releaseScrollLock(HANDOFF_LOCK);
+    if (this.handoff) setDetailHandoffActive(false);
     // By now the next page's own theme style carries the same colours.
     this.headerWalk?.release();
     this.headerWalk = null;
@@ -714,9 +722,15 @@ export class DetailController {
     this.overscroll = 1;
     this.momentum = 0;
     acquireScrollLock(HANDOFF_LOCK);
+    setDetailHandoffActive(true);
     // The header sits above the wipe and would otherwise keep this page's
     // colours until the next page's theme lands at navigation.
-    if (this.o.nextPalette) this.headerWalk = walkHeaderPalette(this.o.nextPalette);
+    // The scheme is read now, not when the page mounted: the visitor may
+    // have switched light and dark since.
+    if (this.o.nextThemeId) {
+      const scheme = document.documentElement.classList.contains("dark") ? "dark" : "light";
+      this.headerWalk = walkHeaderPalette(PROJECT_THEMES[this.o.nextThemeId][scheme]);
+    }
     if (!this.vertical) {
       this.handoff = { time: 0, from: this.panelRest(), titleFrom: 0, titleTo: 0, done: false };
     } else {
@@ -855,10 +869,13 @@ export class DetailController {
     // already on screen still open from its own emerge. It resolves null
     // without hardware WebGL2, and the DOM media stay.
     this.stageState = "starting";
+    const token = ++this.stageToken;
+    const superseded = () =>
+      token !== this.stageToken || this.disposed || this.vertical || this.reduced;
     void (async () => {
       try {
         const { startDetailStage } = await import("./stage/detail-stage");
-        if (this.stageState !== "starting" || this.disposed) return;
+        if (superseded()) return;
         const handle = await startDetailStage({
           container: this.e.gl,
           items: this.stageItems(),
@@ -868,20 +885,20 @@ export class DetailController {
           onFailure: this.onStageFailure,
         });
         if (!handle) {
-          if (this.stageState === "starting") this.stageState = "failed";
+          if (!superseded()) this.stageState = "failed";
           return;
         }
-        // Resolved after this page (or this layout) let go of it: nothing
-        // may keep drawing.
-        if (this.stageState !== "starting" || this.disposed || this.vertical || this.reduced) {
+        // Resolved after this page (or this layout) let go of it, or after a
+        // newer start took over: nothing may keep drawing, and the newer
+        // stage's ownership must stay as it is.
+        if (superseded()) {
           handle.dispose();
-          this.releaseOwnership();
           return;
         }
         this.stage = handle;
         this.stageState = "on";
       } catch {
-        this.stopStage("failed");
+        if (!superseded()) this.stopStage("failed");
       }
     })();
   }
@@ -915,6 +932,7 @@ export class DetailController {
   }
 
   private stopStage(state: "off" | "failed") {
+    this.stageToken += 1;
     this.stage?.dispose();
     this.stage = null;
     this.releaseOwnership();
@@ -999,7 +1017,9 @@ export class DetailController {
   }
 
   private readonly onWheel = (event: WheelEvent) => {
-    if (event.ctrlKey) return;
+    // Another owner (the nav menu) holds the page, or our own entrance or
+    // hand-off does: the strip takes no input, native or smoothed.
+    if (event.ctrlKey || isScrollLocked()) return;
     const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
     if (delta > 0) this.inputForward = true;
     else if (delta < 0) this.inputBack = true;
@@ -1018,6 +1038,7 @@ export class DetailController {
 
   private readonly onKey = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (isScrollLocked()) return;
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest(KEY_OWNERS)) return;
     const page = this.vertical ? window.innerHeight * 0.85 : window.innerWidth;
@@ -1117,7 +1138,7 @@ export class DetailController {
 
   private readonly onTouchMove = (event: TouchEvent) => {
     const drag = this.drag;
-    if (!drag || event.touches.length !== 1) return;
+    if (!drag || event.touches.length !== 1 || isScrollLocked()) return;
     const touch = event.touches[0];
     const dx = touch.clientX - drag.x;
     const dy = touch.clientY - drag.y;
