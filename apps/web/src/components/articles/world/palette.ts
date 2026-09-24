@@ -34,6 +34,14 @@ export type WorldSchemePalette = {
   mote: string;
   /** A second spark colour (dark mode's embers). */
   ember: string;
+  /** The lanterns' flame: a warm white by day, a candle ember by night. */
+  lantern: string;
+  /** Light pouring through the great window (sun by day, moon by night). */
+  window: string;
+  /** The drifting glyphs of the night library. */
+  glyph: string;
+  /** The front of a theme switch: dawn gold into the light, blue fire into the dark. */
+  front: string;
   /** Card text: title, then the quieter description and the rule. */
   ink: string;
   inkSoft: string;
@@ -48,11 +56,26 @@ export const WORLD_PALETTE: { light: WorldSchemePalette; dark: WorldSchemePalett
     glow: "#FFFDF7",
     stone: "#F3F0EA",
     paper: "#FCFBF8",
-    books: ["#F6F3EC", "#ECE7DC", "#E2DCCF", "#FAF9F6", "#E9DFC6", "#DFE5EE", "#F1EDE4", "#D9D2C3"],
+    books: [
+      "#F5F0E6",
+      "#E8DDC8",
+      "#DCD2BF",
+      "#FAF8F3",
+      "#E4D3AE",
+      "#D5DEE9",
+      "#ECE4D8",
+      "#CEC4B2",
+      "#E9D9CF",
+      "#DDE3DA",
+    ],
     river: "#FFFCF4",
     shaft: "#FFF8EA",
     mote: "#FFFFFF",
     ember: "#F7E3B0",
+    lantern: "#FFD58A",
+    window: "#FFF4DC",
+    glyph: "#C9A24B",
+    front: "#FFC65C",
     ink: "#0E1116",
     inkSoft: "#3B4150",
     rule: "#0E1116",
@@ -63,11 +86,26 @@ export const WORLD_PALETTE: { light: WorldSchemePalette; dark: WorldSchemePalett
     glow: "#3A6DC5",
     stone: "#0C0E14",
     paper: "#1A2031",
-    books: ["#10131C", "#151A27", "#0B0D13", "#1A1F2E", "#221D14", "#12203D", "#0F1219", "#181B22"],
+    books: [
+      "#10131C",
+      "#151A27",
+      "#0B0D13",
+      "#1A1F2E",
+      "#241C12",
+      "#12203D",
+      "#0F1219",
+      "#1C1A20",
+      "#2A1518",
+      "#10201C",
+    ],
     river: "#2A4E8F",
     shaft: "#3A6DC5",
     mote: "#9DB9F2",
     ember: "#F7BF33",
+    lantern: "#FF8A2B",
+    window: "#BFD3FF",
+    glyph: "#7FA8F5",
+    front: "#5B8CFF",
     ink: "#EDEDED",
     inkSoft: "#B9BCC6",
     rule: "#EDEDED",

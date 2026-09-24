@@ -148,6 +148,10 @@ export class LibraryEngine implements ArticlesWorldApi {
   private height = 1;
   private pixelRatio = 1;
   private route: WorldRoute;
+  /** Half the nave's width, CSS px at the card plane: measured target and eased value. */
+  private frameTarget = 0;
+  private frameHalf = 0;
+  private framesSinceMeasure = 0;
   private influenceTarget = 1;
   private detailTarget = 0;
   private offFrame: (() => void) | null = null;
@@ -485,6 +489,41 @@ export class LibraryEngine implements ArticlesWorldApi {
   }
 
   /**
+   * Where the walls stand: just outside the list's columns, measured from
+   * the cards on screen (their links, the list's contract), so the arcade
+   * frames the list whatever widths the list gives its cards. Without cards
+   * (an article, an empty list) the walls stay where they were, or take a
+   * guess from the viewport on a first visit.
+   */
+  private measureFrame(snap: boolean) {
+    this.framesSinceMeasure = 0;
+    const width = this.width;
+    const centre = width / 2;
+    let extent = 0;
+    const cards = document.querySelectorAll<HTMLElement>("a[data-article-card]");
+    for (let i = 0; i < cards.length && i < 6; i++) {
+      const rect = cards[i].getBoundingClientRect();
+      if (rect.width < 1) continue;
+      extent = Math.max(extent, Math.abs(rect.left - centre), Math.abs(rect.right - centre));
+    }
+    if (extent === 0) {
+      if (this.frameTarget > 0 && !snap) return;
+      extent =
+        width >= 1024
+          ? Math.min(width * 0.4, 900)
+          : width >= 768
+            ? 246
+            : Math.min(width * 0.44, 240);
+    }
+    const gutter = Math.min(70, Math.max(14, width * 0.03));
+    this.frameTarget = Math.min(extent + gutter, width * 0.5 + 40);
+    if (snap || this.frameHalf === 0) {
+      this.frameHalf = this.frameTarget;
+      this.environment.setNaveHalfWidth(this.frameHalf / this.uniforms.uEnvScale.value);
+    }
+  }
+
+  /**
    * Dresses the world for the route. The camera, fog and particle targets
    * always move (they ease); the lens and the cards only when no transition
    * holds them, or on the first frame.
@@ -551,13 +590,15 @@ export class LibraryEngine implements ArticlesWorldApi {
     u.uResolution.value.set(width * this.pixelRatio, height * this.pixelRatio);
     u.uPixelRatio.value = this.pixelRatio;
     u.uViewport.value.set(width, height);
-    // The library frames the cards like unseen's arcade: its walls sit just
-    // outside a two-column list at every width.
-    const envScale = Math.max(width * 0.08, height * 0.1);
+    // The library is modelled in units of a ninth of the viewport height,
+    // so its storeys and arches keep their proportions on every screen; its
+    // walls are moved separately to frame the list (measureFrame).
+    const envScale = height / 9;
     u.uEnvScale.value = envScale;
     u.uFogStart.value = CAMERA_DISTANCE;
     u.uFogDensity.value = 0.028 / envScale;
     this.environment.group.scale.setScalar(envScale);
+    this.measureFrame(true);
     this.cards.measure();
   };
 
@@ -617,6 +658,13 @@ export class LibraryEngine implements ArticlesWorldApi {
     frame.pointerSpeed = this.pointerSpeed;
     frame.scrolling = Math.abs(this.scrollSpeed) > 30;
 
+    this.framesSinceMeasure += 1;
+    if (this.framesSinceMeasure > 40) this.measureFrame(false);
+    if (Math.abs(this.frameTarget - this.frameHalf) > 0.25) {
+      this.frameHalf += (this.frameTarget - this.frameHalf) * follow(0.35, dt);
+      this.environment.setNaveHalfWidth(this.frameHalf / u.uEnvScale.value);
+    }
+
     this.rig.update(dt);
     this.environment.update(this.time, dt, speedVh);
     this.cards.update(scrollY);
@@ -627,8 +675,18 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.clearColor.lerp(this.scratchTheme, u.uTheme.value);
     this.renderer.setClearColor(this.clearColor, 1);
 
+    // The library first, then (depth cleared) the cards and every layer:
+    // nothing of the library, not even a gallery reaching out in front of
+    // the card plane on a narrow screen, may ever cover a card or a page's
+    // own 3D. Draw calls stay the same; only the order is fixed.
     this.renderer.setRenderTarget(this.target);
+    this.renderer.render(this.envGroup, this.camera);
+    this.renderer.autoClear = false;
+    this.renderer.clearDepth();
+    this.envGroup.visible = false;
     this.renderer.render(this.scene, this.camera);
+    this.envGroup.visible = true;
+    this.renderer.autoClear = true;
     this.renderer.setRenderTarget(null);
     this.composite.uniforms.tScene.value = this.target.texture;
     this.renderer.render(this.composite.scene, this.composite.camera);
