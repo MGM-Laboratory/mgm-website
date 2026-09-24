@@ -218,7 +218,7 @@ export class DetailController {
   private stage: DetailStageHandle | null = null;
   private stageState: "off" | "starting" | "on" | "failed" = "off";
   /** Bumped by every start and stop: a start that finds it changed was superseded. */
-  private stageToken = 0;
+  private stageAttempt = 0;
   private palette: ProjectPalette;
 
   private frames = 0;
@@ -877,9 +877,9 @@ export class DetailController {
     // already on screen still open from its own emerge. It resolves null
     // without hardware WebGL2, and the DOM media stay.
     this.stageState = "starting";
-    const token = ++this.stageToken;
+    const attempt = ++this.stageAttempt;
     const superseded = () =>
-      token !== this.stageToken || this.disposed || this.vertical || this.reduced;
+      attempt !== this.stageAttempt || this.disposed || this.vertical || this.reduced;
     void (async () => {
       try {
         const { startDetailStage } = await import("./stage/detail-stage");
@@ -892,7 +892,7 @@ export class DetailController {
           // Only the current attempt may change ownership: a superseded
           // engine handing its items back must not strip the live one's.
           onOwnershipChange: (id, owned) => {
-            if (token === this.stageToken) this.onOwnership(id, owned);
+            if (attempt === this.stageAttempt) this.onOwnership(id, owned);
           },
           onFailure: this.onStageFailure,
         });
@@ -944,7 +944,7 @@ export class DetailController {
   }
 
   private stopStage(state: "off" | "failed") {
-    this.stageToken += 1;
+    this.stageAttempt += 1;
     this.stage?.dispose();
     this.stage = null;
     this.releaseOwnership();
