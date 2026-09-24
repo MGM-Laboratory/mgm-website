@@ -19,6 +19,10 @@ import {
   type LibraryEnvironment,
 } from "@/components/articles/world/library/environment";
 import { WORLD_PALETTE, hexToUnit } from "@/components/articles/world/palette";
+import {
+  createCursorMagic,
+  type CursorMagic,
+} from "@/components/articles/world/particles/cursor-magic";
 import { QualityGovernor, type QualityLevel } from "@/components/articles/world/quality";
 import type {
   ArticlesWorldApi,
@@ -38,6 +42,7 @@ import {
   onArticleTransitionChange,
 } from "@/lib/article-transition";
 import type { ProjectPalette } from "@/lib/project-themes";
+import { random } from "@/lib/random";
 
 /**
  * The library world: one fixed, full-viewport three.js canvas behind the
@@ -140,6 +145,7 @@ export class LibraryEngine implements ArticlesWorldApi {
   private readonly envGroup = new Group();
   private readonly cardGroup = new Group();
   private readonly composite: Composite;
+  private readonly magic: CursorMagic;
   private target: WebGLRenderTarget;
   private readonly governor: QualityGovernor;
   private level: QualityLevel;
@@ -226,6 +232,15 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.composite = createComposite(this.uniforms);
     this.target = new WebGLRenderTarget(1, 1, { type: UnsignedByteType, depthBuffer: true });
 
+    this.magic = createCursorMagic({
+      world: this.uniforms,
+      camera: this.camera,
+      viewport: () => ({ width: this.width, height: this.height }),
+      tier: this.level.tier,
+      random,
+    });
+    this.scene.add(this.magic.paper.mesh, this.magic.sparks.points);
+
     this.cards = new CardsLayer({
       group: this.cardGroup,
       renderer: this.renderer,
@@ -270,7 +285,10 @@ export class LibraryEngine implements ArticlesWorldApi {
       setBlurAmount: (amount) => {
         this.blurAmount = amount;
       },
-      pulse: () => {},
+      pulse: (x, y, strength = 1) => {
+        this.magic.burst(x, y, Math.round(26 * strength), 0.8 + strength * 0.4);
+      },
+      swarm: (x, y) => this.magic.swarm(x, y),
     };
 
     this.gl = {
@@ -465,6 +483,7 @@ export class LibraryEngine implements ArticlesWorldApi {
     window.removeEventListener("blur", this.onPointerLeave);
     this.canvas.removeEventListener("webglcontextlost", this.handleContextLost);
     this.cards.dispose();
+    this.magic.dispose();
     this.environment.dispose();
     this.composite.dispose();
     this.target.dispose();
@@ -564,7 +583,10 @@ export class LibraryEngine implements ArticlesWorldApi {
   private applyLevel(level: QualityLevel) {
     const tierChanged = level.tier !== this.level.tier;
     this.level = level;
-    if (tierChanged) this.environment.setTier(level.tier);
+    if (tierChanged) {
+      this.environment.setTier(level.tier);
+      this.magic.setTier(level.tier);
+    }
     this.resize();
   }
 
@@ -693,6 +715,9 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.rig.update(dt);
     this.environment.update(this.time, dt, speedVh);
     this.cards.update(scrollY);
+    this.magic.setQuiet(u.uDetail.value);
+    this.magic.setEnabled(!transitionOwnsTheLens());
+    this.magic.update(frame, this.frameHalf);
     for (const { layer } of this.layers) layer.update(frame);
 
     this.clearColor.copy(this.fogLight).lerp(this.fogDark, u.uDark.value);

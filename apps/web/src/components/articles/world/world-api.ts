@@ -128,6 +128,12 @@ export type WorldFxApi = {
   setBlurAmount(amount: number): void;
   /** A burst of light or ink at a viewport point (clicks, arrivals). */
   pulse(x: number, y: number, strength?: number): void;
+  /**
+   * (WP2, additive) Releases a swarm of paper from a viewport point, the one
+   * a resting pointer releases: for a moment that should feel magical (a
+   * click on the Home button, an arrival).
+   */
+  swarm(x: number, y: number): void;
 };
 
 export type ArticlesWorldApi = {
