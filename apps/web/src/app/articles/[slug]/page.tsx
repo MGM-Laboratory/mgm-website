@@ -72,7 +72,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const others = feed.filter((item) => item.slug !== slug).slice(0, 3);
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
+    <div className="relative z-[1] flex min-h-[calc(100dvh-4rem)] flex-col bg-[#fcfcfc] dark:bg-[#0e1116]">
       <main className="flex-1">
         <article className="mx-auto max-w-[1200px] pt-[91px] pb-16">
           <header className="px-6 text-center sm:px-10 lg:px-0">
