@@ -1,0 +1,888 @@
+/*
+ * Project detail page (lusion.co's project page layout, re-derived).
+ *
+ * Two layouts, switched at the same width as lusion's (812 px), plus a
+ * height floor lusion doesn't have (520 px):
+ * - Vertical (812 px and narrower, 520 px tall and shorter, and every
+ *   visitor without JavaScript):
+ *   normal document flow. The meta block on top, media full width, the next
+ *   project panel at the bottom.
+ * - Horizontal (wider): a fixed, full-viewport stage. The document still
+ *   scrolls natively (a spacer gives it the track's length) and the track
+ *   is moved sideways by that scroll from JavaScript.
+ *
+ * Colours come only from the page's --project-* variables (light and dark
+ * variants of the project's theme, set on :root by the page). Everything
+ * JavaScript moves every frame (track, meta pieces, panel) takes its
+ * transform from inline styles only, never from these rules.
+ */
+
+.root {
+  --site-header: 64px;
+  --em: clamp(1rem, 1vw, 1.5rem);
+  --pad-x: 25px;
+  --pad-y: 25px;
+  --header-size: clamp(1rem, 1vw, 2rem);
+  --radius: 10px;
+  /* Small text in the accent colour: 85% highlight keeps every theme at
+     4.5:1 or better on its background (the raw highlight is 3:1 minimum). */
+  --accent-text: color-mix(in srgb, var(--project-highlight) 85%, var(--project-text));
+  --ease-lusion: cubic-bezier(0.35, 0, 0, 1);
+  --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  position: relative;
+  isolation: isolate;
+  /* Starts under the fixed site header (its own 64 px offset is undone), so
+     the page colour runs behind the glass. */
+  margin-top: calc(var(--site-header) * -1);
+  padding: 0 var(--pad-x);
+  min-height: 100svh;
+  font-size: var(--em);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  color: var(--project-text);
+  background: var(--project-bg);
+}
+
+.root ::selection {
+  background: color-mix(in srgb, var(--project-highlight) 35%, transparent);
+}
+
+@media (max-width: 400px) {
+  .root {
+    --pad-x: 15px;
+    --pad-y: 15px;
+  }
+}
+
+@media (max-width: 380px) {
+  .root {
+    --em: clamp(0.75rem, 1vw, 2rem);
+  }
+}
+
+.topography {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.spacer {
+  display: none;
+}
+
+.stage {
+  position: relative;
+}
+
+.gl {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- meta */
+
+.meta {
+  position: relative;
+  padding-top: max(calc(10svh + var(--pad-y)), calc(var(--site-header) + 28px));
+  padding-bottom: 50px;
+}
+
+.titleType {
+  margin: 0;
+  font-family: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  /* lusion's 72 px, eased down on narrow phones so a long single word
+     ("Hollowmere") still fits the column instead of breaking. */
+  font-size: min(4.5em, 16.5vw);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.025em;
+  overflow-wrap: break-word;
+}
+
+.title {
+  display: block;
+}
+
+/* Before hydration the title waits for its entrance only where it has
+   one: the horizontal layout with motion allowed. */
+@media (width > 812px) and (height > 520px) and (prefers-reduced-motion: no-preference) {
+  .titleEnter {
+    opacity: 0;
+  }
+}
+
+.body {
+  font-size: calc(1em * var(--fit, 1));
+}
+
+.left {
+  min-width: 0;
+}
+
+.desc {
+  max-width: 30em;
+  margin: 4em 0;
+  font-size: clamp(1rem, 1.5vw, 3rem);
+  line-height: 1.5;
+}
+
+.desc p {
+  margin: 0;
+}
+
+.desc p + p {
+  margin-top: 1em;
+}
+
+.right {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.5em;
+  row-gap: 3em;
+  margin-top: 4em;
+  font-size: clamp(1rem, 1.5vw, 3rem);
+}
+
+.group {
+  min-width: 0;
+}
+
+.groupTitle {
+  margin: 0 0 1em;
+  font-size: 1em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.4;
+}
+
+.list li + li {
+  margin-top: 0.15em;
+}
+
+/* Link lists space their lines so each link's hit area (padded to 24 px at
+   the smallest size) never overlaps its neighbour's (WCAG 2.5.8). */
+.list:has(.listLink) li + li {
+  margin-top: 0.6em;
+}
+
+.listLink {
+  position: relative;
+  display: inline-block;
+  padding: 0.3em 0;
+  margin: -0.3em 0;
+  background-origin: content-box;
+  background-clip: content-box;
+  color: inherit;
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition: background-size 0.3s var(--ease-expo-out);
+}
+
+.listLink:focus-visible {
+  outline: 2px solid var(--project-highlight);
+  outline-offset: 3px;
+  border-radius: 2px;
+  background-size: 100% 1px;
+}
+
+@media (hover: hover) {
+  .listLink:hover {
+    background-size: 100% 1px;
+  }
+}
+
+.external {
+  display: inline-block;
+  margin-left: 0.2em;
+  vertical-align: 0.05em;
+  opacity: 0.6;
+}
+
+.more {
+  margin-top: 0.3em;
+  padding: 0.3em 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--project-muted);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+
+.more:hover {
+  color: var(--project-text);
+}
+
+.more:focus-visible {
+  outline: 2px solid var(--project-highlight);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.credits {
+  margin-top: 4em;
+  font-size: clamp(1rem, 1.5vw, 3rem);
+}
+
+.creditList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7em 1.5em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.35;
+}
+
+.creditName {
+  display: block;
+}
+
+.creditRole {
+  display: block;
+  color: var(--project-muted);
+}
+
+/* ---------------------------------------------------------------- CTA */
+
+.cta {
+  position: relative;
+  display: inline-flex;
+  vertical-align: top;
+  border-radius: 100px;
+  color: var(--project-button-text);
+  text-decoration: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ctaPill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.125em;
+  height: 3.375em;
+  padding: 1em 1.5em 1em 1.125em;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 100px;
+  background-color: var(--project-button-bg);
+  font-weight: 500;
+  text-transform: uppercase;
+  transition:
+    background-color 0.5s var(--ease-lusion),
+    transform 0.35s var(--ease-lusion);
+}
+
+.ctaDot {
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 100px;
+  background-color: var(--project-button-text);
+  transition:
+    background-color 0.5s var(--ease-lusion),
+    transform 0.4s var(--ease-lusion);
+}
+
+.ctaLabel {
+  position: relative;
+  z-index: 1;
+  font-size: 0.875em;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition:
+    color 0.5s var(--ease-lusion) 0.1s,
+    transform 0.4s var(--ease-lusion) 0.1s;
+}
+
+.ctaArrow {
+  position: absolute;
+  z-index: 1;
+  top: calc(50% - 0.75em);
+  right: 0.75em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 100%;
+  background-color: var(--project-icon-bg);
+  color: var(--project-icon-color);
+  transform: scale(0);
+  transition: transform 0.4s var(--ease-lusion);
+}
+
+.ctaArrow svg {
+  width: 62%;
+  height: 62%;
+}
+
+.ctaPulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 100px;
+  pointer-events: none;
+}
+
+.cta[data-pulse] .ctaPulse {
+  animation: cta-pulse 0.65s var(--ease-expo-out);
+}
+
+@keyframes cta-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--project-highlight) 60%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 1em color-mix(in srgb, var(--project-highlight) 0%, transparent);
+  }
+}
+
+@media (hover: hover) {
+  .cta:hover .ctaPill {
+    background-color: var(--project-button-bg-hover);
+    transition:
+      background-color 0.5s var(--ease-lusion) 0.1s,
+      transform 0.35s var(--ease-lusion);
+  }
+
+  .cta:hover .ctaDot {
+    background-color: var(--project-button-bg-hover);
+    transform: translate3d(5em, 0, 0) scale(26);
+  }
+
+  .cta:hover .ctaLabel {
+    color: var(--project-button-text-hover);
+    transform: translate3d(-20%, 0, 0);
+    transition:
+      color 0.5s var(--ease-lusion),
+      transform 0.4s var(--ease-lusion);
+  }
+
+  .cta:hover .ctaArrow {
+    transform: scale(1);
+    transition: transform 0.4s var(--ease-lusion) 0.1s;
+  }
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--project-highlight);
+  outline-offset: 4px;
+}
+
+.cta:focus-visible .ctaPill {
+  background-color: var(--project-button-bg-hover);
+}
+
+.cta:focus-visible .ctaDot {
+  background-color: var(--project-button-bg-hover);
+  transform: translate3d(5em, 0, 0) scale(26);
+}
+
+.cta:focus-visible .ctaLabel {
+  color: var(--project-button-text-hover);
+  transform: translate3d(-20%, 0, 0);
+}
+
+.cta:focus-visible .ctaArrow {
+  transform: scale(1);
+}
+
+.cta:active .ctaPill {
+  transform: scale(0.97);
+  transition:
+    background-color 0.5s var(--ease-lusion),
+    transform 0.12s var(--ease-lusion);
+}
+
+/* ---------------------------------------------------------------- media */
+
+.track {
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+  padding-bottom: 50px;
+}
+
+.item {
+  position: relative;
+  flex: none;
+  margin: 0;
+  aspect-ratio: var(--aspect);
+  /* Nothing to round on the box itself: the WebGL stage reads the corner
+     radius from here, so it matches the DOM frame's. */
+  border-radius: var(--radius);
+}
+
+.item.full {
+  margin-inline: calc(var(--pad-x) * -1);
+  border-radius: 0;
+}
+
+/* A phone turned sideways stacks too (the 520 px height floor): keep each
+   normal item within one screen's height, centred, instead of letting a
+   portrait image run several screens tall. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .item:not(.full) {
+    width: min(100%, calc((100svh - var(--site-header) - 32px) * var(--aspect)));
+    margin-inline: auto;
+  }
+}
+
+.frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  clip-path: inset(0 round var(--radius));
+}
+
+.full .frame {
+  border-radius: 0;
+  clip-path: inset(0);
+}
+
+.content {
+  position: absolute;
+  inset: 0;
+  background-color: var(--project-highlight);
+}
+
+.media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.9s linear;
+}
+
+.item[data-loaded] .media {
+  opacity: 1;
+}
+
+/* The WebGL stage draws this item: hide the DOM media and its placeholder
+   (visibility, so a video keeps decoding as the stage's texture). */
+.item[data-owned] .frame {
+  visibility: hidden;
+}
+
+/* lusion's emerge, in CSS: the mask opens from 60% of the box to all of
+   it while the picture settles from 1.667x to 1x (1 s, expo out). Replays
+   every time the item comes back into view. */
+.item[data-emerge="out"] .frame {
+  clip-path: inset(20% round var(--radius));
+}
+
+.item.full[data-emerge="out"] .frame {
+  clip-path: inset(0);
+}
+
+.item[data-emerge="out"] .content {
+  transform: scale(1.667);
+}
+
+.item[data-emerge="in"] .frame {
+  transition: clip-path 1s var(--ease-expo-out);
+}
+
+.item[data-emerge="in"] .content {
+  transition: transform 1s var(--ease-expo-out);
+}
+
+.toggle {
+  position: absolute;
+  right: 0.9em;
+  bottom: 0.9em;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5em;
+  height: 2.5em;
+  padding: 0;
+  border: 0;
+  border-radius: 100px;
+  background-color: var(--project-icon-bg);
+  color: var(--project-icon-color);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 0.3s var(--ease-lusion),
+    transform 0.4s var(--ease-lusion);
+}
+
+.toggle svg {
+  width: 42%;
+  height: 42%;
+}
+
+.item:hover .toggle,
+.toggle:focus-visible,
+.toggle[data-paused] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--project-highlight);
+  outline-offset: 3px;
+}
+
+@media (hover: none) {
+  .toggle {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+/* ---------------------------------------------------------------- next project */
+
+.next {
+  position: relative;
+  display: block;
+  margin: 0 calc(var(--pad-x) * -1);
+  padding: 2svh var(--pad-x) calc(var(--pad-y) + env(safe-area-inset-bottom));
+  background-color: var(--project-bg);
+  color: var(--project-text);
+  text-decoration: none;
+  outline: none;
+}
+
+.next:focus-visible {
+  outline: 3px solid var(--project-highlight);
+  outline-offset: -6px;
+}
+
+.nextTitleBox {
+  position: relative;
+}
+
+.nextTitle {
+  color: color-mix(in srgb, var(--project-text) 55%, var(--project-bg));
+}
+
+.nextFooter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  margin-top: 5svh;
+  width: 100%;
+}
+
+.nextLabel {
+  flex: none;
+  font-size: 0.875em;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.nextBar {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--project-text) 20%, transparent);
+}
+
+.nextBarFill {
+  position: absolute;
+  inset: 0;
+  background-color: var(--project-highlight);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+
+.nextArrow {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  rotate: 90deg;
+}
+
+.wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  visibility: hidden;
+  background-color: var(--project-bg);
+  pointer-events: none;
+}
+
+.wipeTitle {
+  position: absolute;
+  top: 0;
+  left: var(--pad-x);
+  right: var(--pad-x);
+  color: var(--project-text);
+}
+
+.hint {
+  display: none;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ================================================================ horizontal */
+
+@media (width > 812px) and (height > 520px) {
+  .root {
+    --pad-x: max(5vw, 40px);
+    --pad-y: clamp(30px, 4vw, 50px);
+    --radius: 20px;
+    /* The media band: lusion's padding under the header (adapted to the
+       64 px site header) and its band below the media, which holds the
+       scroll hint. Portrait tablets cap the band so a 16:9 item stays
+       about a screen wide instead of two. */
+    --band-top-min: calc(var(--site-header) + var(--pad-y));
+    --band-bottom: calc(var(--pad-y) * 2 + var(--header-size) * 1.1);
+    --band-avail: calc(100dvh - var(--band-top-min) - var(--band-bottom));
+    --band-h: min(var(--band-avail), 70vw);
+    --band-top: calc(var(--band-top-min) + (var(--band-avail) - var(--band-h)) / 2);
+
+    padding: 0;
+    min-height: 0;
+  }
+
+  .spacer {
+    display: block;
+  }
+
+  .stage {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    height: 100dvh;
+    overflow: clip;
+    isolation: isolate;
+    /* Vertical swipes scroll the document (the track follows); sideways
+       drags are handled in JavaScript. */
+    /* Vertical swipes scroll natively and sideways drags move the strip
+       (detail-controller.ts), but pinch-zoom must stay the browser's. */
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .gl {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    pointer-events: none;
+  }
+
+  .titleType {
+    font-size: 4.5em;
+  }
+
+  .meta {
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    left: var(--pad-x);
+    width: 34em;
+    padding: 0;
+    transform: translate3d(0, -50%, 0);
+    pointer-events: none;
+  }
+
+  .meta[data-top] {
+    top: calc(var(--site-header) + var(--pad-y));
+    max-height: calc(100dvh - var(--site-header) - 2 * var(--pad-y));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: none;
+    /* Scrollable, so it takes wheel and swipes over its text too. */
+    pointer-events: auto;
+  }
+
+  .meta a,
+  .meta button {
+    pointer-events: auto;
+  }
+
+  .meta[data-top][data-idle],
+  .meta[data-idle] a,
+  .meta[data-idle] button {
+    pointer-events: none;
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: 60% 40%;
+    align-items: start;
+  }
+
+  .desc {
+    max-width: none;
+    font-size: 0.75em;
+  }
+
+  .right {
+    display: block;
+    margin-top: 4em;
+    padding-left: 6em;
+    font-size: 0.75em;
+  }
+
+  .right .group + .group {
+    margin-top: 4em;
+  }
+
+  .credits {
+    margin-top: 3.2em;
+    font-size: 0.75em;
+  }
+
+  .creditList {
+    column-gap: 1.2em;
+  }
+
+  .track {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0;
+    width: max-content;
+    height: 100%;
+    padding: 0 25vw 0 48em;
+  }
+
+  .item {
+    height: var(--band-h);
+    margin: var(--band-top) 0 0 5em;
+  }
+
+  .item:first-child {
+    margin-left: 0;
+  }
+
+  .item:last-child {
+    margin-right: 10vw;
+  }
+
+  .item.full {
+    height: 100%;
+    margin-top: 0;
+    margin-inline: 5em 0;
+  }
+
+  .item.full:first-child {
+    margin-left: 0;
+  }
+
+  .item.full:last-child {
+    margin-right: 10vw;
+  }
+
+  .next {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    margin: 0;
+    padding: 0;
+    transform: translate3d(100vw, 0, 0);
+  }
+
+  .nextTitleBox {
+    position: absolute;
+    top: 50%;
+    left: var(--pad-x);
+    width: 34em;
+    transform: translate3d(0, -50%, 0);
+  }
+
+  .nextFooter {
+    position: absolute;
+    left: var(--pad-x);
+    bottom: var(--pad-y);
+    width: 14em;
+    margin: 0;
+  }
+
+  .nextArrow {
+    rotate: none;
+  }
+
+  .hint {
+    position: absolute;
+    z-index: 3;
+    right: var(--pad-x);
+    bottom: calc(var(--band-bottom) / 2);
+    display: flex;
+    align-items: center;
+    gap: 0.625em;
+    margin: 0;
+    font-size: 0.75em;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    text-transform: uppercase;
+    color: var(--accent-text);
+    transform: translate3d(0, 50%, 0);
+    pointer-events: none;
+    /* Invisible on the page colour; keeps the hint legible where a
+       full-height item runs underneath it. */
+    margin-right: -0.9em;
+    padding: 0.55em 0.9em;
+    border-radius: 100px;
+    background-color: color-mix(in srgb, var(--project-bg) 88%, transparent);
+  }
+
+  .hint svg {
+    width: 1em;
+    height: 1em;
+  }
+}
+
+@media (width > 812px) and (height > 520px) and (min-aspect-ratio: 21/9) {
+  .root {
+    --pad-x: max(6vw, 60px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ctaPill,
+  .ctaDot,
+  .ctaLabel,
+  .ctaArrow,
+  .toggle,
+  .listLink,
+  .media {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+
+  .cta[data-pulse] .ctaPulse {
+    animation: none;
+  }
+}

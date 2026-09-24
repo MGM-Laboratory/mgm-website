@@ -102,18 +102,32 @@ export function onStageModeChange(listener: (mode: StageMode) => void) {
 }
 
 /** Resolves with the mode once it is decided ("gl" or "dom"). */
+// Unsubscribes of waiters still pending, so a visit that ends before the
+// mode is decided doesn't keep its closures (and their DOM) alive.
+const modeWaiters = new Set<() => void>();
+
 export function waitForStageMode(): Promise<Exclude<StageMode, "pending">> {
   if (mode !== "pending") return Promise.resolve(mode);
   return new Promise((resolve) => {
     const off = onStageModeChange((next) => {
       if (next === "pending") return;
-      off();
+      drop();
       resolve(next);
     });
+    const drop = () => {
+      off();
+      modeWaiters.delete(drop);
+    };
+    modeWaiters.add(drop);
   });
 }
 
-/** A new visit: forget the previous visit's decision. */
+/**
+ * A new visit: forget the previous visit's decision. Waiters from the
+ * previous visit are dropped unresolved (their effects are already
+ * cleaned up), so nothing holds that visit's page.
+ */
 export function resetStage() {
+  for (const drop of [...modeWaiters]) drop();
   setStageMode("pending");
 }

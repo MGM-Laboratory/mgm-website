@@ -111,13 +111,34 @@ await verifySuperadmin(superadminPassphrase);
 
 console.log("Fetching published content from production's public API...");
 const storageKeys = new Set();
-function collectKeys(value) {
+// Bucket objects a record references:
+// - string fields named `...Key` (coverKey, videoKey, photoKey, posterKey)
+// - string arrays named `...Keys` (a project's galleryKeys)
+// - the `key` of each project media section (`media: [{ key, posterKey }]`)
+// - media placed in rich-text bodies, which reference the public media
+//   route by URL (`/api/<collection>-cms/media/<key>` in an image block)
+const BODY_MEDIA_URL = /\/api\/[a-z]+-cms\/media\/([^/?#"]+)/;
+function collectKeys(value, parentKey = "") {
   if (Array.isArray(value)) {
-    for (const v of value) collectKeys(v);
+    for (const v of value) {
+      if (parentKey.endsWith("Keys") && typeof v === "string" && v) storageKeys.add(v);
+      else collectKeys(v, parentKey);
+    }
   } else if (value && typeof value === "object") {
     for (const [k, v] of Object.entries(value)) {
-      if (k.endsWith("Key") && typeof v === "string" && v) storageKeys.add(v);
-      else collectKeys(v);
+      if (typeof v === "string" && v) {
+        if (k.endsWith("Key") || (k === "key" && parentKey === "media")) storageKeys.add(v);
+        const bodyMatch = k === "url" ? BODY_MEDIA_URL.exec(v) : null;
+        if (bodyMatch) {
+          try {
+            storageKeys.add(decodeURIComponent(bodyMatch[1]));
+          } catch {
+            // A malformed escape can't name a stored object.
+          }
+        }
+      } else {
+        collectKeys(v, k);
+      }
     }
   }
 }

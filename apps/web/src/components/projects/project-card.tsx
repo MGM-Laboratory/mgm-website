@@ -7,6 +7,7 @@ import { ProjectCardFooter } from "@/components/projects/project-card-footer";
 import {
   projectGalleryKeys,
   projectMediaUrl,
+  projectThemeId,
   PROJECT_CATEGORY_LABELS,
   type CmsProjectRecord,
 } from "@/lib/project-cms";
@@ -22,6 +23,11 @@ import { cn } from "@/lib/utils";
  * The link carries an explicit accessible name: the visual text is split
  * into per-character pieces for its animations, which screen readers would
  * otherwise read letter by letter.
+ *
+ * The data attributes opt the card into the project zoom transition
+ * (components/transition/project-transition.tsx): a click zooms into the
+ * cover frame and shifts the page to the project's theme on the way in, and
+ * the way back lands on this card again.
  */
 export function ProjectCard({
   record,
@@ -43,12 +49,17 @@ export function ProjectCard({
   return (
     <Link
       href={`/projects/${record.slug}`}
+      data-project-transition=""
+      data-project-slug={record.slug}
+      data-project-theme={projectThemeId(project)}
       aria-label={categories.length ? `${project.title} (${categories.join(", ")})` : project.title}
       // A designed keyboard ring around the whole card (the hover effects
       // also follow :focus-visible); an outline, never a transform, since
-      // the cover stage and the footer animate the card's insides.
+      // the cover stage and the footer animate the card's insides. The
+      // scroll margins keep a focus-scrolled card's ring clear of the fixed
+      // header (64px) and the viewport's bottom edge.
       className={cn(
-        "group block rounded-[23px] focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[var(--focus)]",
+        "group block scroll-mt-20 scroll-mb-4 rounded-[23px] focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[var(--focus)]",
         className,
       )}
     >

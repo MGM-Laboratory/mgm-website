@@ -38,6 +38,17 @@
      the section surface it sits on so tiles never render as a literal
      white square against a dark background. */
   --pattern-canvas: var(--surface-muted);
+
+  /* Adaptive glass (site header, nav menu panel): the neutral ink and
+     surface of each tone, the site's own light and dark pairs. The glass
+     switches to these when the content behind it has the other tone
+     (hooks/use-header-tone.ts). */
+  --tone-light-ink: #0e1116;
+  --tone-light-surface: #f7f7f5;
+  --tone-dark-ink: #ededed;
+  --tone-dark-surface: #15181e;
+  /* The nav panel's glass tint before sampling raises it. */
+  --nav-glass-alpha: 74%;
 }
 
 .dark {
@@ -45,6 +56,70 @@
   --foreground: #ededed;
   --line: #262a33;
   --surface-muted: #15181e;
+  --nav-glass-alpha: 78%;
+}
+
+/* Colours the adaptive glass writes per zone (hooks/use-header-tone.ts).
+   Registered so they transition, the tints inside a gradient included. */
+@property --hz-logo-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e1116;
+}
+@property --hz-centre-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e1116;
+}
+@property --hz-controls-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e1116;
+}
+@property --hz-logo-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+@property --hz-centre-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+@property --hz-controls-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+@property --hz-logo-solid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7f7f5;
+}
+@property --hz-centre-solid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7f7f5;
+}
+@property --hz-controls-solid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7f7f5;
+}
+@property --nav-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0e1116;
+}
+@property --nav-surface {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f7f7f5;
+}
+@property --nav-alpha {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 74%;
 }
 
 @theme inline {
@@ -67,6 +142,520 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+   Site header (site-header.tsx). A frosted-glass bar: a translucent tint
+   with the content behind it blurred through.
+
+   Every colour comes from the --project-* variables a project detail page
+   puts on :root while it is mounted, falling back to the site tokens, so
+   the header wears the project's theme there and nothing changes elsewhere.
+   The consuming properties transition (0.5s or less) because those
+   variables can appear or disappear mid route-transition.
+
+   Adaptive zones: the bar has three zones (the logo, the centre with the
+   Back pill, the right-hand controls). Each reads its ink, its glass tint
+   and its opaque surface from --hz-<zone>-ink/-tint/-solid. Here they
+   default to the header's own colours, which is what renders without
+   JavaScript, before the first sample, and while a page transition walks
+   the palette. Once sampling has seen what is behind each zone,
+   hooks/use-header-tone.ts writes them inline (with data-hz-<zone>="flip"
+   when the ink left the preferred colour, and data-hz-<zone>-media over
+   imagery), and the registered properties ease there over 0.45s.
+
+   The glass lives on its own layer (.site-header-glass), never on <header>:
+   the nav menu's fixed overlay and panel are DOM descendants of the header,
+   and a backdrop-filter on it would become their containing block (the
+   panel would collapse into the 64px bar) and the backdrop root of the
+   overlay's own blur. The same goes for the controls zone's wrapper: no
+   filter, transform or backdrop-filter on it, ever.
+
+   Static tint alphas: the "Laboratory" caption is 70% ink, the weakest text
+   here. At 76% (light) and 80% (dark) it keeps at least 4.9:1 even over
+   solid black or white content scrolled underneath, so these stay the
+   default. Sampling lowers the tint to --header-glass-alpha only where the
+   contrast rule holds.
+
+   In @layer components so a caller's utility classes still win.
+--------------------------------------------------------------------------- */
+@layer components {
+  .site-header {
+    --header-surface: var(--project-bg, var(--background));
+    --header-ink: var(--project-text, var(--foreground));
+    --header-accent: var(--project-highlight, var(--focus));
+    --header-tint: 76%;
+    --header-glass-alpha: 58%;
+    --header-sheen: color-mix(in srgb, #fff 60%, transparent);
+    /* Control hover wash: the project highlight when themed, otherwise the
+       ink at the old black/5 (light) and white/10 (dark) strength. */
+    --header-hover-base: color-mix(in srgb, var(--foreground) 36%, transparent);
+    --header-hover: color-mix(
+      in srgb,
+      var(--project-highlight, var(--header-hover-base)) 16%,
+      transparent
+    );
+    --hz-logo-ink: var(--header-ink);
+    --hz-centre-ink: var(--header-ink);
+    --hz-controls-ink: var(--header-ink);
+    --hz-logo-tint: color-mix(in srgb, var(--header-surface) var(--header-tint), transparent);
+    --hz-centre-tint: color-mix(in srgb, var(--header-surface) var(--header-tint), transparent);
+    --hz-controls-tint: color-mix(in srgb, var(--header-surface) var(--header-tint), transparent);
+    --hz-logo-solid: var(--header-surface);
+    --hz-centre-solid: var(--header-surface);
+    --hz-controls-solid: var(--header-surface);
+    color: var(--header-ink);
+    transition:
+      color 0.5s ease,
+      --hz-logo-ink 0.45s ease,
+      --hz-centre-ink 0.45s ease,
+      --hz-controls-ink 0.45s ease,
+      --hz-logo-tint 0.45s ease,
+      --hz-centre-tint 0.45s ease,
+      --hz-controls-tint 0.45s ease,
+      --hz-logo-solid 0.45s ease,
+      --hz-centre-solid 0.45s ease,
+      --hz-controls-solid 0.45s ease;
+  }
+
+  .dark .site-header {
+    --header-tint: 80%;
+    --header-glass-alpha: 62%;
+    --header-sheen: color-mix(in srgb, #fff 7%, transparent);
+    --header-hover-base: color-mix(in srgb, var(--foreground) 62%, transparent);
+  }
+
+  /* Where supported, the top sheen is the surface itself lifted a step in
+     lightness, so it stays faint on any project background, dark or light. */
+  @supports (color: oklch(from red l c h)) {
+    .site-header,
+    .dark .site-header {
+      --header-sheen: oklch(from var(--header-surface) calc(l + 0.1) c h / 0.7);
+    }
+  }
+
+  /* Menu open: the bar turns nearly solid so it reads as part of the
+     menu's chrome above the panel instead of a window onto the page
+     (sampling lifts it to the panel's own tint instead). */
+  .site-header:has([aria-controls="site-nav-panel"][aria-expanded="true"]) {
+    --header-tint: 94%;
+  }
+
+  /* The tint is a gradient across the three zones, with a matching hairline
+     on the bottom edge. The stops sit just past the logo and just before
+     the controls (written by the sampler, sensible defaults here). With the
+     defaults above all three zones match, which is a plain uniform bar. */
+  .site-header-glass {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      linear-gradient(
+          to right,
+          color-mix(in srgb, var(--hz-logo-ink) 9%, transparent) var(--hz-logo-stop, 15%),
+          color-mix(in srgb, var(--hz-centre-ink) 9%, transparent) 50%,
+          color-mix(in srgb, var(--hz-controls-ink) 9%, transparent) var(--hz-controls-stop, 85%)
+        )
+        bottom / 100% 1px no-repeat,
+      linear-gradient(
+        to right,
+        var(--hz-logo-tint) var(--hz-logo-stop, 15%),
+        var(--hz-centre-tint) 50%,
+        var(--hz-controls-tint) var(--hz-controls-stop, 85%)
+      );
+    box-shadow: inset 0 1px 0 var(--header-sheen);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    transition: box-shadow 0.5s ease;
+  }
+
+  /* Without a blur behind it a translucent bar would show sharp content
+     through the text, so both fallbacks go fully opaque (and the sampler
+     stands down, leaving the header's own colours). */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .site-header-glass {
+      background:
+        linear-gradient(color-mix(in srgb, var(--header-ink) 9%, transparent)) bottom / 100% 1px
+          no-repeat,
+        var(--header-surface);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .site-header-glass {
+      background:
+        linear-gradient(color-mix(in srgb, var(--header-ink) 9%, transparent)) bottom / 100% 1px
+          no-repeat,
+        var(--header-surface);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* Each zone's ink. The controls zone's wrapper also holds the nav menu's
+     overlay and panel, which set their own colours. */
+  .site-header [data-header-zone="logo"] {
+    color: var(--hz-logo-ink);
+    transition: text-shadow 0.45s ease;
+  }
+
+  .site-header [data-header-zone="controls"] {
+    color: var(--hz-controls-ink);
+  }
+
+  /* A zone whose ink left the preferred colour: its focus ring and hover
+     wash follow the ink instead of the theme accent. */
+  .site-header[data-hz-logo="flip"] [data-header-zone="logo"],
+  .site-header[data-hz-controls="flip"] [data-header-zone="controls"] {
+    --header-accent: currentColor;
+    --header-hover: color-mix(in srgb, currentColor 14%, transparent);
+  }
+
+  /* Over imagery a faint halo in the zone's own surface colour keeps the
+     glyph edges clean on busy pictures. On the buttons themselves, never
+     on the zone wrapper (see the containing-block note above). */
+  .site-header[data-hz-logo-media] [data-header-zone="logo"] {
+    text-shadow: 0 0 12px color-mix(in srgb, var(--hz-logo-solid) 60%, transparent);
+  }
+
+  .site-header[data-hz-controls-media] [data-header-zone="controls"] > .header-control {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--hz-controls-solid) 60%, transparent));
+  }
+
+  /* Header links and buttons: inherit the header ink, a hover wash, and a
+     focus ring in the accent (the project highlight, or --focus). */
+  .header-control {
+    color: inherit;
+    background-color: transparent;
+    transition:
+      background-color 0.3s ease,
+      filter 0.45s ease;
+  }
+
+  @media (hover: hover) {
+    .header-control:hover {
+      background-color: var(--header-hover);
+    }
+  }
+
+  .header-control:focus-visible,
+  .header-focus:focus-visible {
+    outline: 2px solid var(--header-accent);
+    outline-offset: 2px;
+  }
+
+  /* -------------------------------------------------------------------------
+     Project "Back" pill: only on /projects/<slug>. Centred in the bar on
+     wide screens, an icon-only circle beside the theme toggle at 812px and
+     below. Hover and keyboard focus play a slide-through: the leading arrow
+     exits left, the label nudges into its place and a second arrow, parked
+     past the right edge, slides in behind it.
+
+     The hover colour rises as a fill from the bottom (::before) rather than
+     crossfading the background: a crossfade between an inverted pair passes
+     through a midpoint where label and pill are the same colour. The rest
+     colour is its own layer (::after), inset 1px, so the fill alone owns the
+     rounded edge once it covers: two layers sharing one anti-aliased edge
+     leave a rim of the bottom colour around the top one.
+
+     CSS owns every transform here (no GSAP), each on its own property: the
+     entrance animates `translate`, the press `scale`, and the slide-through
+     and the fill the children's `transform`, so none of them overwrite
+     another.
+  ------------------------------------------------------------------------- */
+  .project-back {
+    --back-bg: var(--project-button-bg, var(--foreground));
+    --back-ink: var(--project-button-text, var(--background));
+    --back-bg-hover: var(--project-button-bg-hover, var(--project-highlight, var(--brand-blue)));
+    --back-ink-hover: var(--project-button-text-hover, #fff);
+    --back-slide: cubic-bezier(0.55, 0, 0.1, 1);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    width: fit-content;
+    height: 2.5rem;
+    margin: auto;
+    align-items: center;
+    gap: 0.6em;
+    overflow: hidden;
+    padding: 0 1.35em 0 1em;
+    border-radius: 9999px;
+    color: var(--back-ink);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    isolation: isolate;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      color 0.5s ease,
+      scale 0.25s var(--back-slide);
+    animation: project-back-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+  }
+
+  /* The project zoom's exit is under way: the pill leaves with the page. */
+  .project-back[data-leaving] {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .project-back::before,
+  .project-back::after {
+    content: "";
+    position: absolute;
+    border-radius: inherit;
+  }
+
+  .project-back::before {
+    inset: 0;
+    z-index: -1;
+    background-color: var(--back-bg-hover);
+    transform: translateY(101%);
+    transition:
+      transform 0.45s var(--back-slide),
+      background-color 0.5s ease;
+  }
+
+  .project-back::after {
+    inset: 1px;
+    z-index: -2;
+    background-color: var(--back-bg);
+    transition: background-color 0.5s ease;
+  }
+
+  /* Arrived behind the route-transition curtain: hold the entrance until
+     the curtain has revealed the page (site-header.tsx). */
+  .project-back[data-waiting] {
+    opacity: 0;
+    animation: none;
+  }
+
+  .project-back-icon,
+  .project-back-label {
+    transition: transform 0.45s var(--back-slide);
+  }
+
+  .project-back-icon {
+    width: 1.2em;
+    height: 1.2em;
+    flex: none;
+  }
+
+  .project-back-icon-in {
+    position: absolute;
+    top: 0;
+    right: 1em;
+    bottom: 0;
+    margin-block: auto;
+    transform: translateX(2.4em);
+    transition-delay: 0.04s;
+  }
+
+  .project-back:focus-visible {
+    outline: 2px solid var(--header-accent);
+    outline-offset: 3px;
+    color: var(--back-ink-hover);
+    transition-duration: 0.3s, 0.25s;
+    transition-delay: 0.06s, 0s;
+  }
+
+  .project-back:focus-visible::before {
+    transform: translateY(0);
+  }
+
+  .project-back:focus-visible .project-back-icon-out {
+    transform: translateX(-2.4em);
+  }
+
+  .project-back:focus-visible .project-back-label {
+    transform: translateX(-1.45em);
+  }
+
+  .project-back:focus-visible .project-back-icon-in {
+    transform: translateX(0);
+  }
+
+  @media (hover: hover) {
+    /* The label turns as the fill passes its middle, not over 0.5s. */
+    .project-back:hover {
+      color: var(--back-ink-hover);
+      transition-duration: 0.3s, 0.25s;
+      transition-delay: 0.06s, 0s;
+    }
+
+    .project-back:hover::before {
+      transform: translateY(0);
+    }
+
+    .project-back:hover .project-back-icon-out {
+      transform: translateX(-2.4em);
+    }
+
+    .project-back:hover .project-back-label {
+      transform: translateX(-1.45em);
+    }
+
+    .project-back:hover .project-back-icon-in {
+      transform: translateX(0);
+    }
+  }
+
+  .project-back:active {
+    scale: 0.94;
+  }
+
+  @media (max-width: 812px) {
+    .project-back {
+      position: relative;
+      inset: auto;
+      width: 2.75rem;
+      height: 2.75rem;
+      flex: none;
+      margin: 0;
+      justify-content: center;
+      gap: 0;
+      padding: 0;
+    }
+
+    .project-back-label {
+      display: none;
+    }
+
+    .project-back-icon-in {
+      right: calc(50% - 0.6em);
+    }
+  }
+
+  /* Over content of the other tone the pill inverts to the zone's ink and
+     surface, so it stays a solid, readable shape on the glass: the centre
+     zone where it is centred, the controls zone where it sits beside them. */
+  @media (min-width: 813px) {
+    .site-header[data-hz-centre="flip"] .project-back {
+      --back-bg: var(--hz-centre-ink);
+      --back-ink: var(--hz-centre-solid);
+      --header-accent: var(--hz-centre-ink);
+    }
+  }
+
+  @media (max-width: 812px) {
+    .site-header[data-hz-controls="flip"] .project-back {
+      --back-bg: var(--hz-controls-ink);
+      --back-ink: var(--hz-controls-solid);
+    }
+  }
+
+  /* Reduced motion: no entrance, no slide, no press; the hover colours
+     still swap, instantly. */
+  @media (prefers-reduced-motion: reduce) {
+    .project-back,
+    .project-back::before,
+    .project-back::after,
+    .project-back-icon,
+    .project-back-label {
+      transition: none;
+      animation: none;
+    }
+
+    .project-back:is(:hover, :focus-visible) .project-back-icon-out,
+    .project-back:is(:hover, :focus-visible) .project-back-label {
+      transform: none;
+    }
+
+    .project-back:is(:hover, :focus-visible) .project-back-icon-in {
+      transform: translateX(2.4em);
+    }
+
+    .project-back:active {
+      scale: none;
+    }
+  }
+}
+
+@keyframes project-back-in {
+  from {
+    opacity: 0;
+    translate: 0 1em;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Nav menu glass (nav/nav-menu.tsx). The panel is the same frosted glass as
+   the header, a little denser because it carries more text. It wears one
+   tone, light or dark: the site's own by default, and the other one when
+   sampling finds content of that tone behind it (data-tone, with
+   --nav-alpha raised where the weakest text needs it). The panel re-points
+   the site tokens its contents already use (--foreground, --background,
+   --surface-muted, --line) at that tone, so every link, card and label
+   follows without per-element colours. The overlay beside the panel is a
+   lighter glass that dims the page and blurs it.
+
+   GSAP owns the panel's and the overlay's transform and opacity, so the
+   transitions here only ever name colours.
+--------------------------------------------------------------------------- */
+@layer components {
+  .nav-panel {
+    --nav-ink: var(--tone-light-ink);
+    --nav-surface: var(--tone-light-surface);
+    --nav-alpha: var(--nav-glass-alpha);
+    --foreground: var(--nav-ink);
+    --background: var(--nav-surface);
+    --surface-muted: var(--nav-surface);
+    --line: color-mix(in srgb, var(--nav-ink) 12%, transparent);
+    color: var(--foreground);
+    background-color: color-mix(in srgb, var(--nav-surface) var(--nav-alpha), transparent);
+    box-shadow: inset 1px 0 0 color-mix(in srgb, #fff 18%, transparent);
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+    backdrop-filter: blur(28px) saturate(170%);
+    transition:
+      --nav-ink 0.45s ease,
+      --nav-surface 0.45s ease,
+      --nav-alpha 0.45s ease;
+  }
+
+  .dark .nav-panel,
+  .nav-panel[data-tone="dark"] {
+    --nav-ink: var(--tone-dark-ink);
+    --nav-surface: var(--tone-dark-surface);
+  }
+
+  .nav-panel[data-tone="light"] {
+    --nav-ink: var(--tone-light-ink);
+    --nav-surface: var(--tone-light-surface);
+  }
+
+  .nav-overlay {
+    background-color: color-mix(in srgb, var(--background) 42%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .nav-panel {
+      background-color: var(--nav-surface);
+    }
+
+    .nav-overlay {
+      background-color: color-mix(in srgb, var(--background) 80%, transparent);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .nav-panel {
+      background-color: var(--nav-surface);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .nav-overlay {
+      background-color: color-mix(in srgb, var(--background) 88%, transparent);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
 
 .article-cover-image {

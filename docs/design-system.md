@@ -69,6 +69,10 @@ Nav bento tiles pair each item with a `motif` (`ring | bracket | cross | chevron
 - **Decorative motifs must stay clear of text at every breakpoint they're visible at**, not just desktop. Several `FlairShape`/`BauhausField` placements were tuned assuming a desktop-only gutter between the shape and a centered text column, and silently started overlapping headings once that gutter didn't exist below `lg:`. When adding a decorative shape near text, check it at the narrowest width it's visible at, not just where it was designed.
 - **GSAP animation setup should be scoped to the breakpoint its target is actually visible at**, using `gsap.matchMedia()`. A `hidden lg:block` element (or any element hidden by a CSS class) still gets its transforms computed if a mount effect sets up a ScrollTrigger/tween/rAF loop for it unconditionally. `gsap.matchMedia(); mm.add("(min-width: 1024px)", () => { ...setup...; return cleanup; })` scopes both the setup and its cleanup to the query, and re-runs automatically on a resize across the breakpoint. See `about/bauhaus-field.tsx` for the pattern (it was previously running its scroll-triggered entrance, idle loops, and a mousemove parallax listener on every mobile visit for shapes that were `display: none` the whole time).
 
+## Project detail themes
+
+Project detail pages are the one deliberate exception to the closed palette (`DESIGN_SYSTEM.md` §2.5). `apps/web/src/lib/project-themes.ts` holds 20 contrast-checked presets with light and dark variants. The page puts the active variant on `:root` as `--project-*` variables through a `<style>` it renders, so the variables exist only while it is mounted, and the header reads them with fallbacks to the site tokens. See `docs/projects-page.md`.
+
 ## Theme awareness rules
 
 - Never hardcode a color that should follow theme. Use tokens/utilities. Surfaces: `--surface-muted` for panels (menu), `--background` for pages.

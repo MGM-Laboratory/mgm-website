@@ -1,6 +1,7 @@
 import gsap from "gsap";
 
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
+import { createScrollDeltaFilter } from "@/components/projects/stage/scroll-jump";
 import { Spring } from "@/components/projects/stage/spring";
 import { getStageCards, type StageCard } from "@/components/projects/stage/stage-registry";
 
@@ -43,6 +44,7 @@ export function startDomReaction() {
   const spring = new Spring(2, 0.32, 0);
   const targets = new WeakMap<StageCard, Targets>();
   let lastScroll: number | null = null;
+  const scrollMotion = createScrollDeltaFilter();
   let velocity = 0;
   let resting = true;
   // Bumped on resize: columns may have changed, so each card's side is
@@ -101,9 +103,9 @@ export function startDomReaction() {
     const scroll = window.scrollY;
     const moved = lastScroll === null ? 0 : scroll - lastScroll;
     lastScroll = scroll;
-    // More than a screen in one frame is a jump (an anchor, the End key),
-    // not a flick: no jolt for it.
-    const delta = Math.abs(moved) > window.innerHeight ? 0 : moved;
+    // A jump (an anchor, the End key, a focus scroll) is not a flick: no
+    // jolt for it (stage/scroll-jump.ts).
+    const delta = scrollMotion(moved, window.innerHeight);
     if (dt > 0) velocity += (delta / dt - velocity) * (1 - Math.exp(-VELOCITY_SMOOTHING * dt));
     if (delta === 0 && Math.abs(velocity) < 1) velocity = 0;
 

@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 
 import { PatternTile, type PatternKind } from "@/components/process/pattern-tile";
+import {
+  gridRevealState,
+  OPENING_MIN_REVEAL_OPACITY,
+} from "@/components/projects/stage/grid-reveal-state";
 import { trackScrollIdle, whenScrollIdle } from "@/components/projects/stage/scroll-idle";
 import {
   FOCUS_HUNT_DELAY,
@@ -11,6 +15,7 @@ import {
   OPENING_VISIBLE_SHARE,
   registerStageCard,
 } from "@/components/projects/stage/stage-registry";
+import { peekProjectReturn } from "@/lib/project-transition";
 import { waitForGridReveal } from "@/lib/projects-intro";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 
@@ -34,6 +39,11 @@ const VISIBILITY_STEPS = Array.from({ length: 21 }, (_, i) => i / 20);
 // A touch longer than the list's reveal (0.9 s fade and 28 px rise, see
 // projects-grid.tsx), which moves cards up without a scroll event.
 const REVEAL_RISE_SECONDS = 0.95;
+// When the list's fade-in passes OPENING_MIN_REVEAL_OPACITY, with a margin.
+const REVEAL_FADE_SECONDS = 0.3;
+// The project zoom overlay unhides the card it lands on; if it never does
+// (it was torn down some way that missed the card), the card shows anyway.
+const LANDING_FAILSAFE_MS = 8000;
 
 /**
  * The card's forced 3:2 cover frame. The frame registers with the page's
@@ -48,6 +58,14 @@ const REVEAL_RISE_SECONDS = 0.95;
  * edge-masked copy fading out on a sharp picture (a cheap edge motion
  * blur), then through a quick focus hunt. Hovering a DOM cover pulls focus
  * and tilts the picture slightly toward the cursor.
+ *
+ * Coming back from a project through the zoom transition (a return note,
+ * lib/project-transition.ts), covers already on screen rest instead of
+ * replaying their opening, and the card being returned to stays hidden
+ * (`data-project-landing`) until the overlay lands on it and removes the
+ * attribute. The frame's `data-project-transition-frame` and
+ * `data-overscan` tell the overlay where the picture sits and how far it
+ * is zoomed at rest.
  */
 export function ProjectCardCover({
   coverUrl,
@@ -66,12 +84,32 @@ export function ProjectCardCover({
   const edgeRef = useRef<HTMLImageElement>(null);
   const fallbackPattern = FALLBACK_PATTERNS[slug.length % FALLBACK_PATTERNS.length];
 
+  // Read once, synchronously during the first render (like the heroes read
+  // the boot flag): the overlay clears the note once it has landed, and
+  // this card must keep the state it mounted with until then.
+  const [{ returning, landing }] = useState(() => {
+    const note = peekProjectReturn();
+    const back = Boolean(note && !note.restoreOnly);
+    return { returning: back, landing: back && note?.slug === slug };
+  });
+
   useIsomorphicLayoutEffect(() => {
     const frame = frameRef.current;
     const root = frame?.closest("a");
     if (!frame || !root) return;
     return registerStageCard({ root, frame, image: imageRef.current, index });
   }, [index]);
+
+  // The landing card's failsafe (the overlay normally unhides it long
+  // before this fires).
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!landing || !frame) return;
+    const timer = window.setTimeout(() => {
+      delete frame.dataset.projectLanding;
+    }, LANDING_FAILSAFE_MS);
+    return () => window.clearTimeout(timer);
+  }, [landing]);
 
   // DOM opening: plays for every card the WebGL stage isn't drawing, in any
   // mode (touch, no WebGL2, a lost context, or a stage that hasn't taken
@@ -171,17 +209,28 @@ export function ProjectCardCover({
     // scroll) and once the list's reveal rise has ended.
     const check = () => {
       if (!armed || !inView || ownedByStage()) return;
+      if (gridRevealState.opacity < OPENING_MIN_REVEAL_OPACITY) return;
       const rect = frame.getBoundingClientRect();
       const onScreen = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
       if (onScreen < OPENING_VISIBLE_SHARE * rect.height) return;
       armed = false;
       play();
     };
+    let afterFade: gsap.core.Tween | null = null;
     let afterRise: gsap.core.Tween | null = null;
     const arm = () => {
       if (cancelled || observer) return;
       armed = true;
-      if (!ownedByStage()) toStart();
+      const rect = frame.getBoundingClientRect();
+      if (returning && rect.bottom > 0 && rect.top < window.innerHeight) {
+        // Back from a project: the list arrives as it was left, so a cover
+        // already on screen rests (the start frame would also mark it
+        // mid-opening and keep the WebGL stage from taking it over). It
+        // replays after it has been fully out of view, like any other.
+        armed = false;
+      } else if (!ownedByStage()) {
+        toStart();
+      }
       observer = new IntersectionObserver(
         (entries) => {
           const entry = entries[entries.length - 1];
@@ -202,6 +251,7 @@ export function ProjectCardCover({
       observer.observe(root);
       window.addEventListener("scroll", check, { passive: true });
       window.addEventListener("resize", check);
+      afterFade = gsap.delayedCall(REVEAL_FADE_SECONDS, check);
       afterRise = gsap.delayedCall(REVEAL_RISE_SECONDS, check);
     };
     void waitForGridReveal().then(arm);
@@ -230,6 +280,7 @@ export function ProjectCardCover({
       observer?.disconnect();
       window.removeEventListener("scroll", check);
       window.removeEventListener("resize", check);
+      afterFade?.kill();
       afterRise?.kill();
       timeline?.kill();
       setOpening(null);
@@ -247,7 +298,7 @@ export function ProjectCardCover({
       offReduced();
       stop();
     };
-  }, []);
+  }, [returning]);
 
   // DOM hover (skipped while the WebGL stage draws this cover).
   useIsomorphicLayoutEffect(() => {
@@ -394,7 +445,10 @@ export function ProjectCardCover({
   return (
     <div
       ref={frameRef}
-      className="group/cover relative aspect-[3/2] overflow-hidden rounded-[15px] bg-[var(--surface-muted)] data-[stage=gl]:bg-transparent dark:bg-white/[0.04]"
+      data-project-transition-frame=""
+      data-overscan={ZOOM_REST}
+      data-project-landing={landing ? "" : undefined}
+      className="group/cover relative aspect-[3/2] overflow-hidden rounded-[15px] bg-[var(--surface-muted)] data-[project-landing]:invisible data-[stage=gl]:bg-transparent dark:bg-white/[0.04]"
     >
       {coverUrl ? (
         // Hidden while the WebGL stage draws this cover. Nothing animates
@@ -405,7 +459,11 @@ export function ProjectCardCover({
             {/* CMS media is served through the storage proxy; next/image
                 cannot optimize it, so a plain img matches the rest of the
                 site. The WebGL stage switches it to eager loading once
-                it exists (stage/cover-engine.ts). */}
+                it exists (stage/cover-engine.ts). The first row is what the
+                list reveals with, so its covers load first; the rest yield
+                to the cover stage's script, which otherwise queued behind a
+                dozen lazy-loaded covers on a cold visit and missed the
+                reveal. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imageRef}
@@ -413,6 +471,7 @@ export function ProjectCardCover({
               alt={alt}
               loading="lazy"
               decoding="async"
+              fetchPriority={index < 2 ? "high" : "low"}
               className="h-full w-full object-cover will-change-transform"
             />
             {/* Edge motion blur for the DOM opening: a blurred copy masked

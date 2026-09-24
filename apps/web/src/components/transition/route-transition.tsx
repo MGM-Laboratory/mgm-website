@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import gsap from "gsap";
 
 import { LogoMark } from "@/components/hero/shapes";
+import { claimsProjectPopstate } from "@/lib/project-transition";
 import { markRouteCoverStarted, markRouteRevealDone } from "@/lib/route-reveal";
 
 /**
@@ -60,6 +61,8 @@ import { markRouteCoverStarted, markRouteRevealDone } from "@/lib/route-reveal";
 
 const WHITE_FADE_IN_DURATION = 0.1;
 const WHITE_FADE_OUT_DURATION = 0.42;
+// How faded the white wash must be before reveal-gated entrances start.
+const REVEAL_SIGNAL_OPACITY = 0.3;
 const GIANT_SETTLE_DURATION = 0.06;
 const SHRINK_DURATION = 0.5;
 const SHRINK_FROM_ROTATION = -18;
@@ -274,8 +277,8 @@ export function RouteTransition() {
         if (logoRef.current) gsap.set(logoRef.current, { scale: 1, rotation: 0 });
         if (whiteRef.current) gsap.set(whiteRef.current, { autoAlpha: 0 });
         pendingRef.current = freshPendingState();
-        // The page is fully visible again: entrance animations gated on the
-        // curtain may now play.
+        // Normally already signalled as the wash faded (see below); this
+        // covers a timeline that jumped straight to its end.
         markRouteRevealDone();
       },
     });
@@ -297,6 +300,17 @@ export function RouteTransition() {
       autoAlpha: 0,
       duration: WHITE_FADE_OUT_DURATION,
       ease: "sine.inOut",
+      // Entrances gated on the reveal start once the wash is mostly gone:
+      // the page is plainly visible by then, and waiting for the wash's
+      // last, nearly transparent frames left a beat of blank page before
+      // the destination's entrance began. Idempotent, so every later frame
+      // (and onComplete) calling it again is a no-op.
+      onUpdate: () => {
+        const white = whiteRef.current;
+        if (white && Number(gsap.getProperty(white, "opacity")) <= REVEAL_SIGNAL_OPACITY) {
+          markRouteRevealDone();
+        }
+      },
     });
   }
 
@@ -471,6 +485,12 @@ export function RouteTransition() {
 
     function onPopState() {
       if (window.location.pathname === shownPathnameRef.current) return;
+      // Back and forward between the project list and a project (or two
+      // projects) belong to the project zoom overlay, which covers the
+      // swap itself (project-transition.tsx). Clicks need no such check:
+      // the overlay's capture listener on window prevents the default
+      // before this one on document runs, and this one bails on that.
+      if (claimsProjectPopstate(shownPathnameRef.current, window.location.pathname)) return;
       startPopstateCover();
     }
 
@@ -494,16 +514,20 @@ export function RouteTransition() {
     [],
   );
 
+  // `data-route-transition` marks both curtain layers for the e2e suite,
+  // which asserts they never show on project zoom navigations.
   return (
     <>
       <div
         ref={whiteRef}
         aria-hidden
+        data-route-transition=""
         className="pointer-events-none invisible fixed inset-0 z-[999] bg-white opacity-0"
       />
       <div
         ref={overlayRef}
         aria-hidden
+        data-route-transition=""
         className="pointer-events-none invisible fixed inset-0 z-[999] opacity-0 bg-[var(--brand-blue)]"
       >
         <div className="absolute inset-0 flex items-center justify-center">

@@ -119,7 +119,7 @@ type Glyph = {
   put: Record<"x" | "y" | "r" | "sx" | "sy", Setter>;
 };
 
-type Resident = { el: HTMLElement; body: HTMLElement; busy: boolean };
+type Resident = { el: HTMLElement; body: HTMLElement; key: string; busy: boolean };
 
 export type HeroPlayOptions = {
   /** Each letter's frozen slot width, in em of the title's font size. */
@@ -178,7 +178,12 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   if (glyphEls.length !== slots.length) return;
   const residents: Resident[] = [
     ...root.querySelectorAll<HTMLElement>(".projects-hero-resident"),
-  ].map((el) => ({ el, body: el.firstElementChild as HTMLElement, busy: false }));
+  ].map((el) => ({
+    el,
+    body: el.firstElementChild as HTMLElement,
+    key: el.dataset.resident ?? "",
+    busy: false,
+  }));
 
   // E: the title's font size in px; every physics length below is in em.
   let E = parseFloat(getComputedStyle(h1).fontSize) || 16;
@@ -295,11 +300,16 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
     let tr = 0;
     let tw = REST_WEIGHT;
     const ts = g.held ? -0.18 : 0;
-    // A pressed letter's neighbours lean aside to make room for it.
+    // A pressed letter's neighbours make room for it, and pass a little of
+    // the push on to the next letters, so nothing fuses into its neighbour
+    // (the held letter also spreads sideways as it squashes).
     const hi = held ? glyphs.indexOf(held) : -9;
-    if (Math.abs(hi - i) === 1) {
+    const gap = Math.abs(hi - i);
+    if (gap === 1) {
       tx += (i - hi) * 0.05;
-      tr += (i - hi) * 5;
+      tr += (i - hi) * 3;
+    } else if (gap === 2) {
+      tx += Math.sign(i - hi) * 0.025;
     }
     if (pointer.inside && fine) {
       // Gaussian falloff around the cursor (vertical distance measured
@@ -311,10 +321,17 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
       const dy = (CAP_MID - pointer.y) * 0.8;
       const R = 0.55;
       const f = Math.exp(-(dx * dx + dy * dy) / (2 * R * R));
-      const side = clamp(-1, 1, dx / R);
-      tx += side * 0.08 * f;
-      tr += side * 6 * f;
-      tw += 180 * f;
+      if (!held) {
+        const side = clamp(-1, 1, dx / R);
+        tx += side * 0.08 * f;
+        tr += side * 6 * f;
+        tw += 180 * f;
+      } else if (g.held) {
+        // While a letter is held, the field only swells its weight:
+        // pushing and leaning the letters around it on top of making room
+        // ran them into their neighbours.
+        tw += 180 * f;
+      }
     }
     return [tx, tr, ts, Math.max(tw, REST_WEIGHT + 220 * g.tide)];
   }
@@ -660,7 +677,11 @@ function attach(root: HTMLElement, { slots, count }: HeroPlayOptions, fine: bool
   /** A resident rises behind a gap or letter, looks around, pops its head
    *  above the cap line, then ducks back down. */
   function peek(): Beat {
-    const free = residents.filter((r) => !r.busy);
+    // In dark mode the letters are white, and white strokes crossing the
+    // brand-yellow disc read as notches cut into it (yellow only ever
+    // carries ink, DESIGN_SYSTEM.md): the other residents peek instead.
+    const dark = document.documentElement.classList.contains("dark");
+    const free = residents.filter((r) => !r.busy && !(dark && r.key === "disc"));
     if (!free.length) return null;
     const r = randomPick(free);
     const x = randomPick(spots);

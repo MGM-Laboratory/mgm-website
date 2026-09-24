@@ -8,6 +8,7 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { InteractiveBackground } from "@/components/interactive-background";
+import { consumeScrollResetSkip, projectDetailSlug } from "@/lib/project-transition";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -18,6 +19,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const isFirstRender = useRef(true);
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
+  const isProjectDetail = projectDetailSlug(pathname) !== null;
   const shouldSmooth = pathname === "/";
 
   useLayoutEffect(() => {
@@ -69,11 +71,16 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   // of whatever native scrollY it happened to read while mounting), and on
   // exit it resets the still-live outgoing smoother — clearing the stale
   // transform on #smooth-content — before its deferred kill() tears it down.
+  //
+  // One exception: the project list, entered back from a project through
+  // the zoom transition, restores its own scroll position in its layout
+  // effects (which run before this one) and asks to keep it.
   useLayoutEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
+    if (consumeScrollResetSkip(pathname)) return;
     window.scrollTo(0, 0);
     ScrollSmoother.get()?.scrollTo(0, false);
     const content = document.getElementById("smooth-content");
@@ -88,7 +95,10 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <InteractiveBackground />
+      {/* Project detail pages draw their own ambient layer (the topography
+          canvas, which also reacts to the cursor): a second cursor effect on
+          top would fight it and ignores the page's theme colours. */}
+      {isProjectDetail ? null : <InteractiveBackground />}
       <div id="smooth-wrapper">
         {/* Offsets every page's content below the fixed SiteHeader — the
           header lives outside this wrapper (see layout.tsx) so it stays
