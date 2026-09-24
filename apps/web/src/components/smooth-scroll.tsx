@@ -8,6 +8,7 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { InteractiveBackground } from "@/components/interactive-background";
+import { isArticlesPath } from "@/lib/article-transition";
 import { consumeScrollResetSkip, projectDetailSlug } from "@/lib/project-transition";
 
 if (typeof window !== "undefined") {
@@ -20,6 +21,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
   const isProjectDetail = projectDetailSlug(pathname) !== null;
+  const isArticles = isArticlesPath(pathname);
   const shouldSmooth = pathname === "/";
 
   useLayoutEffect(() => {
@@ -96,9 +98,11 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* Project detail pages draw their own ambient layer (the topography
-          canvas, which also reacts to the cursor): a second cursor effect on
-          top would fight it and ignores the page's theme colours. */}
-      {isProjectDetail ? null : <InteractiveBackground />}
+          canvas, which also reacts to the cursor), and the articles pages
+          live inside the library world (with cursor trails of its own): a
+          second cursor effect on top would fight them and ignores their
+          colours. */}
+      {isProjectDetail || isArticles ? null : <InteractiveBackground />}
       <div id="smooth-wrapper">
         {/* Offsets every page's content below the fixed SiteHeader — the
           header lives outside this wrapper (see layout.tsx) so it stays
