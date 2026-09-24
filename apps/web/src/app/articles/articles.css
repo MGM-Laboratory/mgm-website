@@ -1,12 +1,56 @@
 /*
- * The articles library: the list's fixed head, the card grid (the DOM the
- * world draws over), the DOM fallback's own animations, and the rules that
- * hand the pictures to the WebGL world while keeping every link, focus ring
- * and accessible name in the DOM.
+ * The articles library's list: the fixed head (title, search, category
+ * pills or the compact filter sheet), the card grid (the DOM the world
+ * draws over, and the whole list when there is no world), the end of the
+ * archive with its Home button, and the back-to-top button.
  *
  * World tokens mirror components/articles/world/palette.ts (the canvas's
- * own colours), so the DOM sitting on the fog always matches it.
+ * own colours), so the DOM sitting on the fog always matches it. Text
+ * pairs: --world-ink on --world-fog is over 15:1 in light and 16:1 in
+ * dark; --world-ink-soft over 9:1 and 8:1.
+ *
+ * Motion rules: nothing here sets a transform on an element GSAP animates
+ * (the title's letters, the search and pill rows during the entrance): the
+ * CSS motion lives on inner or separate elements (docs/animation-system.md
+ * gotcha #1). Everything decorative is inside
+ * `prefers-reduced-motion: no-preference`.
  */
+
+@property --hl-left {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --hl-right {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --hl-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --hl-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
 
 :root {
   --world-fog: #edeff3;
@@ -14,10 +58,16 @@
   --world-ink-soft: #3b4150;
   --world-rule: rgb(14 17 22 / 0.9);
   --world-pill: rgb(255 255 255 / 0.72);
+  --world-pill-hover: rgb(255 255 255 / 0.95);
   --world-pill-line: rgb(14 17 22 / 0.1);
   --world-pill-active: #0e1116;
   --world-pill-active-text: #ffffff;
   --world-accent: #3a6dc5;
+  --world-glow: #f7e3b0;
+  --world-shadow: rgb(14 17 22 / 0.28);
+  --world-ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --world-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --world-ease-expo: cubic-bezier(0.87, 0, 0.13, 1);
 }
 
 :root.dark {
@@ -26,10 +76,13 @@
   --world-ink-soft: #b9bcc6;
   --world-rule: rgb(237 237 237 / 0.85);
   --world-pill: rgb(20 24 34 / 0.7);
+  --world-pill-hover: rgb(34 40 56 / 0.92);
   --world-pill-line: rgb(237 237 237 / 0.14);
   --world-pill-active: #ededed;
   --world-pill-active-text: #05060a;
   --world-accent: #6f9be6;
+  --world-glow: #3a6dc5;
+  --world-shadow: rgb(0 0 0 / 0.6);
 }
 
 /* The page behind the canvas is the fog itself (no flash before the world paints). */
@@ -44,7 +97,6 @@ html:has([data-articles-page]) body {
   position: relative;
   z-index: 1;
   min-height: calc(100dvh - 4rem);
-  padding-bottom: 12vh;
   color: var(--world-ink);
 }
 
@@ -57,9 +109,14 @@ html:has([data-articles-page]) body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.5rem 0;
+  gap: 0.7rem;
+  padding: 0.75rem 1rem 0;
   pointer-events: none;
+}
+
+/* The filter sheet's veil must cover the back-to-top button (35) while open. */
+.articles-head:has(.articles-filter[data-open]) {
+  z-index: 40;
 }
 
 .articles-head > * {
@@ -73,28 +130,80 @@ html:has([data-articles-page]) body {
   line-height: 1;
   letter-spacing: -0.035em;
   color: var(--world-ink);
+  outline: none;
+  user-select: none;
+}
+
+/* One mask for the whole word: the letters rise into it. */
+.articles-title-line {
+  display: inline-flex;
+  overflow: hidden;
+  padding: 0.08em 0.04em 0.14em;
+  margin: -0.08em -0.04em -0.14em;
+}
+
+.articles-title-char,
+.articles-title-glyph {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .articles-title[data-bob] .articles-title-glyph {
+    animation: articles-bob 0.72s cubic-bezier(0.3, 0.7, 0.4, 1) calc(var(--char-i) * 42ms) both;
+  }
+}
+
+@keyframes articles-bob {
+  0% {
+    transform: none;
+  }
+  38% {
+    transform: translateY(-0.11em) rotate(-4deg);
+  }
+  72% {
+    transform: translateY(0.02em) rotate(1deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ search */
+
+.articles-controls {
+  display: flex;
+  gap: 0.5rem;
+  width: min(30rem, 100%);
 }
 
 .articles-search {
   position: relative;
   display: flex;
+  flex: 1;
   align-items: center;
-  width: min(30rem, 100%);
+  min-width: 0;
+  border-radius: 999px;
 }
 
 .articles-search-icon {
   position: absolute;
   left: 1rem;
+  z-index: 1;
   width: 1rem;
   height: 1rem;
   color: var(--world-ink-soft);
   pointer-events: none;
+  transition: color 0.3s ease;
+}
+
+.articles-search:focus-within .articles-search-icon {
+  color: var(--world-accent);
 }
 
 .articles-search-input {
   width: 100%;
   height: 2.75rem;
-  padding: 0 2.75rem 0 2.6rem;
+  padding: 0 4.5rem 0 2.6rem;
   border: 1px solid var(--world-pill-line);
   border-radius: 999px;
   background: var(--world-pill);
@@ -105,12 +214,17 @@ html:has([data-articles-page]) body {
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
   transition:
     border-color 0.3s ease,
-    box-shadow 0.3s ease;
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
+}
+
+.articles-search-input:hover {
+  background: var(--world-pill-hover);
 }
 
 .articles-search-input::placeholder {
   color: var(--world-ink-soft);
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .articles-search-input::-webkit-search-cancel-button {
@@ -122,15 +236,57 @@ html:has([data-articles-page]) body {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--world-accent) 22%, transparent);
 }
 
+.articles-search-key {
+  position: absolute;
+  right: 0.85rem;
+  display: grid;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  border: 1px solid var(--world-pill-line);
+  border-radius: 0.4rem;
+  color: var(--world-ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.articles-search:focus-within .articles-search-key,
+.articles-search:has(.articles-search-clear) .articles-search-key {
+  opacity: 0;
+}
+
+@media (hover: none) {
+  .articles-search-key {
+    display: none;
+  }
+
+  .articles-search-input {
+    padding-right: 2.75rem;
+  }
+}
+
+/* iOS zooms into any field set under 16 px when it takes focus. */
+@media (pointer: coarse) {
+  .articles-search-input {
+    font-size: 1rem;
+  }
+}
+
 .articles-search-clear {
   position: absolute;
-  right: 0.5rem;
+  right: 0.45rem;
+  z-index: 1;
   display: grid;
   width: 2rem;
   height: 2rem;
   place-items: center;
   border-radius: 999px;
   color: var(--world-ink-soft);
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease;
 }
 
 .articles-search-clear:hover,
@@ -140,27 +296,129 @@ html:has([data-articles-page]) body {
   outline: none;
 }
 
-.articles-pills {
+/* The "searching" shimmer: a soft band of light sweeping through the field. */
+.articles-search-glint {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.articles-search-glint::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--world-accent) 22%, transparent) 50%,
+    transparent 70%
+  );
+  content: "";
+  translate: -100% 0;
+}
+
+.articles-search[data-searching] .articles-search-glint {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .articles-search[data-searching] .articles-search-glint::before {
+    animation: articles-glint 1.25s var(--world-ease-io) infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .articles-search[data-searching] .articles-search-glint::before {
+    translate: 0 0;
+  }
+}
+
+@keyframes articles-glint {
+  to {
+    translate: 100% 0;
+  }
+}
+
+/* ------------------------------------------------------------------ pills */
+
+.articles-pills-slot {
   display: flex;
   max-width: min(100%, 64rem);
-  gap: 0.35rem;
+  justify-content: center;
+}
+
+.articles-pillbar {
+  max-width: 100%;
   padding: 0.3rem;
-  overflow-x: auto;
   border: 1px solid var(--world-pill-line);
   border-radius: 999px;
   background: var(--world-pill);
   backdrop-filter: blur(14px) saturate(1.2);
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  scrollbar-width: none;
 }
 
-.articles-pills::-webkit-scrollbar {
+.articles-pills-scroller {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  overflow-x: auto;
+  border-radius: 999px;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--fade-start),
+    #000 calc(100% - var(--fade-end)),
+    transparent 100%
+  );
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  transition:
+    --fade-start 0.3s ease,
+    --fade-end 0.3s ease;
+}
+
+.articles-pills-scroller::-webkit-scrollbar {
   display: none;
 }
 
+.articles-pills-scroller[data-fade-start="on"] {
+  --fade-start: 2.5rem;
+}
+
+.articles-pills-scroller[data-fade-end="on"] {
+  --fade-end: 2.5rem;
+}
+
+.articles-pills-scroller[data-overflow] {
+  cursor: grab;
+}
+
+.articles-pills-scroller[data-dragging] {
+  cursor: grabbing;
+}
+
+.articles-pills-scroller[data-dragging] .articles-pill {
+  pointer-events: none;
+}
+
+.articles-pills-track {
+  position: relative;
+  width: max-content;
+}
+
+.articles-pills {
+  display: flex;
+  gap: 0.35rem;
+}
+
 .articles-pill {
+  display: inline-flex;
   flex: none;
-  padding: 0.35rem 0.85rem;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.4rem 0.9rem;
   border: 1px solid var(--world-pill-line);
   border-radius: 999px;
   color: var(--world-ink);
@@ -168,27 +426,23 @@ html:has([data-articles-page]) body {
   font-weight: 500;
   line-height: 1.2;
   white-space: nowrap;
+  user-select: none;
   transition:
-    background-color 0.4s ease,
-    color 0.4s ease,
-    border-color 0.4s ease;
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    translate 0.4s cubic-bezier(0.3, 0.7, 0.4, 1),
+    scale 0.2s ease;
 }
 
 .articles-pill-count {
-  margin-left: 0.2rem;
-  font-size: 0.65rem;
-  opacity: 0.65;
+  font-size: 0.66rem;
   font-variant-numeric: tabular-nums;
+  opacity: 0.62;
 }
 
-.articles-pill:hover {
-  background: var(--world-pill-line);
-}
-
-.articles-pill.is-active {
-  border-color: var(--world-pill-active);
-  background: var(--world-pill-active);
-  color: var(--world-pill-active-text);
+.articles-pill[aria-pressed="true"] {
+  border-color: transparent;
 }
 
 .articles-pill:focus-visible {
@@ -196,12 +450,297 @@ html:has([data-articles-page]) body {
   outline-offset: 2px;
 }
 
+@media (hover: hover) {
+  .articles-pill[aria-pressed="false"]:hover {
+    background: var(--world-pill-hover);
+    box-shadow: 0 8px 18px -12px var(--world-shadow);
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .articles-pill[aria-pressed="false"]:hover {
+    translate: 0 -2px;
+  }
+
+  .articles-pill[aria-pressed="false"]:active {
+    scale: 0.95;
+  }
+}
+
+/*
+ * The moving highlight: a copy of the row in the active colours, clipped
+ * to the active pill. The leading edge moves first, so it stretches as it
+ * travels (the direction comes from category-pills.tsx).
+ */
+.articles-pills.is-highlight {
+  position: absolute;
+  inset: 0;
+  background: var(--world-pill-active);
+  clip-path: inset(var(--hl-top) var(--hl-right) var(--hl-bottom) var(--hl-left) round 999px);
+  color: var(--world-pill-active-text);
+  pointer-events: none;
+}
+
+.articles-pills.is-highlight .articles-pill {
+  border-color: transparent;
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .articles-pills.is-highlight {
+    --lead: 0s;
+    --trail: 0.08s;
+    transition:
+      --hl-left 0.55s var(--world-ease-io) var(--delay-left, 0s),
+      --hl-right 0.55s var(--world-ease-io) var(--delay-right, 0s),
+      --hl-top 0.3s ease,
+      --hl-bottom 0.3s ease;
+  }
+
+  .articles-pills.is-highlight[data-dir="right"] {
+    --delay-left: var(--trail);
+    --delay-right: var(--lead);
+  }
+
+  .articles-pills.is-highlight[data-dir="left"] {
+    --delay-left: var(--lead);
+    --delay-right: var(--trail);
+  }
+
+  .articles-pills.is-highlight[data-instant] {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ compact filter */
+
+.articles-filter {
+  display: none;
+}
+
+.articles-filter-toggle {
+  display: inline-flex;
+  height: 2.75rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.85rem 0 1.05rem;
+  border-radius: 999px;
+  background: var(--world-pill-active);
+  color: var(--world-pill-active-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: scale 0.2s ease;
+}
+
+.articles-filter-toggle:focus-visible {
+  outline: 2px solid var(--world-accent);
+  outline-offset: 2px;
+}
+
+.articles-filter-label {
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A category is on: the toggle carries its name with an accent dot. */
+.articles-filter-toggle[data-filtered]::before {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--world-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--world-accent) 30%, transparent);
+  content: "";
+}
+
+.articles-filter-chevron {
+  width: 1rem;
+  height: 1rem;
+}
+
+.articles-filter-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: color-mix(in srgb, var(--world-fog) 62%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.articles-filter[data-open] .articles-filter-veil {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.articles-filter-toggle,
+.articles-filter-sheet {
+  position: relative;
+  z-index: 1;
+}
+
+.articles-filter-sheet {
+  position: fixed;
+  top: calc(var(--articles-head, 12rem) + 0.5rem);
+  right: 1rem;
+  left: 1rem;
+  z-index: 2;
+  max-height: calc(100dvh - var(--articles-head, 12rem) - 1.5rem);
+  overflow-y: auto;
+  padding: 1.1rem 1rem 1.2rem;
+  border: 1px solid var(--world-pill-line);
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--world-fog) 88%, transparent);
+  box-shadow: 0 30px 70px -30px var(--world-shadow);
+  clip-path: inset(0 round 1.5rem);
+  visibility: visible;
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  overscroll-behavior: contain;
+}
+
+.articles-filter-sheet[data-state="closed"] {
+  clip-path: inset(
+    var(--from-top, 0) var(--from-right, 0) var(--from-bottom, 100%) var(--from-left, 0) round
+      1.375rem
+  );
+  opacity: 0;
+  visibility: hidden;
+}
+
+.articles-filter-heading {
+  margin-bottom: 0.75rem;
+  color: var(--world-ink-soft);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.articles-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.articles-filter-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--world-pill-line);
+  border-radius: 999px;
+  background: var(--world-pill);
+  color: var(--world-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    scale 0.2s ease;
+}
+
+.articles-filter-pill[aria-pressed="true"] {
+  border-color: var(--world-pill-active);
+  background: var(--world-pill-active);
+  color: var(--world-pill-active-text);
+}
+
+.articles-filter-pill:focus-visible {
+  outline: 2px solid var(--world-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .articles-filter-chevron {
+    transition: rotate 0.6s var(--world-ease-expo);
+  }
+
+  .articles-filter[data-open] .articles-filter-chevron {
+    rotate: 180deg;
+  }
+
+  .articles-filter-toggle:active,
+  .articles-filter-pill:active {
+    scale: 0.95;
+  }
+
+  .articles-filter-veil {
+    transition: opacity 0.5s ease;
+  }
+
+  .articles-filter-sheet {
+    transition:
+      clip-path 0.72s var(--world-ease-expo),
+      opacity 0.3s ease,
+      visibility 0s linear 0s;
+  }
+
+  .articles-filter-sheet[data-state="closed"] {
+    transition:
+      clip-path 0.6s var(--world-ease-expo),
+      opacity 0.3s ease 0.3s,
+      visibility 0s linear 0.6s;
+  }
+
+  .articles-filter-sheet :is(.articles-filter-heading, .articles-filter-pill) {
+    opacity: 1;
+    transition:
+      opacity 0.4s ease calc(0.2s + var(--pill-i, 0) * 0.04s),
+      translate 0.6s var(--world-ease-out) calc(0.2s + var(--pill-i, 0) * 0.04s),
+      background-color 0.3s ease,
+      color 0.3s ease,
+      scale 0.2s ease;
+  }
+
+  .articles-filter-sheet[data-state="closed"] :is(.articles-filter-heading, .articles-filter-pill) {
+    opacity: 0;
+    translate: 0 10px;
+    transition-delay: 0s;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .articles-filter-pill[aria-pressed="false"]:hover {
+    background: var(--world-pill-hover);
+  }
+}
+
+/* ------------------------------------------------------------------ veil */
+
+/*
+ * The band under the fixed head. Over the world the cards fade out under
+ * the head by themselves (the cards shader); the veil only keeps their
+ * transparent links from catching the pointer there. The DOM list has no
+ * such fade, so there the veil is the fog itself, dissolving just below
+ * the head.
+ */
+.articles-veil {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 20;
+  height: var(--articles-head, 16rem);
+}
+
+html:not([data-articles-world="gl"]) .articles-veil {
+  height: calc(var(--articles-head, 16rem) + 2.5rem);
+  background: linear-gradient(
+    to bottom,
+    var(--world-fog) 0,
+    var(--world-fog) calc(100% - 3rem),
+    color-mix(in srgb, var(--world-fog) 0%, transparent) 100%
+  );
+  pointer-events: none;
+}
+
 /* ------------------------------------------------------------------ grid */
 
 .articles-grid {
-  --card-w: min(88vw, 30rem);
-  --meta-size: clamp(0.875rem, calc(var(--card-w) * 0.0318), 1.375rem);
+  --card-w: min(calc(100vw - 2rem), 30rem);
   --card-gap: 2.25rem;
+  --meta-size: clamp(0.875rem, calc(var(--card-w) * 0.0318), 1.375rem);
   display: grid;
   grid-template-columns: var(--card-w);
   justify-content: center;
@@ -209,6 +748,7 @@ html:has([data-articles-page]) body {
   row-gap: var(--card-gap);
   /* The first row rests just under the fold line (cards-layer.ts FOLD_GAP). */
   padding-top: calc(var(--articles-head, 17rem) - 4rem + 7vh + 4px);
+  padding-bottom: 4vh;
 }
 
 @media (min-width: 768px) {
@@ -235,6 +775,15 @@ html:has([data-articles-page]) body {
 @media (min-width: 1921px) {
   .articles-grid {
     --card-w: calc(26.698vw + 114.8px);
+  }
+}
+
+/* Short landscape screens (phones on their side): two smaller columns. */
+@media (max-height: 560px) and (min-width: 600px) {
+  .articles-grid {
+    --card-w: min(42vw, 26rem);
+    --card-gap: 1.5rem;
+    grid-template-columns: repeat(2, var(--card-w));
   }
 }
 
@@ -469,4 +1018,45 @@ html[data-articles-world="gl"] .article-card-meta {
   color: var(--world-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ compact head */
+
+@media (max-width: 767px), (max-height: 560px) {
+  .articles-head {
+    gap: 0.6rem;
+    padding: 0.5rem 1rem 0;
+  }
+
+  .articles-title {
+    font-size: clamp(2.1rem, 9vw, 2.6rem);
+  }
+
+  .articles-controls {
+    width: min(30rem, 100%);
+  }
+
+  .articles-filter {
+    display: block;
+  }
+
+  .articles-pills-slot {
+    display: none;
+  }
+}
+
+@media (max-height: 560px) {
+  .articles-title {
+    font-size: 1.9rem;
+  }
+
+  .articles-head {
+    flex-direction: row;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .articles-controls {
+    width: min(28rem, 60vw);
+  }
 }

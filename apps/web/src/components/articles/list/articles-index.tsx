@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { debounce, parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ArticleCard } from "@/components/articles/list/article-card";
 import { ArticlesHero } from "@/components/articles/list/articles-hero";
 import { requestArticleBatch } from "@/components/articles/list/index-request";
+import { queryKey, useListQuery } from "@/components/articles/list/use-list-query";
 import { getArticlesWorld } from "@/components/articles/world/world-registry";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
 import { LEGAL_LINKS } from "@/data/nav";
@@ -16,6 +16,7 @@ import {
   type ArticleCategory,
   type ArticleIndexQuery,
 } from "@/lib/article-index";
+import { scrollPageTo } from "@/lib/page-scroll";
 import { motionAllowed } from "@/lib/reduced-motion";
 
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
@@ -36,8 +37,9 @@ type ListState = {
   key: string;
 };
 
-function queryKey(query: ArticleIndexQuery) {
-  return `${query.category ?? ""}\u0000${query.q ?? ""}`;
+function mergeItems(known: ArticleCardData[], more: ArticleCardData[]) {
+  const seen = new Set(known.map((item) => item.slug));
+  return [...known, ...more.filter((item) => !seen.has(item.slug))];
 }
 
 /**
@@ -46,9 +48,14 @@ function queryKey(query: ArticleIndexQuery) {
  *
  * The first batch comes from the server page (so the list works without
  * JavaScript and paints at once); further batches load from
- * /api/articles-cms/index while the visitor nears the end of what is loaded,
- * until the list runs out. The library world draws the cards near the
- * screen only and lets the others go (cards-layer.ts).
+ * /api/articles-cms/index while the visitor nears the end of what is
+ * loaded, until the list runs out. The library world draws only the cards
+ * near the screen (cards-layer.ts).
+ *
+ * A new query (the URL: category, search) swaps the list: the cards on
+ * screen sink into the fog one after another, the scroll resets while
+ * nothing shows, and the new cards rise from nearer. A newer query
+ * supersedes one in flight.
  */
 export function ArticlesIndex({
   initial,
@@ -57,30 +64,20 @@ export function ArticlesIndex({
   initial: ArticlesIndexInitial;
   initialQuery: ArticleIndexQuery;
 }) {
-  const [params, setParams] = useQueryStates(
-    {
-      category: parseAsString,
-      q: parseAsString.withOptions({ limitUrlUpdates: debounce(350) }),
-    },
-    { history: "replace", scroll: false },
-  );
-  const query: ArticleIndexQuery = {
-    category: params.category ?? undefined,
-    q: params.q?.trim() || undefined,
-  };
-  const currentKey = queryKey(query);
-  const [typed, setTyped] = useState(params.q ?? "");
+  const query = useListQuery();
+  const currentKey = queryKey(query.settled);
   const [list, setList] = useState<ListState>(() => ({
     items: initial.items,
     total: initial.total,
     nextOffset: initial.nextOffset,
     key: queryKey(initialQuery),
   }));
-  const loadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const swapRef = useRef(0);
+  const loadingRef = useRef(false);
 
   // Smooth wheel scrolling (fine pointers, motion allowed): unseen's list
-  // glides with a slow 0.05-per-frame ease and moves 2 px per wheel px.
+  // glides with a slow ease and moves about 2 px per wheel px.
   useIsomorphicLayoutEffect(() => {
     if (!motionAllowed() || !window.matchMedia("(hover: hover) and (pointer: fine)").matches)
       return;
@@ -97,49 +94,52 @@ export function ArticlesIndex({
   }, []);
 
   // A new query replaces the list: the cards on screen sink into the fog,
-  // the first batch for the new query rises in their place.
+  // the scroll resets while nothing shows, the new first batch rises.
   useEffect(() => {
     if (list.key === currentKey) return;
+    const token = ++swapRef.current;
     const controller = new AbortController();
     const world = getArticlesWorld();
-    const leaving = world ? world.cards.playFilterOut() : Promise.resolve();
-    const q = { category: query.category, q: query.q };
+    const leaving: Promise<unknown> = world ? world.cards.playFilterOut() : Promise.resolve();
+    const settledQuery = query.settled;
     void Promise.all([
-      requestArticleBatch(q, 0, ARTICLE_BATCH_SIZE, controller.signal),
+      requestArticleBatch(settledQuery, 0, ARTICLE_BATCH_SIZE, controller.signal),
       leaving,
     ]).then(([batch]) => {
-      if (controller.signal.aborted) return;
-      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+      if (controller.signal.aborted || token !== swapRef.current) return;
+      scrollPageTo(0, { duration: 0 });
+      window.scrollTo({ top: 0, behavior: "instant" });
       setList({
         items: batch?.items ?? [],
         total: batch?.total ?? 0,
-        nextOffset: batch?.nextOffset ?? null,
+        nextOffset: batch ? batch.nextOffset : null,
         key: currentKey,
       });
-      requestAnimationFrame(() => getArticlesWorld()?.cards.playFilterIn());
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (token !== swapRef.current) return;
+          getArticlesWorld()?.cards.playFilterIn();
+        }),
+      );
     });
     return () => controller.abort();
     // The query parts are what currentKey encodes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentKey, list.key]);
+  }, [currentKey]);
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || list.nextOffset === null || list.key !== currentKey) return;
     loadingRef.current = true;
-    const batch = await requestArticleBatch(query, list.nextOffset, ARTICLE_BATCH_SIZE);
+    const key = list.key;
+    const batch = await requestArticleBatch(query.settled, list.nextOffset, ARTICLE_BATCH_SIZE);
     loadingRef.current = false;
     if (!batch) return;
     setList((current) =>
-      current.key !== currentKey
+      current.key !== key
         ? current
         : {
             ...current,
-            items: [
-              ...current.items,
-              ...batch.items.filter(
-                (item) => !current.items.some((known) => known.slug === item.slug),
-              ),
-            ],
+            items: mergeItems(current.items, batch.items),
             total: batch.total,
             nextOffset: batch.nextOffset,
           },
@@ -161,34 +161,51 @@ export function ArticlesIndex({
     return () => observer.disconnect();
   }, [list.nextOffset, loadMore]);
 
-  const onQuery = (value: string) => {
-    setTyped(value);
-    void setParams({ q: value.trim() ? value : null });
-  };
-  const onCategory = (slug: string | null) => void setParams({ category: slug });
-
-  const showing = list.key === currentKey ? list : null;
+  const showing = list.key === currentKey;
+  const searching = !showing || queryKey(query.live) !== currentKey;
+  const filtered = Boolean(query.settled.category || query.settled.q);
+  const categoryName = initial.categories.find(
+    (category) => category.slug === query.settled.category,
+  )?.name;
+  const announcement = !showing
+    ? ""
+    : list.total === 0
+      ? filtered
+        ? `No articles match${query.settled.q ? ` “${query.settled.q}”` : ""}${categoryName ? ` in ${categoryName}` : ""}.`
+        : "No articles yet."
+      : `${list.total} ${list.total === 1 ? "article" : "articles"}${categoryName ? ` in ${categoryName}` : ""}${query.settled.q ? ` matching “${query.settled.q}”` : ""}.`;
 
   return (
     <div className="articles-page" data-articles-page="">
       <ArticlesHero
-        activeCategory={query.category}
+        activeCategory={query.live.category}
         all={initial.all}
         categories={initial.categories}
-        onCategory={onCategory}
-        onQuery={onQuery}
-        query={typed}
-        total={showing?.total ?? list.total}
+        onCategory={query.setCategory}
+        onQuery={query.setText}
+        onSubmit={query.submit}
+        query={query.text}
+        searching={searching}
       />
+      <div aria-hidden="true" className="articles-veil" />
 
-      <section aria-label="Articles" className="articles-grid" data-articles-grid="">
+      <p aria-live="polite" className="sr-only" role="status">
+        {announcement}
+      </p>
+
+      <section
+        aria-busy={searching}
+        aria-label="Articles"
+        className="articles-grid"
+        data-articles-grid=""
+      >
         {list.items.map((article, index) => (
           <ArticleCard article={article} index={index} key={article.slug} />
         ))}
       </section>
 
-      {list.items.length === 0 ? (
-        query.category || query.q ? (
+      {showing && list.items.length === 0 ? (
+        filtered ? (
           <div className="articles-empty">
             <p className="articles-empty-title">No articles match</p>
             <p className="articles-empty-body">Try a different word, or open every category.</p>
@@ -205,7 +222,7 @@ export function ArticlesIndex({
 
       <div aria-hidden="true" className="articles-sentinel" ref={sentinelRef} />
 
-      {list.nextOffset === null ? (
+      {showing && list.nextOffset === null ? (
         <footer className="articles-end" data-articles-end="">
           <Link className="articles-home" data-articles-home="" href="/">
             Home
