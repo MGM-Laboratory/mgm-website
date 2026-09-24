@@ -74,7 +74,9 @@ const STAGE_WAIT = 0.35;
 /** ...and this long for the WebGL renderer being built, before the DOM one plays. */
 const GL_WAIT = 0.15;
 /** Held covered this long without the route committing: give up and uncover the page. */
-const COMMIT_CEILING = 8;
+const COMMIT_CEILING = 12;
+/** Held this long (a slow network), the cover shows that the library is still writing the page. */
+const WAITING_AFTER = 1.2;
 /**
  * Holding covered after the route commits, in seconds of visible time:
  * - content: for the destination's loading shell to give way to its content;
@@ -226,6 +228,7 @@ export class PortalController {
   private shown: string;
   private root: HTMLElement | null = null;
   private plainCover: HTMLElement | null = null;
+  private waiting: SVGSVGElement | null = null;
   private offTick: (() => void) | null = null;
   private lastTick = 0;
   private resumed = false;
@@ -524,6 +527,7 @@ export class PortalController {
         run.held += dt;
         if (run.committed) run.sinceCommit += dt;
         run.stage?.hold(dt, world);
+        if (run.held >= WAITING_AFTER) this.showWaiting(run);
         if (this.ready(run, dt)) this.beginReveal(run);
         else if (!run.committed && run.held >= COMMIT_CEILING) this.abort(run);
         break;
@@ -580,6 +584,7 @@ export class PortalController {
 
   private beginReveal(run: Run) {
     run.log.revealAt = performance.now() - run.log.started;
+    this.hideWaiting();
     if (run.direction === "in") {
       // An article wears its theme: the header walks on to it as the fog
       // clears (the page's own stylesheet carries the same values, so the
@@ -675,6 +680,7 @@ export class PortalController {
     this.root?.remove();
     this.root = null;
     this.plainCover = null;
+    this.waiting = null;
     this.letGo(run);
   }
 
@@ -707,6 +713,63 @@ export class PortalController {
     document.body.appendChild(root);
     this.root = root;
     this.plainCover = cover;
+  }
+
+  /**
+   * A slow destination: a line of ink writing itself and fading, over and
+   * over, low on the cover (the library is still writing the page). Web
+   * Animations, so it needs no stylesheet, and it lives in the portal's
+   * layer, so it goes with it.
+   */
+  private showWaiting(run: Run) {
+    if (this.waiting || !this.root) return;
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 140 24");
+    svg.setAttribute("width", "140");
+    svg.setAttribute("height", "24");
+    Object.assign(svg.style, {
+      position: "absolute",
+      left: "50%",
+      bottom: "12vh",
+      marginLeft: "-70px",
+      overflow: "visible",
+      opacity: "0",
+    });
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute(
+      "d",
+      "M4 16c10-9 16-9 20 0s10 9 16 0 10-12 17-3 9 9 16 0 11-10 18-1 10 8 17-1 10-9 16-1",
+    );
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", run.dark ? "#EDEDED" : "#0E1116");
+    path.setAttribute("stroke-width", "1.6");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    path.setAttribute("stroke-dasharray", "170");
+    svg.appendChild(path);
+    this.root.appendChild(svg);
+    this.waiting = svg;
+    svg.animate([{ opacity: 0 }, { opacity: 0.42 }], { duration: 500, fill: "forwards" });
+    path.animate(
+      [
+        { strokeDashoffset: 170 },
+        { strokeDashoffset: 0, offset: 0.55 },
+        { strokeDashoffset: -170 },
+      ],
+      { duration: 2200, iterations: Infinity, easing: "cubic-bezier(0.45, 0, 0.25, 1)" },
+    );
+  }
+
+  private hideWaiting() {
+    const waiting = this.waiting;
+    if (!waiting) return;
+    this.waiting = null;
+    const fade = waiting.animate([{ opacity: 0.42 }, { opacity: 0 }], {
+      duration: 250,
+      fill: "forwards",
+    });
+    fade.onfinish = () => waiting.remove();
   }
 
   private setPlain(opacity: number) {
