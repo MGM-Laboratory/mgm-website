@@ -92,31 +92,55 @@ export function createDrift(
   const dark = WORLD_PALETTE.dark;
 
   // ---------------------------------------------------------------- floating books
-  type Floater = { x: number; y: number; z: number; spin: number; phase: number; tilt: number };
+  // Open books drifting in the depth, their covers slowly beating like
+  // wings. Four boxes a book: two covers and two blocks of pages, hinged
+  // at the spine.
+  type Floater = {
+    x: number;
+    y: number;
+    z: number;
+    spin: number;
+    phase: number;
+    tilt: number;
+    beat: number;
+    w: number;
+    h: number;
+  };
   const floaterData: Floater[] = [];
   const floaterParts: Part[] = [];
   for (let i = 0; i < options.floaters; i++) {
     const index = Math.floor(rand() * light.books.length);
     floaterData.push({
-      x: rb(-0.75, 0.75),
-      y: rb(-3.5, 9),
-      z: rb(-12, -12 - depth * 0.7),
-      spin: rb(0.04, 0.16) * (rand() < 0.5 ? -1 : 1),
+      x: rb(-0.7, 0.7),
+      y: rb(-2.5, 8),
+      z: rb(-14, -14 - depth * 0.6),
+      spin: rb(0.05, 0.14) * (rand() < 0.5 ? -1 : 1),
       phase: rb(0, Math.PI * 2),
-      tilt: rb(-0.6, 0.6),
+      tilt: rb(-0.35, 0.35),
+      beat: rb(0.5, 0.9),
+      w: rb(0.42, 0.56),
+      h: rb(0.72, 0.95),
     });
-    floaterParts.push({
-      p: [0, 0, 0],
-      s: [rb(0.7, 1.1), rb(1.0, 1.45), rb(0.14, 0.3)],
+    const cover = {
+      p: [0, 0, 0] as const,
+      s: [1, 1, 1] as const,
       light: light.books[index],
       dark: dark.books[index],
-    });
+    };
+    const leaves = {
+      p: [0, 0, 0] as const,
+      s: [1, 1, 1] as const,
+      light: light.paper,
+      dark: dark.paper,
+    };
+    floaterParts.push(cover, cover, leaves, leaves);
   }
   const floaterGeometry = new BoxGeometry(1, 1, 1);
   disposables.push(floaterGeometry);
   const floaters = instancedParts(floaterParts, floaterGeometry, solid);
   group.add(floaters);
   disposables.push(floaters);
+  let floaterCount = options.floaters;
 
   // ---------------------------------------------------------------- pages
   const pageMaterial = new ShaderMaterial({
@@ -345,31 +369,51 @@ export function createDrift(
   const euler = new Euler();
   const position = new Vector3();
   const scale = new Vector3();
+  const bookMatrix = new Matrix4();
+  const hinge = new Matrix4();
+  const offset = new Matrix4();
+  const identityQuaternion = new Quaternion();
 
   return {
     group,
     update(time, half) {
-      for (let i = 0; i < floaters.count; i++) {
+      for (let i = 0; i < floaterCount; i++) {
         const f = floaterData[i];
-        const part = floaterParts[i];
         euler.set(
-          f.tilt + Math.sin(time * f.spin * 2 + f.phase) * 0.35,
+          f.tilt + Math.sin(time * f.spin * 2 + f.phase) * 0.25,
           time * f.spin + f.phase,
-          Math.sin(time * 0.27 + f.phase) * 0.25,
+          Math.sin(time * 0.27 + f.phase) * 0.2,
         );
         quaternion.setFromEuler(euler);
-        matrix.compose(
+        bookMatrix.compose(
           position.set(f.x * half, f.y + Math.sin(time * 0.45 + f.phase) * 0.45, f.z),
           quaternion,
-          scale.set(part.s[0], part.s[1], part.s[2]),
+          scale.set(1, 1, 1),
         );
-        floaters.setMatrixAt(i, matrix);
+        // The covers open and close around the spine (local y).
+        const open = 0.95 + Math.sin(time * f.beat * 2.2 + f.phase) * 0.4;
+        for (let side = 0; side < 2; side++) {
+          const sign = side === 0 ? -1 : 1;
+          hinge.makeRotationY(sign * open);
+          for (let layer = 0; layer < 2; layer++) {
+            const inset = layer === 0 ? 0 : 0.035;
+            const thick = layer === 0 ? 0.035 : 0.07;
+            offset.compose(
+              position.set(sign * (f.w / 2 - inset), 0, layer === 0 ? 0 : 0.05),
+              identityQuaternion,
+              scale.set(f.w - inset * 2, f.h - (layer === 0 ? 0 : 0.06), thick),
+            );
+            matrix.multiplyMatrices(bookMatrix, hinge).multiply(offset);
+            floaters.setMatrixAt(i * 4 + layer * 2 + side, matrix);
+          }
+        }
       }
       floaters.instanceMatrix.needsUpdate = true;
     },
     setCounts(counts) {
       pages.count = Math.min(options.pages, counts.pages);
-      floaters.count = Math.min(options.floaters, counts.floaters);
+      floaterCount = Math.min(options.floaters, counts.floaters);
+      floaters.count = floaterCount * 4;
       moteGeometry.setDrawRange(0, Math.min(options.motes, counts.motes));
       glyphGeometry.setDrawRange(0, Math.min(options.glyphs, counts.glyphs));
     },
