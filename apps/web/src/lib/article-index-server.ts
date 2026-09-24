@@ -1,0 +1,163 @@
+import "server-only";
+
+import { MEMBERS, type Member } from "@/data/members";
+import { publishedArticles, type CmsArticleRecord } from "@/lib/article-cms";
+import { ensureArticleCmsSeeded, ensureArticleFeed } from "@/lib/article-cms-seed";
+import {
+  articleCategories,
+  hasCategory,
+  toArticleCard,
+  type ArticleBatch,
+  type ArticleCategory,
+  type ArticleIndexQuery,
+} from "@/lib/article-index";
+import { bodyText, searchArticles, tokenize } from "@/lib/article-search";
+import { mergeMemberRecords } from "@/lib/member-cms";
+import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+
+/**
+ * Server reads behind the /articles index: the page renders the first batch
+ * with them and `/api/articles/index` serves the batches after it while the
+ * visitor scrolls.
+ *
+ * The page always reads fresh (an editor's publish shows on the next load),
+ * and every read primes a short-lived copy the batch route reuses, so a
+ * visitor scrolling through a dozen batches doesn't refetch the whole feed
+ * from the CMS a dozen times. Full records (with their documents) are only
+ * read for a text search, and cached the same way.
+ */
+
+const FEED_TTL_MS = 10_000;
+const FULL_TTL_MS = 30_000;
+const MEMBERS_TTL_MS = 60_000;
+
+type Cached<T> = { value: T; at: number } | undefined;
+
+let feedCache: Cached<CmsArticleRecord[]>;
+let fullCache: Cached<CmsArticleRecord[]>;
+let membersCache: Cached<readonly Member[]>;
+
+function fresh<T>(entry: Cached<T>, ttl: number): entry is { value: T; at: number } {
+  return Boolean(entry && Date.now() - entry.at < ttl);
+}
+
+async function readFeed(reuse: boolean) {
+  if (reuse && fresh(feedCache, FEED_TTL_MS)) return feedCache.value;
+  try {
+    const value = publishedArticles(await ensureArticleFeed());
+    feedCache = { value, at: Date.now() };
+    return value;
+  } catch {
+    // A CMS outage keeps the last good copy rather than emptying the list.
+    return feedCache?.value ?? [];
+  }
+}
+
+async function readFullRecords() {
+  if (fresh(fullCache, FULL_TTL_MS)) return fullCache.value;
+  try {
+    const value = publishedArticles(await ensureArticleCmsSeeded());
+    fullCache = { value, at: Date.now() };
+    return value;
+  } catch {
+    return fullCache?.value ?? [];
+  }
+}
+
+async function readMembers() {
+  if (fresh(membersCache, MEMBERS_TTL_MS)) return membersCache.value;
+  try {
+    const value = mergeMemberRecords(MEMBERS, await ensureMemberCmsSeeded());
+    membersCache = { value, at: Date.now() };
+    return value;
+  } catch {
+    return membersCache?.value ?? [...MEMBERS];
+  }
+}
+
+/**
+ * Whether every term of the query appears somewhere in the article (title,
+ * subtitle, categories, authors or body). The ranking search forgives typos
+ * and partial words, which is right for ordering but far too loose for a
+ * list that filters: "kit-build" alone matched 194 of 209 articles.
+ */
+function containsEveryTerm(
+  record: CmsArticleRecord,
+  terms: readonly string[],
+  members: readonly Member[],
+) {
+  const { article } = record;
+  const authors = article.authorSlugs
+    .map((slug) => members.find((member) => member.slug === slug)?.name ?? "")
+    .join(" ");
+  const haystack = [
+    article.title,
+    article.subtitle ?? "",
+    article.categories.join(" "),
+    authors,
+    bodyText(record),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return terms.every((term) => haystack.includes(term));
+}
+
+/** The records a query selects, in the order the list shows them. */
+async function selectRecords(
+  feed: readonly CmsArticleRecord[],
+  query: ArticleIndexQuery,
+  members: readonly Member[],
+) {
+  let records: readonly CmsArticleRecord[] = feed;
+  if (query.q) {
+    // Rank over the full documents, then keep the feed's own (light) records.
+    const full = await readFullRecords();
+    const terms = tokenize(query.q);
+    const matching = full.filter((record) => containsEveryTerm(record, terms, members));
+    const bySlug = new Map(feed.map((record) => [record.slug, record]));
+    const ranked = searchArticles(matching, query.q, Number.POSITIVE_INFINITY).map(
+      (result) => result.slug,
+    );
+    // A match the ranking scores at zero (an author's name, say) still
+    // belongs in the list: it follows the ranked ones, newest first.
+    const rankedSet = new Set(ranked);
+    const rest = matching
+      .filter((record) => !rankedSet.has(record.slug))
+      .sort((left, right) => right.article.date.localeCompare(left.article.date))
+      .map((record) => record.slug);
+    records = [...ranked, ...rest].flatMap((slug) => {
+      const record = bySlug.get(slug);
+      return record ? [record] : [];
+    });
+  }
+  if (query.category) {
+    const slug = query.category;
+    records = records.filter((record) => hasCategory(record, slug));
+  }
+  return records;
+}
+
+export type ArticleIndexResult = ArticleBatch & {
+  /** Every category across the whole published list (not only the matches). */
+  categories: ArticleCategory[];
+  /** Published articles in total, whatever the query. */
+  all: number;
+};
+
+export async function readArticleIndex(
+  query: ArticleIndexQuery,
+  { offset = 0, limit, reuse = false }: { offset?: number; limit: number; reuse?: boolean },
+): Promise<ArticleIndexResult> {
+  const [feed, members] = await Promise.all([readFeed(reuse), readMembers()]);
+  const records = await selectRecords(feed, query, members);
+  const start = Math.max(0, Math.min(offset, records.length));
+  const end = Math.min(records.length, start + Math.max(0, limit));
+  return {
+    items: records.slice(start, end).map((record) => toArticleCard(record, members)),
+    total: records.length,
+    offset: start,
+    nextOffset: end < records.length ? end : null,
+    categories: articleCategories(feed),
+    all: feed.length,
+  };
+}

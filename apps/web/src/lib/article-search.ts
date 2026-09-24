@@ -17,7 +17,7 @@ const FIELD_WEIGHTS = { title: 4, subtitle: 3, categories: 2.5, text: 1 } as con
 /** Metadata keys that carry no prose and must not feed the word index. */
 const SKIPPED_KEYS = new Set(["type", "href", "url", "id", "styles", "level"]);
 
-function tokenize(value: string) {
+export function tokenize(value: string) {
   return value
     .toLowerCase()
     .split(/[^a-z0-9]+/)
@@ -92,7 +92,7 @@ function blockWords(blocks: ArticleBlock[]) {
 }
 
 /** Every prose chunk of an article, joined for snippet extraction. */
-function bodyText(record: CmsArticleRecord) {
+export function bodyText(record: CmsArticleRecord) {
   const parts: string[] = [];
   for (const block of record.content) {
     const collect = (node: unknown): string => {
