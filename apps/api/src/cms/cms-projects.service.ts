@@ -192,24 +192,28 @@ export class CmsProjectsService {
   }
 
   /**
-   * Pixel sizes of the record's images whose size the record doesn't carry
-   * (the cover, gallery images, and media sections saved without one), keyed
-   * by media key. The detail page lays its horizontal track out from these
+   * Pixel sizes of the record's images whose size the record doesn't carry,
+   * keyed by media key: image sections saved without one, or, for a record
+   * with no sections, the cover and gallery the page derives them from. The detail page lays its horizontal track out from these
    * before any image loads, so older records don't reflow as they arrive.
    */
   private async mediaSizesOf(record: Record<string, unknown>) {
     const project = projectOf(record);
     const keys = new Set<string>();
-    if (typeof project?.coverKey === "string") keys.add(project.coverKey);
-    if (Array.isArray(project?.galleryKeys)) {
-      for (const key of project.galleryKeys) if (typeof key === "string") keys.add(key);
-    }
-    if (Array.isArray(project?.media)) {
-      for (const item of project.media) {
+    const sections = Array.isArray(project?.media) ? project.media : [];
+    if (sections.length) {
+      // Explicit sections: only images saved without a size.
+      for (const item of sections) {
         const section = item as { kind?: unknown; key?: unknown; width?: unknown } | undefined;
         if (section?.kind === "image" && typeof section.key === "string" && !section.width) {
           keys.add(section.key);
         }
+      }
+    } else {
+      // No sections yet: the page derives them from the cover and gallery.
+      if (typeof project?.coverKey === "string") keys.add(project.coverKey);
+      if (Array.isArray(project?.galleryKeys)) {
+        for (const key of project.galleryKeys) if (typeof key === "string") keys.add(key);
       }
     }
     const wanted = [...keys]
