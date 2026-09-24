@@ -20,6 +20,7 @@ import Cropper, { type Area } from "react-easy-crop";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { ThemePicker } from "@/components/admin/project-editor/theme-picker";
 import type { Member } from "@/data/members";
 import {
   articleCoverUrl,
@@ -717,6 +718,25 @@ export function ArticleEditor({
                 Authors link to their member profiles on the public page.
               </p>
             </Field>
+          </div>
+
+          <div className="rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
+            <p
+              className="font-mono text-[10px] font-bold tracking-[0.14em] text-[#7e899d] uppercase dark:text-white/35"
+              id="article-theme-label"
+            >
+              Page theme
+            </p>
+            <p className="mt-1.5 mb-3 text-xs leading-5 text-[#8490a5] dark:text-white/40">
+              The article page&apos;s palette. It follows each visitor&apos;s light or dark mode.
+            </p>
+            <ThemePicker
+              columnsClassName="grid-cols-3"
+              labelId="article-theme-label"
+              onChange={(theme) => updateDraft("theme", theme)}
+              slug={draft.slug}
+              value={draft.theme}
+            />
           </div>
 
           <div className="flex items-center justify-between gap-3">

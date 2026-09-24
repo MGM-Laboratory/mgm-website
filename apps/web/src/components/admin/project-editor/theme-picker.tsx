@@ -49,11 +49,14 @@ function Swatch({ theme }: { theme: ProjectTheme }) {
  * Arrow keys move the selection (radio semantics); Tab leaves the group.
  */
 export function ThemePicker({
+  columnsClassName = "grid-cols-3 sm:grid-cols-5 lg:grid-cols-7",
   labelId,
   onChange,
   slug,
   value,
 }: {
+  /** The grid's column classes; narrow side panels pass a fixed count. */
+  columnsClassName?: string;
   labelId: string;
   onChange: (theme: ThemeChoice) => void;
   slug: string;
@@ -85,7 +88,7 @@ export function ThemePicker({
   return (
     <div
       aria-labelledby={labelId}
-      className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7"
+      className={`grid gap-2 ${columnsClassName}`}
       onKeyDown={onKeyDown}
       role="radiogroup"
     >
