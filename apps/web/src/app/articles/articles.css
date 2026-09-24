@@ -230,8 +230,10 @@ html:has([data-articles-page]) body {
     background-color 0.3s ease;
 }
 
-.articles-search-input:hover {
-  background: var(--world-pill-hover);
+@media (hover: hover) {
+  .articles-search-input:hover {
+    background: var(--world-pill-hover);
+  }
 }
 
 .articles-search-input::placeholder {
@@ -301,11 +303,17 @@ html:has([data-articles-page]) body {
     background-color 0.25s ease;
 }
 
-.articles-search-clear:hover,
 .articles-search-clear:focus-visible {
   color: var(--world-ink);
   background: var(--world-pill-line);
   outline: none;
+}
+
+@media (hover: hover) {
+  .articles-search-clear:hover {
+    color: var(--world-ink);
+    background: var(--world-pill-line);
+  }
 }
 
 /* The "searching" shimmer: a soft band of light sweeping through the field. */
@@ -1039,20 +1047,41 @@ html:not([data-articles-world="gl"]) .articles-veil {
   }
 }
 
-/* Reduced motion keeps the feedback in colour and underline only. */
+/*
+ * Reduced motion keeps the feedback in colour and underline only (for
+ * keyboard focus always, for hover only where hover is real, so a tap on
+ * a phone never leaves a card lit).
+ */
 @media (prefers-reduced-motion: reduce) {
-  .article-card:is(:hover, :focus-visible) .article-card-roll > span:first-child {
+  .article-card:focus-visible .article-card-roll > span:first-child {
     text-decoration: underline;
     text-decoration-color: var(--world-accent);
     text-decoration-thickness: 1.5px;
     text-underline-offset: 0.18em;
   }
 
-  .article-card:is(:hover, :focus-visible) .article-card-meta {
+  .article-card:focus-visible .article-card-meta {
     border-bottom-color: var(--world-accent);
   }
 
-  .article-card:is(:hover, :focus-visible) .article-card-arrow {
+  .article-card:focus-visible .article-card-arrow {
+    color: var(--world-accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (hover: hover) {
+  .article-card:hover .article-card-roll > span:first-child {
+    text-decoration: underline;
+    text-decoration-color: var(--world-accent);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.18em;
+  }
+
+  .article-card:hover .article-card-meta {
+    border-bottom-color: var(--world-accent);
+  }
+
+  .article-card:hover .article-card-arrow {
     color: var(--world-accent);
   }
 }
@@ -1283,8 +1312,10 @@ html[data-articles-world="gl"]
     scale 0.15s ease;
 }
 
-.articles-empty-action:hover {
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--world-accent) 22%, transparent);
+@media (hover: hover) {
+  .articles-empty-action:hover {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--world-accent) 22%, transparent);
+  }
 }
 
 .articles-empty-action:focus-visible {
@@ -1293,8 +1324,10 @@ html[data-articles-world="gl"]
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .articles-empty-action:hover {
-    translate: 0 -2px;
+  @media (hover: hover) {
+    .articles-empty-action:hover {
+      translate: 0 -2px;
+    }
   }
 
   .articles-empty-action:active {
@@ -1415,12 +1448,14 @@ html[data-articles-world="gl"]
       box-shadow 0.5s ease;
   }
 
-  .articles-home:not([data-home-gl]):hover {
-    box-shadow:
-      0 0 0 10px color-mix(in srgb, var(--world-accent) 16%, transparent),
-      0 34px 70px -28px var(--world-shadow);
-    scale: 1.04;
-    translate: 0 -4px;
+  @media (hover: hover) {
+    .articles-home:not([data-home-gl]):hover {
+      box-shadow:
+        0 0 0 10px color-mix(in srgb, var(--world-accent) 16%, transparent),
+        0 34px 70px -28px var(--world-shadow);
+      scale: 1.04;
+      translate: 0 -4px;
+    }
   }
 
   .articles-home:not([data-home-gl]):active {
@@ -1429,7 +1464,7 @@ html[data-articles-world="gl"]
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (prefers-reduced-motion: reduce) and (hover: hover) {
   .articles-home:not([data-home-gl]):hover {
     box-shadow: 0 0 0 4px var(--world-accent);
   }
@@ -1461,11 +1496,17 @@ html[data-articles-world="gl"]
     text-decoration-color 0.25s ease;
 }
 
-.articles-legal a:hover,
 .articles-legal a:focus-visible {
   color: var(--world-ink);
   text-decoration-color: currentColor;
   outline: none;
+}
+
+@media (hover: hover) {
+  .articles-legal a:hover {
+    color: var(--world-ink);
+    text-decoration-color: currentColor;
+  }
 }
 
 .articles-legal a:focus-visible {
@@ -1587,13 +1628,15 @@ html[data-articles-world="gl"]
     transition: filter 0.3s ease;
   }
 
-  .articles-top:hover .articles-top-arrow:not(.is-chaser) {
-    translate: 0 -125%;
-  }
+  @media (hover: hover) {
+    .articles-top:hover .articles-top-arrow:not(.is-chaser) {
+      translate: 0 -125%;
+    }
 
-  .articles-top:hover .articles-top-arrow.is-chaser {
-    translate: 0 0;
-    transition-delay: 0.07s;
+    .articles-top:hover .articles-top-arrow.is-chaser {
+      translate: 0 0;
+      transition-delay: 0.07s;
+    }
   }
 
   .articles-top:active {
