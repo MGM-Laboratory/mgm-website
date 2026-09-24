@@ -185,6 +185,12 @@ export class ArticleController {
           controller: this,
         },
       });
+      // The transitions' signals, for scripted checks of the entrance
+      // protocol before the transitions that send them exist.
+      void import("@/lib/article-transition").then((signals) => {
+        const probe = (window as { __articleDetail?: { controller: unknown } }).__articleDetail;
+        if (probe?.controller === this) Object.assign(probe, { signals });
+      });
     }
   }
 

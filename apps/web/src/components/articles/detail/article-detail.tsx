@@ -23,7 +23,15 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 
 // Without JavaScript every piece shows at once (the entrance and the reveals
 // need the controller). With reduced motion the stylesheet never hides them.
-const NO_SCRIPT_CSS = `[data-article-detail] [data-enter],[data-article-detail] [data-ad-reveal],[data-article-detail] [data-ad-reveal] *,[data-article-detail] .ad-cover img{opacity:1!important;transform:none!important;clip-path:none!important;mask-image:none!important;-webkit-mask-image:none!important}[data-article-detail] .ad-rail{display:none!important}`;
+//
+// The articles routes have a loading state, so the server streams the page
+// after it: React sends the finished page in a hidden container and a small
+// script moves it into place. Without scripts nothing moves it, so the
+// hidden containers are shown where they are (after the header and the
+// empty loading slot, which reads the same). In Tailwind's first layer: its
+// base layer hides [hidden] with !important, and only an important rule in
+// an earlier layer outranks that.
+const NO_SCRIPT_CSS = `@layer theme{body>div[hidden][id^="S:"]{display:block!important}}[data-article-detail] [data-enter],[data-article-detail] [data-ad-reveal],[data-article-detail] [data-ad-reveal] *,[data-article-detail] .ad-cover img{opacity:1!important;transform:none!important;clip-path:none!important;mask-image:none!important;-webkit-mask-image:none!important;animation:none!important}[data-article-detail] .ad-rail,[data-article-detail] .ad-readbar{display:none!important}`;
 
 /**
  * The article page (/articles/[slug]) on the client: the hero, the cover
