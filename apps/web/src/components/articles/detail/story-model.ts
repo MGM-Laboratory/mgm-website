@@ -8,7 +8,8 @@ import { hashSlug } from "@/lib/theme-pick";
  * the sources gathered at the end. Images get a layout variant (wide with
  * an inner parallax, inset with the caption in the margin, offset), picked
  * in a rotation that starts at a stable point per article so two articles
- * never look alike; two images in a row become a diptych.
+ * never look alike (a diagram or chart is never cropped, so it never goes
+ * full bleed); two images in a row become a diptych.
  *
  * Pure and client-safe: the server page builds the story once per request
  * and renders it; nothing here touches the DOM.
@@ -26,7 +27,17 @@ export type InlineNode =
 /** Inline content as BlockNote stores it: a node list, or plain text. */
 export type InlineContent = InlineNode[] | string;
 
-export type StoryImage = { id: string; src: string; caption: string };
+export type StoryImage = {
+  id: string;
+  src: string;
+  caption: string;
+  /**
+   * A diagram, chart, map or animation rather than a photograph: it is never
+   * cropped (no full bleed, no portrait crop in a pair), since its edges
+   * carry labels and axes.
+   */
+  graphic: boolean;
+};
 
 export type FigureVariant = "wide" | "inset" | "offset";
 
@@ -204,12 +215,19 @@ function flatten(
   return out;
 }
 
+// Drawn pictures come as PNG, SVG or GIF files, or say what they are in
+// their caption ("Diagram: ...", "A concept map of ...").
+const GRAPHIC_FILE = /\.(png|svg|gif)($|[?#])/i;
+const GRAPHIC_WORDS =
+  /\b(diagram|chart|graph|map|flowchart|plot|infographic|screenshot|animation)s?\b/i;
+
 function imageOf(block: ArticleBlock): StoryImage | undefined {
   const raw = typeof block.props?.url === "string" ? block.props.url : "";
   const src = raw ? safeImageSrc(raw.trim()) : undefined;
   if (!src) return undefined;
   const caption = typeof block.props?.caption === "string" ? block.props.caption.trim() : "";
-  return { id: block.id, src, caption };
+  const graphic = GRAPHIC_FILE.test(src) || GRAPHIC_WORDS.test(caption);
+  return { id: block.id, src, caption, graphic };
 }
 
 export function buildStory(slug: string, blocks: readonly ArticleBlock[]): Story {
@@ -273,7 +291,9 @@ export function buildStory(slug: string, blocks: readonly ArticleBlock[]): Story
           story.words += wordCount(pair.caption);
           break;
         }
-        const variant = VARIANTS[(rotation + figures) % VARIANTS.length];
+        const turn = VARIANTS[(rotation + figures) % VARIANTS.length];
+        // A graphic takes the widest layout that keeps all of it in view.
+        const variant = image.graphic && turn === "wide" ? "offset" : turn;
         current.push({ kind: "figure", id: image.id, variant, image, order: figures });
         figures += 1;
         story.words += wordCount(image.caption);

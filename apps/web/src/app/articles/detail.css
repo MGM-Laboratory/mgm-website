@@ -1034,6 +1034,19 @@ html[data-articles-world="gl"] .ad-story::before {
   object-fit: cover;
 }
 
+/* A pair with a drawing in it keeps both pictures whole (no portrait crop:
+   a diagram's edges carry its labels). */
+.ad-diptych[data-graphic] .ad-media {
+  aspect-ratio: auto;
+}
+
+.ad-diptych[data-graphic] .ad-img {
+  position: relative;
+  height: auto;
+  max-height: 70svh;
+  object-fit: contain;
+}
+
 .ad-diptych .ad-figure:nth-child(2) {
   margin-top: clamp(24px, 6vh, 72px);
 }

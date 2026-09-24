@@ -170,6 +170,7 @@ function Figure({
       className="ad-figure"
       data-ad-figure=""
       data-ad-reveal="figure"
+      data-graphic={image.graphic ? "" : undefined}
       data-variant={variant}
       data-zoomable=""
     >
@@ -181,7 +182,11 @@ function Figure({
 
 function Diptych({ images, order }: { images: [StoryImage, StoryImage]; order: number }) {
   return (
-    <div className="ad-diptych" data-ad-reveal="diptych">
+    <div
+      className="ad-diptych"
+      data-ad-reveal="diptych"
+      data-graphic={images.some((image) => image.graphic) ? "" : undefined}
+    >
       {images.map((image, index) => (
         <figure
           className="ad-figure"
