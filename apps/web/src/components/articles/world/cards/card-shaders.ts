@@ -89,7 +89,7 @@ export const CARD_VERTEX = /* glsl */ `
 
     // The cursor's ring of ripples, strongest just around the cursor.
     float d = distance(local, uCardPoint.xy);
-    float ring = uCardPoint.z * exp(-d * d / 26000.0) * sin(d * 0.075 - uTime * 7.5);
+    float ring = uCardPoint.z * exp(-d * d / 30000.0) * sin(d * 0.056 - uTime * 6.0);
 
     // The press burst: one ring that races outward and dies away.
     float b = distance(local, uCardBurst.xy);

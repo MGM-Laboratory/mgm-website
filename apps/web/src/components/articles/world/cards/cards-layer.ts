@@ -78,8 +78,8 @@ const SEGMENTS_Y = 18;
 /** Lean toward the cursor, radians (about x and about y). */
 const LEAN_X = 0.045;
 const LEAN_Y = 0.06;
-const RIPPLE_REST = 3.5;
-const RIPPLE_MOVING = 9;
+const RIPPLE_REST = 1.6;
+const RIPPLE_MOVING = 5.5;
 const BURST = 15;
 /** The filter's recede/rise and the intro's depth, CSS px. */
 const FILTER_DEPTH = 200;
