@@ -45,6 +45,9 @@ export type DetailStageHandle = {
   measure(): void;
   /** Crossfades the stage's colours (placeholder tint) to a new palette. */
   setPalette(palette: ProjectPalette): void;
+  /** Stops drawing items the page removed (their media failed to load), leaving
+   *  every other item exactly as it is. Call measure() afterwards. */
+  remove(ids: string[]): void;
   /** Frees every GPU resource and removes the canvas. */
   dispose(): void;
 };

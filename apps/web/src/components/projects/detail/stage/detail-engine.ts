@@ -238,6 +238,7 @@ export class DetailEngine {
         this.layoutDirty = true;
       },
       setPalette: (palette) => this.setPalette(palette),
+      remove: (ids) => this.remove(ids),
       dispose: () => this.dispose(),
     };
   }
@@ -533,6 +534,22 @@ export class DetailEngine {
       item.owned = true;
       this.options.onOwnershipChange(item.source.id, true);
     }
+  }
+
+  /** Drops items whose placeholders the page removed, without a restart. */
+  private remove(ids: string[]) {
+    if (this.disposed) return;
+    const gone = new Set(ids);
+    for (let index = this.items.length - 1; index >= 0; index -= 1) {
+      const item = this.items[index];
+      if (!gone.has(item.source.id)) continue;
+      this.release(item);
+      this.evict(item);
+      this.itemScene.remove(item.mesh);
+      item.material.dispose();
+      this.items.splice(index, 1);
+    }
+    this.layoutDirty = true;
   }
 
   /** Hands one item back to the page's DOM media (its media failed). */

@@ -441,6 +441,7 @@ export class DetailController {
     const ids = elements.map((el) => el.dataset.id).join("|");
     if (ids === this.itemIds) return;
     const changed = this.itemIds !== "";
+    const previousIds = this.itemIds ? this.itemIds.split("|") : [];
     this.itemIds = ids;
     const previous = new Map(this.items.map((item) => [item.el, item]));
     this.items = elements.map((el) => {
@@ -474,8 +475,19 @@ export class DetailController {
       this.io?.unobserve(gone.el);
     }
     this.videosDirty = true;
-    // The stage keeps its own list of placeholders: start it over.
-    if (changed && (this.stageState === "on" || this.stageState === "starting")) {
+    if (!changed) return;
+    // Only removals (media that failed to load): the running stage drops
+    // those items and every other one stays exactly as it is on screen.
+    const kept = new Set(this.items.map((item) => item.id));
+    const gone = previousIds.filter((id) => !kept.has(id));
+    const onlyRemoved = gone.length > 0 && gone.length + kept.size === previousIds.length;
+    if (onlyRemoved && this.stageState === "on" && this.stage) {
+      this.stage.remove(gone);
+      this.stage.measure();
+      return;
+    }
+    // Anything else changed the stage's list of placeholders: start it over.
+    if (this.stageState === "on" || this.stageState === "starting") {
       this.stopStage("off");
       this.maybeStartStage();
     }
