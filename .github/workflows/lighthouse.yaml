@@ -53,11 +53,15 @@ jobs:
 
       # A separate, best-effort step: the gate below only reads this job's
       # own exit code, which the autorun step above already determined via
-      # its assertions. If posting these per-URL GitHub status checks fails
-      # (bad token, revoked permission), continue-on-error keeps that
-      # failure from ever reaching the job's exit code, and therefore the
-      # gate, since it's purely additional visibility, not a merge signal.
+      # its assertions. `if: !cancelled()` makes it still run after autorun
+      # fails (a step only runs if the prior one succeeded by default), so a
+      # failing URL still gets a status showing what failed, not silence. If
+      # posting these per-URL GitHub status checks fails itself (bad token,
+      # revoked permission), continue-on-error keeps that failure from ever
+      # reaching the job's exit code, and therefore the gate, since it's
+      # purely additional visibility, not a merge signal.
       - name: Post Lighthouse GitHub status checks
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: pnpm dlx @lhci/cli@0.15.x upload --target=temporary-public-storage --githubToken="$LHCI_GITHUB_TOKEN"
         env:
