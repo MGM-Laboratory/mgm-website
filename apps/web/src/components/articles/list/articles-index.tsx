@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ArticleCard } from "@/components/articles/list/article-card";
+import { ArticlesEmpty } from "@/components/articles/list/articles-empty";
 import { ArticlesHero } from "@/components/articles/list/articles-hero";
 import { requestArticleBatch } from "@/components/articles/list/index-request";
 import { queryKey, useListQuery } from "@/components/articles/list/use-list-query";
@@ -35,6 +36,8 @@ type ListState = {
   nextOffset: number | null;
   /** The query these items answer. */
   key: string;
+  /** The last request for this query failed (the list shows a retry). */
+  failed: boolean;
 };
 
 function mergeItems(known: ArticleCardData[], more: ArticleCardData[]) {
@@ -71,7 +74,9 @@ export function ArticlesIndex({
     total: initial.total,
     nextOffset: initial.nextOffset,
     key: queryKey(initialQuery),
+    failed: false,
   }));
+  const [retry, setRetry] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const swapRef = useRef(0);
   const loadingRef = useRef(false);
@@ -96,7 +101,7 @@ export function ArticlesIndex({
   // A new query replaces the list: the cards on screen sink into the fog,
   // the scroll resets while nothing shows, the new first batch rises.
   useEffect(() => {
-    if (list.key === currentKey) return;
+    if (list.key === currentKey && retry === 0) return;
     const token = ++swapRef.current;
     const controller = new AbortController();
     const world = getArticlesWorld();
@@ -109,11 +114,13 @@ export function ArticlesIndex({
       if (controller.signal.aborted || token !== swapRef.current) return;
       scrollPageTo(0, { duration: 0 });
       window.scrollTo({ top: 0, behavior: "instant" });
+      setRetry(0);
       setList({
         items: batch?.items ?? [],
         total: batch?.total ?? 0,
         nextOffset: batch ? batch.nextOffset : null,
         key: currentKey,
+        failed: !batch,
       });
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
@@ -125,7 +132,7 @@ export function ArticlesIndex({
     return () => controller.abort();
     // The query parts are what currentKey encodes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentKey]);
+  }, [currentKey, retry]);
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || list.nextOffset === null || list.key !== currentKey) return;
@@ -162,18 +169,20 @@ export function ArticlesIndex({
   }, [list.nextOffset, loadMore]);
 
   const showing = list.key === currentKey;
-  const searching = !showing || queryKey(query.live) !== currentKey;
+  const searching = !showing || retry > 0 || queryKey(query.live) !== currentKey;
   const filtered = Boolean(query.settled.category || query.settled.q);
   const categoryName = initial.categories.find(
     (category) => category.slug === query.settled.category,
   )?.name;
   const announcement = !showing
     ? ""
-    : list.total === 0
-      ? filtered
-        ? `No articles match${query.settled.q ? ` “${query.settled.q}”` : ""}${categoryName ? ` in ${categoryName}` : ""}.`
-        : "No articles yet."
-      : `${list.total} ${list.total === 1 ? "article" : "articles"}${categoryName ? ` in ${categoryName}` : ""}${query.settled.q ? ` matching “${query.settled.q}”` : ""}.`;
+    : list.failed
+      ? "The archive didn't answer."
+      : list.total === 0
+        ? filtered
+          ? `No articles match${query.settled.q ? ` “${query.settled.q}”` : ""}${categoryName ? ` in ${categoryName}` : ""}.`
+          : "No articles yet."
+        : `${list.total} ${list.total === 1 ? "article" : "articles"}${categoryName ? ` in ${categoryName}` : ""}${query.settled.q ? ` matching “${query.settled.q}”` : ""}.`;
 
   return (
     <div className="articles-page" data-articles-page="">
@@ -205,24 +214,19 @@ export function ArticlesIndex({
       </section>
 
       {showing && list.items.length === 0 ? (
-        filtered ? (
-          <div className="articles-empty">
-            <p className="articles-empty-title">No articles match</p>
-            <p className="articles-empty-body">Try a different word, or open every category.</p>
-          </div>
-        ) : (
-          <div className="articles-empty">
-            <p className="articles-empty-title">No articles yet</p>
-            <p className="articles-empty-body">
-              The first write-ups from the lab are on their way.
-            </p>
-          </div>
-        )
+        <ArticlesEmpty
+          category={categoryName}
+          failed={list.failed}
+          filtered={filtered}
+          onClear={query.clear}
+          onRetry={() => setRetry((value) => value + 1)}
+          q={query.settled.q}
+        />
       ) : null}
 
       <div aria-hidden="true" className="articles-sentinel" ref={sentinelRef} />
 
-      {showing && list.nextOffset === null ? (
+      {showing && list.nextOffset === null && !list.failed ? (
         <footer className="articles-end" data-articles-end="">
           <Link className="articles-home" data-articles-home="" href="/">
             Home

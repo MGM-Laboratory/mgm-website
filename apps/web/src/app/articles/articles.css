@@ -954,30 +954,137 @@ html[data-articles-world="gl"] .article-card-meta {
   border-bottom-color: transparent;
 }
 
-/* ------------------------------------------------------------------ empty and end */
+/* ------------------------------------------------------------------ empty */
 
 .articles-empty {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.6rem;
   justify-items: center;
-  padding: 18vh 1.5rem 0;
+  padding: 6vh 1.5rem 4vh;
   text-align: center;
 }
 
+.articles-empty-pages {
+  position: relative;
+  width: 7.5rem;
+  height: 6rem;
+  margin-bottom: 1rem;
+}
+
+.articles-empty-pages > span {
+  position: absolute;
+  top: 0.5rem;
+  left: 1.75rem;
+  width: 4rem;
+  height: 5rem;
+  border: 1px solid var(--world-pill-line);
+  border-radius: 0.3rem;
+  background: var(--world-pill);
+  box-shadow: 0 14px 30px -18px var(--world-shadow);
+}
+
+.articles-empty-pages > span:nth-child(1) {
+  rotate: -12deg;
+  translate: -1.1rem 0.4rem;
+}
+
+.articles-empty-pages > span:nth-child(2) {
+  rotate: 9deg;
+  translate: 1.1rem 0.2rem;
+}
+
+.articles-empty-pages > span:nth-child(3) {
+  background:
+    linear-gradient(var(--world-pill-line), var(--world-pill-line)) 0.6rem 1.1rem / 2.2rem 2px
+      no-repeat,
+    linear-gradient(var(--world-pill-line), var(--world-pill-line)) 0.6rem 1.6rem / 2.8rem 2px
+      no-repeat,
+    linear-gradient(var(--world-pill-line), var(--world-pill-line)) 0.6rem 2.1rem / 1.8rem 2px
+      no-repeat,
+    var(--world-pill-hover);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .articles-empty-pages > span {
+    animation: articles-drift 5.5s ease-in-out infinite;
+  }
+
+  .articles-empty-pages > span:nth-child(2) {
+    animation-delay: -1.8s;
+  }
+
+  .articles-empty-pages > span:nth-child(3) {
+    animation-delay: -3.4s;
+  }
+}
+
+@keyframes articles-drift {
+  50% {
+    transform: translateY(-7px) rotate(2deg);
+  }
+}
+
 .articles-empty-title {
+  max-width: 34rem;
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 2.4vw, 2.25rem);
   font-weight: 500;
+  line-height: 1.15;
   letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.articles-empty-query {
+  color: var(--world-accent);
 }
 
 .articles-empty-body {
+  max-width: 28rem;
   color: var(--world-ink-soft);
+  text-wrap: pretty;
+}
+
+.articles-empty-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: 999px;
+  background: var(--world-pill-active);
+  color: var(--world-pill-active-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    box-shadow 0.3s ease,
+    translate 0.3s ease,
+    scale 0.15s ease;
+}
+
+.articles-empty-action:hover {
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--world-accent) 22%, transparent);
+}
+
+.articles-empty-action:focus-visible {
+  outline: 2px solid var(--world-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .articles-empty-action:hover {
+    translate: 0 -2px;
+  }
+
+  .articles-empty-action:active {
+    scale: 0.95;
+  }
 }
 
 .articles-sentinel {
   height: 1px;
 }
+
+/* ------------------------------------------------------------------ end */
 
 .articles-end {
   display: grid;
