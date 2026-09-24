@@ -167,7 +167,7 @@ Commenting `/preview` on a PR (maintainers/collaborators only) deploys a throwaw
 
 Commenting `/merge` on a PR (maintainers/CODEOWNERS only) runs `merge.yml`, entirely API-driven, no PR code is ever checked out:
 
-1. Checks every check-run and commit status against the PR's head commit, plus GitHub's own `mergeable` flag, and the review policy: a pull request whose author isn't a code owner needs a code owner's approval on its head commit. Anything failing, still running, unapproved, or a merge conflict → replies with what's blocking it and stops. Nothing is changed.
+1. Checks every check-run and commit status against the PR's head commit, plus GitHub's own `mergeable` flag. Anything failing, still running, or a merge conflict → replies with what's blocking it and stops. Nothing is changed.
 2. If everything's green: merges with a merge commit (not squash: this repo keeps granular history, see `docs/repo-history.md`), pinned to the exact head SHA it just checked.
 3. Only after GitHub confirms the merge, posts one combined comment thanking and tagging every GitHub-linked contributor represented in the PR commits (a small stats table, then the LGTM GIF).
 4. Deletes the head branch only if it's genuinely safe: same repo (not a fork), not the default branch, and no other open PR still points at it.
@@ -220,9 +220,12 @@ Gatus also exposes a response-time badge (`.../response-times/:duration/badge.sv
 
 ## Governance
 
-`main` requires an up-to-date PR, signed commits, and the selected first-party gates below, including the review policy.
+`main` requires an up-to-date PR, signed commits, and the selected first-party gates below. No pull request review is required to merge (`required_approving_review_count: 0`, with `require_code_owner_review`, `require_last_push_approval`, and `required_review_thread_resolution` all `false`), a deliberate choice by the repository owner, not an oversight. Check the rule after any ruleset edit with the command below. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`. Do not use an administrative bypass for routine work.
 
-Pull request reviews follow the review policy the repository owner set on 2026-09-24: a pull request opened by a code owner (`CODEOWNERS`, currently `* @shirasakaren`) needs no review, and every other author's pull request needs an approving review from a code owner on its latest commit. A later "changes requested" from the owner withdraws the approval, and a new push needs a new one. The ruleset can't express that rule (and GitHub never lets authors approve their own pull requests), so its `pull_request` rule requires no reviews and the `Review policy` required check (`review-policy.yml`, running `.github/scripts/review-policy-check.mjs` from the base branch) enforces it on every merge path, GitHub's merge button included. `/merge` checks the same rule before it merges. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`. Do not use an administrative bypass for routine work.
+```bash
+gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743 \
+  --jq '.rules[] | select(.type=="pull_request") | .parameters | {required_approving_review_count, require_code_owner_review, require_last_push_approval, required_review_thread_resolution}'
+```
 
 The ruleset also allows all three merge strategies (merge commit, squash, rebase) at the GitHub level, but `/merge`'s own automation always merges with a merge commit specifically (see "Merging" below). The broader allowance only matters for a manual merge through GitHub's own UI.
 
@@ -232,7 +235,6 @@ The `main-protection` ruleset (id `23450743`) deliberately requires only stable,
 - Security: `Security gate` (which includes gitleaks on every change and conditionally runs CodeQL, dependency review, and Trivy)
 - Browser coverage: `E2E gate` (the seven Playwright projects run when browser-facing paths change)
 - Quality: `Lighthouse gate` and `Prose gate`
-- Reviews: `Review policy` (passes at once for a code owner's pull request, otherwise once a code owner approves the latest commit; it runs on every push and every review)
 
 All other workflows still run on their explicit triggers: staging Docker builds validate PR images, production Docker publishing runs after `main` changes, scheduled security and cleanup workflows run independently, and external apps may report their own checks. They are not merge requirements because their availability and check names are outside this repository's control.
 
@@ -250,13 +252,6 @@ All other workflows still run on their explicit triggers: staging Docker builds 
 | pre-commit.ci                                            | 68672            |
 | GitGuardian                                              | 46505            |
 | Semgrep                                                  | 4965759          |
-
-**Review policy (set by the repository owner on 2026-09-24).** Pull requests opened by a code owner (`CODEOWNERS`: `@shirasakaren`) merge without anyone else's review. Every other author's pull request needs an approving review from a code owner on its latest commit. GitHub rulesets can't require reviews only from authors who aren't code owners, and GitHub never lets authors approve their own pull requests, so the `pull_request` rule requires no reviews (`required_approving_review_count: 0`, with `require_code_owner_review`, `require_last_push_approval` and `required_review_thread_resolution` all `false`) and the `Review policy` required check plus `/merge` enforce the policy instead (both use `.github/scripts/review-policy.mjs`). Check the rule after any ruleset edit:
-
-```bash
-gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743 \
-  --jq '.rules[] | select(.type=="pull_request") | .parameters | {required_approving_review_count, require_code_owner_review, require_last_push_approval, required_review_thread_resolution}'
-```
 
 ## Local
 
