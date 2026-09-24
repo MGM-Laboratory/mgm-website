@@ -95,7 +95,7 @@ The card link carries the project zoom's hooks: `data-project-transition`, `data
 
 ### Smooth scroll and the frame loop
 
-Fine-pointer, full-motion visitors get Lenis wheel smoothing on `/projects` only (`stage/smooth-scroller.ts`, dynamically imported, lerp 0.15). Lenis is stepped from `stage/frame-loop.ts`, one ordered GSAP-ticker callback in which every "scroll" step runs before any "render" step. That ordering is what keeps the fixed canvas and the DOM text in the same frame: a fixed canvas drawn against native compositor scrolling visibly trails the DOM. Scroll keys go through Lenis too. It stops while any scroll lock is held, queues a `scrollPageTo` made while locked (latest only) until unlock, and is registered through `setPageScroller`. Touch keeps native scrolling.
+Fine-pointer, full-motion visitors get Lenis wheel smoothing on `/projects` (`stage/smooth-scroller.ts`, dynamically imported, lerp 0.15). Project detail pages start their own instance through the same module with per-page options (lerp 0.2, both-axis gestures, a 200 px wheel clamp). Lenis is stepped from `stage/frame-loop.ts`, one ordered GSAP-ticker callback in which every "scroll" step runs before any "render" step. That ordering is what keeps the fixed canvas and the DOM text in the same frame: a fixed canvas drawn against native compositor scrolling visibly trails the DOM. Scroll keys go through Lenis too. It stops while any scroll lock is held, queues a `scrollPageTo` made while locked (latest only) until unlock, and is registered through `setPageScroller`. Touch keeps native scrolling.
 
 ### The WebGL cover stage (`stage/cover-engine.ts`)
 
