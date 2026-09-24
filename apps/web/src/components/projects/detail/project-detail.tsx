@@ -43,7 +43,7 @@ const LIST_LIMIT = 6;
 // everything visible (the horizontal layout needs the scroll mapping).
 const NO_SCRIPT_CSS = `
 [data-project-detail] [data-enter],[data-project-detail] [data-detail-item] :is(img,video){opacity:1!important}
-@media (width>812px){
+@media (width>812px) and (height>520px){
 [data-project-detail]{padding:0 var(--pad-x)!important}
 [data-project-detail] [data-detail-spacer],[data-project-detail] [data-detail-hint]{display:none!important}
 [data-project-detail] [data-detail-stage]{position:relative!important;inset:auto!important;height:auto!important;overflow:visible!important}
@@ -172,13 +172,17 @@ export function ProjectDetail({ data }: { data: DetailData }) {
 
   const navigateNext = useCallback(() => {
     if (!next || !nextHref) return;
+    // The visitor left during the wipe (browser Back): the address bar
+    // already shows another page, and pushing the next project now would
+    // override where they went.
+    if (window.location.pathname !== `/projects/${data.slug}`) return;
     noteNextArrival(next.slug);
     router.push(nextHref);
     // A navigation that never lands (offline, a failed payload) still
     // leaves this page instead of stranding the covered screen.
     window.clearTimeout(navigateTimer.current);
     navigateTimer.current = window.setTimeout(() => window.location.assign(nextHref), 8000);
-  }, [next, nextHref, router]);
+  }, [data.slug, next, nextHref, router]);
 
   const prefetchNext = useCallback(() => {
     if (nextHref) router.prefetch(nextHref);
@@ -270,7 +274,7 @@ export function ProjectDetail({ data }: { data: DetailData }) {
   const hasRight = data.services.length > 0 || data.links.length > 0;
 
   return (
-    <div
+    <main
       className={styles.root}
       data-project-cover={data.coverUrl}
       data-project-detail=""
@@ -443,6 +447,6 @@ export function ProjectDetail({ data }: { data: DetailData }) {
       <noscript>
         <style>{NO_SCRIPT_CSS}</style>
       </noscript>
-    </div>
+    </main>
   );
 }

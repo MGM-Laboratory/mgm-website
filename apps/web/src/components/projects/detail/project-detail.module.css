@@ -1,8 +1,10 @@
 /*
  * Project detail page (lusion.co's project page layout, re-derived).
  *
- * Two layouts, switched at the same width as lusion's (812 px):
- * - Vertical (812 px and narrower, and every visitor without JavaScript):
+ * Two layouts, switched at the same width as lusion's (812 px), plus a
+ * height floor lusion doesn't have (520 px):
+ * - Vertical (812 px and narrower, 520 px tall and shorter, and every
+ *   visitor without JavaScript):
  *   normal document flow. The meta block on top, media full width, the next
  *   project panel at the bottom.
  * - Horizontal (wider): a fixed, full-viewport stage. The document still
@@ -103,7 +105,7 @@
 
 /* Before hydration the title waits for its entrance only where it has
    one: the horizontal layout with motion allowed. */
-@media (width > 812px) and (prefers-reduced-motion: no-preference) {
+@media (width > 812px) and (height > 520px) and (prefers-reduced-motion: no-preference) {
   .titleEnter {
     opacity: 0;
   }
@@ -641,7 +643,7 @@
 
 /* ================================================================ horizontal */
 
-@media (width > 812px) {
+@media (width > 812px) and (height > 520px) {
   .root {
     --pad-x: max(5vw, 40px);
     --pad-y: clamp(30px, 4vw, 50px);
@@ -701,6 +703,9 @@
 
   .meta[data-top] {
     top: calc(var(--site-header) + var(--pad-y));
+    max-height: calc(100dvh - var(--site-header) - 2 * var(--pad-y));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     transform: none;
   }
 
@@ -844,7 +849,7 @@
   }
 }
 
-@media (width > 812px) and (min-aspect-ratio: 21/9) {
+@media (width > 812px) and (height > 520px) and (min-aspect-ratio: 21/9) {
   .root {
     --pad-x: max(6vw, 60px);
   }

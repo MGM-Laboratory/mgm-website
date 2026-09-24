@@ -39,7 +39,10 @@ import { dismissScrollHint, isScrollHintDismissed } from "./detail-session";
  */
 
 /** The stacked (vertical) layout, lusion's switch width. */
-export const VERTICAL_QUERY = "(max-width: 812px)";
+// Lusion switches on width alone. A short window (a phone turned sideways,
+// a small browser window) also stacks: the horizontal band and the meta
+// block need some height to breathe.
+export const VERTICAL_QUERY = "(max-width: 812px), (max-height: 520px)";
 
 // lusion's timings (its tweens are linear; the windows and eases are its own).
 const ENTRANCE_SECONDS = 1.5;
@@ -403,7 +406,12 @@ export class DetailController {
     const bodyHeight = body.offsetHeight;
     const scale = clamp((room - (height - bodyHeight)) / Math.max(1, bodyHeight), META_MIN_FIT, 1);
     meta.style.setProperty("--fit", scale.toFixed(3));
-    if (meta.offsetHeight > this.vh - SITE_HEADER - 2 * META_CLEARANCE) meta.dataset.top = "";
+    if (meta.offsetHeight > this.vh - SITE_HEADER - 2 * META_CLEARANCE) {
+      // Still too tall at the smallest type: pinned under the header and
+      // scrollable on its own (the smoother leaves wheel input inside it alone).
+      meta.dataset.top = "";
+    }
+    meta.toggleAttribute("data-lenis-prevent", meta.dataset.top !== undefined);
   }
 
   private scanItems() {
@@ -881,7 +889,11 @@ export class DetailController {
           items: this.stageItems(),
           palette: this.palette,
           getFrame: this.frameState,
-          onOwnershipChange: this.onOwnership,
+          // Only the current attempt may change ownership: a superseded
+          // engine handing its items back must not strip the live one's.
+          onOwnershipChange: (id, owned) => {
+            if (token === this.stageToken) this.onOwnership(id, owned);
+          },
           onFailure: this.onStageFailure,
         });
         if (!handle) {
@@ -1004,9 +1016,9 @@ export class DetailController {
     stage.addEventListener("focusin", this.onFocus);
     this.cleanups.push(() => stage.removeEventListener("focusin", this.onFocus));
 
-    const onVisibility = () => {
-      this.videosDirty = true;
-    };
+    // Straight away: a hidden tab gets no animation frames, so waiting for
+    // the next tick would leave videos playing in the background.
+    const onVisibility = () => this.syncVideos();
     document.addEventListener("visibilitychange", onVisibility);
     this.cleanups.push(() => document.removeEventListener("visibilitychange", onVisibility));
 
