@@ -7,6 +7,7 @@ import { ArticlesEmpty } from "@/components/articles/list/articles-empty";
 import { ArticlesEnd } from "@/components/articles/list/articles-end";
 import { ArticlesHero } from "@/components/articles/list/articles-hero";
 import { BackToTop } from "@/components/articles/list/back-to-top";
+import { startDomReveal } from "@/components/articles/list/dom-reveal";
 import { requestArticleBatch } from "@/components/articles/list/index-request";
 import { queryKey, useListQuery } from "@/components/articles/list/use-list-query";
 import { getArticlesWorld } from "@/components/articles/world/world-registry";
@@ -83,6 +84,7 @@ export function ArticlesIndex({
   }));
   const [loadingMore, setLoadingMore] = useState(false);
   const [retry, setRetry] = useState(0);
+  const gridRef = useRef<HTMLElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const swapRef = useRef(0);
   const loadingRef = useRef(false);
@@ -104,6 +106,31 @@ export function ArticlesIndex({
     };
   }, []);
 
+  // The DOM list (no world) reveals its cards as they scroll in.
+  useIsomorphicLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    return startDomReveal(grid, { instant: !motionAllowed() });
+  }, []);
+
+  // While the list scrolls, the DOM hover stands down (a card sliding under
+  // a resting cursor must not light up: docs/animation-system.md gotcha #20).
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    let timer = 0;
+    const onScroll = () => {
+      if (!("scrolling" in grid.dataset)) grid.dataset.scrolling = "";
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => delete grid.dataset.scrolling, 140);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(timer);
+    };
+  }, []);
+
   // A new query replaces the list: the cards on screen sink into the fog,
   // the scroll resets while nothing shows, the new first batch rises.
   useEffect(() => {
@@ -111,7 +138,15 @@ export function ArticlesIndex({
     const token = ++swapRef.current;
     const controller = new AbortController();
     const world = getArticlesWorld();
-    const leaving: Promise<unknown> = world ? world.cards.playFilterOut() : Promise.resolve();
+    const grid = gridRef.current;
+    const motion = motionAllowed();
+    let leaving: Promise<unknown> = Promise.resolve();
+    if (world) {
+      leaving = world.cards.playFilterOut();
+    } else if (grid && motion && list.items.length) {
+      grid.dataset.leaving = "";
+      leaving = new Promise((resolve) => window.setTimeout(resolve, 320));
+    }
     const settledQuery = query.settled;
     void Promise.all([
       requestArticleBatch(settledQuery, 0, ARTICLE_BATCH_SIZE, controller.signal),
@@ -131,6 +166,7 @@ export function ArticlesIndex({
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
           if (token !== swapRef.current) return;
+          if (grid) delete grid.dataset.leaving;
           getArticlesWorld()?.cards.playFilterIn();
         }),
       );
@@ -216,6 +252,7 @@ export function ArticlesIndex({
         aria-label="Articles"
         className="articles-grid"
         data-articles-grid=""
+        ref={gridRef}
       >
         {list.items.map((article, index) => (
           <ArticleCard article={article} index={index} key={article.slug} />

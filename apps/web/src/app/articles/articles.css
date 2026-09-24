@@ -804,8 +804,11 @@ html:not([data-articles-world="gl"]) .articles-veil {
   display: block;
   min-width: 0;
   color: var(--world-ink);
-  border-radius: 2px;
+  border-radius: 3px;
   outline: none;
+  /* A card reached by keyboard lands below the fold, never folded under the head. */
+  scroll-margin-top: calc(var(--articles-head, 16rem) + 10vh);
+  scroll-margin-bottom: 6vh;
 }
 
 .article-card:focus-visible {
@@ -817,6 +820,7 @@ html:not([data-articles-world="gl"]) .articles-veil {
   position: relative;
   overflow: hidden;
   aspect-ratio: 5 / 2;
+  border-radius: 2px;
   background: color-mix(in srgb, var(--world-ink) 6%, var(--world-fog));
 }
 
@@ -825,6 +829,19 @@ html:not([data-articles-world="gl"]) .articles-veil {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.article-card-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    color-mix(in srgb, #ffffff 42%, transparent) 50%,
+    transparent 68%
+  );
+  pointer-events: none;
+  translate: -130% 0;
 }
 
 .article-card-meta {
@@ -839,8 +856,10 @@ html:not([data-articles-world="gl"]) .articles-veil {
 }
 
 .article-card-lines {
-  min-width: 0;
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .article-card-title {
@@ -893,44 +912,174 @@ html:not([data-articles-world="gl"]) .articles-veil {
 }
 
 .article-card-arrow-in {
-  transform: translate(-110%, -110%);
+  translate: -115% -115%;
 }
 
-/* DOM hover (the world plays its own when it draws the card). */
-@media (prefers-reduced-motion: no-preference) {
-  .article-card-image {
-    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+.article-card-rule {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1.5px;
+  background: var(--world-accent);
+  scale: 0 1;
+  transform-origin: left center;
+}
+
+/*
+ * The DOM list's hover (the world plays its own when it draws the card).
+ * Only for hover-capable pointers, and never while the list scrolls
+ * (articles-index.tsx sets data-scrolling), so a card sliding under a
+ * resting cursor doesn't light up.
+ */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  html[data-articles-world="dom"]
+    :is(.article-card-image, .article-card-cover, .article-card-meta) {
+    transition:
+      transform 0.7s var(--world-ease-out),
+      translate 0.7s var(--world-ease-out),
+      box-shadow 0.7s var(--world-ease-out),
+      filter 0.7s ease;
   }
 
-  .article-card-roll {
-    transition: transform 0.55s cubic-bezier(0.65, 0, 0.35, 1);
+  html[data-articles-world="dom"] .article-card-roll {
+    transition: transform 0.55s var(--world-ease-io);
   }
 
-  .article-card-arrow > svg {
-    transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+  html[data-articles-world="dom"] .article-card-arrow > svg {
+    transition: translate 0.5s var(--world-ease-io);
   }
 
-  .article-card:is(:hover, :focus-visible) .article-card-image {
+  html[data-articles-world="dom"] .article-card-rule {
+    transition: scale 0.65s var(--world-ease-out);
+  }
+
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:is(:hover, :focus-visible)
+    .article-card-image {
     transform: scale(1.1);
+    filter: saturate(1.08);
   }
 
-  .article-card:is(:hover, :focus-visible) .article-card-roll {
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:is(:hover, :focus-visible)
+    .article-card-sweep {
+    translate: 130% 0;
+    transition: translate 1.1s var(--world-ease-io);
+  }
+
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:is(:hover, :focus-visible)
+    .article-card-cover {
+    box-shadow: 0 22px 40px -26px var(--world-shadow);
+  }
+
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:is(:hover, :focus-visible)
+    .article-card-roll {
     transform: translateY(-50%);
   }
 
-  .article-card:is(:hover, :focus-visible) .article-card-arrow-out {
-    transform: translate(110%, 110%);
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:is(:hover, :focus-visible)
+    .article-card-arrow-out {
+    translate: 115% 115%;
   }
 
-  .article-card:is(:hover, :focus-visible) .article-card-arrow-in {
-    transform: translate(0, 0);
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:is(:hover, :focus-visible)
+    .article-card-arrow-in {
+    translate: 0 0;
+  }
+
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:is(:hover, :focus-visible)
+    .article-card-rule {
+    scale: 1 1;
+  }
+
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:hover
+    .article-card-cover {
+    translate: 0 -5px;
+  }
+
+  html[data-articles-world="dom"]
+    .articles-grid:not([data-scrolling])
+    .article-card:hover
+    .article-card-meta {
+    translate: 0 -3px;
+  }
+
+  /* The press: a small squash. */
+  html[data-articles-world="dom"] .article-card:active .article-card-cover {
+    translate: 0 -1px;
+    transform: scale(0.985);
+    transition-duration: 0.12s;
+  }
+}
+
+/* Reduced motion keeps the feedback in colour and underline only. */
+@media (prefers-reduced-motion: reduce) {
+  .article-card:is(:hover, :focus-visible) .article-card-roll > span:first-child {
+    text-decoration: underline;
+    text-decoration-color: var(--world-accent);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.18em;
+  }
+
+  .article-card:is(:hover, :focus-visible) .article-card-meta {
+    border-bottom-color: var(--world-accent);
+  }
+
+  .article-card:is(:hover, :focus-visible) .article-card-arrow {
+    color: var(--world-accent);
+  }
+}
+
+/*
+ * The DOM list's reveal: each card fades and rises as it scrolls in
+ * (dom-reveal.ts), and the cards on screen sink away when a filter swaps
+ * the list.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-articles-world="dom"] .article-slot > .article-card {
+    transition:
+      opacity 0.8s ease var(--reveal-delay, 0s),
+      translate 1s var(--world-ease-out) var(--reveal-delay, 0s);
+  }
+
+  html[data-articles-world="dom"] .article-slot:not([data-reveal="shown"]) > .article-card,
+  html[data-articles-world="dom"] [data-entrance="pending"] .article-slot > .article-card {
+    opacity: 0;
+    translate: 0 32px;
+  }
+
+  html[data-articles-world="dom"] [data-reveal-instant] .article-slot > .article-card {
+    transition: none;
+  }
+
+  html[data-articles-world="dom"] .articles-grid[data-leaving] .article-slot > .article-card {
+    opacity: 0;
+    translate: 0 -14px;
+    transition:
+      opacity 0.3s ease,
+      translate 0.4s ease;
   }
 }
 
 /*
  * While the world decides (motion allowed), the DOM pictures and text stay
- * hidden so the swap to WebGL never shows; the DOM fallback reveals them
- * once the mode is "dom", and <noscript> shows them without JavaScript.
+ * hidden so the swap to WebGL never shows; the DOM list reveals them once
+ * the mode is "dom", and <noscript> shows them without JavaScript.
  */
 @media (prefers-reduced-motion: no-preference) {
   html:not([data-articles-world]) .article-card-cover,
