@@ -880,6 +880,10 @@ html[data-articles-world="gl"] .ad-story::before {
   border-radius: var(--ad-frame-radius);
   background: color-mix(in srgb, var(--project-text) 7%, var(--project-bg));
   transform-origin: 50% 0;
+}
+
+/* With the page's script running, a picture opens large on a click. */
+[data-ad-live] [data-zoomable] > .ad-frame {
   cursor: zoom-in;
 }
 
@@ -1058,6 +1062,97 @@ html[data-articles-world="gl"] .ad-story::before {
 
   .ad-diptych .ad-figure:nth-child(2) {
     margin-top: 0;
+  }
+}
+
+.ad-frame:focus-visible {
+  outline: 2px solid var(--project-highlight);
+  outline-offset: 4px;
+}
+
+/* A picture opened large (image-zoom.ts builds this on <body>). */
+.ad-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  cursor: zoom-out;
+}
+
+.ad-zoom-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--project-bg) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(0.85);
+  backdrop-filter: blur(14px) saturate(0.85);
+}
+
+.ad-zoom-picture {
+  position: fixed;
+  overflow: hidden;
+  box-shadow:
+    0 2px 6px -2px color-mix(in srgb, var(--project-text) 18%, transparent),
+    0 40px 90px -30px color-mix(in srgb, var(--project-text) 45%, transparent);
+  background: color-mix(in srgb, var(--project-text) 7%, var(--project-bg));
+}
+
+.ad-zoom-picture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ad-zoom-caption {
+  position: fixed;
+  right: 0;
+  bottom: max(20px, 4.5vh);
+  left: 0;
+  width: min(44rem, 100% - 2 * var(--ad-gutter, 20px));
+  margin: 0 auto;
+  color: var(--project-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.ad-zoom-close {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--project-line);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--project-bg) 80%, transparent);
+  color: var(--project-text);
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.ad-zoom-close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+}
+
+.ad-zoom-close:focus-visible {
+  outline: 2px solid var(--project-highlight);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .ad-zoom-close:hover {
+    background: var(--project-button-bg-hover);
+    color: var(--project-button-text-hover);
   }
 }
 
