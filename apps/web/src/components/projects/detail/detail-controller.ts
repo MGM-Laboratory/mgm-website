@@ -9,6 +9,17 @@ import {
 } from "@/components/transition/project-zoom-colors";
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
 import { startSmoothScroll } from "@/components/projects/stage/smooth-scroller";
+import {
+  compositeLayers,
+  mixRgb,
+  parseCssColor,
+  registerHeaderToneProvider,
+  requestHeaderToneSample,
+  type HeaderToneProvider,
+  type HeaderToneSample,
+  type Rgb,
+} from "@/lib/header-tone";
+import { sampleImageAt, sampleVideoAt } from "@/lib/header-tone-probe";
 import { scrollPageTo } from "@/lib/page-scroll";
 import { PROJECT_THEMES, type ProjectPalette } from "@/lib/project-themes";
 import type { ProjectThemeId } from "@/lib/project-cms";
@@ -268,6 +279,7 @@ export class DetailController {
     void this.runEntrance();
     void this.signalReady();
     this.cleanups.push(onReducedMotion(() => this.toReduced()));
+    this.cleanups.push(registerHeaderToneProvider(this.headerTone));
     this.maybeStartStage();
 
     if (process.env.NODE_ENV !== "production") {
@@ -338,6 +350,45 @@ export class DetailController {
 
   /** The ambient background's per-frame read. */
   readonly motion = () => ({ scroll: this.travel, velocity: this.reduced ? 0 : this.velocity });
+
+  /**
+   * What the media show behind the site header (lib/header-tone.ts). The
+   * WebGL stage draws the items it owns while their DOM frames are hidden,
+   * which DOM probing can't see, so points over an item are answered here:
+   * the item's own picture (the DOM <img>, or a video's poster, read at
+   * that point), its placeholder colour until the file has loaded, faded
+   * with the track over the page background. Everything else (the meta
+   * block, the next project's panel in its own colours) is left to the DOM
+   * probe.
+   */
+  private readonly headerTone: HeaderToneProvider = (zones) => {
+    if (this.disposed || !this.items.length) return undefined;
+    const opacity = this.itemsOpacity;
+    // Still fading in or out: look again shortly.
+    if (opacity > 0.001 && opacity < 0.999) requestHeaderToneSample();
+    const bg: Rgb = parseCssColor(this.palette.bg)?.rgb ?? [255, 255, 255];
+    const placeholder: Rgb = parseCssColor(this.palette.highlight)?.rgb ?? bg;
+    const boxes = this.items.map((item) => ({ item, rect: item.el.getBoundingClientRect() }));
+    return zones.map((zone) =>
+      zone.points.map(({ x, y }): HeaderToneSample | undefined => {
+        const hit = boxes.find(
+          ({ rect }) => x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom,
+        );
+        if (!hit) return undefined;
+        const { item } = hit;
+        const loaded = opacity > 0.001 && item.el.hasAttribute("data-loaded");
+        const picture = !loaded
+          ? null
+          : item.img
+            ? sampleImageAt(item.img, x, y)
+            : item.video
+              ? sampleVideoAt(item.video, x, y)
+              : null;
+        const shown = picture ? compositeLayers(placeholder, [picture]) : placeholder;
+        return { color: mixRgb(bg, shown, opacity), media: Boolean(picture) };
+      }),
+    );
+  };
 
   // ------------------------------------------------------------ layout
 
@@ -625,6 +676,8 @@ export class DetailController {
     this.csr = clamp(this.entranceTime / ENTRANCE_SECONDS);
     if (this.csr >= SCROLL_UNLOCK_AT) this.releaseEntranceLock();
     if (before < 0.4 && this.csr >= 0.4) this.videosDirty = true;
+    // The media start fading in: the header samples along (headerTone).
+    if (before < 0.55 && this.csr >= 0.55) requestHeaderToneSample();
     if (this.csr >= 1) this.entrance = "done";
   }
 
