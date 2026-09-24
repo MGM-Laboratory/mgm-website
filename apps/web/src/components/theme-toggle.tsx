@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 
+import { runThemeSwitch } from "@/lib/theme-switch";
 import { cn } from "@/lib/utils";
 
 function subscribeNoop() {
@@ -33,7 +34,18 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={(event) => {
+        const next = isDark ? "light" : "dark";
+        const rect = event.currentTarget.getBoundingClientRect();
+        const request = {
+          next,
+          origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+          commit: () => setTheme(next),
+        } as const;
+        // A page may stage the switch (the articles library plays a wave
+        // from here); otherwise it applies at once.
+        if (!runThemeSwitch(request)) request.commit();
+      }}
       aria-label="Toggle theme"
       // Colours come from the site header (globals.css, .header-control):
       // the header ink, its hover wash and its focus ring, so the toggle
