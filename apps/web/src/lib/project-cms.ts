@@ -1,4 +1,5 @@
 import {
+  PROJECT_DETAIL_LIMITS,
   PROJECT_THEME_IDS,
   type ProjectCta,
   type ProjectMediaItem,
@@ -305,6 +306,9 @@ export function projectMediaSections(
   });
 }
 
+const SECTION_ALT_MAX = PROJECT_DETAIL_LIMITS.mediaAltMax;
+const VIDEO_FILE_NAME = /\.(mp4|webm|mov|m4v|mkv|avi)$/i;
+
 function derivedMediaSections(project: ProjectDraft): ProjectMediaItem[] {
   if (project.media?.length) return project.media;
   const sections: ProjectMediaItem[] = [];
@@ -322,7 +326,8 @@ function derivedMediaSections(project: ProjectDraft): ProjectMediaItem[] {
       key: project.coverKey,
       width: 0,
       height: 0,
-      alt: project.coverAlt,
+      // The cover's alt may run to 300 characters, a section's to 200.
+      alt: project.coverAlt?.slice(0, SECTION_ALT_MAX),
     });
   }
   project.galleryKeys.forEach((key, index) =>
@@ -336,7 +341,11 @@ function derivedMediaSections(project: ProjectDraft): ProjectMediaItem[] {
       key: project.videoKey,
       width: 0,
       height: 0,
-      alt: project.videoName,
+      // An uploaded demo's name is usually its file name: no use as alt text.
+      alt:
+        project.videoName && !VIDEO_FILE_NAME.test(project.videoName.trim())
+          ? project.videoName
+          : undefined,
     });
   }
   return sections;
