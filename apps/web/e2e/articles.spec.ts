@@ -182,7 +182,10 @@ test.describe("articles transitions", () => {
       .poll(() => settled(page), { timeout: 20_000 })
       .toMatchObject({ locked: false, transition: null });
 
-    await page.locator("a[data-article-back]").first().click();
+    // The pill holds its entrance until the transition has revealed the page.
+    const back = page.locator("a[data-article-back]").first();
+    await expect.poll(() => back.getAttribute("data-waiting")).toBeNull();
+    await back.click();
     await expect(page).toHaveURL(/\/articles$/, { timeout: 20_000 });
     await expect
       .poll(() => settled(page), { timeout: 20_000 })
