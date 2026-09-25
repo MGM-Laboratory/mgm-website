@@ -32,11 +32,10 @@ import { CmsArticlesService } from "./cms-articles.service.js";
 function parseSafe<T>(schema: z.ZodType<T>, body: unknown): T {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    throw new BadRequestException(
-      parsed.error.issues[0]
-        ? `${parsed.error.issues[0].path.join(".")}: ${parsed.error.issues[0].message}`
-        : "Invalid request",
-    );
+    const issue = parsed.error.issues[0];
+    // An issue at the root of the body has no path to name.
+    const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
+    throw new BadRequestException(issue ? `${where}${issue.message}` : "Invalid request");
   }
   return parsed.data;
 }
