@@ -17,7 +17,7 @@ Everything here is theme-aware and reduced-motion safe. Without hardware WebGL2 
 | World                | `components/articles/world/` (`world-host.tsx`, `world-registry.ts`, `world-api.ts` (the contract), `engine.ts`, `camera-rig.ts`, `world-glsl.ts`, `palette.ts`, `quality.ts`, `theme-wave.ts`)                                                  |
 | Library              | `world/library/*` (floor plan, stacks, vault, window, lanterns, floor, atmosphere, drifting books, pages, dust and glyphs)                                                                                                                       |
 | Effects              | `world/fx/composite.ts` (lens, motion blur, pulses, wipe), `world/fx/theme-front.ts`, `world/particles/*` (sparks, paper, cursor magic), `world/cursor/world-cursor.ts`                                                                          |
-| List                 | `components/articles/list/*` (`articles-index.tsx`, `articles-hero.tsx`, `article-card.tsx`, `category-pills.tsx`, `filter-sheet.tsx`, `use-list-query.ts`, `list-entrance.ts`, `return-scroll.ts`, `list-cache.ts`, `articles-end.tsx`, others) |
+| List                 | `components/articles/list/*` (`articles-index.tsx`, `articles-hero.tsx`, `article-card.tsx`, `filter-sheet.tsx`, `use-list-query.ts`, `list-entrance.ts`, `return-scroll.ts`, `list-cache.ts`, `articles-end.tsx`, others)                       |
 | Cards in the world   | `world/cards/*` (`cards-layer.ts`, `card-shaders.ts`, `card-textures.ts`), `world/home/*` (the 3D Home button)                                                                                                                                   |
 | Article page         | `components/articles/detail/*` (hero, story model and renderer, controller, entrance, reveals, scroll motion, image zoom, next threshold, flood), `world/detail/*` (the cover's sea)                                                             |
 | In-world transitions | `components/articles/transitions/article-transitions.ts`, `articles-transitions-host.tsx`                                                                                                                                                        |
@@ -58,7 +58,11 @@ Modelled in library units (`library/layout.ts`), scaled so a unit is a ninth of 
 
 ### Head and filters
 
-A fixed head over the library: the "Articles" title, a search field and category pills (phones and short landscape screens get a compact head with a "Filter" sheet). Filters are URL state through nuqs (`?category=`, `?q=`, history "replace"), so a filtered list survives going into an article and back, a reload, and a shared link. Search is strict: every term must appear (title, subtitle, categories, authors or body), ranked by the fuzzy scorer. The head's bottom is published as `--articles-head`: the grid starts under it and the world folds the cards just below it.
+A fixed head over the library: the "Articles" title, a search field and beside it a Filter button that opens the categories (with their counts) in a sheet: a panel centred under the search on wide screens, a sheet across the screen on phones. Picking one closes it, and the button then carries the category's name. Filters are URL state through nuqs (`?category=`, `?q=`, history "replace"), so a filtered list survives going into an article and back, a reload, and a shared link. Search is strict: every term must appear (title, subtitle, categories, authors or body), ranked by the fuzzy scorer. The head's bottom is published as `--articles-head`: the grid starts under it and the world folds the cards just below it.
+
+### The header over the library
+
+The site header is nearly clear glass on every articles page (`world.css`, scoped by the `data-articles-library` marker the articles layout renders): an 8% tint (12% in the dark) and a 2 px blur instead of the frosted bar, so the library shows through it. The adaptive sampler starts from that tint and thickens a zone only where the logo or the menu would drop below 4.5:1 over what is behind it, and a soft halo in each zone's surface color keeps their edges clean. The open menu keeps its dense glass, and reduced transparency keeps the opaque bar.
 
 ### Cards
 
@@ -80,7 +84,7 @@ Text strips are an alpha atlas per card colored in the shader, so a theme switch
 
 The articles entrance protocol, shared by every articles page:
 
-- A fresh load plays at once after the fonts (bounded): the title's letters rise, the search and pills follow, the lens settles and the cards rise out of the fog row by row.
+- A fresh load plays at once after the fonts (bounded): the title's letters rise, the search row follows, the lens settles and the cards rise out of the fog row by row.
 - Under a cover (the portal, the route curtain or an in-world transition) the pieces wait hidden until every cover reveals, then play the same entrance without the lens settle.
 - Coming back from an article the list is simply there, as it was left.
 - Reduced motion shows everything at once.
