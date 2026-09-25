@@ -261,6 +261,9 @@ export function ArticlesWorldHost() {
         : null;
 
     const offReduced = onReducedMotion(() => {
+      // Final for the visit: an engine still loading or starting must not
+      // publish itself after this.
+      cancelled = true;
       teardown();
       offCursor?.();
       offCursor = null;
