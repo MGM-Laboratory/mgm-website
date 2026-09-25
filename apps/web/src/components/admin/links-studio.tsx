@@ -96,9 +96,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function StatTile({ label, value }: { label: string; value: number }) {
+function StatTile({ label, value, testId }: { label: string; value: number; testId: string }) {
   return (
-    <div className="rounded-xl border border-[#e4e8f0] bg-[#fbfbfa] px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+    <div
+      className="rounded-xl border border-[#e4e8f0] bg-[#fbfbfa] px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]"
+      data-testid={testId}
+    >
       <div className="font-mono text-2xl font-semibold tabular-nums">{value}</div>
       <div className={`${labelClass} mt-0.5`}>{label}</div>
     </div>
@@ -128,6 +131,7 @@ function DailyChart({ days }: { days: { day: string; views: number; clicks: numb
           return (
             <div
               className="group relative flex h-full min-w-0 flex-1 flex-col justify-end"
+              data-testid="chart-day"
               key={day.day}
             >
               <div
@@ -200,7 +204,10 @@ function AnalyticsPanel({ analytics, onClose }: { analytics: LinkAnalytics; onCl
   const locationOf = (visit: LinkAnalytics["recent"][number]) =>
     [visit.city, visit.country].filter(Boolean).join(", ") || "Unknown";
   return (
-    <div className="rounded-2xl border border-[#e4e8f0] bg-[#fbfbfa] p-5 dark:border-white/10 dark:bg-white/[0.02]">
+    <div
+      className="rounded-2xl border border-[#e4e8f0] bg-[#fbfbfa] p-5 dark:border-white/10 dark:bg-white/[0.02]"
+      data-testid="links-analytics"
+    >
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-bold">
           Analytics · <span className="font-mono">{analytics.link.shortUrl}</span>
@@ -215,10 +222,14 @@ function AnalyticsPanel({ analytics, onClose }: { analytics: LinkAnalytics; onCl
         </button>
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="Views" value={analytics.totals.views} />
-        <StatTile label="Clicks" value={analytics.totals.clicks} />
-        <StatTile label="Unique visitors" value={analytics.totals.uniqueIps} />
-        <StatTile label="Failed attempts" value={analytics.totals.failedAttempts} />
+        <StatTile label="Views" testId="stat-views" value={analytics.totals.views} />
+        <StatTile label="Clicks" testId="stat-clicks" value={analytics.totals.clicks} />
+        <StatTile label="Unique visitors" testId="stat-unique" value={analytics.totals.uniqueIps} />
+        <StatTile
+          label="Failed attempts"
+          testId="stat-failed"
+          value={analytics.totals.failedAttempts}
+        />
       </div>
       <div className="mt-5 rounded-xl border border-[#e4e8f0] bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
         <div className={`${labelClass} mb-3`}>Last 14 days</div>
