@@ -141,6 +141,12 @@ export type WorldFxApi = {
   setBlurAmount(amount: number): void;
   /** A burst of light or ink at a viewport point (clicks, arrivals). */
   pulse(x: number, y: number, strength?: number): void;
+  /**
+   * (WP2, additive) Releases a swarm of paper from a viewport point, the one
+   * a resting pointer releases: for a moment that should feel magical (a
+   * click on the Home button, an arrival).
+   */
+  swarm(x: number, y: number): void;
 };
 
 export type ArticlesWorldApi = {
@@ -158,8 +164,11 @@ export type ArticlesWorldApi = {
   /**
    * Follows the site scheme. With `wave`, the change spreads from that
    * viewport point across the whole world instead of switching at once.
+   * (WP2, additive) `masked`: the page's DOM flips behind a clip that
+   * follows the front (the theme switch's view transition), so what shows
+   * behind any live DOM is already the new scheme (colorAt answers so).
    */
-  setScheme(dark: boolean, options?: { wave?: { x: number; y: number } }): void;
+  setScheme(dark: boolean, options?: { wave?: { x: number; y: number }; masked?: boolean }): void;
   /** Tints the world toward an article theme (null returns to the library's own palette). */
   setTheme(theme: { light: ProjectPalette; dark: ProjectPalette } | null, seconds?: number): void;
   /** The colour the world paints behind a viewport point, for the adaptive header. */
