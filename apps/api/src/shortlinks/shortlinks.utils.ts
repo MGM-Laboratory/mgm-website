@@ -2,7 +2,7 @@ import { lookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { randomInt, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { isIP } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
 import { promisify } from "node:util";
 
 const scryptAsync = promisify(scrypt) as (
@@ -151,29 +151,36 @@ function isPrivateAddress(address: string): boolean {
 }
 
 /**
- * One request straight to a previously resolved address: the connection is
- * pinned to the IP while the Host header and the TLS server name keep the
- * original hostname, so nothing a DNS rebinding can change between the
- * lookup and the request.
+ * One request with the address check at connection time: the `lookup`
+ * callback resolves the hostname itself and refuses private or restricted
+ * addresses right before the socket connects, so no DNS answer that
+ * arrives between a check and a connect can retarget the request.
  */
-function requestToAddress(
-  protocol: string,
-  address: string,
-  hostHeader: string,
-  hostname: string,
-  path: string,
-  method: "HEAD" | "GET",
-): Promise<number | null> {
-  const driver = protocol === "https:" ? httpsRequest : httpRequest;
-  const port = protocol === "https:" ? 443 : 80;
+function requestChecked(parsed: URL, method: "HEAD" | "GET"): Promise<number | null> {
+  const driver = parsed.protocol === "https:" ? httpsRequest : httpRequest;
+  const port = parsed.port ? Number(parsed.port) : parsed.protocol === "https:" ? 443 : 80;
+  const lookupGuarded: LookupFunction = (hostname, _options, callback) => {
+    lookup(hostname, { all: true })
+      .then((addresses) => {
+        if (addresses.length === 0 || addresses.some(({ address }) => isPrivateAddress(address))) {
+          const refused = new Error(
+            "Refusing to connect to a private address",
+          ) as NodeJS.ErrnoException;
+          refused.code = "EACCES";
+          callback(refused, "", 0);
+          return;
+        }
+        callback(null, addresses[0].address, addresses[0].family);
+      })
+      .catch((error: NodeJS.ErrnoException) => callback(error, "", 0));
+  };
   const options = {
-    hostname: address,
+    hostname: parsed.hostname,
     port,
     method,
-    path,
-    headers: { host: hostHeader },
-    servername: protocol === "https:" ? hostname : undefined,
+    path: parsed.pathname + parsed.search,
     signal: AbortSignal.timeout(5000),
+    lookup: lookupGuarded,
   };
   return new Promise((resolve, reject) => {
     const req = driver(options, (response) => {
@@ -188,8 +195,8 @@ function requestToAddress(
 /**
  * A best-effort HEAD check of a link's target, with two guards against the
  * API being used to probe internal networks: the URL must be http(s), and
- * every address the hostname resolves to must be a public one, with the
- * request itself pinned to one of those addresses.
+ * the address actually connected to must be a public one, validated when
+ * the connection opens rather than in a separate earlier step.
  */
 export async function checkLongUrl(url: string): Promise<"ok" | "error"> {
   let parsed: URL;
@@ -199,50 +206,20 @@ export async function checkLongUrl(url: string): Promise<"ok" | "error"> {
   } catch {
     return "error";
   }
-  let addresses: { address: string }[];
-  if (isIP(parsed.hostname)) {
-    if (isPrivateAddress(parsed.hostname)) return "error";
-    addresses = [{ address: parsed.hostname }];
-  } else {
-    try {
-      addresses = await lookup(parsed.hostname, { all: true });
-      if (addresses.length === 0 || addresses.some(({ address }) => isPrivateAddress(address))) {
-        return "error";
-      }
-    } catch {
-      return "error";
-    }
-  }
+  if (isIP(parsed.hostname) && isPrivateAddress(parsed.hostname)) return "error";
 
   const attempt = async (method: "HEAD" | "GET") => {
-    for (const { address } of addresses) {
-      try {
-        const status = await requestToAddress(
-          parsed.protocol,
-          address,
-          parsed.host,
-          parsed.hostname,
-          parsed.pathname + parsed.search,
-          method,
-        );
-        if (status !== null) return status < 400 ? "ok" : "error";
-      } catch {
-        // Try the next address; a multi-homed host only needs one that works.
-      }
-    }
-    return "error";
-  };
-  try {
-    return await attempt("HEAD");
-  } catch {
-    // Some servers refuse HEAD entirely; one GET fallback still counts as a
-    // check, not a fetch of the whole page, thanks to the abort below.
     try {
-      return await attempt("GET");
+      const status = await requestChecked(parsed, method);
+      return status !== null && status < 400 ? "ok" : "error";
     } catch {
       return "error";
     }
-  }
+  };
+  // Some servers refuse HEAD entirely; one GET fallback still counts as a
+  // check, not a fetch of the whole page, thanks to the abort signal.
+  const head = await attempt("HEAD");
+  return head === "ok" ? "ok" : attempt("GET");
 }
 
 export const EXPIRY_OPTIONS = ["once", "24h", "3d", "7d", "30d", "never"] as const;

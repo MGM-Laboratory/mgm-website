@@ -27,7 +27,9 @@ export function decryptToken(stored: string): string | null {
     const [ivHex, tagHex, ciphertextHex] = stored.split(".");
     const tag = Buffer.from(tagHex, "hex");
     if (tag.length !== 16) return null;
-    const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"));
+    const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"), {
+      authTagLength: 16,
+    });
     decipher.setAuthTag(tag);
     return Buffer.concat([
       decipher.update(Buffer.from(ciphertextHex, "hex")),
