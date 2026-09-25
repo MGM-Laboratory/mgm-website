@@ -98,15 +98,38 @@ export function safeImageSrc(value: string) {
   return undefined;
 }
 
+/**
+ * Inline content as the story can trust it. The CMS stores documents as
+ * loosely typed JSON, so every node is checked all the way down: a text
+ * node keeps its text only when it is a string, a link keeps its address
+ * and its content only when they are well formed, and anything else is
+ * dropped rather than allowed to break the page.
+ */
 function asInline(content: unknown): InlineContent | undefined {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return undefined;
-  return content.filter(
-    (node): node is InlineNode =>
-      Boolean(node) &&
-      typeof node === "object" &&
-      ((node as InlineNode).type === "text" || (node as InlineNode).type === "link"),
-  );
+  const nodes: InlineNode[] = [];
+  for (const raw of content) {
+    if (!raw || typeof raw !== "object") continue;
+    const node = raw as Record<string, unknown>;
+    if (node.type === "text") {
+      nodes.push({
+        type: "text",
+        text: typeof node.text === "string" ? node.text : undefined,
+        styles:
+          node.styles && typeof node.styles === "object"
+            ? (node.styles as Record<string, unknown>)
+            : undefined,
+      });
+    } else if (node.type === "link") {
+      nodes.push({
+        type: "link",
+        href: typeof node.href === "string" ? node.href : undefined,
+        content: asInline(node.content),
+      });
+    }
+  }
+  return nodes;
 }
 
 /** The plain text of inline content. */
@@ -209,8 +232,12 @@ function flatten(
 ): { block: ArticleBlock; depth: number }[] {
   const out: { block: ArticleBlock; depth: number }[] = [];
   for (const block of blocks) {
+    // Stored JSON: a child can be anything, and only objects are blocks.
+    if (!block || typeof block !== "object") continue;
     out.push({ block, depth });
-    if (block.children?.length) out.push(...flatten(block.children, depth + 1));
+    if (Array.isArray(block.children) && block.children.length) {
+      out.push(...flatten(block.children, depth + 1));
+    }
   }
   return out;
 }
@@ -236,7 +263,7 @@ export function buildStory(slug: string, blocks: readonly ArticleBlock[]): Story
   let figures = 0;
   let indonesianSources = false;
   const rotation = hashSlug(slug) % VARIANTS.length;
-  const entries = flatten(blocks);
+  const entries = flatten(Array.isArray(blocks) ? blocks : []);
 
   const pushList = (ordered: boolean, id: string, content: InlineContent, depth: number) => {
     const last = current[current.length - 1];
