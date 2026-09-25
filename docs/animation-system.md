@@ -146,7 +146,7 @@ The glass header eases its colours over 0.5 s in CSS, and the project zoom walks
 
 ### 24. A shared geometry can't carry instanced attributes of different counts
 
-Two `InstancedMesh`es built on one `BufferGeometry` with per-instance attributes of different lengths fail to draw (a WebGL draw error, and nothing on screen). Clone the geometry per instanced mesh (`geometry.clone()`, as the library's stacks do).
+Two `InstancedMesh`es built on one `BufferGeometry` with per-instance attributes of different lengths fail to draw (a WebGL draw error, and nothing on screen). Clone the geometry for an instanced mesh whose attributes differ (`plane.clone()` for the fog sheets in `library/atmosphere.ts`). Sharing is fine when every mesh has the same instance count, as the two walls in `library/stacks.ts` do.
 
 ### 25. A transition that owns a shared scene must also own what the route would have changed
 
@@ -162,7 +162,7 @@ A clock that adds each frame's time capped at 0.5 s (so a single hitch doesn't j
 
 ### 28. Motion blur taps that share the lens's spectral weights smear into rainbows
 
-The list's first motion blur reused the chromatic split's per-tap weights, so a fast scroll smeared every edge into a rainbow. Shuffle the blur taps against the split (a golden-ratio offset), keep the smear short (about 0.011 of the scroll speed, clamped), and let the split stay a lens effect at the edges.
+The list's first motion blur reused the chromatic split's per-tap weights, so a fast scroll smeared every edge into a rainbow. Shuffle the blur taps against the split (a golden-ratio offset), keep the smear short (0.0075 of the scroll speed, clamped to `MAX_BLUR` in `engine.ts`), and let the split stay a lens effect at the edges.
 
 ## Homepage ambient interactions
 
