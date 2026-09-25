@@ -12,6 +12,7 @@ import {
   articleDetailSlug,
   articleTransitionKind,
   clearArticleArrival,
+  clearArticleReturn,
   expectArticlePage,
   isArticleTransitionBusy,
   markArticleCoverStarted,
@@ -812,6 +813,12 @@ export class ArticleTransitions {
     }
     delete document.documentElement.dataset.articleTransition;
     clearArticleArrival();
+    if (run.kind === "close" && !run.committed) {
+      // The list was never reached: its return note and the scroll-reset
+      // skip must not surprise a later, unrelated visit to it.
+      clearArticleReturn();
+      skipScrollReset(null);
+    }
     markArticleRevealStarted();
     releaseScrollLock(LOCK);
     if (this.run === run) this.run = null;
