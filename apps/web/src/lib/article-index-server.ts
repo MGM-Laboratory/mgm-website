@@ -53,8 +53,19 @@ async function readFeed(reuse: boolean) {
   }
 }
 
-async function readFullRecords() {
-  if (fresh(fullCache, FULL_TTL_MS)) return fullCache.value;
+/** Whether the full records hold every article in the feed, as saved now. */
+function coversFeed(full: readonly CmsArticleRecord[], feed: readonly CmsArticleRecord[]) {
+  const saved = new Map(full.map((record) => [record.slug, record.updatedAt]));
+  return feed.every((record) => saved.get(record.slug) === record.updatedAt);
+}
+
+/**
+ * Full records for a search. The copy is reused only while it still holds
+ * every article the (fresher) feed lists, as saved: a publish or an edit
+ * shows up in search at once instead of after the copy expires.
+ */
+async function readFullRecords(feed: readonly CmsArticleRecord[]) {
+  if (fresh(fullCache, FULL_TTL_MS) && coversFeed(fullCache.value, feed)) return fullCache.value;
   try {
     const value = publishedArticles(await ensureArticleCmsSeeded());
     fullCache = { value, at: Date.now() };
@@ -111,9 +122,12 @@ async function selectRecords(
   let records: readonly CmsArticleRecord[] = feed;
   if (query.q) {
     // Rank over the full documents, then keep the feed's own (light) records.
-    const full = await readFullRecords();
+    const full = await readFullRecords(feed);
     const terms = tokenize(query.q);
-    const matching = full.filter((record) => containsEveryTerm(record, terms, members));
+    // Nothing searchable in the query (punctuation only): nothing matches.
+    const matching = terms.length
+      ? full.filter((record) => containsEveryTerm(record, terms, members))
+      : [];
     const bySlug = new Map(feed.map((record) => [record.slug, record]));
     const ranked = searchArticles(matching, query.q, Number.POSITIVE_INFINITY).map(
       (result) => result.slug,
