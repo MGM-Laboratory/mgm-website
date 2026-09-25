@@ -134,3 +134,77 @@ model MailRoutingState {
   key   String @id
   value Int    @default(0)
 }
+
+// One row per domain a short link can be served from: the site's own domain
+// (isPrimary, links live under /s/:slug) or a custom domain added by an
+// admin (links live at the domain root). Custom domains point at the web
+// service via CNAME and are only served once they verify.
+model ShortLinkDomain {
+  id          String   @id @default(cuid())
+  hostname    String   @unique
+  isPrimary   Boolean  @default(false)
+  // "local" (the site domain), "cloudflare" (DNS hosted on Cloudflare),
+  // or "manual" (any other provider).
+  provider String @default("manual")
+  // "pending" until the domain answers the verification marker.
+  status  String    @default("pending")
+  cloudflareZoneId        String?
+  cloudflareTokenEncrypted String?
+  // The Railway custom-domain id, when the domain was attached to the web
+  // service through the Railway API (needs RAILWAY_API_TOKEN).
+  railwayDomainId String?
+  lastUsedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  links           ShortLink[]
+}
+
+model ShortLink {
+  id       String @id @default(cuid())
+  slug     String
+  longUrl  String
+  domainId String
+  domain   ShortLinkDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  // null means the link never expires; maxClicks caps total clicks ("once").
+  expiresAt DateTime?
+  maxClicks Int?
+  clickCount Int     @default(0)
+  viewCount  Int     @default(0)
+  passphraseSalt String?
+  passphraseHash String?
+  // Lazy health check of longUrl, refreshed when the admin lists links.
+  longUrlStatus    String?
+  longUrlCheckedAt DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  visits           ShortLinkVisit[]
+
+  @@unique([domainId, slug])
+  @@index([domainId, createdAt])
+}
+
+model ShortLinkVisit {
+  id        String @id @default(cuid())
+  linkId    String
+  link      ShortLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  ip        String?
+  userAgent String?
+  referer   String?
+  // A view is a gate page render, a click is an actual redirect; a link
+  // without a passphrase records both on its single request.
+  isView        Boolean @default(true)
+  isClick       Boolean @default(false)
+  failedAttempt Boolean @default(false)
+  country       String?
+  region        String?
+  city          String?
+  latitude      Float?
+  longitude     Float?
+  timezone      String?
+  device        String?
+  browser       String?
+  os            String?
+  createdAt     DateTime @default(now())
+
+  @@index([linkId, createdAt])
+}
