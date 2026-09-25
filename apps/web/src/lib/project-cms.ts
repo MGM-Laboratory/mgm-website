@@ -1,12 +1,12 @@
 import {
   PROJECT_DETAIL_LIMITS,
-  PROJECT_THEME_IDS,
   type ProjectCta,
   type ProjectMediaItem,
   type ProjectThemeId,
 } from "@repo/shared";
 
 import { formatArticleDate, slugify as slugifyText, type ArticleBlock } from "@/lib/article-cms";
+import { themeIdFor } from "@/lib/theme-pick";
 
 export {
   PROJECT_DETAIL_LIMITS,
@@ -266,24 +266,12 @@ export function projectDescriptionParagraphs(project: ProjectDraft) {
   return text ? text.split("\n\n") : [];
 }
 
-function hashSlug(slug: string) {
-  let hash = 2166136261;
-  for (let index = 0; index < slug.length; index += 1) {
-    hash ^= slug.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
 /**
  * The project's palette: the one an editor picked, else a stable pick from
  * the slug, so older records still get a considered theme of their own.
  */
 export function projectThemeId(project: Pick<ProjectDraft, "slug" | "theme">): ProjectThemeId {
-  if (project.theme && (PROJECT_THEME_IDS as readonly string[]).includes(project.theme)) {
-    return project.theme;
-  }
-  return PROJECT_THEME_IDS[hashSlug(project.slug) % PROJECT_THEME_IDS.length];
+  return themeIdFor(project);
 }
 
 /**

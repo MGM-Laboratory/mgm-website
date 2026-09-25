@@ -12,11 +12,12 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 6. `docs/navigation-menu.md`: the full-screen nav menu system spec.
 7. `docs/page-transition.md`: the full-screen navigation curtain played on every internal route change, and the related homepage-entrance-skip behavior.
 8. `docs/projects-page.md`: the `/projects` index and the `/projects/[slug]` detail pages, the most animated pages (intro choreography, hero play, the WebGL cover stage, the horizontal themed detail page and its media stage, the project zoom transitions).
-9. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
-10. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
-11. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
-12. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
-13. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
+9. `docs/articles-page.md`: the `/articles` library, a persistent WebGL world the list and every article live in (the paper-card river, themed article pages, the in-world transitions, and the portal in and out of the rest of the site).
+10. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
+11. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
+12. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
+13. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
+14. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
 
 ## ⚠️ Next.js 16: not the Next.js in your training data
 
@@ -54,7 +55,8 @@ Node **22** (`.nvmrc`), pnpm **11.3.0** (`packageManager`), Turbo 2.10.
 apps/web/            Next.js 16 marketing site (the focus of most work)
   src/app/           29 page files: public pages, dynamic detail pages, and the admin workspace (plus API route handlers)
   src/components/    hero/ nav/ transition/ (page-transition curtain) process/ sections/
-                     contact/ careers/ members/ articles/ projects/ (all real, CMS-driven)
+                     contact/ careers/ members/ articles/ (world/ list/ detail/ transitions/)
+                     projects/ (all real, CMS-driven)
                      + admin/ (internal CMS workspace), site-header, smooth-scroll, theme-toggle,
                      social-icons, providers, api-status, app-boot-tracker
   src/data/          nav.ts (menu config), competencies.ts, and other static page content

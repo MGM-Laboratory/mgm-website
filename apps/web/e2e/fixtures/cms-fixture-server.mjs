@@ -1,19 +1,24 @@
 /**
- * A dependency-free stand-in for the CMS API's public project reads, for the
- * Playwright suite (playwright.config.ts starts it as a webServer, and the
- * web server's CMS_API_URL points at it). CI serves the web build without an
- * API, so without this /projects only ever showed its empty state and every
- * /projects/<slug> was a 404.
+ * A dependency-free stand-in for the CMS API's public project and article
+ * reads, for the Playwright suite (playwright.config.ts starts it as a
+ * webServer, and the web server's CMS_API_URL points at it). CI serves the
+ * web build without an API, so without this /projects and /articles only
+ * ever showed their empty states and every detail page was a 404.
  *
- * It answers only what the public project pages read, from the records in
- * cms/projects.json and the files in cms/media/, shaped like the NestJS API
- * (apps/api/src/cms/cms-projects.controller.ts):
+ * It answers only what the public project and article pages read, from the
+ * records in cms/projects.json and cms/articles.json and the files in
+ * cms/media/, shaped like the NestJS API
+ * (apps/api/src/cms/cms-projects.controller.ts, cms-articles.controller.ts):
  *
  *   GET /api/cms/projects              { records } (published, with bodies)
  *   GET /api/cms/projects/feed         { records } (published, body [])
  *   GET /api/cms/projects/:slug        { record } plus measured mediaSizes, or a 404
  *   GET /api/cms/projects/media/:key   302 to /files/<key> on this server
  *   GET /api/cms/projects/video/:key   302 likewise (published videos only)
+ *   GET /api/cms/articles              { records } (published, with content)
+ *   GET /api/cms/articles/feed         { records } (published, content [])
+ *   GET /api/cms/articles/:slug        { record }, or a 404
+ *   GET /api/cms/articles/media/:key   302 to /files/<key> on this server
  *   GET /files/:key                    the file itself, with Range support
  *   GET /__cms-fixture                 readiness (the real API 404s it, so a
  *                                      busy port fails loudly instead of
@@ -44,10 +49,12 @@ const MEDIA_DIR = path.join(ROOT, "media");
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MEDIA_KEY_PATTERN =
   /^project-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp)$/;
+const ARTICLE_MEDIA_KEY_PATTERN =
+  /^article-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp)$/;
 const VIDEO_KEY_PATTERN =
   /^demo-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:mp4|webm)$/;
-// Named routes the API serves under /cms/projects that are not a record.
-const RESERVED_SLUGS = new Set(["admin", "feed", "bootstrap", "contributor-photo"]);
+// Named routes the API serves under /cms/projects and /cms/articles that are not a record.
+const RESERVED_SLUGS = new Set(["admin", "feed", "bootstrap", "contributor-photo", "media"]);
 
 const CONTENT_TYPES = {
   ".jpg": "image/jpeg",
@@ -60,6 +67,9 @@ const CONTENT_TYPES = {
 
 const { records } = JSON.parse(readFileSync(path.join(ROOT, "projects.json"), "utf8"));
 const published = records.filter((record) => record.project.draft !== true);
+const articles = JSON.parse(readFileSync(path.join(ROOT, "articles.json"), "utf8")).records.filter(
+  (record) => record.article.draft !== true,
+);
 
 /** Width and height from a baseline or progressive JPEG's frame header. */
 function jpegSize(buffer) {
@@ -164,6 +174,30 @@ function sendFile(request, response, key) {
   return createReadStream(file, { start, end }).pipe(response);
 }
 
+/** The article reads; returns false for anything it doesn't serve. */
+function articleRoute(response, rest) {
+  if (rest.length === 0) {
+    sendJson(response, 200, { records: articles });
+    return true;
+  }
+  if (rest.length === 1 && rest[0] === "feed") {
+    sendJson(response, 200, { records: articles.map((record) => ({ ...record, content: [] })) });
+    return true;
+  }
+  if (rest.length === 2 && rest[0] === "media") {
+    if (!ARTICLE_MEDIA_KEY_PATTERN.test(rest[1])) sendError(response, 400, "Unknown media key");
+    else redirectToFile(response, rest[1]);
+    return true;
+  }
+  if (rest.length === 1 && SLUG_PATTERN.test(rest[0]) && !RESERVED_SLUGS.has(rest[0])) {
+    const record = articles.find((entry) => entry.slug === rest[0]);
+    if (!record) sendError(response, 404, "Article record not found");
+    else sendJson(response, 200, { record });
+    return true;
+  }
+  return false;
+}
+
 /** Handles the routes above; returns false for anything it doesn't serve. */
 function route(request, response) {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
@@ -171,12 +205,19 @@ function route(request, response) {
   const parts = pathname.split("/").filter(Boolean).map(decodeURIComponent);
 
   if (pathname === "/__cms-fixture") {
-    sendJson(response, 200, { fixture: "cms", records: published.length });
+    sendJson(response, 200, {
+      fixture: "cms",
+      records: published.length,
+      articles: articles.length,
+    });
     return true;
   }
   if (parts[0] === "files" && parts.length === 2) {
     sendFile(request, response, parts[1]);
     return true;
+  }
+  if (parts[0] === "api" && parts[1] === "cms" && parts[2] === "articles") {
+    return articleRoute(response, parts.slice(3));
   }
   if (parts[0] !== "api" || parts[1] !== "cms" || parts[2] !== "projects") return false;
   const rest = parts.slice(3);
@@ -233,7 +274,9 @@ server.on("error", (error) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`[cms-fixture] ${published.length} projects on ${ORIGIN}`);
+  console.log(
+    `[cms-fixture] ${published.length} projects, ${articles.length} articles on ${ORIGIN}`,
+  );
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {

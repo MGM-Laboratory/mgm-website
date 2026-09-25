@@ -17,12 +17,28 @@ import { ApiTags } from "@nestjs/swagger";
 import { SkipThrottle } from "@nestjs/throttler";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Response } from "express";
+import { PROJECT_THEME_IDS } from "@repo/shared";
 import { z } from "zod";
 
 import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsArticlesService } from "./cms-articles.service.js";
+
+/**
+ * Zod failures become readable 400s instead of opaque 500s, as they do for
+ * projects: the editor shows the first issue next to the field it names.
+ */
+function parseSafe<T>(schema: z.ZodType<T>, body: unknown): T {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    // An issue at the root of the body has no path to name.
+    const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
+    throw new BadRequestException(issue ? `${where}${issue.message}` : "Invalid request");
+  }
+  return parsed.data;
+}
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -46,6 +62,10 @@ const articleSchema = z.object({
     authorSlugs: z.array(z.string().min(1)).min(1),
     draft: z.boolean(),
     coverKey: z.string().min(1).max(500).optional(),
+    // The detail page palette, one of the project themes. Records saved
+    // before the field existed have none and get a stable pick from the
+    // slug on the page. Declared here because z.object strips unknown keys.
+    theme: z.enum(PROJECT_THEME_IDS).optional(),
   }),
   content: z.array(blockSchema),
 });
@@ -102,7 +122,7 @@ export class CmsArticlesController {
   @Post("bootstrap")
   async bootstrap(@Body() body: unknown, @Headers("x-cms-passphrase") passphrase = "") {
     this.assertAdmin(passphrase);
-    const { records } = bootstrapSchema.parse(body);
+    const { records } = parseSafe(bootstrapSchema, body);
     return {
       records: await this.articles.bootstrap(
         records.map((record) => ({
@@ -138,7 +158,7 @@ export class CmsArticlesController {
     @Headers("x-cms-passphrase") passphrase = "",
   ) {
     this.assertAdmin(passphrase);
-    const document = saveArticleSchema.parse(body);
+    const document = parseSafe(saveArticleSchema, body);
     try {
       return await this.articles.save(
         slug,
@@ -167,7 +187,7 @@ export class CmsArticlesController {
     @Headers("x-cms-passphrase") passphrase = "",
   ) {
     this.assertAdmin(passphrase);
-    const { image } = imageSchema.parse(body);
+    const { image } = parseSafe(imageSchema, body);
     const [meta, payload] = image.split(",", 2);
     const contentType = meta.match(/^data:(image\/(?:jpeg|png|webp));base64$/)?.[1];
     const buffer = Buffer.from(payload ?? "", "base64");

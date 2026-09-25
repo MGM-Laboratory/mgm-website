@@ -73,14 +73,15 @@ For high-contrast dark sections (testimonials, dramatic stats, big quote breaks)
 - No tinted page backgrounds. The page background is white. Always.
 - No drop shadows on colored fills (a yellow chip with a yellow shadow is forbidden).
 
-### 2.5 Project detail themes (a scoped exception)
+### 2.5 Themed pages: projects and the articles library (a scoped exception)
 
-Each project detail page (`/projects/[slug]`) wears one of 20 preset themes, picked per project in the admin editor. This is the one place the closed palette and the untinted page background don't apply: the page, the ambient topography and the site header on that page take the project's own colours, the way a case study carries its client's identity. Everywhere else the rules above hold.
+Each project detail page (`/projects/[slug]`) and each article page (`/articles/[slug]`) wears one of 20 preset themes, picked per record in the admin editor. These, and the articles library around them, are the only places the closed palette and the untinted page background don't apply: the page, its ambient scene and the site header on that page take the record's own colours, the way a case study carries its client's identity. Everywhere else the rules above hold.
 
 - The presets live in `apps/web/src/lib/project-themes.ts`. Four of them are built from the brand colours (Laboratory, Sunburst, Signal, Grove). Editors choose from the list and never enter free colours.
 - Every theme has a light and a dark variant, and the page follows the site's light or dark mode.
 - Every variant is contrast-checked: text on the background at least 7:1, button and hover labels at least 4.5:1, muted text at least 4.5:1, the highlight and icons at least 3:1. Re-check whenever a colour changes.
 - The theme is scoped to the page: its variables exist only while that page is mounted, and leaving it hands the header back to the site tokens.
+- The articles library (`/articles` and every article) is drawn by a WebGL world with its own tokens for both schemes, in `apps/web/src/components/articles/world/palette.ts`: pearl fog, ivory stone and paper and warm white light by day, near-black fog, ink-blue stacks and a moonlit brand-blue glow by night. They are the world's only colours (editors never set them). Text on the fog uses the site's ink tokens (over 15:1 on the light fog, over 16:1 on the dark one), and focus rings and accents stay brand blue. On an article page the world tints its fog and stone toward the article's theme. See `docs/articles-page.md`.
 
 ---
 

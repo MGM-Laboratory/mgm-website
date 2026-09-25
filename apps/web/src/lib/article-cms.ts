@@ -1,4 +1,7 @@
+import type { ProjectThemeId } from "@repo/shared";
+
 import type { Member } from "@/data/members";
+import { themeIdFor } from "@/lib/theme-pick";
 
 /** A single BlockNote block as persisted in the CMS document. */
 export type ArticleBlock = {
@@ -19,6 +22,11 @@ export type ArticleDraft = {
   draft: boolean;
   /** S3 media key, or a `static/<public-path>` key for bundled seed art. */
   coverKey?: string;
+  /**
+   * The detail page palette, one of the project themes. Absent means
+   * "Automatic": a stable pick from the slug (see `articleThemeId`).
+   */
+  theme?: ProjectThemeId;
 };
 
 export type CmsArticleRecord = {
@@ -79,6 +87,11 @@ export function articleAuthors(record: CmsArticleRecord, members: readonly Membe
   return record.article.authorSlugs
     .map((slug) => members.find((member) => member.slug === slug))
     .filter((member): member is Member => Boolean(member));
+}
+
+/** The article page's palette: the editor's pick, else the slug's stable pick. */
+export function articleThemeId(article: Pick<ArticleDraft, "slug" | "theme">): ProjectThemeId {
+  return themeIdFor(article);
 }
 
 export function publishedArticles(records: readonly CmsArticleRecord[]) {

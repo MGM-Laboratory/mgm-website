@@ -55,6 +55,8 @@ The capture-phase click handler bails out (lets the click through normally) on: 
 
 Two exceptions belong to the project zoom (see the last section). Project card clicks never reach this handler: the zoom's capture listener sits on `window`, runs first and prevents the default. Back and forward between `/projects` and a project, or between two projects, are skipped through `claimsProjectPopstate()` (`lib/project-transition.ts`) while the zoom layer is mounted and motion is allowed.
 
+The articles library is the other exception (see "The articles library" below). Every navigation into, out of or inside `/articles` is taken by a capture listener on `window` (the portal's or the world's), which prevents the default, so the curtain bails. Browser back and forward into or out of the library, and between articles pages, are skipped through `claimsArticlePopstate()` (`lib/article-transition.ts`).
+
 Back/forward (`popstate`) covers the page too, except when the pathname doesn't change. Following a same-page fragment link (`<a href="#x">`), or going back from one, also fires `popstate`; covering for it would wait up to the 8-second ceiling for a route change that never comes, so `RouteTransition` compares against the pathname currently on screen and ignores those. In-page anchors that animate should still call `preventDefault` and scroll through `scrollPageTo` (`lib/page-scroll.ts`) so they cooperate with a page's smooth scroller.
 
 ## Skipping the homepage's entrance animation on internal navigation
@@ -146,3 +148,16 @@ Every flow ends in one `finish()`, whichever way it ended (landed, revealed, abo
 - A pixel diff of a card before and after a zoom must keep the pointer off the card: a hovered card on the WebGL stage rests at about 1.0 times instead of 1.026.
 - Playwright's Firefox screenshots can show a frame without the fixed overlay while a route commits, and WebKit's video capture has dropped a WebGL canvas. Confirm anything odd with in-page state sampled every animation frame before chasing it.
 - CI runs `e2e/project-transitions.spec.ts` over the fixture projects (`docs/testing-verification.md`) with the DOM fallback: a card into its project, the Back pill, browser back and forward, and the next-project hand-off. After each step it checks that nothing is locked, tinted or covering the page, and that the curtain's layers (`[data-route-transition]`) never showed.
+
+## The articles library (portal and in-world transitions)
+
+The articles pages never show the curtain. Two hosts own every navigation that touches them, and `docs/articles-page.md` (section "Transitions") has the full choreography:
+
+- **The portal** (`components/transition/articles-portal.tsx`, mounted in the root layout next to the project zoom): any other page into `/articles` or `/articles/<slug>`, and back out. It covers first (the page lifts off like a sheet of paper into luminous fog), pushes the route only once covered, holds (bounded) for the destination, then reveals. It calls `markRouteCoverStarted()` before pushing and `markRouteRevealDone()` once the page is plainly visible, so every entrance that waits on `waitForRouteReveal()` works through it unchanged.
+- **The in-world transitions** (`components/articles/transitions/*`, mounted by `app/articles/layout.tsx` so they live exactly as long as the library world): list to article ("open"), article to list ("close," which lands on the opened card) and article to article ("swap"). They signal through the articles cover instead (`markArticleCoverStarted()`, `markArticleRevealStarted()`, `waitForArticleReveal()`).
+
+Both take clicks in a capture listener on `window` and prevent the default, and both claim browser back and forward through `claimsArticlePopstate(from, to)`: portal kinds while the portal is mounted (it also handles reduced motion itself, navigating through the router so the curtain never covers a way into the library), in-world kinds while the world is mounted and motion is allowed. Under reduced motion the in-world kinds are native navigations. The next-article hand-off on an article page (`a[data-article-next]`) is left to the page, which plays its own flood.
+
+While either runs, `isArticleTransitionBusy()` is true: the adaptive header hands its colors to the transition's palette walk, and the curtain and the project zoom stand down. Every run ends in one `finish()` that releases the scroll lock, the busy flag, the header tint and every layer, whatever ended it. Both also end on their own after a visible-time ceiling.
+
+CI runs `e2e/articles.spec.ts` over the fixture articles (the DOM paths): a card into its article and Back to the same card, browser back and forward, reduced motion, and the portal from the homepage and back.

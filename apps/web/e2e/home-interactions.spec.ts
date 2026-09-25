@@ -54,17 +54,27 @@ test("desktop idle motion and headline parallax survive returning home", async (
     .locator('a[href="/articles"]')
     .first()
     .evaluate((el: HTMLElement) => el.click());
-  await expect(page).toHaveURL(/\/articles$/);
-  // A click while the curtain is still covering is dropped by design
-  // (route-transition.tsx), so wait out the full floor: cover 0.66s +
-  // MIN_STAY_MS 0.75s + reveal 0.82s plus a margin for the RSC fetch that
-  // gates the /articles sentinel (docs/page-transition.md).
-  await page.waitForTimeout(3200);
+  // Into the library through the articles portal (docs/page-transition.md).
+  await expect(page).toHaveURL(/\/articles$/, { timeout: 15000 });
+  // A click while the portal still covers the page is dropped by design, so
+  // wait until it has handed the page back (its layer gone, the page
+  // unlocked). A software-rendered browser can take several seconds.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            !document.querySelector("[data-articles-portal]") &&
+            document.documentElement.style.overflow !== "hidden",
+        ),
+      { timeout: 20000 },
+    )
+    .toBe(true);
   await page
     .locator('a[href="/"]')
     .first()
     .evaluate((el: HTMLElement) => el.click());
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/$/, { timeout: 15000 });
   await page.waitForTimeout(2000);
   const returned = await cross.evaluate((el) => getComputedStyle(el).transform);
   await expect
@@ -110,12 +120,16 @@ test("background wake fades and reduced motion disables it", async ({ page, isMo
 });
 
 test("article covers respond to focus without reloading their image", async ({ page }) => {
-  await page.goto("/articles");
+  // The homepage's articles section (the /articles list draws its own cards).
+  await page.goto("/");
   const cover = page.locator(".article-cover").first();
   test.skip((await cover.count()) === 0, "No published articles in this environment");
   const requests: string[] = [];
   page.on("request", (request) => {
-    if (request.resourceType() === "image") requests.push(request.url());
+    // Only the covers' own pictures (the header logo, say, may load late).
+    if (request.resourceType() === "image" && request.url().includes("/api/articles-cms/media/")) {
+      requests.push(request.url());
+    }
   });
   await cover.locator("..").focus();
   await expect(cover.locator(".article-cover-arrow")).toHaveCSS("opacity", "1");

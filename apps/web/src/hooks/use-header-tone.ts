@@ -21,6 +21,7 @@ import {
   type TonePreferences,
 } from "@/lib/header-tone";
 import { pageBaseColor, probePoint } from "@/lib/header-tone-probe";
+import { isArticleTransitionBusy, onArticleTransitionChange } from "@/lib/article-transition";
 import { isProjectTransitionBusy, onProjectTransitionChange } from "@/lib/project-transition";
 import { isRouteCoverActive, onRouteCoverChange } from "@/lib/route-reveal";
 
@@ -192,6 +193,7 @@ class HeaderToneController {
     this.offs.push(onHeaderToneRequest(this.request));
     this.offs.push(onRouteCoverChange(this.onBusyChange));
     this.offs.push(onProjectTransitionChange(this.onBusyChange));
+    this.offs.push(onArticleTransitionChange(this.onBusyChange));
 
     if (process.env.NODE_ENV !== "production") {
       const view = {
@@ -314,7 +316,7 @@ class HeaderToneController {
   }
 
   private busy() {
-    return isRouteCoverActive() || isProjectTransitionBusy();
+    return isRouteCoverActive() || isProjectTransitionBusy() || isArticleTransitionBusy();
   }
 
   private opaque() {
