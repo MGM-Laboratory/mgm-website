@@ -137,6 +137,18 @@ function linkOf(event: MouseEvent) {
   return { anchor, url };
 }
 
+/**
+ * The overlay's sweep without WebGL: how much of the screen it covers from
+ * the right edge. A transform, never a clip: on Linux WebKit a full-screen
+ * fixed layer with an animated `clip-path` over the sliding list crashed
+ * the page's process (a browser-back close did it about every other time).
+ * A transform is also the cheaper of the two (the compositor moves it).
+ */
+function coverFromRight(overlay: HTMLElement, progress: number) {
+  const left = Math.min(100, Math.max(0, (1 - progress) * 100));
+  overlay.style.transform = `translate3d(${left}%, 0, 0)`;
+}
+
 function fit(t: number, from: number, to: number) {
   return Math.min(1, Math.max(0, (t - from) / (to - from)));
 }
@@ -448,8 +460,9 @@ export class ArticleTransitions {
       zIndex: "45",
       background: color,
       pointerEvents: "auto",
-      clipPath: "inset(0 0 0 100%)",
+      willChange: "transform",
     });
+    coverFromRight(overlay, 0);
     document.body.appendChild(overlay);
     return overlay;
   }
@@ -462,7 +475,7 @@ export class ArticleTransitions {
       world.transition.setLensAmount(0);
       if (run.kind === "close") world.transition.setPan(PAN);
     } else if (run.overlay) {
-      run.overlay.style.clipPath = "inset(0 0 0 0%)";
+      coverFromRight(run.overlay, 1);
     }
     run.walk?.set(1);
     const content = document.querySelector<HTMLElement>("[data-article-content]");
@@ -475,9 +488,8 @@ export class ArticleTransitions {
     if (run.world) {
       run.world.transition.setWipe(progress, run.color, opacity);
     } else if (run.overlay) {
-      // The same soft front as the world's wipe, as a clip from the right.
-      const left = Math.max(0, (1 - progress) * 100);
-      run.overlay.style.clipPath = `inset(0 0 0 ${left}%)`;
+      // The world's wipe as a sheet sliding in from the right.
+      coverFromRight(run.overlay, progress);
       run.overlay.style.opacity = String(opacity);
     }
   }
@@ -506,7 +518,9 @@ export class ArticleTransitions {
       .to(state, { lens: 0, duration: 1 }, 0)
       .to(state, { walk: 1, duration: 1.6, ease: "power2.inOut" }, 0);
     if (head) tl.to(head, { xPercent: -100, autoAlpha: 0 }, 0);
-    if (grid) tl.to(grid, { x: () => -0.45 * window.innerWidth, autoAlpha: 0 }, 0);
+    // The DOM grid fades under the sweep rather than sliding: a full-height
+    // grid moving under the fixed overlay crashed Linux WebKit's page process.
+    if (grid) tl.to(grid, { autoAlpha: 0, duration: 1.2 }, 0);
     if (chrome.length) tl.to(chrome, { autoAlpha: 0, duration: 0.5 }, 0);
     tl.call(() => this.push(run, false), undefined, OPEN_PUSH_AT);
     return tl;
@@ -527,7 +541,7 @@ export class ArticleTransitions {
       onComplete: () => void this.enter(run),
     });
     if (!world && run.overlay) {
-      run.overlay.style.clipPath = "inset(0 0 0 0%)";
+      coverFromRight(run.overlay, 1);
       run.overlay.style.opacity = "0";
     }
     if (content) {
@@ -572,7 +586,7 @@ export class ArticleTransitions {
       onComplete: () => void this.enter(run),
     });
     if (!world && run.overlay) {
-      run.overlay.style.clipPath = "inset(0 0 0 0%)";
+      coverFromRight(run.overlay, 1);
       run.overlay.style.opacity = "0";
     }
     if (content) tl.to(content, { scale: 0.92, autoAlpha: 0, transformOrigin: "50% 30%" }, 0);
@@ -705,11 +719,12 @@ export class ArticleTransitions {
       );
     }
     if (grid) {
+      // Faded, never slid (see openOut).
       tl.fromTo(
         grid,
-        { x: () => -0.45 * window.innerWidth, autoAlpha: 0 },
-        { x: 0, autoAlpha: 1, clearProps: "transform,opacity,visibility" },
-        0,
+        { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 1.4, ease: "power2.out", clearProps: "opacity,visibility" },
+        0.3,
       );
     }
     markArticleRevealStarted();
