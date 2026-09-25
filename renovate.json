@@ -4,10 +4,11 @@
   "timezone": "Asia/Jakarta",
   "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
+  "automerge": false,
   "rangeStrategy": "bump",
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am on monday"]
+    "schedule": ["* 0 * * *"]
   },
   "vulnerabilityAlerts": {
     "enabled": true,
