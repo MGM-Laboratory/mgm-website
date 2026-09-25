@@ -114,3 +114,52 @@ html[data-theme-wave] .world-cursor {
     display: none;
   }
 }
+
+/* ------------------------------------------------------------------ header */
+
+/*
+ * Over the library the site header is nearly clear glass, so the library
+ * shows through it: a whisper of tint and a hair of blur instead of the
+ * frosted bar. The adaptive sampler (hooks/use-header-tone.ts) starts from
+ * this --header-glass-alpha and only thickens a zone where its text would
+ * drop below 4.5:1 over what is behind it, and a soft halo in each zone's
+ * own surface colour keeps the logo and the controls' edges clean over the
+ * busiest part of the scene. The menu keeps its dense glass, and reduced
+ * transparency keeps the opaque bar (globals.css).
+ *
+ * In the same layer as the header's own rules, so its fallbacks and the
+ * menu's rule still apply by specificity.
+ */
+@layer components {
+  html:has([data-articles-library]) .site-header {
+    --header-tint: 30%;
+    --header-glass-alpha: 8%;
+  }
+
+  html.dark:has([data-articles-library]) .site-header {
+    --header-tint: 36%;
+    --header-glass-alpha: 12%;
+  }
+
+  html:has([data-articles-library])
+    .site-header:has([aria-controls="site-nav-panel"][aria-expanded="true"]) {
+    --header-tint: 94%;
+  }
+
+  @media not (prefers-reduced-transparency: reduce) {
+    @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+      html:has([data-articles-library]) .site-header-glass {
+        -webkit-backdrop-filter: blur(2px) saturate(120%);
+        backdrop-filter: blur(2px) saturate(120%);
+      }
+    }
+  }
+
+  html:has([data-articles-library]) .site-header [data-header-zone="logo"] {
+    text-shadow: 0 0 14px color-mix(in srgb, var(--hz-logo-solid) 72%, transparent);
+  }
+
+  html:has([data-articles-library]) .site-header [data-header-zone="controls"] > .header-control {
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--hz-controls-solid) 70%, transparent));
+  }
+}
