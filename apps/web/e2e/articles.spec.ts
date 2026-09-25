@@ -49,6 +49,9 @@ const contentOpacity = (page: Page) =>
     return content ? getComputedStyle(content).opacity : null;
   });
 
+/** Matches the article's own address (a predicate, not a RegExp built from data). */
+const atArticle = (slug: string) => (url: URL) => url.pathname === `/articles/${slug}`;
+
 const cardFor = (page: Page, slug: string) =>
   page.locator(`a[data-article-card][data-article-slug="${slug}"]`);
 
@@ -172,7 +175,7 @@ test.describe("articles transitions", () => {
 
     const slug = LIST_ORDER[1].slug;
     await cardFor(page, slug).click();
-    await expect(page).toHaveURL(new RegExp(`/articles/${slug}$`), { timeout: 20_000 });
+    await expect(page).toHaveURL(atArticle(slug), { timeout: 20_000 });
     await expect(page.locator("[data-article-detail]")).toHaveAttribute("data-article-slug", slug);
     await expect.poll(() => contentOpacity(page), { timeout: 20_000 }).toBe("1");
     await expect
@@ -199,7 +202,7 @@ test.describe("articles transitions", () => {
 
     const slug = LIST_ORDER[0].slug;
     await cardFor(page, slug).click();
-    await expect(page).toHaveURL(new RegExp(`/articles/${slug}$`), { timeout: 20_000 });
+    await expect(page).toHaveURL(atArticle(slug), { timeout: 20_000 });
     await expect.poll(() => contentOpacity(page), { timeout: 20_000 }).toBe("1");
 
     await page.goBack();
@@ -210,7 +213,7 @@ test.describe("articles transitions", () => {
     await expect(cardFor(page, slug)).toBeInViewport();
 
     await page.goForward();
-    await expect(page).toHaveURL(new RegExp(`/articles/${slug}$`), { timeout: 20_000 });
+    await expect(page).toHaveURL(atArticle(slug), { timeout: 20_000 });
     await expect.poll(() => contentOpacity(page), { timeout: 20_000 }).toBe("1");
     await expect
       .poll(() => settled(page), { timeout: 20_000 })
@@ -224,7 +227,7 @@ test.describe("articles transitions", () => {
     await page.goto("/articles");
     const slug = LIST_ORDER[3].slug;
     await cardFor(page, slug).click();
-    await expect(page).toHaveURL(new RegExp(`/articles/${slug}$`), { timeout: 20_000 });
+    await expect(page).toHaveURL(atArticle(slug), { timeout: 20_000 });
     await expect.poll(() => contentOpacity(page), { timeout: 10_000 }).toBe("1");
     expect((await settled(page)).locked).toBe(false);
 
