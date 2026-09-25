@@ -124,8 +124,10 @@ export class QualityGovernor {
 
 /** Visible seconds after a start before the world may be judged too slow for anyone. */
 const HOPELESS_GRACE_SECONDS = 2.5;
-/** Frames per judgement. */
+/** Frames per judgement, or fewer once they span this much time (ms): multi-second frames are judged within seconds. */
 const HOPELESS_WINDOW = 24;
+const HOPELESS_SPAN_MS = 3000;
+const HOPELESS_MIN_FRAMES = 3;
 /** Median frame time (ms) past which the world gives the visit to the DOM list (under 8 fps). */
 const HOPELESS_MS = 125;
 /** Longer than this is a stall (a tab switch, a debugger), not a frame. */
@@ -144,6 +146,7 @@ const HOPELESS_STALL_MS = 3000;
 export class HopelessWatch {
   private grace = HOPELESS_GRACE_SECONDS;
   private readonly samples: number[] = [];
+  private span = 0;
   private fired = false;
 
   constructor(private readonly onHopeless: () => void) {}
@@ -157,9 +160,14 @@ export class HopelessWatch {
       return;
     }
     this.samples.push(ms);
-    if (this.samples.length < HOPELESS_WINDOW) return;
-    const median = [...this.samples].sort((a, b) => a - b)[HOPELESS_WINDOW >> 1];
+    this.span += ms;
+    const count = this.samples.length;
+    if (count < HOPELESS_WINDOW && (this.span < HOPELESS_SPAN_MS || count < HOPELESS_MIN_FRAMES)) {
+      return;
+    }
+    const median = [...this.samples].sort((a, b) => a - b)[count >> 1];
     this.samples.length = 0;
+    this.span = 0;
     if (median > HOPELESS_MS) {
       this.fired = true;
       this.onHopeless();
