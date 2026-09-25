@@ -1,4 +1,5 @@
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
+import { isRouteCoverActive, onRouteCoverChange } from "@/lib/route-reveal";
 
 /**
  * The library's cursor: a thin ring that follows the pointer with a little
@@ -15,6 +16,10 @@ import { addFrameCallback } from "@/components/projects/stage/frame-loop";
  * The outer element carries the position and the stretch (written every
  * frame); the inner ring carries the state (CSS transitions), so the two
  * never fight over one transform.
+ *
+ * It bows out while a route cover (the curtain, the portal in or out of
+ * the library) holds the screen: those are the page's own moments, and a
+ * ring left floating over them would outlive the library it belongs to.
  */
 
 /** unseen's per-frame follow factor, made frame-rate independent. */
@@ -62,6 +67,11 @@ export function mountWorldCursor() {
   };
   root.dataset.state = state;
   root.dataset.visible = "false";
+  const followCover = () => {
+    root.dataset.covered = isRouteCoverActive() ? "true" : "false";
+  };
+  followCover();
+  const offCover = onRouteCoverChange(followCover);
 
   const onMove = (event: PointerEvent) => {
     if (event.pointerType === "touch") {
@@ -120,6 +130,7 @@ export function mountWorldCursor() {
 
   return () => {
     offFrame();
+    offCover();
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerdown", onDown);
     window.removeEventListener("pointerup", onUp);

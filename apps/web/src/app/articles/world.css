@@ -53,6 +53,11 @@ html[data-theme-fade] :is(.site-header, [data-articles-page], [data-article-deta
   opacity: 1;
 }
 
+/* A route cover (the curtain, the portal) holds the screen: the ring bows out. */
+.world-cursor[data-covered="true"] {
+  opacity: 0;
+}
+
 .world-cursor-ring {
   position: absolute;
   top: calc(var(--cursor-size) / -2);
