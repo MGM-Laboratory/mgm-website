@@ -1,7 +1,7 @@
 import type { ProjectThemeId } from "@repo/shared";
 
 import type { Member, MemberAccent } from "@/data/members";
-import { categorySlug } from "@/lib/article-index";
+import { categorySlug, nextArticleSlug } from "@/lib/article-index";
 import {
   articleAuthors,
   articleCoverUrl,
@@ -84,11 +84,13 @@ function authorOf(member: Member, records: readonly CmsMemberRecord[]): DetailAu
   };
 }
 
-/** The published article after `slug` in list order (newest first), wrapping around. */
+/**
+ * The published article after `slug` in the list's own order (newest first,
+ * wrapping around), so the threshold leads to the card after this one.
+ */
 function nextOf(feed: readonly CmsArticleRecord[], slug: string): DetailNext | undefined {
-  if (feed.length < 2) return undefined;
-  const index = feed.findIndex((record) => record.slug === slug);
-  const record = index < 0 ? feed[0] : feed[(index + 1) % feed.length];
+  const nextSlug = nextArticleSlug(feed, slug);
+  const record = nextSlug ? feed.find((item) => item.slug === nextSlug) : undefined;
   if (!record || record.slug === slug) return undefined;
   const { article } = record;
   return {
