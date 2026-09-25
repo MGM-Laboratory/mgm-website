@@ -205,7 +205,11 @@ function route(request, response) {
   const parts = pathname.split("/").filter(Boolean).map(decodeURIComponent);
 
   if (pathname === "/__cms-fixture") {
-    sendJson(response, 200, { fixture: "cms", records: published.length, articles: articles.length });
+    sendJson(response, 200, {
+      fixture: "cms",
+      records: published.length,
+      articles: articles.length,
+    });
     return true;
   }
   if (parts[0] === "files" && parts.length === 2) {
@@ -270,7 +274,9 @@ server.on("error", (error) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`[cms-fixture] ${published.length} projects, ${articles.length} articles on ${ORIGIN}`);
+  console.log(
+    `[cms-fixture] ${published.length} projects, ${articles.length} articles on ${ORIGIN}`,
+  );
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
