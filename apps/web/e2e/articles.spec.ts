@@ -1,13 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import fixture from "./fixtures/cms/articles.json";
+import { curtainPeak, installProbes } from "./support/projects";
 
 // The suite's CMS fixture API (e2e/fixtures/cms) serves five articles, so
-// every expectation here comes from the same file the pages render. The
-// library world draws the list with WebGL where the browser has it and
-// falls back to the plain DOM list where it doesn't (several CI browsers
-// render in software or not at all), so these checks hold in both: the
-// cards are real links either way, and the transitions play either way.
+// every expectation here comes from the same file the pages render. Like
+// the project specs, these switch WebGL off (`installProbes`), so the
+// library's DOM paths run on every engine: the plain list, the DOM cover,
+// the transitions' flat overlay and the portal's DOM stage. Everything
+// checked here also holds for the WebGL paths (E2E_WEBGL=1): the cards are
+// real links either way, and the transitions play either way.
 
 type FixtureArticle = {
   slug: string;
@@ -28,6 +30,10 @@ const READING_ROOM = records.find((record) => record.slug === "e2e-reading-room"
 // Two entrances and a transition each way can exceed the default budget on
 // software-rendered CI browsers.
 test.setTimeout(90_000);
+
+test.beforeEach(async ({ page }) => {
+  await installProbes(page);
+});
 
 /** Everything a transition or an entrance may hold while it plays. */
 const settled = (page: Page) =>
@@ -179,6 +185,8 @@ test.describe("articles transitions", () => {
       .poll(() => settled(page), { timeout: 20_000 })
       .toEqual({ locked: false, transition: null, entrance: "done" });
     await expect(cardFor(page, slug)).toBeInViewport();
+    // The world's transitions own these navigations: the curtain never shows.
+    expect(await curtainPeak(page)).toBe(0);
     expect(errors).toEqual([]);
   });
 
@@ -207,6 +215,7 @@ test.describe("articles transitions", () => {
     await expect
       .poll(() => settled(page), { timeout: 20_000 })
       .toMatchObject({ locked: false, transition: null });
+    expect(await curtainPeak(page)).toBe(0);
     expect(errors).toEqual([]);
   });
 
@@ -248,6 +257,8 @@ test.describe("articles transitions", () => {
     await expect
       .poll(() => page.evaluate(() => document.documentElement.style.overflow), { timeout: 20_000 })
       .not.toBe("hidden");
+    // The portal carries both ways: the curtain never covers them.
+    expect(await curtainPeak(page)).toBe(0);
     expect(errors).toEqual([]);
   });
 });
