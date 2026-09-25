@@ -111,6 +111,16 @@ const PLAIN_INTERACTIVE = 0.75;
 /** Undoing a cover the route never followed. */
 const REWIND_SECONDS = 0.4;
 /**
+ * However slowly frames come (a software renderer, a starved main thread),
+ * no beat outlasts its own length by more than this factor of real,
+ * visible time: the animation skips ahead rather than holding the visitor
+ * under a cover. The frame clock alone would stretch every beat, since it
+ * counts at most half a second per frame.
+ */
+const WALL_STRETCH = 1.5;
+/** A frame loop silent this long (ms, visible) is driven by a timer until it ticks again. */
+const STALL_MS = 400;
+/**
  * Idle warming, once the page has settled. On a library page any link may
  * leave it, so everything loads (the WebGL layer too). Elsewhere only the
  * stage's script loads, later: every page links into the library (the
@@ -135,8 +145,10 @@ type Run = {
   /** Forces the DOM renderer (?noworld, the dev probe). */
   dom: boolean;
   phase: Phase;
-  /** Seconds into the current phase. */
+  /** Seconds into the current phase, on the frame clock (at most 0.5 s a frame). */
   t: number;
+  /** ...and in real, visible seconds (bounds every beat, see WALL_STRETCH). */
+  wall: number;
   /** Seconds covered and waiting, in total and since the route committed. */
   held: number;
   sinceCommit: number;
@@ -245,6 +257,7 @@ export class PortalController {
   private waiting: SVGSVGElement | null = null;
   private offTick: (() => void) | null = null;
   private lastTick = 0;
+  private stallTimer = 0;
   private resumed = false;
   private stageModule: StageModule | null = null;
   private stageLoading: Promise<StageModule | null> | null = null;
@@ -430,6 +443,7 @@ export class PortalController {
       dom: noworld || this.forceDom || new URLSearchParams(window.location.search).has("noworld"),
       phase: instant ? "hold" : "load",
       t: 0,
+      wall: 0,
       held: 0,
       sinceCommit: 0,
       sinceContent: 0,
@@ -488,6 +502,8 @@ export class PortalController {
     this.lastTick = 0;
     this.offTick?.();
     this.offTick = addFrameCallback("scroll", this.tick);
+    window.clearInterval(this.stallTimer);
+    this.stallTimer = window.setInterval(this.onStallCheck, 200);
     // A warm portal starts in this very frame.
     if (this.canBuildStage(run)) this.buildStage(run);
   }
@@ -496,23 +512,41 @@ export class PortalController {
     const run = this.run;
     if (!run) return;
     const now = performance.now();
-    let dt = this.lastTick ? (now - this.lastTick) / 1000 : 0;
+    let real = this.lastTick ? (now - this.lastTick) / 1000 : 0;
     this.lastTick = now;
     if (this.resumed) {
-      dt = 0;
+      real = 0;
       this.resumed = false;
     }
-    dt = Math.min(dt, 0.5) / this.slowdown;
+    const dt = Math.min(real, 0.5) / this.slowdown;
+    real /= this.slowdown;
     run.t += dt;
+    run.wall += real;
     try {
-      this.step(run, dt, now);
+      this.step(run, dt, real, now);
     } catch (error) {
       this.recover(run, error);
     }
   };
 
-  /** One frame of the run (the tick guards it). */
-  private step(run: Run, dt: number, now: number) {
+  /**
+   * The frame loop can starve (a software renderer on a loaded machine
+   * drops frames for seconds): while it is silent, a timer ticks the run
+   * on so it still covers, navigates and hands the page back in time.
+   */
+  private readonly onStallCheck = () => {
+    const run = this.run;
+    if (!run) {
+      window.clearInterval(this.stallTimer);
+      return;
+    }
+    if (document.hidden) return;
+    const last = this.lastTick || run.log.started;
+    if (performance.now() - last > STALL_MS) this.tick();
+  };
+
+  /** One frame of the run (the tick guards it). `dt` animates; `real` bounds the waits. */
+  private step(run: Run, dt: number, real: number, now: number) {
     const world = this.worldTransition();
 
     if (run.stage?.lost && !run.plain) {
@@ -537,9 +571,13 @@ export class PortalController {
       case "cover": {
         let covered: boolean;
         if (run.stage) {
+          const seconds = run.stage.coverSeconds;
+          // Out of time: the cover's last frame, so the push is covered.
+          if (run.wall >= seconds * WALL_STRETCH) run.t = Math.max(run.t, seconds);
           run.stage.cover(run.t, dt, world);
-          covered = run.t >= run.stage.coverSeconds;
+          covered = run.t >= seconds;
         } else {
+          if (run.wall >= PLAIN_COVER * WALL_STRETCH) run.t = Math.max(run.t, PLAIN_COVER);
           this.setPlain(fit(run.t, 0, PLAIN_COVER));
           covered = run.t >= PLAIN_COVER;
         }
@@ -560,17 +598,20 @@ export class PortalController {
           if (this.stageModule) this.buildStage(run);
           else if (run.held >= STAGE_WAIT) run.plain = true;
         }
-        run.held += dt;
-        if (run.committed) run.sinceCommit += dt;
+        // The waits are bounds on the visitor's time: real seconds.
+        run.held += real;
+        if (run.committed) run.sinceCommit += real;
         run.stage?.hold(dt, world);
         if (run.held >= WAITING_AFTER) this.showWaiting(run);
-        if (this.ready(run, dt)) this.beginReveal(run);
+        if (this.ready(run, real)) this.beginReveal(run);
         else if (!run.committed && run.held >= COMMIT_CEILING) this.abort(run);
         break;
       }
       case "reveal": {
         const seconds = run.stage?.revealSeconds ?? PLAIN_REVEAL;
         const signal = run.stage?.revealSignal ?? PLAIN_REVEAL * 0.5;
+        // Out of time: skip ahead (the beats below each fire once).
+        run.t = Math.max(run.t, run.wall / WALL_STRETCH);
         if (run.stage) run.stage.reveal(run.t, dt, run.released ? null : world);
         else this.setPlain(1 - fit(run.t, 0, PLAIN_REVEAL));
         if (run.theme && !run.released) this.tint.set(fit(run.t, 0, 0.7 * seconds));
@@ -586,6 +627,7 @@ export class PortalController {
       }
       case "rewind": {
         // Plays the cover backwards to where it began.
+        run.t = Math.max(run.t, run.wall / WALL_STRETCH);
         const k = fit(run.t, 0, REWIND_SECONDS);
         const at = run.rewindFrom * (1 - k);
         const seconds = run.stage?.coverSeconds ?? PLAIN_COVER;
@@ -676,6 +718,7 @@ export class PortalController {
   private enter(run: Run, phase: Phase) {
     run.phase = phase;
     run.t = 0;
+    run.wall = 0;
   }
 
   /**
@@ -741,6 +784,7 @@ export class PortalController {
     this.lastLog = run.log;
     this.offTick?.();
     this.offTick = null;
+    window.clearInterval(this.stallTimer);
     run.stage?.end();
     run.stage = null;
     this.root?.remove();
