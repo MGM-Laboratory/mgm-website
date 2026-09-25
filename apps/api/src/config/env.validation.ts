@@ -55,11 +55,18 @@ const envSchema = z.object({
   SHORTLINKS_CNAME_TARGET: z.string().min(1).default("web-production-589d3f.up.railway.app"),
   // Railway service ids for attaching custom short domains to the web
   // service, only used when RAILWAY_API_TOKEN is configured. The project and
-  // environment ids default to this deployment's production values and are
-  // overridden by Railway's injected variables at runtime.
+  // environment ids default to this deployment's production values, and on
+  // Railway the platform's injected variables take over, so a preview
+  // environment attaches domains to itself rather than to production.
   SHORTLINKS_WEB_SERVICE_ID: z.string().min(1).default("4969778e-0bff-4200-9472-6b5a13f037da"),
-  SHORTLINKS_RAILWAY_PROJECT_ID: z.string().min(1).default("810d3a40-d9d2-410c-b117-289d2aff095f"),
-  SHORTLINKS_RAILWAY_ENV_ID: z.string().min(1).default("42acf786-e8f4-41f8-8d4f-715bee1655f8"),
+  SHORTLINKS_RAILWAY_PROJECT_ID: z
+    .string()
+    .min(1)
+    .default(process.env.RAILWAY_PROJECT_ID ?? "810d3a40-d9d2-410c-b117-289d2aff095f"),
+  SHORTLINKS_RAILWAY_ENV_ID: z
+    .string()
+    .min(1)
+    .default(process.env.RAILWAY_ENVIRONMENT_ID ?? "42acf786-e8f4-41f8-8d4f-715bee1655f8"),
   RAILWAY_API_TOKEN: optionalString(),
   // 32-byte hex key that encrypts Cloudflare API tokens at rest; without
   // it, saving a Cloudflare token is refused rather than stored in plain.
