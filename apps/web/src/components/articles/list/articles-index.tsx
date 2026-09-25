@@ -60,6 +60,9 @@ if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
 const PLACEHOLDERS = 4;
 /** Batches the return mode may load looking for the card it came back to. */
 const RETURN_BATCHES = 8;
+/** A failed batch retries after this pause, doubling up to the cap. */
+const MORE_RETRY_MS = 1500;
+const MORE_RETRY_MAX_MS = 20_000;
 /** The longest the page waits (visible or not) before telling a transition it is ready. */
 const READY_CEILING_MS = 2600;
 
@@ -133,6 +136,11 @@ export function ArticlesIndex({
     };
   });
   const [loadingMore, setLoadingMore] = useState(false);
+  // A failed batch tries again after a pause: the sentinel stays in view,
+  // so its observer would never fire again on its own.
+  const [moreAttempt, setMoreAttempt] = useState(0);
+  const moreRetryRef = useRef(0);
+  useEffect(() => () => window.clearTimeout(moreRetryRef.current), []);
   const [retry, setRetry] = useState(0);
   const pageRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLElement>(null);
@@ -340,7 +348,14 @@ export function ArticlesIndex({
     const batch = await requestArticleBatch(query.settled, list.nextOffset, ARTICLE_BATCH_SIZE);
     loadingRef.current = false;
     setLoadingMore(false);
-    if (!batch) return;
+    if (!batch) {
+      window.clearTimeout(moreRetryRef.current);
+      moreRetryRef.current = window.setTimeout(
+        () => setMoreAttempt((attempt) => attempt + 1),
+        Math.min(MORE_RETRY_MAX_MS, MORE_RETRY_MS * 2 ** Math.min(moreAttempt, 4)),
+      );
+      return;
+    }
     setList((current) =>
       current.key !== key
         ? current
@@ -352,7 +367,7 @@ export function ArticlesIndex({
           },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [list.nextOffset, list.key, currentKey]);
+  }, [list.nextOffset, list.key, currentKey, moreAttempt]);
 
   // Load the next batch while the visitor is still well above the end
   // (more than two viewports ahead), so a card is never waited for.
@@ -367,7 +382,8 @@ export function ArticlesIndex({
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [list.nextOffset, loadMore]);
+    // moreAttempt: a new observer reports the sentinel still in view.
+  }, [list.nextOffset, loadMore, moreAttempt]);
 
   const showing = list.key === currentKey;
   const searching = !showing || retry > 0 || queryKey(query.live) !== currentKey;
