@@ -4,6 +4,7 @@ import {
   SLUG_PATTERN,
   checkLongUrl,
   expiryFromOption,
+  guardedLookup,
   hashPassphrase,
   linkStatus,
   normalizeHostname,
@@ -132,5 +133,37 @@ describe("checkLongUrl", () => {
 
   it("reports error for hosts that do not resolve", async () => {
     expect(await checkLongUrl("https://nonexistent.invalid/")).toBe("error");
+  });
+});
+
+describe("guardedLookup", () => {
+  it("answers the single-address shape", async () => {
+    const { address, family } = await new Promise<{ address: unknown; family: number | undefined }>(
+      (resolve, reject) => {
+        guardedLookup("iana.org", {}, (error, address, family) =>
+          error ? reject(error) : resolve({ address, family }),
+        );
+      },
+    );
+    expect(typeof address).toBe("string");
+    expect(family).toBeGreaterThan(0);
+  });
+
+  it("answers with an address array when node asks with all: true", async () => {
+    const { address } = await new Promise<{ address: unknown }>((resolve, reject) => {
+      guardedLookup("iana.org", { all: true } as never, (error, address) =>
+        error ? reject(error) : resolve({ address }),
+      );
+    });
+    expect(Array.isArray(address)).toBe(true);
+    expect((address as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it("refuses private addresses with EACCES", async () => {
+    const error = await new Promise<Error | null>((resolve) => {
+      guardedLookup("localhost", {}, (lookupError) => resolve(lookupError));
+    });
+    expect(error).toBeInstanceOf(Error);
+    expect((error as NodeJS.ErrnoException).code).toBe("EACCES");
   });
 });
