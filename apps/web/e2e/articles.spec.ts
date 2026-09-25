@@ -228,6 +228,9 @@ test.describe("articles transitions", () => {
   test("reduced motion navigates at once and still comes back to the card", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/articles");
+    // Hydrated first: a link clicked while React is still hydrating the
+    // list can lose its navigation.
+    await expect.poll(() => settled(page), { timeout: 10_000 }).toMatchObject({ entrance: "done" });
     const slug = LIST_ORDER[3].slug;
     await cardFor(page, slug).click();
     await expect(page).toHaveURL(atArticle(slug), { timeout: 20_000 });
