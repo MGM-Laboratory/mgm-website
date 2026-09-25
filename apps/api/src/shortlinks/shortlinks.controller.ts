@@ -264,11 +264,12 @@ export class ShortlinksController {
     @Headers("x-cms-passphrase") passphrase = "",
   ) {
     this.assertAdmin(passphrase);
+    // A duplicated query parameter can arrive as an array; only strings get
+    // sliced and searched.
+    const searchText = typeof search === "string" ? search.slice(0, 200) : undefined;
+    const domainFilter = typeof domainId === "string" ? domainId : undefined;
     return {
-      links: await this.shortlinks.listLinks(
-        search?.slice(0, 200) || undefined,
-        domainId || undefined,
-      ),
+      links: await this.shortlinks.listLinks(searchText, domainFilter),
     };
   }
 
