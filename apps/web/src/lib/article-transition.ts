@@ -13,8 +13,9 @@
  *   other page to an articles route) and "portal-out" (the reverse) play in
  *   the root-level portal.
  * - Popstate: the curtain leaves browser back and forward between paths
- *   these hosts handle to them (`claimsArticlePopstate`), but only while
- *   the host for that kind is mounted and motion is allowed.
+ *   these hosts handle to them (`claimsArticlePopstate`) while the host for
+ *   that kind is mounted (under reduced motion the host lets it navigate
+ *   natively).
  * - Cover: while a transition covers the screen, a page that mounts
  *   underneath holds its entrance until `waitForArticleReveal()` resolves.
  * - Arrival: the transition leaves a note saying how the next page is being
@@ -33,8 +34,6 @@
  *
  * Module state survives client-side navigation and resets on a hard load.
  */
-
-import { motionAllowed } from "@/lib/reduced-motion";
 
 type Waiter = () => void;
 
@@ -145,16 +144,15 @@ export function isArticleWorldMounted() {
 /**
  * Whether an articles host handles a browser back or forward between these
  * paths, so the route curtain stays out of it. In-world kinds need the
- * world mounted and motion allowed. Portal kinds need only the portal: it
- * lets a reduced-motion visit navigate natively itself, and the curtain
- * (installed while motion was allowed, if the preference changed since)
- * must never cover a way into or out of the library.
+ * world mounted, portal kinds the portal. Both hosts let a reduced-motion
+ * visit navigate natively themselves, and the curtain (installed while
+ * motion was allowed, if the preference changed since) must never cover a
+ * way into, out of or around the library.
  */
 export function claimsArticlePopstate(from: string, to: string) {
   const kind = articleTransitionKind(from, to);
   if (!kind) return false;
   if (kind === "portal-in" || kind === "portal-out") return portalLayers > 0;
-  if (!motionAllowed()) return false;
   return worldLayers > 0;
 }
 

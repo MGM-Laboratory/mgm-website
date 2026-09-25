@@ -241,8 +241,12 @@ export class ArticleTransitions {
 
     const href = link.url.pathname + link.url.search + link.url.hash;
     if (!motionAllowed()) {
-      // Native navigation; the list only needs to know where to come back to.
+      // A plain navigation (the list only needs to know where to come back
+      // to), but through the router: a route curtain installed while motion
+      // was allowed must never cover a way around the library.
+      event.preventDefault();
       this.noteQuietly(kind, from, to);
+      this.o.navigate(href, kind === "close" ? { scroll: false } : undefined);
       return;
     }
     if (isArticleTransitionBusy() || isRouteCoverActive() || isProjectTransitionBusy()) {
@@ -256,7 +260,13 @@ export class ArticleTransitions {
   private readonly onPopState = () => {
     const to = window.location.pathname;
     const from = this.shown;
-    if (to === from) return;
+    if (to === from) {
+      // Back to the page still on screen before the route this run pushed
+      // committed: the visitor changed their mind, so the run ends here
+      // (its lock, cover and deferred push with it).
+      if (this.run && !this.run.committed) this.finish(this.run);
+      return;
+    }
     const kind = articleTransitionKind(from, to);
     if (kind !== "open" && kind !== "close" && kind !== "swap") return;
     if (!motionAllowed()) {
@@ -344,7 +354,9 @@ export class ArticleTransitions {
 
     if (kind === "open") {
       if (toSlug) openedFrom = { slug: toSlug, scrollY: window.scrollY };
-      rememberArticleListHref(window.location.pathname + window.location.search);
+      // Browser forward is already at the article: the list's address stays
+      // the one remembered when the card was first opened.
+      if (!instant) rememberArticleListHref(window.location.pathname + window.location.search);
       noteArticleArrival({ kind: "open", pathname: to, slug: toSlug ?? undefined });
       run.release = world?.cards.hold() ?? null;
       const palette = themePalette(
