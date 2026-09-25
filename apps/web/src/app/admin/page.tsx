@@ -69,8 +69,8 @@ export default async function AdminPage() {
       ? fetchContactInquiries().catch(() => [])
       : Promise.resolve([]),
     can(session.permissions, "links", "read")
-      ? fetchLinksAdminSnapshot().catch(() => ({ domains: [], links: [], cnameTarget: "" }))
-      : Promise.resolve({ domains: [], links: [], cnameTarget: "" }),
+      ? fetchLinksAdminSnapshot().catch(() => ({ domains: [], links: [] }))
+      : Promise.resolve({ domains: [], links: [] }),
   ]);
   return (
     <MemberCmsStudio

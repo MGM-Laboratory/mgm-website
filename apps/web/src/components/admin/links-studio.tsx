@@ -17,7 +17,7 @@ import {
 } from "@phosphor-icons/react";
 
 import type {
-  CloudflareSetupResult,
+  ConnectResult,
   LinkAnalytics,
   LinkStatus,
   ShortlinkDomain,
@@ -540,37 +540,58 @@ function EditLinkModal({
   );
 }
 
+function RecordRow({ label, name, content }: { label: string; name: string; content: string }) {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success(`${label} copied`, { description: content });
+    } catch {
+      toast.error(`Could not copy the ${label}`);
+    }
+  };
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-24 shrink-0 font-mono font-semibold uppercase text-[#7e899d] dark:text-white/40">
+        {label}
+      </span>
+      <span className="min-w-0 flex-1 truncate font-mono text-[#3b4150] dark:text-white/70">
+        {name} → {content}
+      </span>
+      <button
+        aria-label={`Copy ${label}`}
+        className="shrink-0 rounded-lg p-1.5 text-[#778299] transition hover:bg-white hover:text-brand-blue dark:hover:bg-white/10"
+        onClick={() => void copy()}
+        title={`Copy the ${label} record`}
+        type="button"
+      >
+        <Copy size={13} />
+      </button>
+    </div>
+  );
+}
+
 function DomainCard({
   domain,
   canWrite,
   canDelete,
-  cnameTarget,
   busy,
   onCheck,
   onDelete,
-  cfExpanded,
-  onToggleCf,
-  cfToken,
-  setCfToken,
-  cfBusy,
-  cfResult,
-  onAutoconfigure,
+  onConnect,
+  connectBusy,
+  connectResult,
 }: {
   domain: ShortlinkDomain;
   canWrite: boolean;
   canDelete: boolean;
-  cnameTarget: string;
   busy: boolean;
   onCheck: (domain: ShortlinkDomain) => void;
   onDelete: (domain: ShortlinkDomain) => void;
-  cfExpanded: boolean;
-  onToggleCf: () => void;
-  cfToken: string;
-  setCfToken: (value: string) => void;
-  cfBusy: boolean;
-  cfResult: CloudflareSetupResult | null;
-  onAutoconfigure: (domain: ShortlinkDomain) => void;
+  onConnect: (domain: ShortlinkDomain) => void;
+  connectBusy: boolean;
+  connectResult: ConnectResult | null;
 }) {
+  const records = domain.records;
   return (
     <div className="rounded-xl border border-[#e4e8f0] p-4 dark:border-white/10">
       <div className="flex flex-wrap items-center gap-2">
@@ -623,54 +644,48 @@ function DomainCard({
       </div>
       {domain.status !== "connected" ? (
         <div className="mt-3 border-t border-[#eef0f4] pt-3 dark:border-white/5">
-          <p className="text-xs leading-5 text-[#778299] dark:text-white/45">
-            Add a CNAME record for <span className="font-mono">{domain.hostname}</span> pointing to{" "}
-            <span className="font-mono">{cnameTarget}</span>.
-          </p>
           {domain.provider === "cloudflare" ? (
-            <div className="mt-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-brand-blue/40 bg-brand-blue/[0.06] px-3.5 text-xs font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white disabled:opacity-50"
-                disabled={cfBusy || !canWrite}
-                onClick={onToggleCf}
+                className="inline-flex h-9 items-center gap-2 rounded-xl bg-brand-blue px-3.5 text-xs font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
+                disabled={connectBusy || !canWrite}
+                onClick={() => onConnect(domain)}
                 type="button"
               >
                 <CloudArrowUp size={16} />
-                {cfExpanded ? "Close setup" : "Set up on Cloudflare"}
+                {connectBusy ? "Opening…" : "Connect with Cloudflare"}
               </button>
-              {cfExpanded ? (
-                <div className="mt-3 space-y-2 rounded-xl bg-[#fbfbfa] p-3 dark:bg-white/[0.03]">
-                  <p className="text-xs leading-5 text-[#778299] dark:text-white/45">
-                    Paste a Cloudflare API token with Zone · DNS · Edit for{" "}
-                    <span className="font-mono">{domain.hostname}</span>. It is stored encrypted and
-                    used only to create the DNS records.
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      className={`${inputClass} font-mono`}
-                      onChange={(event) => setCfToken(event.target.value)}
-                      placeholder="Cloudflare API token"
-                      type="password"
-                      value={cfToken}
-                    />
-                    <button
-                      className="h-10 shrink-0 rounded-xl bg-brand-blue px-4 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
-                      disabled={cfBusy || !cfToken.trim()}
-                      onClick={() => onAutoconfigure(domain)}
-                      type="button"
-                    >
-                      {cfBusy ? "Working…" : "Autoconfigure"}
-                    </button>
-                  </div>
-                  {cfResult ? (
-                    <p className="text-xs leading-5 text-brand-green">
-                      Created the CNAME for <span className="font-mono">{cfResult.cname.name}</span>{" "}
-                      → <span className="font-mono">{cfResult.cname.content}</span>
-                      {cfResult.txt ? ` and the verification TXT on ${cfResult.txt.name}` : ""}. DNS
-                      can take a few minutes; use “Check now” to verify.
-                    </p>
-                  ) : null}
-                </div>
+              <p className="min-w-0 flex-1 text-xs leading-5 text-[#778299] dark:text-white/45">
+                One click. Cloudflare asks for your approval, then adds the CNAME and the
+                verification TXT below to {domain.hostname} via Domain Connect.
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs leading-5 text-[#778299] dark:text-white/45">
+              Add the records below at your DNS provider, then use “Check now”.
+            </p>
+          )}
+          {connectResult ? (
+            <p className="mt-2 text-xs leading-5 text-brand-green">
+              {connectResult.url
+                ? "Opened Cloudflare in a new tab. Approve the changes there, then use “Check now” once DNS settles."
+                : "Domain Connect is not registered for this provider yet, so add the records below by hand."}
+            </p>
+          ) : null}
+          {records ? (
+            <div className="mt-3 space-y-2 rounded-xl bg-[#fbfbfa] p-3 dark:bg-white/[0.03]">
+              <RecordRow label="CNAME" name={records.cname.name} content={records.cname.content} />
+              <RecordRow
+                label="Verify TXT"
+                name={records.verifyTxt.name}
+                content={records.verifyTxt.content}
+              />
+              {records.railwayTxt ? (
+                <RecordRow
+                  label="Railway TXT"
+                  name={records.railwayTxt.name}
+                  content={records.railwayTxt.content}
+                />
               ) : null}
             </div>
           ) : null}
@@ -684,39 +699,29 @@ function DomainsModal({
   domains,
   canWrite,
   canDelete,
-  cnameTarget,
   busy,
   newDomain,
   setNewDomain,
   onAdd,
   onDelete,
   onCheck,
-  cfDomainId,
-  setCfDomainId,
-  cfToken,
-  setCfToken,
-  cfBusy,
-  cfResult,
-  onAutoconfigure,
+  onConnect,
+  connectBusy,
+  connectResult,
   onClose,
 }: {
   domains: ShortlinkDomain[];
   canWrite: boolean;
   canDelete: boolean;
-  cnameTarget: string;
   busy: boolean;
   newDomain: string;
   setNewDomain: (value: string) => void;
   onAdd: () => void;
   onDelete: (domain: ShortlinkDomain) => void;
   onCheck: (domain: ShortlinkDomain) => void;
-  cfDomainId: string | null;
-  setCfDomainId: (id: string | null) => void;
-  cfToken: string;
-  setCfToken: (value: string) => void;
-  cfBusy: boolean;
-  cfResult: CloudflareSetupResult | null;
-  onAutoconfigure: (domain: ShortlinkDomain) => void;
+  onConnect: (domain: ShortlinkDomain) => void;
+  connectBusy: boolean;
+  connectResult: ConnectResult | null;
   onClose: () => void;
 }) {
   useEscapeToClose(onClose);
@@ -753,18 +758,13 @@ function DomainsModal({
               busy={busy}
               canDelete={canDelete}
               canWrite={canWrite}
-              cfBusy={cfBusy}
-              cfExpanded={cfDomainId === domain.id}
-              cfResult={cfResult}
-              cfToken={cfToken}
-              cnameTarget={cnameTarget}
+              connectBusy={connectBusy}
+              connectResult={connectResult}
               domain={domain}
               key={domain.id}
-              onAutoconfigure={onAutoconfigure}
               onCheck={onCheck}
+              onConnect={onConnect}
               onDelete={onDelete}
-              onToggleCf={() => setCfDomainId(cfDomainId === domain.id ? null : domain.id)}
-              setCfToken={setCfToken}
             />
           ))}
           {customDomains.length === 0 ? (
@@ -804,7 +804,6 @@ function DomainsModal({
 export function LinksStudio({
   initialDomains,
   initialLinks,
-  cnameTarget,
   canWrite,
   canDelete,
   search,
@@ -812,7 +811,6 @@ export function LinksStudio({
 }: {
   initialDomains: ShortlinkDomain[];
   initialLinks: ShortlinkLink[];
-  cnameTarget: string;
   canWrite: boolean;
   canDelete: boolean;
   search: string;
@@ -862,10 +860,8 @@ export function LinksStudio({
   const [domainsOpen, setDomainsOpen] = useState(false);
   const [newDomain, setNewDomain] = useState("");
   const [domainBusy, setDomainBusy] = useState(false);
-  const [cfDomainId, setCfDomainId] = useState<string | null>(null);
-  const [cfToken, setCfToken] = useState("");
-  const [cfBusy, setCfBusy] = useState(false);
-  const [cfResult, setCfResult] = useState<CloudflareSetupResult | null>(null);
+  const [connectBusy, setConnectBusy] = useState(false);
+  const [connectResult, setConnectResult] = useState<ConnectResult | null>(null);
 
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -1151,34 +1147,31 @@ export function LinksStudio({
     }
   };
 
-  const autoconfigureCloudflare = async (domain: ShortlinkDomain) => {
-    if (!cfToken.trim()) {
-      toast.error("Add the Cloudflare token first", {
-        description: "It is stored encrypted and only used for this domain.",
-      });
-      return;
-    }
-    setCfBusy(true);
-    setCfResult(null);
+  const connectDomain = async (domain: ShortlinkDomain) => {
+    setConnectBusy(true);
+    setConnectResult(null);
     try {
-      const response = await fetch(`/api/admin/links/domains/${domain.id}/cloudflare`, {
+      const response = await fetch(`/api/admin/links/domains/${domain.id}/connect`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: cfToken }),
       });
-      const body = await jsonOrThrow<CloudflareSetupResult>(response);
-      setCfResult(body);
-      toast.success("Cloudflare configured", {
-        description: body.railwayAttached
-          ? "DNS records are in place. Give DNS a few minutes, then check the domain."
-          : "DNS records are in place. Attach the domain in Railway, then check it.",
-      });
+      const body = await jsonOrThrow<ConnectResult>(response);
+      setConnectResult(body);
+      if (body.url) {
+        window.open(body.url, "_blank", "noopener,noreferrer");
+        toast.success("Connect with Cloudflare opened", {
+          description: "Approve the changes there, then use “Check now” once DNS settles.",
+        });
+      } else {
+        toast.info("Add the records below by hand", {
+          description: "Domain Connect is not registered for this provider yet.",
+        });
+      }
     } catch (error) {
-      toast.error("Cloudflare setup failed", {
+      toast.error("Could not start the connection", {
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
-      setCfBusy(false);
+      setConnectBusy(false);
     }
   };
 
@@ -1492,20 +1485,15 @@ export function LinksStudio({
           busy={domainBusy}
           canDelete={canDelete}
           canWrite={canWrite}
-          cfBusy={cfBusy}
-          cfDomainId={cfDomainId}
-          cfResult={cfResult}
-          cfToken={cfToken}
-          cnameTarget={cnameTarget}
+          connectBusy={connectBusy}
+          connectResult={connectResult}
           domains={domains}
           newDomain={newDomain}
           onAdd={() => void addDomain()}
-          onAutoconfigure={(domain) => void autoconfigureCloudflare(domain)}
           onCheck={(domain) => void checkDomain(domain)}
           onClose={() => setDomainsOpen(false)}
+          onConnect={(domain) => void connectDomain(domain)}
           onDelete={(domain) => void deleteDomain(domain)}
-          setCfDomainId={setCfDomainId}
-          setCfToken={setCfToken}
           setNewDomain={setNewDomain}
         />
       ) : null}

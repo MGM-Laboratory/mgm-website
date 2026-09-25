@@ -7,7 +7,6 @@ import type { ShortlinkDomain, ShortlinkLink } from "@/lib/links-cms";
 export type LinksAdminSnapshot = {
   domains: ShortlinkDomain[];
   links: ShortlinkLink[];
-  cnameTarget: string;
 };
 
 /** The initial workspace data, fetched server-side before the studio mounts. */
@@ -17,7 +16,7 @@ export async function fetchLinksAdminSnapshot(): Promise<LinksAdminSnapshot> {
     cmsApi("/shortlinks/admin/links"),
   ]);
   const domainsBody = domainsResponse.ok
-    ? ((await domainsResponse.json()) as { domains?: ShortlinkDomain[]; cnameTarget?: string })
+    ? ((await domainsResponse.json()) as { domains?: ShortlinkDomain[] })
     : null;
   const linksBody = linksResponse.ok
     ? ((await linksResponse.json()) as { links?: ShortlinkLink[] })
@@ -25,6 +24,5 @@ export async function fetchLinksAdminSnapshot(): Promise<LinksAdminSnapshot> {
   return {
     domains: domainsBody?.domains ?? [],
     links: linksBody?.links ?? [],
-    cnameTarget: domainsBody?.cnameTarget ?? "web-production-589d3f.up.railway.app",
   };
 }

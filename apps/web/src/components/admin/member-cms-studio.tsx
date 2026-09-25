@@ -485,7 +485,7 @@ export function MemberCmsStudio({
   initialEvents = [],
   initialEventRegistrations = [],
   initialContactInquiries = [],
-  initialLinksData = { domains: [], links: [], cnameTarget: "" },
+  initialLinksData = { domains: [], links: [] },
   paperLimitBytes = 209_715_200,
   videoLimitBytes = 524_288_000,
   session,
@@ -1507,7 +1507,6 @@ export function MemberCmsStudio({
                 <LinksStudio
                   canDelete={can(viewer.permissions, "links", "delete")}
                   canWrite={can(viewer.permissions, "links", "write")}
-                  cnameTarget={initialLinksData.cnameTarget}
                   initialDomains={initialLinksData.domains}
                   initialLinks={initialLinksData.links}
                   onSearchChange={setLinksSearch}
