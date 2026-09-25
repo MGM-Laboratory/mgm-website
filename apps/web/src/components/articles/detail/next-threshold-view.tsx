@@ -54,6 +54,15 @@ export function NextThreshold({ next }: { next: DetailNext }) {
           <span className="ad-next-bar">
             <span className="ad-next-bar-fill" data-ad-next-bar="" />
           </span>
+          {/* Shown only by the flood's copy, when the next page is slow to
+              arrive: a small book turning its pages, and "(Loading)". */}
+          <span className="ad-next-loading">
+            <span className="ad-book">
+              <span className="ad-book-page" />
+              <span className="ad-book-page" />
+            </span>
+            <span className="ad-next-loading-text">(Loading)</span>
+          </span>
         </span>
       </span>
     </Link>
