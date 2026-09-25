@@ -331,11 +331,19 @@ export class PortalController {
 
   private readonly onClick = (event: MouseEvent) => {
     if (this.run && !this.run.released) {
-      // Mid-portal every click is swallowed: nothing may navigate or
-      // toggle under the cover, programmatic clicks included.
-      event.preventDefault();
-      event.stopPropagation();
-      return;
+      if (this.run.phase === "reveal") {
+        // The destination is on screen and clearing: a click there is the
+        // visitor's. The page is theirs at once (the last of the fog still
+        // draws), and the click carries on (a slow renderer could otherwise
+        // hold it for seconds).
+        this.letGo(this.run);
+      } else {
+        // Covered: every click is swallowed. Nothing may navigate or toggle
+        // under the cover, programmatic clicks included.
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
     }
     const link = navigationTarget(event);
     if (!link) return;
