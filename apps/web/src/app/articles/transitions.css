@@ -1,4 +1,17 @@
 /*
- * The articles transitions' DOM layers (list to article, article to list,
- * article to article), styled here so the transitions own their own rules.
+ * The articles transitions' DOM rules (components/articles/transitions/*).
+ * While a transition covers the screen, the page it brings in stays hidden
+ * from its first frame: the transition then reveals it with inline styles
+ * (which win over these), and drops the attribute when it is done.
+ * Opacity only, never a transform (docs/animation-system.md gotcha #1).
  */
+
+html[data-article-transition="open-out"] [data-article-content],
+html[data-article-transition="swap-out"] [data-article-content] {
+  opacity: 0;
+}
+
+html[data-article-transition="close-out"] [data-articles-head],
+html[data-article-transition="close-out"] [data-articles-top] {
+  opacity: 0;
+}
