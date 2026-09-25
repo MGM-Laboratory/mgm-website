@@ -150,6 +150,9 @@ model ShortLinkDomain {
   status  String    @default("pending")
   cloudflareZoneId        String?
   cloudflareTokenEncrypted String?
+  // Random token checked in the _mgm-verify TXT record that the Domain
+  // Connect sync writes, which is what domain validity checks look for.
+  verifyToken   String?
   // The Railway custom-domain id, when the domain was attached to the web
   // service through the Railway API (needs RAILWAY_API_TOKEN).
   railwayDomainId String?

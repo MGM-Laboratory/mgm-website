@@ -1,16 +1,35 @@
 /** Types for the link shortener workspace, shared by the server fetch and the editor. */
 
+export type DomainRecords = {
+  cname: { name: string; content: string };
+  verifyTxt: { name: string; content: string };
+  railwayTxt: { name: string; content: string } | null;
+};
+
 export type ShortlinkDomain = {
   id: string;
   hostname: string;
   isPrimary: boolean;
   provider: "local" | "cloudflare" | "manual";
   status: "connected" | "pending";
-  hasCloudflareToken: boolean;
   railwayAttached: boolean;
   lastUsedAt: string | null;
   createdAt: string;
   linkCount: number;
+  /** The DNS records to apply or copy, for custom domains. */
+  records?: DomainRecords;
+};
+
+export type DomainChecks = {
+  verifyTxt: boolean;
+  railway: boolean;
+  marker: boolean;
+};
+
+export type ConnectResult = {
+  /** The signed Domain Connect apply URL; null until Cloudflare onboarding is done. */
+  url: string | null;
+  records: DomainRecords;
 };
 
 export type LinkStatus = "available" | "expired" | "consumed" | "error";
@@ -58,14 +77,6 @@ export type LinkAnalytics = {
     os: string | null;
     createdAt: string;
   }[];
-};
-
-export type CloudflareSetupResult = {
-  zoneId: string;
-  cname: { name: string; content: string };
-  txt: { name: string; content: string } | null;
-  railwayAttached: boolean;
-  next: "verify";
 };
 
 export const EXPIRY_OPTIONS: {

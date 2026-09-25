@@ -1,17 +1,18 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { resolveNs } from "node:dns/promises";
+import { randomBytes } from "node:crypto";
+import { resolveNs, resolveTxt } from "node:dns/promises";
 
 import type { Env } from "../config/env.validation.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import {
+  buildConnectUrl,
+  connectRecords,
+  resolveCloudflareSync,
+} from "./shortlinks.domainconnect.js";
 import { enrichVisit } from "./shortlinks.geo.js";
 import {
-  CloudflareError,
   RailwayApiError,
-  createCloudflareDnsRecord,
-  encryptToken,
-  findCloudflareZone,
-  hasEncryptionKey,
   railwayCustomDomainAvailable,
   railwayCustomDomainCreate,
   railwayCustomDomainDelete,
@@ -116,7 +117,52 @@ export class ShortlinksService implements OnApplicationBootstrap {
       include: { _count: { select: { links: true } } },
       orderBy: [{ isPrimary: "desc" }, { lastUsedAt: "desc" }, { createdAt: "desc" }],
     });
-    return domains.map((domain) => this.toDomainDto(domain, domain._count.links));
+    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
+    return Promise.all(
+      domains.map(async (domain) => {
+        const dto = this.toDomainDto(domain, domain._count.links);
+        if (!domain.isPrimary) {
+          const railway =
+            domain.railwayDomainId && railwayToken
+              ? await this.railwayStatus(railwayToken, domain.railwayDomainId)
+              : null;
+          dto.records = this.recordsFor(domain.hostname, domain.verifyToken, railway);
+        }
+        return dto;
+      }),
+    );
+  }
+
+  /**
+   * The DNS records the admin's provider needs, ready to copy: the routing
+   * CNAME (Railway's own per-domain target when the domain is attached),
+   * our verification TXT, and Railway's ownership TXT.
+   */
+  private recordsFor(
+    hostname: string,
+    verifyToken: string | null,
+    railway: RailwayDomainStatus | null,
+  ) {
+    return {
+      cname: {
+        name: hostname,
+        content:
+          railway?.status?.dnsRecords?.[0]?.requiredValue ??
+          this.config.getOrThrow("SHORTLINKS_CNAME_TARGET"),
+      },
+      verifyTxt: { name: `_mgm-verify.${hostname}`, content: verifyToken ?? "" },
+      railwayTxt: railway?.status?.verificationToken
+        ? { name: `_railway-verify.${hostname}`, content: railway.status.verificationToken }
+        : null,
+    };
+  }
+
+  private railwayStatus(token: string, railwayDomainId: string) {
+    return railwayCustomDomainStatus(
+      token,
+      railwayDomainId,
+      this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
+    ).catch(() => null);
   }
 
   private toDomainDto(
@@ -129,23 +175,35 @@ export class ShortlinksService implements OnApplicationBootstrap {
       cloudflareZoneId: string | null;
       cloudflareTokenEncrypted: string | null;
       railwayDomainId: string | null;
+      verifyToken: string | null;
       lastUsedAt: Date | null;
       createdAt: Date;
     },
     linkCount: number,
   ) {
-    return {
+    const dto: {
+      id: string;
+      hostname: string;
+      isPrimary: boolean;
+      provider: string;
+      status: string;
+      railwayAttached: boolean;
+      lastUsedAt: Date | null;
+      createdAt: Date;
+      linkCount: number;
+      records?: ReturnType<ShortlinksService["recordsFor"]>;
+    } = {
       id: domain.id,
       hostname: domain.hostname,
       isPrimary: domain.isPrimary,
       provider: domain.provider,
       status: domain.status,
-      hasCloudflareToken: Boolean(domain.cloudflareTokenEncrypted),
       railwayAttached: Boolean(domain.railwayDomainId),
       lastUsedAt: domain.lastUsedAt,
       createdAt: domain.createdAt,
       linkCount,
     };
+    return dto;
   }
 
   /**
@@ -205,21 +263,42 @@ export class ShortlinksService implements OnApplicationBootstrap {
     }
 
     const domain = await this.prisma.shortLinkDomain.create({
-      data: { hostname: host, provider, railwayDomainId },
+      data: {
+        hostname: host,
+        provider,
+        railwayDomainId,
+        verifyToken: randomBytes(16).toString("hex"),
+      },
     });
     return { domain: this.toDomainDto(domain, 0), railwayNote };
   }
 
+  /** Domains created before the verify token existed get one on demand. */
+  private async ensureVerifyToken(domain: { id: string; verifyToken: string | null }) {
+    if (domain.verifyToken) return domain.verifyToken;
+    const verifyToken = randomBytes(16).toString("hex");
+    await this.prisma.shortLinkDomain.update({
+      where: { id: domain.id },
+      data: { verifyToken },
+    });
+    return verifyToken;
+  }
+
   /**
-   * Re-checks a custom domain and stores what it finds: the marker probe is
-   * the source of truth, and a "manual" domain gets its Cloudflare detection
-   * refreshed in case DNS changed since it was added.
+   * Re-checks a custom domain. The validity check is the verification TXT
+   * at _mgm-verify.<hostname> (what the Domain Connect sync writes): the
+   * domain is only connected when that TXT matches its stored token AND
+   * the web app's marker probe answers, which is the end-to-end proof that
+   * Railway routes the host. A "manual" domain gets its Cloudflare
+   * detection refreshed too.
    */
   async refreshDomain(id: string) {
     const domain = await this.prisma.shortLinkDomain.findUnique({ where: { id } });
     if (!domain || domain.isPrimary) return null;
 
-    const connected = await this.verifyDomainMarker(domain.hostname);
+    const verifyToken = await this.ensureVerifyToken(domain);
+    const parts = await this.domainCheckParts({ ...domain, verifyToken });
+    const connected = parts.verifyTxt && parts.marker;
     let provider = domain.provider;
     if (provider !== "cloudflare") {
       provider = (await isCloudflareHost(domain.hostname)) ? "cloudflare" : "manual";
@@ -234,7 +313,40 @@ export class ShortlinksService implements OnApplicationBootstrap {
         { ...domain, status: connected ? "connected" : "pending", provider },
         linkCount,
       ),
+      checks: parts,
     };
+  }
+
+  /** The individual pieces a domain's connected state is made of. */
+  private async domainCheckParts(domain: {
+    hostname: string;
+    verifyToken: string | null;
+    railwayDomainId: string | null;
+  }) {
+    const parts = {
+      verifyTxt: false,
+      railway: false,
+      marker: false,
+    };
+    if (domain.verifyToken) {
+      try {
+        const records = await resolveTxt(`_mgm-verify.${domain.hostname}`);
+        parts.verifyTxt = records.some((strings) => strings.join("") === domain.verifyToken);
+      } catch {
+        // No TXT record yet.
+      }
+    }
+    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
+    if (railwayToken && domain.railwayDomainId) {
+      const railway = await this.railwayStatus(railwayToken, domain.railwayDomainId);
+      parts.railway = Boolean(
+        railway?.status?.dnsRecords?.every(
+          (record) => record.status !== "DNS_RECORD_STATUS_REQUIRES_UPDATE",
+        ) && railway.status.certificateStatus === "CERTIFICATE_STATUS_TYPE_VALID",
+      );
+    }
+    parts.marker = await this.verifyDomainMarker(domain.hostname);
+    return parts;
   }
 
   async deleteDomain(id: string) {
@@ -302,71 +414,15 @@ export class ShortlinksService implements OnApplicationBootstrap {
   }
 
   /**
-   * The Cloudflare DNS records. The verification TXT goes to two names
-   * (the domain root and _railway.<domain>) because Railway's dashboard
-   * shows the expected name and the API returns only the value; a stray
-   * harmless TXT beats a domain stuck in pending.
+   * The one-click Cloudflare setup: make sure the domain is attached on
+   * Railway (so the edge routes it), then build the signed Domain Connect
+   * apply URL. Cloudflare's consent page applies the template's CNAME and
+   * TXT records to the zone; the API never sees a Cloudflare token.
    */
-  private async createCloudflareDns(
-    domain: { hostname: string },
-    token: string,
-    zoneId: string,
-    cnameTarget: string,
-    railway: RailwayDomainStatus | null,
-  ) {
-    try {
-      await createCloudflareDnsRecord(token, zoneId, {
-        type: "CNAME",
-        name: domain.hostname,
-        content: cnameTarget,
-      });
-    } catch (error) {
-      const message = error instanceof CloudflareError ? error.message : String(error);
-      throw new ShortlinksError(`Cloudflare rejected the DNS record: ${message}`);
-    }
-
-    const verificationToken = railway?.status?.verificationToken;
-    if (verificationToken) {
-      const txtHosts = new Set([domain.hostname, `_railway.${domain.hostname}`]);
-      for (const txtHost of txtHosts) {
-        try {
-          await createCloudflareDnsRecord(token, zoneId, {
-            type: "TXT",
-            name: txtHost,
-            content: verificationToken,
-          });
-        } catch (error) {
-          const message = error instanceof CloudflareError ? error.message : String(error);
-          throw new ShortlinksError(
-            `The routing record was created but the verification TXT failed: ${message}`,
-          );
-        }
-      }
-      return { name: `_railway.${domain.hostname}`, content: verificationToken };
-    }
-    return null;
-  }
-
-  /**
-   * One-click Cloudflare setup: attach the domain on Railway (so the edge
-   * routes it to the web service), then create the routing and verification
-   * DNS records on Cloudflare.
-   */
-  async autoconfigureCloudflare(id: string, token: string) {
+  async connectDomain(id: string) {
     const domain = await this.prisma.shortLinkDomain.findUnique({ where: { id } });
     if (!domain || domain.isPrimary) return null;
-    if (!hasEncryptionKey()) {
-      throw new ShortlinksError(
-        "Cloudflare tokens cannot be saved until SHORTLINKS_ENCRYPTION_KEY is configured.",
-      );
-    }
-    const tokenValue = token.trim();
-    const zoneId = await findCloudflareZone(tokenValue, domain.hostname);
-    if (!zoneId) {
-      throw new ShortlinksError(
-        "No Cloudflare zone matches this domain. Check the token's permissions and zone.",
-      );
-    }
+    const verifyToken = await this.ensureVerifyToken(domain);
 
     let railwayResult: { railway: RailwayDomainStatus | null; cnameTarget: string };
     try {
@@ -376,30 +432,36 @@ export class ShortlinksService implements OnApplicationBootstrap {
         `Railway could not attach the domain: ${error instanceof RailwayApiError ? error.message : String(error)}`,
       );
     }
-    const txt = await this.createCloudflareDns(
-      domain,
-      tokenValue,
-      zoneId,
+
+    const records = connectRecords(
+      domain.hostname,
       railwayResult.cnameTarget,
-      railwayResult.railway,
+      verifyToken,
+      railwayResult.railway?.status?.verificationToken ?? null,
     );
 
-    await this.prisma.shortLinkDomain.update({
-      where: { id },
-      data: {
-        provider: "cloudflare",
-        cloudflareZoneId: zoneId,
-        cloudflareTokenEncrypted: encryptToken(tokenValue),
-      },
+    const privateKey = this.config.get("DOMAIN_CONNECT_PRIVATE_KEY");
+    if (!privateKey) {
+      // Without the signing key the sync cannot be requested; hand the
+      // records over so the UI can still show exactly what to enter.
+      return { url: null as string | null, records };
+    }
+    const { zone, syncUrl } = await resolveCloudflareSync(
+      domain.hostname,
+      this.config.getOrThrow("DOMAIN_CONNECT_SYNC_URL"),
+    );
+    const built = buildConnectUrl({
+      syncUrl,
+      providerId: this.config.getOrThrow("DOMAIN_CONNECT_PROVIDER_ID"),
+      serviceId: this.config.getOrThrow("DOMAIN_CONNECT_SERVICE_ID"),
+      zone,
+      hostname: domain.hostname,
+      records,
+      keyId: this.config.getOrThrow("DOMAIN_CONNECT_KEY_ID"),
+      redirectUrl: this.config.getOrThrow("DOMAIN_CONNECT_REDIRECT_URL"),
+      privateKey,
     });
-
-    return {
-      zoneId,
-      cname: { name: domain.hostname, content: railwayResult.cnameTarget },
-      txt,
-      railwayAttached: Boolean(railwayResult.railway),
-      next: "verify" as const,
-    };
+    return { url: built.url, records };
   }
 
   // --- Links ---

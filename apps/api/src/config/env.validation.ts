@@ -68,6 +68,19 @@ const envSchema = z.object({
     .min(1)
     .default(process.env.RAILWAY_ENVIRONMENT_ID ?? "42acf786-e8f4-41f8-8d4f-715bee1655f8"),
   RAILWAY_API_TOKEN: optionalString(),
+  // --- Domain Connect (the one-click Cloudflare DNS setup) ---
+  // The provider identity registered with Cloudflare's Domain Connect
+  // onboarding (template PR + email). The private key signs each sync
+  // request; its public half is published as the chunked TXT records at
+  // DOMAIN_CONNECT_KEY_ID.<DOMAIN_CONNECT_PROVIDER_ID>.
+  DOMAIN_CONNECT_PROVIDER_ID: z.string().min(1).default("labmgm.org"),
+  DOMAIN_CONNECT_SERVICE_ID: z.string().min(1).default("shortlinks"),
+  DOMAIN_CONNECT_PRIVATE_KEY: optionalString(z.string().min(1)),
+  DOMAIN_CONNECT_KEY_ID: z.string().min(1).default("_dcpubkeyv1"),
+  DOMAIN_CONNECT_REDIRECT_URL: z.url().default("https://labmgm.org/admin"),
+  // Fallback for the sync UX prefix when the provider's settings document
+  // cannot be reached.
+  DOMAIN_CONNECT_SYNC_URL: z.url().default("https://cloudflare.com/cdn-cgi/domain-connect"),
   // 32-byte hex key that encrypts Cloudflare API tokens at rest; without
   // it, saving a Cloudflare token is refused rather than stored in plain.
   SHORTLINKS_ENCRYPTION_KEY: optionalString(z.string().regex(/^[0-9a-f]{64}$/)),
