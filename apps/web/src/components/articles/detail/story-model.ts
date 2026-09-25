@@ -108,28 +108,35 @@ export function safeImageSrc(value: string) {
 function asInline(content: unknown): InlineContent | undefined {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return undefined;
-  const nodes: InlineNode[] = [];
-  for (const raw of content) {
-    if (!raw || typeof raw !== "object") continue;
-    const node = raw as Record<string, unknown>;
-    if (node.type === "text") {
-      nodes.push({
-        type: "text",
-        text: typeof node.text === "string" ? node.text : undefined,
-        styles:
-          node.styles && typeof node.styles === "object"
-            ? (node.styles as Record<string, unknown>)
-            : undefined,
-      });
-    } else if (node.type === "link") {
-      nodes.push({
-        type: "link",
-        href: typeof node.href === "string" ? node.href : undefined,
-        content: asInline(node.content),
-      });
-    }
+  return content.flatMap((raw) => {
+    const node = asInlineNode(raw);
+    return node ? [node] : [];
+  });
+}
+
+/** One stored inline node as the story can trust it, or undefined. */
+function asInlineNode(raw: unknown): InlineNode | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const node = raw as Record<string, unknown>;
+  if (node.type === "text") {
+    return {
+      type: "text",
+      text: stringOrUndefined(node.text),
+      styles: objectOrUndefined(node.styles),
+    };
   }
-  return nodes;
+  if (node.type === "link") {
+    return { type: "link", href: stringOrUndefined(node.href), content: asInline(node.content) };
+  }
+  return undefined;
+}
+
+function stringOrUndefined(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function objectOrUndefined(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : undefined;
 }
 
 /** The plain text of inline content. */
