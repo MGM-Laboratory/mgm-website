@@ -90,6 +90,8 @@ const CLOSE_PUSH_AT = 1.15;
 const SWAP_PUSH_AT = 0.85;
 /** Visible time after which a run that never ended is ended anyway. */
 const RUN_CEILING_MS = 16000;
+/** No timeline runs slower than real, visible time divided by this (see `paced`). */
+const WALL_STRETCH = 1.5;
 
 /** The list's scroll position when a card was opened, for the way back. */
 let openedFrom: { slug: string; scrollY: number } | null = null;
@@ -361,12 +363,40 @@ export class ArticleTransitions {
       void this.enter(run);
       return;
     }
-    run.timeline =
+    run.timeline = this.paced(
+      run,
       kind === "open"
         ? this.openOut(run)
         : kind === "close"
           ? this.closeOut(run)
-          : this.swapOut(run);
+          : this.swapOut(run),
+    );
+  }
+
+  /**
+   * GSAP's lag smoothing advances a timeline by at most 33 ms a frame once
+   * frames take over half a second, so on a software renderer the open's
+   * two-second pan took over twenty, and the run's ceiling ended it before
+   * it had navigated. A timer keeps every timeline at least at two thirds
+   * of real, visible speed: slow frames drop, the choreography keeps time
+   * (docs/animation-system.md gotcha #27).
+   */
+  private paced(run: Run, timeline: gsap.core.Timeline) {
+    let visible = 0;
+    let last = performance.now();
+    const timer = window.setInterval(() => {
+      const now = performance.now();
+      if (!document.hidden) visible += (now - last) / 1000;
+      last = now;
+      if (run.ended || run.timeline !== timeline || timeline.progress() >= 1) {
+        window.clearInterval(timer);
+        return;
+      }
+      const floor = Math.min(visible / WALL_STRETCH, timeline.duration());
+      // Jumping the playhead fires every callback it passes (the push, the end).
+      if (timeline.time() < floor) this.guard(run, () => timeline.time(floor));
+    }, 100);
+    return timeline;
   }
 
   /**
@@ -586,12 +616,14 @@ export class ArticleTransitions {
     if (run.ended || this.run !== run) return;
     document.documentElement.dataset.articleTransition = `${run.kind}-in`;
     run.timeline?.kill();
-    run.timeline =
+    run.timeline = this.paced(
+      run,
       run.kind === "close"
         ? this.closeIn(run)
         : run.kind === "open"
           ? this.openIn(run)
-          : this.swapIn(run);
+          : this.swapIn(run),
+    );
   }
 
   private openIn(run: Run) {
