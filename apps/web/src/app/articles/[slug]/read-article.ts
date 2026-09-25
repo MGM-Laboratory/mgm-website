@@ -5,8 +5,8 @@ import { cache } from "react";
 import { MEMBERS } from "@/data/members";
 import { publishedArticles, type CmsArticleRecord } from "@/lib/article-cms";
 import { fetchArticleFeed, fetchArticleRecord } from "@/lib/article-cms-seed";
+import { cmsApi } from "@/lib/cms-api";
 import { mergeMemberRecords, type CmsMemberRecord } from "@/lib/member-cms";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
 
 /**
  * The article page's reads, memoised per request with React's cache():
@@ -34,10 +34,19 @@ export const readPublishedFeed = cache(async (): Promise<CmsArticleRecord[]> => 
   }
 });
 
+/**
+ * The member directory, for the bylines. A plain read of the CMS records
+ * (not the directory's seeding helper, which imports the bundled members
+ * into an empty store): an article page never writes. Without records the
+ * bundled members still name every author, only without their portraits.
+ */
 export const readMembers = cache(
   async (): Promise<{ members: CmsMemberRecord["member"][]; records: CmsMemberRecord[] }> => {
     try {
-      const records = await ensureMemberCmsSeeded();
+      const response = await cmsApi("/cms/members");
+      if (!response.ok) throw new Error("CMS member records could not be read");
+      const data = (await response.json()) as { records?: CmsMemberRecord[] };
+      const records = data.records ?? [];
       return { members: mergeMemberRecords(MEMBERS, records), records };
     } catch {
       return { members: [...MEMBERS], records: [] };
