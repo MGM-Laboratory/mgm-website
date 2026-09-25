@@ -3,7 +3,7 @@
 import { debounce, parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useState } from "react";
 
-import type { ArticleIndexQuery } from "@/lib/article-index";
+import { readArticleIndexQuery, type ArticleIndexQuery } from "@/lib/article-index";
 
 /** How long typing must pause before the list asks for results. */
 const SEARCH_SETTLE_MS = 320;
@@ -33,10 +33,10 @@ export function useListQuery() {
     { category: parseAsString, q: parseAsString },
     { history: "replace", scroll: false },
   );
-  const live: ArticleIndexQuery = {
-    category: params.category ?? undefined,
-    q: params.q?.trim() || undefined,
-  };
+  // The same reading the server and the batch route apply (a category is
+  // a lowercase slug, a search is trimmed and capped), so the head shows
+  // exactly the filter the records answer.
+  const live: ArticleIndexQuery = readArticleIndexQuery(params);
   const [settled, setSettled] = useState<ArticleIndexQuery>(live);
   const [typing, setTyping] = useState(false);
 
