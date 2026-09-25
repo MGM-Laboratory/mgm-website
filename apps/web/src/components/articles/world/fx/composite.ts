@@ -22,7 +22,8 @@ import { WORLD_COMMON, type WorldUniforms } from "@/components/articles/world/wo
  *   from the centre (the corners, a card at the edge) fringes into red and
  *   blue while the middle stays sharp. The list wears it fully; article
  *   pages keep only the grain (`uLens`). A first visit starts with the lens
- *   strongly warped and lets it settle (`uDistort`).
+ *   strongly warped and lets it settle (`uDistort`), the library coming out
+ *   of a veil of its own fog meanwhile (`uVeil`).
  * - Motion blur: a vertical smear along the scroll direction, as long as
  *   the list is fast. The same taps carry the spectral split, so a fast
  *   scroll fringes more at the edges, like a real lens.
@@ -38,6 +39,9 @@ import { WORLD_COMMON, type WorldUniforms } from "@/components/articles/world/wo
  * - The transition wipe: a flat colour sweeping in from the right edge with
  *   a very soft front, which the list-to-article transition drives.
  */
+
+/** The lens at rest (about 17 px of fringe in a 1440 px corner, like unseen.co's). */
+export const REST_DISTORT = -0.05;
 
 /** How many pulses can ripple at once (the oldest gives way). */
 export const PULSE_SLOTS = 4;
@@ -57,6 +61,8 @@ const FRAGMENT = /* glsl */ `
   uniform sampler2D tScene;
   uniform float uLens;
   uniform float uDistort;
+  /** The settle's fog veil over the whole picture (0 none). */
+  uniform float uVeil;
   uniform float uBlur;
   uniform vec3 uWipeColor;
   uniform float uWipe;
@@ -93,11 +99,21 @@ const FRAGMENT = /* glsl */ `
     float r2 = dot(c, c);
     float lens = uLens * uDistort;
     float blur = uBlur / uViewport.y;
-    // Ten taps can't smear tens of pixels smoothly: each samples a mip of
-    // the scene about as coarse as the gap between taps, so the smear
-    // reads as one soft streak instead of grainy copies. At rest: level 0.
-    float lod = log2(max(1.0, abs(uBlur) * uPixelRatio * 1.6 / float(TAPS)));
+    // Ten taps can't spread tens of pixels smoothly: each samples a mip of
+    // the scene about as coarse as the gap between taps, so a scroll smear
+    // reads as one soft streak, and the settle's strong warp as a soft
+    // fringe, instead of combs of copies. Only the warp beyond the resting
+    // lens counts (the engine builds the mips while either runs), so at
+    // rest every tap reads level 0.
+    float settle = uLens * max(0.0, abs(uDistort) - ${(-REST_DISTORT).toFixed(3)});
+    float lensGap = length(c * r2 * uViewport) * settle * uPixelRatio / float(TAPS);
+    float blurGap = abs(uBlur) * uPixelRatio * 1.6 / float(TAPS);
+    float lod = log2(max(1.0, max(blurGap, lensGap * 0.6)));
     float jitter = worldHash(gl_FragCoord.xy + uGrainSeed);
+    // And while the warp is strong, every pixel slides its taps by up to a
+    // whole gap (a dither that changes every frame): the copies melt into a
+    // continuous fringe that reads as the grain. At rest the taps sit still.
+    float dither = (jitter - 0.5) * smoothstep(0.0, 0.12, settle);
 
     // Pulses bend the picture outward along their rings, and remember how
     // much ring passes here for the tint below.
@@ -127,7 +143,7 @@ const FRAGMENT = /* glsl */ `
     vec3 sum = vec3(0.0);
     vec3 weight = vec3(0.0);
     for (int i = 0; i < TAPS; i++) {
-      float t = (float(i) + 0.5) / float(TAPS);
+      float t = (float(i) + 0.5 + dither) / float(TAPS);
       // Barrel: each wavelength bends by its own amount (red not at all,
       // blue the most), so the corners fringe and the centre stays sharp.
       vec2 tapUv = uv + c * r2 * lens * t;
@@ -188,6 +204,11 @@ const FRAGMENT = /* glsl */ `
       color += uFireDawn * glow * uBloom * 0.4 + vec3(uBloom * 0.05);
     }
 
+    // A first visit's veil: the library comes out of its own fog while the
+    // lens is still at its strongest (unseen's peak warp plays under its
+    // loader's fade), so what shows of the warp is its last, gentlest part.
+    color = mix(color, worldFogColor(dark), uVeil);
+
     float vig = smoothstep(0.95, 0.25, length(c * vec2(1.0, 1.12)));
     float vignette = mix(mix(0.94, 1.0, vig), mix(0.52, 1.0, vig), dark);
     color *= mix(1.0, vignette, uLens);
@@ -214,6 +235,7 @@ export type Composite = {
     tScene: { value: Texture | null };
     uLens: { value: number };
     uDistort: { value: number };
+    uVeil: { value: number };
     uBlur: { value: number };
     uWipeColor: { value: Color };
     uWipe: { value: number };
@@ -244,7 +266,8 @@ export function createComposite(world: WorldUniforms): Composite {
   const uniforms = {
     tScene: { value: null as Texture | null },
     uLens: { value: 1 },
-    uDistort: { value: -0.05 },
+    uDistort: { value: REST_DISTORT },
+    uVeil: { value: 0 },
     uBlur: { value: 0 },
     uWipeColor: { value: new Color("#000000") },
     uWipe: { value: 0 },

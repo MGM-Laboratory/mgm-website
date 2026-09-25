@@ -17,6 +17,7 @@ import { CameraRig } from "@/components/articles/world/camera-rig";
 import { CardsLayer } from "@/components/articles/world/cards/cards-layer";
 import {
   PULSE_SLOTS,
+  REST_DISTORT,
   createComposite,
   type Composite,
 } from "@/components/articles/world/fx/composite";
@@ -94,10 +95,11 @@ import { random } from "@/lib/random";
 const CAMERA_DISTANCE = 2000;
 /** Most device pixels drawn per frame, whatever the screen. */
 const MAX_PIXELS = 2560 * 1600;
-/** The lens at rest (about 17 px of fringe in a 1440 px corner, like unseen.co's). */
-const REST_DISTORT = -0.05;
 /** A first visit starts this warped and settles (unseen's 5 to 0.4 is 12.5 times). */
 const SETTLE_DISTORT = REST_DISTORT * 12.5;
+/** How veiled in fog the settle starts, and how long the veil takes to lift. */
+const SETTLE_VEIL = 0.8;
+const SETTLE_VEIL_SECONDS = 0.65;
 /** Seconds the camera, fog and particles take to follow a route change. */
 const ROUTE_EASE_SECONDS = 1;
 /** The longest scroll smear, CSS px (a fast flick). */
@@ -156,8 +158,8 @@ export class LibraryEngine implements ArticlesWorldApi {
   private blurAmount = 1;
   /** Whether the scene target's storage holds its whole mip chain yet. */
   private mipsAllocated = false;
-  private readonly lensState = { distort: REST_DISTORT };
-  private lensTween: gsap.core.Tween | null = null;
+  private readonly lensState = { distort: REST_DISTORT, veil: 0 };
+  private lensTween: gsap.core.Timeline | null = null;
   private readonly camera: PerspectiveCamera;
   private readonly rig: CameraRig;
   private readonly uniforms: WorldUniforms;
@@ -319,11 +321,15 @@ export class LibraryEngine implements ArticlesWorldApi {
       settleLens: (seconds = 1.5) => {
         this.lensTween?.kill();
         this.lensState.distort = SETTLE_DISTORT;
-        this.lensTween = gsap.to(this.lensState, {
-          distort: REST_DISTORT,
-          duration: seconds,
-          ease: "power2.out",
-        });
+        this.lensState.veil = SETTLE_VEIL;
+        this.lensTween = gsap
+          .timeline()
+          .to(this.lensState, { distort: REST_DISTORT, duration: seconds, ease: "power2.out" }, 0)
+          .to(
+            this.lensState,
+            { veil: 0, duration: SETTLE_VEIL_SECONDS * (seconds / 1.5), ease: "power1.out" },
+            0,
+          );
       },
       setBlurAmount: (amount) => {
         this.blurAmount = amount;
@@ -802,13 +808,15 @@ export class LibraryEngine implements ArticlesWorldApi {
         ? Math.max(-MAX_BLUR, Math.min(MAX_BLUR, this.scrollSpeed * 0.0075)) * this.blurAmount
         : 0;
     this.composite.uniforms.uBlur.value = blur;
-    // The smear samples the scene's mips (composite.ts): build them only
-    // while there is a smear to draw. A freshly sized target must allocate
-    // its whole mip chain on its first render (three sizes the storage by
-    // this flag then), so that frame builds them too.
-    this.target.texture.generateMipmaps = !this.mipsAllocated || Math.abs(blur) > 0.5;
+    // The smear and the settle's warp sample the scene's mips (composite.ts):
+    // build them only while either has something to draw. A freshly sized
+    // target must allocate its whole mip chain on its first render (three
+    // sizes the storage by this flag then), so that frame builds them too.
+    const settling = Math.abs(this.lensState.distort) > Math.abs(REST_DISTORT) + 1e-4;
+    this.target.texture.generateMipmaps = !this.mipsAllocated || Math.abs(blur) > 0.5 || settling;
     this.mipsAllocated = true;
     this.composite.uniforms.uDistort.value = this.lensState.distort;
+    this.composite.uniforms.uVeil.value = this.lensState.veil;
 
     // Route easing: the camera quiets down and the fog thickens on an article.
     const r = follow(ROUTE_EASE_SECONDS / 3, dt);
