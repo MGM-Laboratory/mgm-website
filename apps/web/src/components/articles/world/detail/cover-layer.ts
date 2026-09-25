@@ -74,6 +74,8 @@ export class ArticleCoverLayer implements WorldLayer {
   private emergeTween: gsap.core.Tween | null = null;
   private liftTween: gsap.core.Tween | null = null;
   private readonly cleanups: (() => void)[] = [];
+  /** Aborts the cover's download when the layer goes. */
+  private readonly loading = new AbortController();
   private readonly tintLight = new Color();
   private readonly tintDark = new Color();
   private disposed = false;
@@ -196,6 +198,8 @@ export class ArticleCoverLayer implements WorldLayer {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    // A download still in flight goes with the page.
+    this.loading.abort();
     for (const cleanup of this.cleanups.splice(0)) cleanup();
     this.emergeTween?.kill();
     this.liftTween?.kill();
@@ -220,6 +224,7 @@ export class ArticleCoverLayer implements WorldLayer {
       rect.height || window.innerWidth * 0.4,
       Math.min(window.devicePixelRatio || 1, 2),
       this.world.gl.renderer.capabilities.maxTextureSize,
+      this.loading.signal,
     );
     if (!loaded || this.disposed) {
       loaded?.bitmap.close();

@@ -9,6 +9,8 @@
  */
 
 const MEDIA_PREFIX = "/api/articles-cms/media/";
+/** A stalled download gives up after this long (the DOM cover stays). */
+const READ_TIMEOUT_MS = 20_000;
 const STATIC_PREFIX = "/article-covers/";
 
 /**
@@ -17,12 +19,23 @@ const STATIC_PREFIX = "/article-covers/";
  * non-literal fetch() URL and can't be suppressed inline for JavaScript;
  * this is a browser reading its own page's image.
  */
-function readBlob(path: string): Promise<Blob | null> {
+function readBlob(path: string, signal?: AbortSignal): Promise<Blob | null> {
   return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve(null);
+      return;
+    }
     const request = new XMLHttpRequest();
+    const abort = () => request.abort();
+    const done = (blob: Blob | null) => {
+      signal?.removeEventListener("abort", abort);
+      resolve(blob);
+    };
     request.responseType = "blob";
-    request.onload = () => resolve(request.status === 200 ? (request.response as Blob) : null);
-    request.onerror = request.onabort = () => resolve(null);
+    request.timeout = READ_TIMEOUT_MS;
+    request.onload = () => done(request.status === 200 ? (request.response as Blob) : null);
+    request.onerror = request.onabort = request.ontimeout = () => done(null);
+    signal?.addEventListener("abort", abort, { once: true });
     request.open("GET", path);
     request.send();
   });
@@ -59,11 +72,12 @@ export async function loadCoverBitmap(
   frameHeight: number,
   pixelRatio: number,
   maxTextureSize: number,
+  signal?: AbortSignal,
 ): Promise<CoverBitmap | null> {
   const path = coverPath(url);
   if (!path || typeof createImageBitmap !== "function") return null;
-  const blob = await readBlob(path);
-  if (!blob) return null;
+  const blob = await readBlob(path, signal);
+  if (!blob || signal?.aborted) return null;
   let full: ImageBitmap;
   try {
     full = await createImageBitmap(blob, { imageOrientation: "from-image" });
