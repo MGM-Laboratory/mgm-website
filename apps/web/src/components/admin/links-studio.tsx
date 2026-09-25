@@ -32,7 +32,7 @@ const labelClass =
 const chipClass =
   "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.1em]";
 
-const LAST_DOMAIN_KEY = "mgm-links-domain";
+const LAST_DOMAIN_KEY = "mgm.links.lastDomainId";
 const SLUG_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 const URL_PATTERN = /^https?:\/\//i;
 
@@ -71,17 +71,16 @@ async function jsonOrThrow<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+const STATUS_TONE: Record<LinkStatus, string> = {
+  available: "bg-brand-green-50 text-brand-green",
+  consumed: "bg-brand-yellow-50 text-[#a97b1c]",
+  error: "bg-brand-red text-white",
+  expired: "bg-[#eef0f4] text-[#5c6470] dark:bg-white/10 dark:text-white/50",
+};
+
 function StatusBadge({ status }: { status: LinkStatus }) {
-  const tone =
-    status === "available"
-      ? "bg-brand-green-50 text-brand-green"
-      : status === "consumed"
-        ? "bg-brand-yellow-50 text-[#a97b1c]"
-        : status === "error"
-          ? "bg-brand-red text-white"
-          : "bg-[#eef0f4] text-[#5c6470] dark:bg-white/10 dark:text-white/50";
   return (
-    <span className={`${chipClass} ${tone}`} title={STATUS_HINT[status]}>
+    <span className={`${chipClass} ${STATUS_TONE[status]}`} title={STATUS_HINT[status]}>
       {STATUS_LABEL[status]}
     </span>
   );
@@ -200,6 +199,28 @@ function BreakdownList({
   );
 }
 
+function VisitEventBadge({ visit }: { visit: LinkAnalytics["recent"][number] }) {
+  if (visit.failedAttempt) {
+    return (
+      <span className="rounded-full bg-brand-red px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-white">
+        Rejected
+      </span>
+    );
+  }
+  if (visit.isClick) {
+    return (
+      <span className="rounded-full bg-brand-green-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-brand-green">
+        Click
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-brand-blue-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-brand-blue">
+      View
+    </span>
+  );
+}
+
 function AnalyticsPanel({ analytics, onClose }: { analytics: LinkAnalytics; onClose: () => void }) {
   const locationOf = (visit: LinkAnalytics["recent"][number]) =>
     [visit.city, visit.country].filter(Boolean).join(", ") || "Unknown";
@@ -293,19 +314,7 @@ function AnalyticsPanel({ analytics, onClose }: { analytics: LinkAnalytics; onCl
                     })}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    {visit.failedAttempt ? (
-                      <span className="rounded-full bg-brand-red px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-white">
-                        Rejected
-                      </span>
-                    ) : visit.isClick ? (
-                      <span className="rounded-full bg-brand-green-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-brand-green">
-                        Click
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-brand-blue-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-brand-blue">
-                        View
-                      </span>
-                    )}
+                    <VisitEventBadge visit={visit} />
                   </td>
                   <td className="px-3 py-2 font-mono whitespace-nowrap">{visit.ip ?? "—"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{locationOf(visit)}</td>
@@ -334,6 +343,464 @@ function AnalyticsPanel({ analytics, onClose }: { analytics: LinkAnalytics; onCl
   );
 }
 
+type DomainOption = ShortlinkDomain & { label: string };
+
+type EditForm = {
+  longUrl: string;
+  slug: string;
+  domainId: string;
+  expiresIn: ExpiryId;
+  passphraseMode: "keep" | "set" | "remove";
+  passphrase: string;
+};
+
+function domainLabel(domain: ShortlinkDomain): string {
+  if (domain.isPrimary) return `${domain.hostname} (site)`;
+  if (domain.status === "pending") return `${domain.hostname} (pending)`;
+  return domain.hostname;
+}
+
+function useEscapeToClose(onClose: () => void) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+}
+
+function RowAnalytics({
+  busy,
+  analytics,
+  onClose,
+}: {
+  busy: boolean;
+  analytics: LinkAnalytics | null;
+  onClose: () => void;
+}) {
+  if (busy) return <p className="px-3 py-4 text-xs text-[#9ba4b5]">Loading analytics…</p>;
+  if (analytics) return <AnalyticsPanel analytics={analytics} onClose={onClose} />;
+  return null;
+}
+
+function EditLinkModal({
+  editing,
+  domainOptions,
+  form,
+  setForm,
+  busy,
+  onClose,
+  onSave,
+}: {
+  editing: ShortlinkLink;
+  domainOptions: DomainOption[];
+  form: EditForm;
+  setForm: React.Dispatch<React.SetStateAction<EditForm>>;
+  busy: boolean;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  useEscapeToClose(onClose);
+  return (
+    <div
+      aria-label="Edit link"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0e1116]/45 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      role="dialog"
+    >
+      <div className="w-full max-w-lg rounded-2xl border border-[#e4e8f0] bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#1c212a]">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-base font-bold">Edit {editing.shortUrl}</h3>
+          <button
+            aria-label="Close"
+            className="rounded-lg p-1.5 text-[#7e899d] transition hover:bg-[#f7f8fa] dark:hover:bg-white/10"
+            onClick={onClose}
+            type="button"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <Field label="Long link">
+            <input
+              className={inputClass}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, longUrl: event.target.value }))
+              }
+              value={form.longUrl}
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Short code">
+              <input
+                className={`${inputClass} font-mono`}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, slug: event.target.value }))
+                }
+                value={form.slug}
+              />
+            </Field>
+            <Field label="Domain">
+              <select
+                className={inputClass}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, domainId: event.target.value }))
+                }
+                value={form.domainId}
+              >
+                {domainOptions.map((domain) => (
+                  <option
+                    disabled={domain.status === "pending" && domain.id !== editing.domainId}
+                    key={domain.id}
+                    value={domain.id}
+                  >
+                    {domain.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Expires">
+              <select
+                className={inputClass}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, expiresIn: event.target.value as ExpiryId }))
+                }
+                value={form.expiresIn}
+              >
+                {EXPIRY_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+                {form.expiresIn === "custom" ? (
+                  <option value="custom">
+                    Custom (
+                    {editing.expiresAt ? new Date(editing.expiresAt).toLocaleDateString() : ""})
+                  </option>
+                ) : null}
+              </select>
+            </Field>
+            <Field label="Passphrase">
+              <select
+                className={inputClass}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    passphraseMode: event.target.value as "keep" | "set" | "remove",
+                  }))
+                }
+                value={form.passphraseMode}
+              >
+                <option value="keep">
+                  {editing.hasPassphrase ? "Keep current" : "No passphrase"}
+                </option>
+                <option value="set">{editing.hasPassphrase ? "Set a new one" : "Add one"}</option>
+                {editing.hasPassphrase ? <option value="remove">Remove it</option> : null}
+              </select>
+            </Field>
+          </div>
+          {form.passphraseMode === "set" ? (
+            <Field label="New passphrase">
+              <input
+                className={inputClass}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, passphrase: event.target.value }))
+                }
+                type="password"
+                value={form.passphrase}
+              />
+            </Field>
+          ) : null}
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            className="h-10 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold text-[#3b4150] transition hover:bg-[#f7f8fa] dark:border-white/10 dark:text-white/70 dark:hover:bg-white/5"
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="h-10 rounded-xl bg-brand-blue px-5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
+            disabled={busy}
+            onClick={onSave}
+            type="button"
+          >
+            {busy ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DomainCard({
+  domain,
+  canWrite,
+  canDelete,
+  cnameTarget,
+  busy,
+  onCheck,
+  onDelete,
+  cfExpanded,
+  onToggleCf,
+  cfToken,
+  setCfToken,
+  cfBusy,
+  cfResult,
+  onAutoconfigure,
+}: {
+  domain: ShortlinkDomain;
+  canWrite: boolean;
+  canDelete: boolean;
+  cnameTarget: string;
+  busy: boolean;
+  onCheck: (domain: ShortlinkDomain) => void;
+  onDelete: (domain: ShortlinkDomain) => void;
+  cfExpanded: boolean;
+  onToggleCf: () => void;
+  cfToken: string;
+  setCfToken: (value: string) => void;
+  cfBusy: boolean;
+  cfResult: CloudflareSetupResult | null;
+  onAutoconfigure: (domain: ShortlinkDomain) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-[#e4e8f0] p-4 dark:border-white/10">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-mono text-sm font-semibold">{domain.hostname}</span>
+        {domain.status === "connected" ? (
+          <span className={`${chipClass} bg-brand-green-50 text-brand-green`}>Live</span>
+        ) : (
+          <span
+            className={`${chipClass} bg-[#eef0f4] text-[#5c6470] dark:bg-white/10 dark:text-white/50`}
+          >
+            Pending
+          </span>
+        )}
+        {domain.provider === "cloudflare" ? (
+          <span className={`${chipClass} bg-[#fef6e0] text-[#a97b1c]`} title="Hosted on Cloudflare">
+            Cloudflare
+          </span>
+        ) : (
+          <span
+            className={`${chipClass} bg-[#eef0f4] text-[#5c6470] dark:bg-white/10 dark:text-white/50`}
+          >
+            Manual DNS
+          </span>
+        )}
+        <span className="ml-auto text-xs text-[#9ba4b5]">
+          {domain.linkCount} link{domain.linkCount === 1 ? "" : "s"}
+        </span>
+        <button
+          aria-label="Check domain now"
+          className="rounded-lg p-1.5 text-[#778299] transition hover:bg-[#f7f8fa] hover:text-brand-blue dark:hover:bg-white/10"
+          disabled={busy}
+          onClick={() => onCheck(domain)}
+          title="Check now"
+          type="button"
+        >
+          <ArrowsClockwise size={16} />
+        </button>
+        {canDelete ? (
+          <button
+            aria-label="Remove domain"
+            className="rounded-lg p-1.5 text-[#778299] transition hover:bg-[#f7f8fa] hover:text-brand-red dark:hover:bg-white/10"
+            disabled={busy}
+            onClick={() => onDelete(domain)}
+            title="Remove domain"
+            type="button"
+          >
+            <Trash size={16} />
+          </button>
+        ) : null}
+      </div>
+      {domain.status !== "connected" ? (
+        <div className="mt-3 border-t border-[#eef0f4] pt-3 dark:border-white/5">
+          <p className="text-xs leading-5 text-[#778299] dark:text-white/45">
+            Add a CNAME record for <span className="font-mono">{domain.hostname}</span> pointing to{" "}
+            <span className="font-mono">{cnameTarget}</span>.
+          </p>
+          {domain.provider === "cloudflare" ? (
+            <div className="mt-3">
+              <button
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-brand-blue/40 bg-brand-blue/[0.06] px-3.5 text-xs font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white disabled:opacity-50"
+                disabled={cfBusy || !canWrite}
+                onClick={onToggleCf}
+                type="button"
+              >
+                <CloudArrowUp size={16} />
+                {cfExpanded ? "Close setup" : "Set up on Cloudflare"}
+              </button>
+              {cfExpanded ? (
+                <div className="mt-3 space-y-2 rounded-xl bg-[#fbfbfa] p-3 dark:bg-white/[0.03]">
+                  <p className="text-xs leading-5 text-[#778299] dark:text-white/45">
+                    Paste a Cloudflare API token with Zone · DNS · Edit for{" "}
+                    <span className="font-mono">{domain.hostname}</span>. It is stored encrypted and
+                    used only to create the DNS records.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      className={`${inputClass} font-mono`}
+                      onChange={(event) => setCfToken(event.target.value)}
+                      placeholder="Cloudflare API token"
+                      type="password"
+                      value={cfToken}
+                    />
+                    <button
+                      className="h-10 shrink-0 rounded-xl bg-brand-blue px-4 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
+                      disabled={cfBusy || !cfToken.trim()}
+                      onClick={() => onAutoconfigure(domain)}
+                      type="button"
+                    >
+                      {cfBusy ? "Working…" : "Autoconfigure"}
+                    </button>
+                  </div>
+                  {cfResult ? (
+                    <p className="text-xs leading-5 text-brand-green">
+                      Created the CNAME for <span className="font-mono">{cfResult.cname.name}</span>{" "}
+                      → <span className="font-mono">{cfResult.cname.content}</span>
+                      {cfResult.txt ? ` and the verification TXT on ${cfResult.txt.name}` : ""}. DNS
+                      can take a few minutes; use “Check now” to verify.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DomainsModal({
+  domains,
+  canWrite,
+  canDelete,
+  cnameTarget,
+  busy,
+  newDomain,
+  setNewDomain,
+  onAdd,
+  onDelete,
+  onCheck,
+  cfDomainId,
+  setCfDomainId,
+  cfToken,
+  setCfToken,
+  cfBusy,
+  cfResult,
+  onAutoconfigure,
+  onClose,
+}: {
+  domains: ShortlinkDomain[];
+  canWrite: boolean;
+  canDelete: boolean;
+  cnameTarget: string;
+  busy: boolean;
+  newDomain: string;
+  setNewDomain: (value: string) => void;
+  onAdd: () => void;
+  onDelete: (domain: ShortlinkDomain) => void;
+  onCheck: (domain: ShortlinkDomain) => void;
+  cfDomainId: string | null;
+  setCfDomainId: (id: string | null) => void;
+  cfToken: string;
+  setCfToken: (value: string) => void;
+  cfBusy: boolean;
+  cfResult: CloudflareSetupResult | null;
+  onAutoconfigure: (domain: ShortlinkDomain) => void;
+  onClose: () => void;
+}) {
+  useEscapeToClose(onClose);
+  const customDomains = domains.filter((domain) => !domain.isPrimary);
+  return (
+    <div
+      aria-label="Custom domains"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0e1116]/45 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      role="dialog"
+    >
+      <div className="w-full max-w-xl rounded-2xl border border-[#e4e8f0] bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#1c212a]">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-base font-bold">Custom domains</h3>
+          <button
+            aria-label="Close"
+            className="rounded-lg p-1.5 text-[#7e899d] transition hover:bg-[#f7f8fa] dark:hover:bg-white/10"
+            onClick={onClose}
+            type="button"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <p className="mb-4 text-xs leading-5 text-[#778299] dark:text-white/45">
+          A custom domain serves short links at its root ({customDomains[0]?.hostname ?? "mgm.li"}
+          /slug). Point it at the site with a CNAME and it goes live the moment it verifies.
+        </p>
+        <div className="space-y-3">
+          {customDomains.map((domain) => (
+            <DomainCard
+              busy={busy}
+              canDelete={canDelete}
+              canWrite={canWrite}
+              cfBusy={cfBusy}
+              cfExpanded={cfDomainId === domain.id}
+              cfResult={cfResult}
+              cfToken={cfToken}
+              cnameTarget={cnameTarget}
+              domain={domain}
+              key={domain.id}
+              onAutoconfigure={onAutoconfigure}
+              onCheck={onCheck}
+              onDelete={onDelete}
+              onToggleCf={() => setCfDomainId(cfDomainId === domain.id ? null : domain.id)}
+              setCfToken={setCfToken}
+            />
+          ))}
+          {customDomains.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-[#d9dfeb] px-4 py-6 text-center text-sm text-[#9ba4b5] dark:border-white/10 dark:text-white/35">
+              No custom domains yet.
+            </p>
+          ) : null}
+        </div>
+        {canWrite ? (
+          <div className="mt-4 flex gap-2 border-t border-[#eef0f4] pt-4 dark:border-white/5">
+            <input
+              className={`${inputClass} flex-1`}
+              onChange={(event) => setNewDomain(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void onAdd();
+              }}
+              placeholder="your-domain.com"
+              value={newDomain}
+            />
+            <button
+              className="h-10 shrink-0 rounded-xl border border-dashed border-brand-green/45 bg-brand-green/[0.04] px-4 text-sm font-semibold text-brand-green transition hover:bg-brand-green hover:text-white disabled:opacity-50"
+              disabled={busy || !newDomain.trim()}
+              onClick={onAdd}
+              type="button"
+            >
+              Add domain
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// NOSONAR: won't-fix, see docs/repo-history.md — the workspace is one
+// stateful studio; the heavy lifting already lives in the components above.
 export function LinksStudio({
   initialDomains,
   initialLinks,
@@ -718,7 +1185,7 @@ export function LinksStudio({
   const domainOptions = domains
     .map((domain) => ({
       ...domain,
-      label: `${domain.hostname}${domain.isPrimary ? " (site)" : domain.status === "pending" ? " (pending)" : ""}`,
+      label: domainLabel(domain),
     }))
     .sort(
       (a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.hostname.localeCompare(b.hostname),
@@ -989,11 +1456,11 @@ export function LinksStudio({
               </div>
               {analyticsId === link.id ? (
                 <div className="pb-2">
-                  {analyticsBusy ? (
-                    <p className="px-3 py-4 text-xs text-[#9ba4b5]">Loading analytics…</p>
-                  ) : analytics ? (
-                    <AnalyticsPanel analytics={analytics} onClose={() => setAnalyticsId(null)} />
-                  ) : null}
+                  <RowAnalytics
+                    analytics={analytics}
+                    busy={analyticsBusy}
+                    onClose={() => setAnalyticsId(null)}
+                  />
                 </div>
               ) : null}
             </div>
@@ -1009,327 +1476,38 @@ export function LinksStudio({
       </div>
 
       {editing ? (
-        <div
-          aria-label="Edit link"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0e1116]/45 p-4"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setEditing(null);
-          }}
-          role="dialog"
-        >
-          <div className="w-full max-w-lg rounded-2xl border border-[#e4e8f0] bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#1c212a]">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-bold">Edit {editing.shortUrl}</h3>
-              <button
-                aria-label="Close"
-                className="rounded-lg p-1.5 text-[#7e899d] transition hover:bg-[#f7f8fa] dark:hover:bg-white/10"
-                onClick={() => setEditing(null)}
-                type="button"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <Field label="Long link">
-                <input
-                  className={inputClass}
-                  onChange={(event) =>
-                    setEditForm((current) => ({ ...current, longUrl: event.target.value }))
-                  }
-                  value={editForm.longUrl}
-                />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Short code">
-                  <input
-                    className={`${inputClass} font-mono`}
-                    onChange={(event) =>
-                      setEditForm((current) => ({ ...current, slug: event.target.value }))
-                    }
-                    value={editForm.slug}
-                  />
-                </Field>
-                <Field label="Domain">
-                  <select
-                    className={inputClass}
-                    onChange={(event) =>
-                      setEditForm((current) => ({ ...current, domainId: event.target.value }))
-                    }
-                    value={editForm.domainId}
-                  >
-                    {domainOptions.map((domain) => (
-                      <option
-                        disabled={domain.status === "pending" && domain.id !== editing.domainId}
-                        key={domain.id}
-                        value={domain.id}
-                      >
-                        {domain.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Expires">
-                  <select
-                    className={inputClass}
-                    onChange={(event) =>
-                      setEditForm((current) => ({
-                        ...current,
-                        expiresIn: event.target.value as ExpiryId,
-                      }))
-                    }
-                    value={editForm.expiresIn}
-                  >
-                    {EXPIRY_OPTIONS.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                    {editForm.expiresIn === "custom" ? (
-                      <option value="custom">
-                        Custom (
-                        {editing.expiresAt ? new Date(editing.expiresAt).toLocaleDateString() : ""})
-                      </option>
-                    ) : null}
-                  </select>
-                </Field>
-                <Field label="Passphrase">
-                  <select
-                    className={inputClass}
-                    onChange={(event) =>
-                      setEditForm((current) => ({
-                        ...current,
-                        passphraseMode: event.target.value as "keep" | "set" | "remove",
-                      }))
-                    }
-                    value={editForm.passphraseMode}
-                  >
-                    <option value="keep">
-                      {editing.hasPassphrase ? "Keep current" : "No passphrase"}
-                    </option>
-                    <option value="set">
-                      {editing.hasPassphrase ? "Set a new one" : "Add one"}
-                    </option>
-                    {editing.hasPassphrase ? <option value="remove">Remove it</option> : null}
-                  </select>
-                </Field>
-              </div>
-              {editForm.passphraseMode === "set" ? (
-                <Field label="New passphrase">
-                  <input
-                    className={inputClass}
-                    onChange={(event) =>
-                      setEditForm((current) => ({ ...current, passphrase: event.target.value }))
-                    }
-                    type="password"
-                    value={editForm.passphrase}
-                  />
-                </Field>
-              ) : null}
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                className="h-10 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold text-[#3b4150] transition hover:bg-[#f7f8fa] dark:border-white/10 dark:text-white/70 dark:hover:bg-white/5"
-                onClick={() => setEditing(null)}
-                type="button"
-              >
-                Cancel
-              </button>
-              <button
-                className="h-10 rounded-xl bg-brand-blue px-5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
-                disabled={editBusy}
-                onClick={() => void saveEdit()}
-                type="button"
-              >
-                {editBusy ? "Saving…" : "Save changes"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <EditLinkModal
+          busy={editBusy}
+          domainOptions={domainOptions}
+          editing={editing}
+          form={editForm}
+          onClose={() => setEditing(null)}
+          onSave={() => void saveEdit()}
+          setForm={setEditForm}
+        />
       ) : null}
 
       {domainsOpen ? (
-        <div
-          aria-label="Custom domains"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0e1116]/45 p-4"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setDomainsOpen(false);
-          }}
-          role="dialog"
-        >
-          <div className="w-full max-w-xl rounded-2xl border border-[#e4e8f0] bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#1c212a]">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-bold">Custom domains</h3>
-              <button
-                aria-label="Close"
-                className="rounded-lg p-1.5 text-[#7e899d] transition hover:bg-[#f7f8fa] dark:hover:bg-white/10"
-                onClick={() => setDomainsOpen(false)}
-                type="button"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <p className="mb-4 text-xs leading-5 text-[#778299] dark:text-white/45">
-              A custom domain serves short links at its root (
-              {domains.find((domain) => !domain.isPrimary)?.hostname ?? "mgm.li"}
-              /slug). Point it at the site with a CNAME and it goes live the moment it verifies.
-            </p>
-            <div className="space-y-3">
-              {domains
-                .filter((domain) => !domain.isPrimary)
-                .map((domain) => (
-                  <div
-                    className="rounded-xl border border-[#e4e8f0] p-4 dark:border-white/10"
-                    key={domain.id}
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-sm font-semibold">{domain.hostname}</span>
-                      {domain.status === "connected" ? (
-                        <span className={`${chipClass} bg-brand-green-50 text-brand-green`}>
-                          Live
-                        </span>
-                      ) : (
-                        <span
-                          className={`${chipClass} bg-[#eef0f4] text-[#5c6470] dark:bg-white/10 dark:text-white/50`}
-                        >
-                          Pending
-                        </span>
-                      )}
-                      {domain.provider === "cloudflare" ? (
-                        <span
-                          className={`${chipClass} bg-[#fef6e0] text-[#a97b1c]`}
-                          title="Hosted on Cloudflare"
-                        >
-                          Cloudflare
-                        </span>
-                      ) : (
-                        <span
-                          className={`${chipClass} bg-[#eef0f4] text-[#5c6470] dark:bg-white/10 dark:text-white/50`}
-                        >
-                          Manual DNS
-                        </span>
-                      )}
-                      <span className="ml-auto text-xs text-[#9ba4b5]">
-                        {domain.linkCount} link{domain.linkCount === 1 ? "" : "s"}
-                      </span>
-                      <button
-                        aria-label="Check domain now"
-                        className="rounded-lg p-1.5 text-[#778299] transition hover:bg-[#f7f8fa] hover:text-brand-blue dark:hover:bg-white/10"
-                        disabled={domainBusy}
-                        onClick={() => void checkDomain(domain)}
-                        title="Check now"
-                        type="button"
-                      >
-                        <ArrowsClockwise size={16} />
-                      </button>
-                      {canDelete ? (
-                        <button
-                          aria-label="Remove domain"
-                          className="rounded-lg p-1.5 text-[#778299] transition hover:bg-[#f7f8fa] hover:text-brand-red dark:hover:bg-white/10"
-                          disabled={domainBusy}
-                          onClick={() => void deleteDomain(domain)}
-                          title="Remove domain"
-                          type="button"
-                        >
-                          <Trash size={16} />
-                        </button>
-                      ) : null}
-                    </div>
-                    {domain.status !== "connected" ? (
-                      <div className="mt-3 border-t border-[#eef0f4] pt-3 dark:border-white/5">
-                        <p className="text-xs leading-5 text-[#778299] dark:text-white/45">
-                          Add a CNAME record for{" "}
-                          <span className="font-mono">{domain.hostname}</span> pointing to{" "}
-                          <span className="font-mono">{cnameTarget}</span>.
-                        </p>
-                        {domain.provider === "cloudflare" ? (
-                          <div className="mt-3">
-                            <button
-                              className="inline-flex h-9 items-center gap-2 rounded-xl border border-brand-blue/40 bg-brand-blue/[0.06] px-3.5 text-xs font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white disabled:opacity-50"
-                              disabled={cfBusy || !canWrite}
-                              onClick={() =>
-                                setCfDomainId(cfDomainId === domain.id ? null : domain.id)
-                              }
-                              type="button"
-                            >
-                              <CloudArrowUp size={16} />
-                              {cfDomainId === domain.id ? "Close setup" : "Set up on Cloudflare"}
-                            </button>
-                            {cfDomainId === domain.id ? (
-                              <div className="mt-3 space-y-2 rounded-xl bg-[#fbfbfa] p-3 dark:bg-white/[0.03]">
-                                <p className="text-xs leading-5 text-[#778299] dark:text-white/45">
-                                  Paste a Cloudflare API token with Zone · DNS · Edit for{" "}
-                                  <span className="font-mono">{domain.hostname}</span>. It is stored
-                                  encrypted and used only to create the DNS records.
-                                </p>
-                                <div className="flex gap-2">
-                                  <input
-                                    className={`${inputClass} font-mono`}
-                                    onChange={(event) => setCfToken(event.target.value)}
-                                    placeholder="Cloudflare API token"
-                                    type="password"
-                                    value={cfToken}
-                                  />
-                                  <button
-                                    className="h-10 shrink-0 rounded-xl bg-brand-blue px-4 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
-                                    disabled={cfBusy || !cfToken.trim()}
-                                    onClick={() => void autoconfigureCloudflare(domain)}
-                                    type="button"
-                                  >
-                                    {cfBusy ? "Working…" : "Autoconfigure"}
-                                  </button>
-                                </div>
-                                {cfResult ? (
-                                  <p className="text-xs leading-5 text-brand-green">
-                                    Created the CNAME for{" "}
-                                    <span className="font-mono">{cfResult.cname.name}</span> →{" "}
-                                    <span className="font-mono">{cfResult.cname.content}</span>
-                                    {cfResult.txt
-                                      ? ` and the verification TXT on ${cfResult.txt.name}`
-                                      : ""}
-                                    . DNS can take a few minutes; use “Check now” to verify.
-                                  </p>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              {domains.filter((domain) => !domain.isPrimary).length === 0 ? (
-                <p className="rounded-xl border border-dashed border-[#d9dfeb] px-4 py-6 text-center text-sm text-[#9ba4b5] dark:border-white/10 dark:text-white/35">
-                  No custom domains yet.
-                </p>
-              ) : null}
-            </div>
-            {canWrite ? (
-              <div className="mt-4 flex gap-2 border-t border-[#eef0f4] pt-4 dark:border-white/5">
-                <input
-                  className={`${inputClass} flex-1`}
-                  onChange={(event) => setNewDomain(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void addDomain();
-                  }}
-                  placeholder="your-domain.com"
-                  value={newDomain}
-                />
-                <button
-                  className="h-10 shrink-0 rounded-xl border border-dashed border-brand-green/45 bg-brand-green/[0.04] px-4 text-sm font-semibold text-brand-green transition hover:bg-brand-green hover:text-white disabled:opacity-50"
-                  disabled={domainBusy || !newDomain.trim()}
-                  onClick={() => void addDomain()}
-                  type="button"
-                >
-                  Add domain
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <DomainsModal
+          busy={domainBusy}
+          canDelete={canDelete}
+          canWrite={canWrite}
+          cfBusy={cfBusy}
+          cfDomainId={cfDomainId}
+          cfResult={cfResult}
+          cfToken={cfToken}
+          cnameTarget={cnameTarget}
+          domains={domains}
+          newDomain={newDomain}
+          onAdd={() => void addDomain()}
+          onAutoconfigure={(domain) => void autoconfigureCloudflare(domain)}
+          onCheck={(domain) => void checkDomain(domain)}
+          onClose={() => setDomainsOpen(false)}
+          onDelete={(domain) => void deleteDomain(domain)}
+          setCfDomainId={setCfDomainId}
+          setCfToken={setCfToken}
+          setNewDomain={setNewDomain}
+        />
       ) : null}
     </div>
   );

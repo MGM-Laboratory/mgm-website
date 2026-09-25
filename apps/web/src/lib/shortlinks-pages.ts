@@ -211,15 +211,17 @@ type PageContent = {
 };
 
 function page({ title, eyebrow, heading, hint, form }: PageContent): string {
-  const statusNote = form?.error ? `<p class="error">${escapeHtml(form.error)}</p>` : "";
-  const formHtml = form
-    ? `<form method="post" action="/s/${encodeURIComponent(form.slug)}">
+  let formHtml = "";
+  if (form) {
+    const errorHtml = form.error ? `<p class="error">${escapeHtml(form.error)}</p>` : "";
+    const invalidAttr = form.error ? 'aria-invalid="true"' : "";
+    formHtml = `<form method="post" action="/s/${encodeURIComponent(form.slug)}">
         <label for="passphrase">Passphrase</label>
         <input id="passphrase" name="passphrase" type="password" placeholder="Passphrase"
-          autocomplete="current-password" required autofocus ${form.error ? 'aria-invalid="true"' : ""} />
+          autocomplete="current-password" required autofocus ${invalidAttr} />
         <button type="submit">Unlock link</button>
-      </form>${statusNote}`
-    : "";
+      </form>${errorHtml}`;
+  }
   return `<!doctype html>
 <html lang="en">
 <head>

@@ -16,11 +16,11 @@ import {
   railwayCustomDomainCreate,
   railwayCustomDomainDelete,
   railwayCustomDomainStatus,
+  type RailwayDomainStatus,
 } from "./shortlinks.providers.js";
 import {
   SLUG_MAX_LENGTH,
   SLUG_START_LENGTH,
-  apexOf,
   checkLongUrl,
   expiryFromOption,
   hashPassphrase,
@@ -29,6 +29,7 @@ import {
   parseUserAgent,
   randomSlug,
   verifyPassphrase,
+  zoneCandidates,
   type ExpiryOption,
 } from "./shortlinks.utils.js";
 
@@ -66,12 +67,15 @@ function clip(value: string | null | undefined, max: number): string | null {
 
 /** Hostnames ending in a Cloudflare nameserver: the domain lives on Cloudflare. */
 async function isCloudflareHost(hostname: string): Promise<boolean> {
-  try {
-    const servers = await resolveNs(apexOf(hostname));
-    return servers.some((server) => server.toLowerCase().endsWith(".ns.cloudflare.com"));
-  } catch {
-    return false;
+  for (const candidate of zoneCandidates(hostname)) {
+    try {
+      const servers = await resolveNs(candidate);
+      return servers.some((server) => server.toLowerCase().endsWith(".ns.cloudflare.com"));
+    } catch {
+      // Not a resolvable zone (yet); the next candidate may be.
+    }
   }
+  return false;
 }
 
 @Injectable()
@@ -92,17 +96,17 @@ export class ShortlinksService implements OnApplicationBootstrap {
   /** The site's own domain row, seeded once so /s/:slug links always have a home. */
   private async ensurePrimaryDomain() {
     const hostname = this.primaryHostname;
-    const existing = await this.prisma.shortLinkDomain.findUnique({ where: { hostname } });
-    if (!existing) {
-      await this.prisma.shortLinkDomain.create({
-        data: { hostname, isPrimary: true, provider: "local", status: "connected" },
-      });
-    } else if (!existing.isPrimary) {
-      await this.prisma.shortLinkDomain.update({
-        where: { id: existing.id },
-        data: { isPrimary: true },
-      });
-    }
+    // An upsert rather than find-then-create, so two concurrent boots can't
+    // race into a unique-constraint error while the other wins.
+    await this.prisma.shortLinkDomain.upsert({
+      where: { hostname },
+      create: { hostname, isPrimary: true, provider: "local", status: "connected" },
+      update: {},
+    });
+    await this.prisma.shortLinkDomain.updateMany({
+      where: { hostname, isPrimary: false },
+      data: { isPrimary: true },
+    });
   }
 
   // --- Domains ---
@@ -255,6 +259,95 @@ export class ShortlinksService implements OnApplicationBootstrap {
   }
 
   /**
+   * Attaches the domain to the web service through the Railway API (when a
+   * token is configured) and returns the routing target Railway expects.
+   */
+  private async attachOnRailway(domain: {
+    id: string;
+    hostname: string;
+    railwayDomainId: string | null;
+  }) {
+    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
+    const fallbackTarget = this.config.getOrThrow("SHORTLINKS_CNAME_TARGET");
+    if (!railwayToken)
+      return { railway: null as RailwayDomainStatus | null, cnameTarget: fallbackTarget };
+
+    let railway: RailwayDomainStatus | null = null;
+    if (domain.railwayDomainId) {
+      railway = await railwayCustomDomainStatus(
+        railwayToken,
+        domain.railwayDomainId,
+        this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
+      );
+    } else {
+      const available = await railwayCustomDomainAvailable(railwayToken, domain.hostname);
+      if (!available.available) {
+        throw new RailwayApiError(available.message ?? "Railway cannot attach this domain.");
+      }
+      const created = await railwayCustomDomainCreate(
+        railwayToken,
+        this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
+        this.config.getOrThrow("SHORTLINKS_RAILWAY_ENV_ID"),
+        this.config.getOrThrow("SHORTLINKS_WEB_SERVICE_ID"),
+        domain.hostname,
+      );
+      await this.prisma.shortLinkDomain.update({
+        where: { id: domain.id },
+        data: { railwayDomainId: created.id },
+      });
+      railway = created;
+    }
+    const routing = railway?.status?.dnsRecords?.[0];
+    return { railway, cnameTarget: routing?.requiredValue ?? fallbackTarget };
+  }
+
+  /**
+   * The Cloudflare DNS records. The verification TXT goes to two names
+   * (the domain root and _railway.<domain>) because Railway's dashboard
+   * shows the expected name and the API returns only the value; a stray
+   * harmless TXT beats a domain stuck in pending.
+   */
+  private async createCloudflareDns(
+    domain: { hostname: string },
+    token: string,
+    zoneId: string,
+    cnameTarget: string,
+    railway: RailwayDomainStatus | null,
+  ) {
+    try {
+      await createCloudflareDnsRecord(token, zoneId, {
+        type: "CNAME",
+        name: domain.hostname,
+        content: cnameTarget,
+      });
+    } catch (error) {
+      const message = error instanceof CloudflareError ? error.message : String(error);
+      throw new ShortlinksError(`Cloudflare rejected the DNS record: ${message}`);
+    }
+
+    const verificationToken = railway?.status?.verificationToken;
+    if (verificationToken) {
+      const txtHosts = new Set([domain.hostname, `_railway.${domain.hostname}`]);
+      for (const txtHost of txtHosts) {
+        try {
+          await createCloudflareDnsRecord(token, zoneId, {
+            type: "TXT",
+            name: txtHost,
+            content: verificationToken,
+          });
+        } catch (error) {
+          const message = error instanceof CloudflareError ? error.message : String(error);
+          throw new ShortlinksError(
+            `The routing record was created but the verification TXT failed: ${message}`,
+          );
+        }
+      }
+      return { name: `_railway.${domain.hostname}`, content: verificationToken };
+    }
+    return null;
+  }
+
+  /**
    * One-click Cloudflare setup: attach the domain on Railway (so the edge
    * routes it to the web service), then create the routing and verification
    * DNS records on Cloudflare.
@@ -275,74 +368,21 @@ export class ShortlinksService implements OnApplicationBootstrap {
       );
     }
 
-    let cnameTarget = this.config.getOrThrow("SHORTLINKS_CNAME_TARGET");
-    let railway = null;
-    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
-    if (railwayToken) {
-      try {
-        if (domain.railwayDomainId) {
-          railway = await railwayCustomDomainStatus(
-            railwayToken,
-            domain.railwayDomainId,
-            this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
-          );
-        } else {
-          const available = await railwayCustomDomainAvailable(railwayToken, domain.hostname);
-          if (!available.available) {
-            throw new RailwayApiError(available.message ?? "Railway cannot attach this domain.");
-          }
-          const created = await railwayCustomDomainCreate(
-            railwayToken,
-            this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
-            this.config.getOrThrow("SHORTLINKS_RAILWAY_ENV_ID"),
-            this.config.getOrThrow("SHORTLINKS_WEB_SERVICE_ID"),
-            domain.hostname,
-          );
-          await this.prisma.shortLinkDomain.update({
-            where: { id },
-            data: { railwayDomainId: created.id },
-          });
-          railway = created;
-        }
-      } catch (error) {
-        throw new ShortlinksError(
-          `Railway could not attach the domain: ${error instanceof RailwayApiError ? error.message : String(error)}`,
-        );
-      }
-      const routing = railway?.status?.dnsRecords?.[0];
-      if (routing?.requiredValue) cnameTarget = routing.requiredValue;
-    }
-
+    let railwayResult: { railway: RailwayDomainStatus | null; cnameTarget: string };
     try {
-      await createCloudflareDnsRecord(tokenValue, zoneId, {
-        type: "CNAME",
-        name: domain.hostname,
-        content: cnameTarget,
-      });
+      railwayResult = await this.attachOnRailway(domain);
     } catch (error) {
-      const message = error instanceof CloudflareError ? error.message : String(error);
-      throw new ShortlinksError(`Cloudflare rejected the DNS record: ${message}`);
+      throw new ShortlinksError(
+        `Railway could not attach the domain: ${error instanceof RailwayApiError ? error.message : String(error)}`,
+      );
     }
-
-    let txtRecord: { name: string; content: string } | null = null;
-    if (railway?.status?.verificationToken) {
-      const txtHost =
-        railway.status.dnsRecords.find((record) => record.hostlabel.includes("_"))?.hostlabel ??
-        `_railway.${domain.hostname}`;
-      try {
-        await createCloudflareDnsRecord(tokenValue, zoneId, {
-          type: "TXT",
-          name: txtHost,
-          content: railway.status.verificationToken,
-        });
-        txtRecord = { name: txtHost, content: railway.status.verificationToken };
-      } catch (error) {
-        const message = error instanceof CloudflareError ? error.message : String(error);
-        throw new ShortlinksError(
-          `The routing record was created but the verification TXT failed: ${message}`,
-        );
-      }
-    }
+    const txt = await this.createCloudflareDns(
+      domain,
+      tokenValue,
+      zoneId,
+      railwayResult.cnameTarget,
+      railwayResult.railway,
+    );
 
     await this.prisma.shortLinkDomain.update({
       where: { id },
@@ -355,9 +395,9 @@ export class ShortlinksService implements OnApplicationBootstrap {
 
     return {
       zoneId,
-      cname: { name: domain.hostname, content: cnameTarget },
-      txt: txtRecord,
-      railwayAttached: Boolean(railway),
+      cname: { name: domain.hostname, content: railwayResult.cnameTarget },
+      txt,
+      railwayAttached: Boolean(railwayResult.railway),
       next: "verify" as const,
     };
   }
@@ -480,6 +520,17 @@ export class ShortlinksService implements OnApplicationBootstrap {
     return links.map((link) => this.toLinkDto(link, link.domain));
   }
 
+  /** keep leaves the stored hash alone, set re-hashes, remove clears it. */
+  private async resolvePassphrase(
+    action: "keep" | "set" | "remove",
+    passphrase: string | undefined,
+    current: { salt: string | null; hash: string | null },
+  ) {
+    if (action === "set" && passphrase) return hashPassphrase(passphrase);
+    if (action === "remove") return null;
+    return current.hash ? { salt: current.salt ?? "", hash: current.hash } : null;
+  }
+
   async updateLink(
     id: string,
     input: {
@@ -508,14 +559,10 @@ export class ShortlinksService implements OnApplicationBootstrap {
     }
 
     const expiry = input.expiresIn ? expiryFromOption(input.expiresIn) : null;
-    const passphrase =
-      input.passphraseAction === "set" && input.passphrase
-        ? await hashPassphrase(input.passphrase)
-        : input.passphraseAction === "remove"
-          ? null
-          : link.passphraseHash
-            ? { salt: link.passphraseSalt ?? "", hash: link.passphraseHash }
-            : null;
+    const passphrase = await this.resolvePassphrase(input.passphraseAction, input.passphrase, {
+      salt: link.passphraseSalt,
+      hash: link.passphraseHash,
+    });
 
     const longUrlChanged = input.longUrl !== undefined && input.longUrl !== link.longUrl;
     const updated = await this.prisma.shortLink.update({

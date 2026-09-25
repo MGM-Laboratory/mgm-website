@@ -1,4 +1,6 @@
 import { lookup } from "node:dns/promises";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { randomInt, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
 import { promisify } from "node:util";
@@ -37,10 +39,17 @@ export function normalizeHostname(value: string): string {
   return host;
 }
 
-/** The registrable part of a hostname: "short.mgm.li" → "mgm.li". */
-export function apexOf(hostname: string): string {
+/** The registrable part of a hostname, as a longest-first candidate list:
+ * "short.mgm.li" → ["short.mgm.li", "mgm.li"]. Trying the full hostname
+ * first also handles multi-label public suffixes like foo.co.uk correctly
+ * without a suffix database. */
+export function zoneCandidates(hostname: string): string[] {
   const labels = hostname.split(".").filter(Boolean);
-  return labels.length > 2 ? labels.slice(-2).join(".") : labels.join(".");
+  const candidates: string[] = [];
+  for (let keep = labels.length; keep >= 2; keep -= 1) {
+    candidates.push(labels.slice(-keep).join("."));
+  }
+  return candidates;
 }
 
 export async function hashPassphrase(passphrase: string) {
@@ -50,6 +59,9 @@ export async function hashPassphrase(passphrase: string) {
 }
 
 export async function verifyPassphrase(passphrase: string, saltHex: string, hashHex: string) {
+  // Stored values must be real hex of the expected width: anything else
+  // (an empty buffer from malformed hex included) must not verify.
+  if (!/^[0-9a-f]{32}$/.test(saltHex) || !/^[0-9a-f]{128}$/.test(hashHex)) return false;
   try {
     const expected = Buffer.from(hashHex, "hex");
     const actual = await scryptAsync(passphrase, Buffer.from(saltHex, "hex"), expected.length);
@@ -61,38 +73,52 @@ export async function verifyPassphrase(passphrase: string, saltHex: string, hash
 
 export type ClientInfo = { browser: string; os: string; device: string };
 
+const BROWSER_PATTERNS: [RegExp, string][] = [
+  [/edg(e|ios|a)?\//, "Edge"],
+  [/opr\/|opera/, "Opera"],
+  [/firefox\//, "Firefox"],
+  [/chrome\/|crios\//, "Chrome"],
+  [/safari\//, "Safari"],
+  [/\bwhatsapp\//, "WhatsApp"],
+  [/\binstagram\b/, "Instagram"],
+  [/\btelegram\b/, "Telegram"],
+  [/\bfacebook\b|fbav|fban/, "Facebook"],
+  [/\bpostman\b/, "Postman"],
+  [/curl\/|wget\//, "cURL"],
+  [/bot|crawl|spider|slurp|preview/, "Bot"],
+];
+
+const OS_PATTERNS: [RegExp, string][] = [
+  [/windows/, "Windows"],
+  // iOS before macOS: an iPhone user agent also carries "like Mac OS X".
+  [/iphone|ipad|ipod/, "iOS"],
+  [/android/, "Android"],
+  [/mac os x|macintosh/, "macOS"],
+  [/crkey|netcast|tizen/, "TV"],
+  [/linux/, "Linux"],
+];
+
+const DEVICE_PATTERNS: [RegExp, string][] = [
+  [/ipad|tablet/, "Tablet"],
+  [/iphone|android.*mobile|blackberry|windows phone/, "Mobile"],
+  [/crkey|netcast|tizen/, "TV"],
+];
+
+function matchFirst(ua: string, patterns: [RegExp, string][], fallback: string): string {
+  for (const [pattern, label] of patterns) {
+    if (pattern.test(ua)) return label;
+  }
+  return fallback;
+}
+
 /** Best-effort user-agent classification, dependency-free. */
 export function parseUserAgent(userAgent: string): ClientInfo {
   const ua = (userAgent ?? "").toLowerCase();
-  let browser = "Other";
-  let os = "Other";
-  let device = "Desktop";
-
-  if (/edg(e|ios|a)?\//.test(ua)) browser = "Edge";
-  else if (/opr\/|opera/.test(ua)) browser = "Opera";
-  else if (/firefox\//.test(ua)) browser = "Firefox";
-  else if (/chrome\/|crios\//.test(ua)) browser = "Chrome";
-  else if (/safari\//.test(ua)) browser = "Safari";
-  else if (/\bwhatsapp\//.test(ua)) browser = "WhatsApp";
-  else if (/\binstagram\b/.test(ua)) browser = "Instagram";
-  else if (/\btelegram\b/.test(ua)) browser = "Telegram";
-  else if (/\bfacebook\b|fbav|fban/.test(ua)) browser = "Facebook";
-  else if (/\bpostman\b/.test(ua)) browser = "Postman";
-  else if (/curl\/|wget\//.test(ua)) browser = "cURL";
-  else if (/bot|crawl|spider|slurp|preview/.test(ua)) browser = "Bot";
-
-  if (/windows/.test(ua)) os = "Windows";
-  else if (/mac os x|macintosh/.test(ua)) os = "macOS";
-  else if (/iphone|ipad|ipod/.test(ua)) os = "iOS";
-  else if (/android/.test(ua)) os = "Android";
-  else if (/crkey|netcast|tizen/.test(ua)) os = "TV";
-  else if (/linux/.test(ua)) os = "Linux";
-
-  if (/ipad|tablet/.test(ua)) device = "Tablet";
-  else if (/iphone|android.*mobile|blackberry|windows phone/.test(ua)) device = "Mobile";
-  else if (/crkey|netcast|tizen/.test(ua)) device = "TV";
-
-  return { browser, os, device };
+  return {
+    browser: matchFirst(ua, BROWSER_PATTERNS, "Other"),
+    os: matchFirst(ua, OS_PATTERNS, "Other"),
+    device: matchFirst(ua, DEVICE_PATTERNS, "Desktop"),
+  };
 }
 
 function isPrivateAddress(address: string): boolean {
@@ -110,15 +136,60 @@ function isPrivateAddress(address: string): boolean {
         a >= 224
       );
     }
-    return address === "::1" || address.startsWith("fc") || address.startsWith("fd");
+    // Link-local (fe80::/10), unique local (fc00::/7) and the loopback.
+    return (
+      address === "::1" ||
+      address.startsWith("fc") ||
+      address.startsWith("fd") ||
+      address.startsWith("fe8") ||
+      address.startsWith("fe9") ||
+      address.startsWith("fea") ||
+      address.startsWith("feb")
+    );
   }
   return false;
 }
 
 /**
+ * One request straight to a previously resolved address: the connection is
+ * pinned to the IP while the Host header and the TLS server name keep the
+ * original hostname, so nothing a DNS rebinding can change between the
+ * lookup and the request.
+ */
+function requestToAddress(
+  protocol: string,
+  address: string,
+  hostHeader: string,
+  hostname: string,
+  path: string,
+  method: "HEAD" | "GET",
+): Promise<number | null> {
+  const driver = protocol === "https:" ? httpsRequest : httpRequest;
+  const port = protocol === "https:" ? 443 : 80;
+  const options = {
+    hostname: address,
+    port,
+    method,
+    path,
+    headers: { host: hostHeader },
+    servername: protocol === "https:" ? hostname : undefined,
+    signal: AbortSignal.timeout(5000),
+  };
+  return new Promise((resolve, reject) => {
+    const req = driver(options, (response) => {
+      response.resume();
+      resolve(response.statusCode ?? null);
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+/**
  * A best-effort HEAD check of a link's target, with two guards against the
  * API being used to probe internal networks: the URL must be http(s), and
- * every address the hostname resolves to must be a public one.
+ * every address the hostname resolves to must be a public one, with the
+ * request itself pinned to one of those addresses.
  */
 export async function checkLongUrl(url: string): Promise<"ok" | "error"> {
   let parsed: URL;
@@ -128,22 +199,38 @@ export async function checkLongUrl(url: string): Promise<"ok" | "error"> {
   } catch {
     return "error";
   }
-  if (isIP(parsed.hostname) && isPrivateAddress(parsed.hostname)) return "error";
-  try {
-    const addresses = await lookup(parsed.hostname, { all: true });
-    if (addresses.length === 0 || addresses.some(({ address }) => isPrivateAddress(address))) {
+  let addresses: { address: string }[];
+  if (isIP(parsed.hostname)) {
+    if (isPrivateAddress(parsed.hostname)) return "error";
+    addresses = [{ address: parsed.hostname }];
+  } else {
+    try {
+      addresses = await lookup(parsed.hostname, { all: true });
+      if (addresses.length === 0 || addresses.some(({ address }) => isPrivateAddress(address))) {
+        return "error";
+      }
+    } catch {
       return "error";
     }
-  } catch {
-    return "error";
   }
+
   const attempt = async (method: "HEAD" | "GET") => {
-    const response = await fetch(url, {
-      method,
-      redirect: "follow",
-      signal: AbortSignal.timeout(5000),
-    });
-    return response.status < 400 ? "ok" : "error";
+    for (const { address } of addresses) {
+      try {
+        const status = await requestToAddress(
+          parsed.protocol,
+          address,
+          parsed.host,
+          parsed.hostname,
+          parsed.pathname + parsed.search,
+          method,
+        );
+        if (status !== null) return status < 400 ? "ok" : "error";
+      } catch {
+        // Try the next address; a multi-homed host only needs one that works.
+      }
+    }
+    return "error";
   };
   try {
     return await attempt("HEAD");

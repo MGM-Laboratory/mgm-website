@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
-import { apexOf } from "./shortlinks.utils.js";
+import { zoneCandidates } from "./shortlinks.utils.js";
 
 /**
  * Encrypts a Cloudflare API token with AES-256-GCM before it touches the
@@ -25,8 +25,10 @@ export function decryptToken(stored: string): string | null {
   try {
     const key = Buffer.from(process.env.SHORTLINKS_ENCRYPTION_KEY ?? "", "hex");
     const [ivHex, tagHex, ciphertextHex] = stored.split(".");
+    const tag = Buffer.from(tagHex, "hex");
+    if (tag.length !== 16) return null;
     const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"));
-    decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+    decipher.setAuthTag(tag);
     return Buffer.concat([
       decipher.update(Buffer.from(ciphertextHex, "hex")),
       decipher.final(),
@@ -75,11 +77,16 @@ async function cloudflareRequest(
 }
 
 export async function findCloudflareZone(token: string, hostname: string): Promise<string | null> {
-  const zones = (await cloudflareRequest(
-    token,
-    `/zones?name=${encodeURIComponent(apexOf(hostname))}`,
-  )) as { id: string }[];
-  return zones[0]?.id ?? null;
+  // Longest candidate first: a subdomain's own zone wins over its parent's,
+  // and multi-label suffixes like foo.co.uk resolve to the right zone.
+  for (const candidate of zoneCandidates(hostname)) {
+    const zones = (await cloudflareRequest(
+      token,
+      `/zones?name=${encodeURIComponent(candidate)}`,
+    )) as { id: string }[];
+    if (zones[0]?.id) return zones[0].id;
+  }
+  return null;
 }
 
 export type CloudflareDnsRecord = { name: string; content: string; type: "CNAME" | "TXT" };

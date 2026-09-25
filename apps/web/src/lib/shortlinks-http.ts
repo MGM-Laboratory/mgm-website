@@ -149,7 +149,8 @@ export async function handleShortlinkPost(request: Request, slug: string): Promi
   let passphrase = "";
   try {
     const form = await request.formData();
-    passphrase = String(form.get("passphrase") ?? "").trim();
+    const value = form.get("passphrase");
+    if (typeof value === "string") passphrase = value.trim();
   } catch {
     // A JSON or malformed body is treated as an empty passphrase.
   }
