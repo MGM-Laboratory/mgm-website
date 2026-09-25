@@ -37,26 +37,64 @@ let feedCache: Cached<CmsArticleRecord[]>;
 let fullCache: Cached<CmsArticleRecord[]>;
 let membersCache: Cached<readonly Member[]>;
 
-function fresh<T>(entry: Cached<T>, ttl: number): entry is { value: T; at: number } {
-  return Boolean(entry && Date.now() - entry.at < ttl);
+/** The cached value while it is younger than `ttl`, else undefined. */
+function freshValue<T>(entry: Cached<T>, ttl: number): T | undefined {
+  return entry && Date.now() - entry.at < ttl ? entry.value : undefined;
 }
 
+/**
+ * One CMS read in flight per copy: requests arriving while it runs share
+ * it, so a burst (the first visitors, or a copy expiring under load) costs
+ * one round trip instead of one each.
+ */
+function coalesced<T>(read: () => Promise<T>) {
+  let flight: Promise<T> | null = null;
+  return () => {
+    flight ??= read().finally(() => {
+      flight = null;
+    });
+    return flight;
+  };
+}
+
+const fetchFeed = coalesced(async () => {
+  const value = publishedArticles(await ensureArticleFeed());
+  feedCache = { value, at: Date.now() };
+  return value;
+});
+
+const fetchFullRecords = coalesced(async () => {
+  const value = publishedArticles(await ensureArticleCmsSeeded());
+  fullCache = { value, at: Date.now() };
+  return value;
+});
+
+const fetchMembers = coalesced(async () => {
+  const value = mergeMemberRecords(MEMBERS, await ensureMemberCmsSeeded());
+  membersCache = { value, at: Date.now() };
+  return value;
+});
+
 async function readFeed(reuse: boolean) {
-  if (reuse && fresh(feedCache, FEED_TTL_MS)) return feedCache.value;
+  const cached = reuse ? freshValue(feedCache, FEED_TTL_MS) : undefined;
+  if (cached) return cached;
   try {
-    const value = publishedArticles(await ensureArticleFeed());
-    feedCache = { value, at: Date.now() };
-    return value;
+    return await fetchFeed();
   } catch {
     // A CMS outage keeps the last good copy rather than emptying the list.
     return feedCache?.value ?? [];
   }
 }
 
-/** Whether the full records hold every article in the feed, as saved now. */
+/**
+ * Whether the full records hold every article in the feed, as saved now. A
+ * record without a revision can't be proven current, so it never counts.
+ */
 function coversFeed(full: readonly CmsArticleRecord[], feed: readonly CmsArticleRecord[]) {
   const saved = new Map(full.map((record) => [record.slug, record.updatedAt]));
-  return feed.every((record) => saved.get(record.slug) === record.updatedAt);
+  return feed.every(
+    (record) => record.updatedAt !== undefined && saved.get(record.slug) === record.updatedAt,
+  );
 }
 
 /**
@@ -65,22 +103,20 @@ function coversFeed(full: readonly CmsArticleRecord[], feed: readonly CmsArticle
  * shows up in search at once instead of after the copy expires.
  */
 async function readFullRecords(feed: readonly CmsArticleRecord[]) {
-  if (fresh(fullCache, FULL_TTL_MS) && coversFeed(fullCache.value, feed)) return fullCache.value;
+  const cached = freshValue(fullCache, FULL_TTL_MS);
+  if (cached && coversFeed(cached, feed)) return cached;
   try {
-    const value = publishedArticles(await ensureArticleCmsSeeded());
-    fullCache = { value, at: Date.now() };
-    return value;
+    return await fetchFullRecords();
   } catch {
     return fullCache?.value ?? [];
   }
 }
 
 async function readMembers() {
-  if (fresh(membersCache, MEMBERS_TTL_MS)) return membersCache.value;
+  const cached = freshValue(membersCache, MEMBERS_TTL_MS);
+  if (cached) return cached;
   try {
-    const value = mergeMemberRecords(MEMBERS, await ensureMemberCmsSeeded());
-    membersCache = { value, at: Date.now() };
-    return value;
+    return await fetchMembers();
   } catch {
     return membersCache?.value ?? [...MEMBERS];
   }
