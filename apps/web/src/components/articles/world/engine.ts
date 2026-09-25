@@ -102,6 +102,10 @@ const SETTLE_VEIL = 0.8;
 const SETTLE_VEIL_SECONDS = 0.65;
 /** Seconds the camera, fog and particles take to follow a route change. */
 const ROUTE_EASE_SECONDS = 1;
+/** Share of a transition pan the camera makes relative to the library, at first. */
+const ENV_PAN_PARALLAX = 0.28;
+/** ...never taking it further off the nave's axis than this share of the nave's half-width. */
+const ENV_PAN_REACH = 0.45;
 /** The longest scroll smear, CSS px (a fast flick). */
 const MAX_BLUR = 22;
 /** Most sparks a theme front throws per frame, by tier (the ring buffer's size bounds them). */
@@ -297,6 +301,14 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.transition = {
       setPan: (px) => {
         this.rig.offset.x = px;
+        // The library follows the pan, all but a parallax that makes the
+        // cards race past it: that part eases out as it nears its reach, so
+        // a long pan (the list's 2800 px to an article) keeps the camera
+        // inside the nave, on a phone as on a wide screen, instead of
+        // carrying it out through a wall of shelves.
+        const reach = Math.max(1, this.frameHalf * ENV_PAN_REACH);
+        const parallax = reach * Math.tanh((px * ENV_PAN_PARALLAX) / reach);
+        this.envGroup.position.x = px - parallax;
       },
       setWipe: (progress, color, opacity = 1) => {
         this.composite.uniforms.uWipe.value = progress;

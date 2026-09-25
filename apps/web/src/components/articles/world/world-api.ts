@@ -79,7 +79,8 @@ export type CardsLayerApi = {
 export type WorldTransitionApi = {
   /**
    * Pans the whole list scene horizontally (CSS px at the card plane,
-   * positive moves the view right so the cards travel left).
+   * positive moves the view right so the cards travel left). The library
+   * follows all but a bounded parallax, so the camera never leaves the nave.
    */
   setPan(px: number): void;
   /**
