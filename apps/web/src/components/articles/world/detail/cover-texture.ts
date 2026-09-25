@@ -84,6 +84,11 @@ export async function loadCoverBitmap(
   } catch {
     return null;
   }
+  // The page may have gone while the picture decoded: no resize for nobody.
+  if (signal?.aborted) {
+    full.close();
+    return null;
+  }
   // The ripples refract up to a few percent past the frame: a little margin.
   const cover = Math.max(frameWidth / full.width, frameHeight / full.height);
   const scale = Math.min(
@@ -101,6 +106,10 @@ export async function loadCoverBitmap(
       resizeQuality: "high",
     });
     full.close();
+    if (signal?.aborted) {
+      bitmap.close();
+      return null;
+    }
     return { bitmap, width, height };
   } catch {
     return { bitmap: full, width: full.width, height: full.height };
