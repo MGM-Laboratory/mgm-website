@@ -158,7 +158,7 @@ Panning the camera 2800 px (unseen's list-to-project pan) carried it out through
 
 ### 27. A frame-time clock stretches every beat on a slow renderer
 
-A clock that adds each frame's time capped at 0.5 s (so a single hitch doesn't jump the animation) runs slow when every frame is slow: on CI's software-rendered Linux WebKit the portal's cover was still playing five seconds after a click. Keep the frame clock for the animation, bound every beat in real (visible) time as well, and tick the run from a timer while frames stop coming.
+A clock that adds each frame's time capped at 0.5 s (so a single hitch doesn't jump the animation) runs slow when every frame is slow: on CI's software-rendered Linux WebKit the portal's cover was still playing five seconds after a click. Keep the frame clock for the animation, bound every beat in real (visible) time as well, and tick the run from a timer while frames stop coming. GSAP timelines have the same problem through lag smoothing (at most 33 ms of timeline per frame over 500 ms): the articles transitions push each timeline's playhead forward from a timer (`paced` in `article-transitions.ts`). And when frames are that slow for good, the articles world gives the visit to its DOM version (`HopelessWatch` in `articles/world/quality.ts`).
 
 ### 28. Motion blur taps that share the lens's spectral weights smear into rainbows
 

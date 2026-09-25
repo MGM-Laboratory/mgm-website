@@ -52,7 +52,7 @@ Modelled in library units (`library/layout.ts`), scaled so a unit is a ninth of 
 - **Screen pass** (`fx/composite.ts`): barrel distortion with a radial spectral split (about 17 px at a 1440 px corner), a vertical motion blur as long as the scroll is fast (decorrelated from the split so it never smears into rainbows), vignette, grain, click pulses, and the transitions' right-to-left wipe. The list wears the lens fully, articles keep the grain only. A first visit starts strongly warped and settles.
 - **Cursor** (fine pointers, motion allowed): a thin ring that lags and stretches (at most 55%), dots over links, haloes over a card, presses in. Moving leaves a trail of motes. Resting about 400 ms releases a swarm of paper. On touch, a drag trails, a tap bursts, a long press swarms.
 - **Theme switch**: the header toggle hands the switch to the world (`lib/theme-switch.ts`). The new scheme spreads from the toggle behind a ragged front (per pixel, `darkAt()` in `world-glsl.ts`), sparks race along it, and the lanterns gutter and relight. The DOM flips through a View Transition clipped to the very same edge (`theme-wave.ts`, `fx/theme-front.ts`).
-- **Quality** (`quality.ts`): starts at a device guess, watches steady visible frames for the first seconds and steps down (pixel ratio first, then the tier that thins the library and particles). It never steps back up in a visit.
+- **Quality** (`quality.ts`): starts at a device guess, watches steady visible frames for the first seconds and steps down (pixel ratio first, then the tier that thins the library and particles). It never steps back up in a visit. A world still under about 8 fps after warming up (`HopelessWatch`: a software renderer that hides its name, as WebKit's does) hands the visit to the DOM list, as a lost context does, but never under a running transition.
 
 ## The list (`/articles`)
 
@@ -136,8 +136,9 @@ The next-article pull is not a swap: `[data-article-next]` links are left to the
 - **Browser back and forward** cover at once in the popstate handler (the route is already changing) and play only the "in" half. The cover then dissolves or recedes as usual.
 - **Without the world**, a fixed overlay in the same color plays the same sweep (a clip from the right) and the DOM grid slides with it.
 - **Reduced motion** is never intercepted: links navigate natively, and the return note (`restoreOnly`) still brings the list back to the card.
+- **Slow frames** can't stretch a run: GSAP's lag smoothing advances a timeline by at most 33 ms per slow frame, so a timer keeps every timeline at least at two thirds of real, visible speed (`paced`).
 - **One `finish()`** releases everything on every path (landed, superseded, route changed elsewhere, unmounted), and a visible-time ceiling of 16 s ends a run that never did. Frame callbacks are guarded: a fault ends the run cleanly instead of freezing it.
-- While a run covers the screen, `html[data-article-transition]` hides the page coming in from its first frame (`transitions.css`, opacity only), and every click is swallowed.
+- While a run covers the screen, `html[data-article-transition]` hides the page coming in from its first frame (`transitions.css`, opacity only). Clicks are swallowed while the screen is covered. Once the page coming in shows, a click lands the transition at once and goes through.
 
 ### The portal (in from the site, out to it)
 
@@ -147,7 +148,7 @@ The controller (`articles-portal-controller.ts`) ships in the root layout but lo
 
 Timing: the GL stage covers in 1.05 s and reveals in 1.4 s going in (1.25 s and 1.0 s going out). The DOM stage takes about 0.6 s each way. After the route commits, the portal holds (bounded) for the content to replace its loading shell, the page to report ready and the world to decide its mode, then reveals. Into an article with WebGL it holds longer for the content (up to 3.4 s), showing a line of ink to say the library is still writing the page.
 
-Every wait counts visible time only (a background tab pauses it). The frame clock counts at most half a second per frame, so each beat is also bounded in real time at 1.5 times its length, and a timer ticks the run on while the frame loop is silent. A software renderer on a loaded machine therefore can't hold a visitor under the cover (this was a real flake on CI's Linux WebKit).
+Clicks are swallowed while the portal covers the screen. Once the destination is revealing, a click hands the page back at once (the last of the fog still draws) and goes through. Every wait counts visible time only (a background tab pauses it). The frame clock counts at most half a second per frame, so each beat is also bounded in real time at 1.5 times its length, and a timer ticks the run on while the frame loop is silent. A software renderer on a loaded machine therefore can't hold a visitor under the cover (this was a real flake on CI's Linux WebKit).
 
 ## Verifying changes here
 
