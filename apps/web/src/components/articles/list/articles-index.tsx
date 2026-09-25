@@ -291,7 +291,7 @@ export function ArticlesIndex({
   // the scroll resets while nothing shows, the new first batch rises.
   useEffect(() => {
     if (list.key === currentKey && retry === 0) return;
-    const token = ++swapRef.current;
+    const generation = ++swapRef.current;
     const controller = new AbortController();
     const world = getArticlesWorld();
     const grid = gridRef.current;
@@ -308,7 +308,7 @@ export function ArticlesIndex({
       requestArticleBatch(settledQuery, 0, ARTICLE_BATCH_SIZE, controller.signal),
       leaving,
     ]).then(([batch]) => {
-      if (controller.signal.aborted || token !== swapRef.current) return;
+      if (controller.signal.aborted || generation !== swapRef.current) return;
       scrollPageTo(0, { duration: 0 });
       window.scrollTo({ top: 0, behavior: "instant" });
       setRetry(0);
@@ -321,7 +321,7 @@ export function ArticlesIndex({
       });
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
-          if (token !== swapRef.current) return;
+          if (generation !== swapRef.current) return;
           if (grid) delete grid.dataset.leaving;
           getArticlesWorld()?.cards.playFilterIn();
         }),
