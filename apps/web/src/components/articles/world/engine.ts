@@ -879,6 +879,10 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.renderer.render(this.envGroup, this.camera);
     this.renderer.autoClear = false;
     this.renderer.clearDepth();
+    // On an article, mark the library's pixels for the readable ceiling.
+    if (u.uDetail.value > 0.001) {
+      this.renderer.render(this.composite.libraryMask, this.composite.camera);
+    }
     this.envGroup.visible = false;
     this.renderer.render(this.scene, this.camera);
     this.envGroup.visible = true;

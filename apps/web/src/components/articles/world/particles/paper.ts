@@ -101,7 +101,9 @@ const FRAGMENT = /* glsl */ `
     vec3 night = mix(uPaperDark * 1.6, uGlowDark * 0.75, lit * 0.7) + uGlowDark * (script * 0.6 + edge * 0.3);
     vec3 color = mix(day, night, dark);
     float fog = worldFogAmount(vDepth, vWorldY) * mix(0.62, 0.65, dark);
-    gl_FragColor = vec4(mix(color, worldFogColor(dark), fog), 1.0);
+    // Alpha 0: the sheets are the library's (the screen pass keeps them
+    // under an article's readable ceiling, fx/composite.ts).
+    gl_FragColor = vec4(mix(color, worldFogColor(dark), fog), 0.0);
   }
 `;
 

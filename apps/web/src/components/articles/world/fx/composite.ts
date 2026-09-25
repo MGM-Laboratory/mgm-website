@@ -1,13 +1,17 @@
 import {
+  AddEquation,
   BufferAttribute,
   BufferGeometry,
   Color,
+  CustomBlending,
   Mesh,
+  OneFactor,
   OrthographicCamera,
   Scene,
   ShaderMaterial,
   Vector2,
   Vector4,
+  ZeroFactor,
   type Texture,
 } from "three";
 
@@ -42,6 +46,15 @@ import { WORLD_COMMON, type WorldUniforms } from "@/components/articles/world/wo
 
 /** The lens at rest (about 17 px of fringe in a 1440 px corner, like unseen.co's). */
 export const REST_DISTORT = -0.05;
+
+/**
+ * The brightest the library may get behind an article's text by night
+ * (relative luminance), and where its highlights start to roll off. At the
+ * ceiling, the palest dark-theme text (luminance about 0.8) still reads
+ * 7.4:1, and its 70 % muted shade (lib/project-themes.ts) 4.6:1.
+ */
+const READABLE_KNEE = 0.03;
+const READABLE_CEILING = 0.065;
 
 /** How many pulses can ripple at once (the oldest gives way). */
 export const PULSE_SLOTS = 4;
@@ -160,6 +173,24 @@ const FRAGMENT = /* glsl */ `
     vec3 color = sum / weight;
 
     float dark = darkAt();
+    // On an article by night, nothing of the library may outshine the
+    // page's text: a lantern, a moonlit sheet or a spark behind a line rolls
+    // off softly under a ceiling that keeps light text (and its 70 % muted
+    // shade) above 4.5:1. Only the library's own pixels (the scene target's
+    // alpha is cleared under them, see createComposite): a page's 3D, like
+    // the article cover, keeps its full range.
+    float library = 1.0 - textureLod(tScene, uv, 0.0).a;
+    float ceiling = uDetail * dark * library;
+    if (ceiling > 0.0) {
+      vec3 lit = pow(max(color, 0.0), vec3(2.2));
+      float l = dot(lit, vec3(0.2126, 0.7152, 0.0722));
+      if (l > ${READABLE_KNEE.toFixed(3)}) {
+        float room = ${(READABLE_CEILING - READABLE_KNEE).toFixed(3)};
+        float rolled = ${READABLE_KNEE.toFixed(3)} + room * (1.0 - exp(-(l - ${READABLE_KNEE.toFixed(3)}) / room));
+        color = mix(color, color * pow(rolled / l, 1.0 / 2.2), ceiling);
+      }
+    }
+
     // A bank of mist behind the list's head (and the site header above it):
     // whatever the world draws there (a lantern, the moon, a card folding
     // away) stays a whisper under the title, the search and the filters.
@@ -231,6 +262,8 @@ const FRAGMENT = /* glsl */ `
 export type Composite = {
   scene: Scene;
   camera: OrthographicCamera;
+  /** Clears the scene target's alpha under the library (see the readable ceiling). */
+  libraryMask: Scene;
   uniforms: {
     tScene: { value: Texture | null };
     uLens: { value: number };
@@ -296,14 +329,38 @@ export function createComposite(world: WorldUniforms): Composite {
   const scene = new Scene();
   scene.add(mesh);
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+  // Drawn over the library before anything else joins it: keeps every
+  // colour and clears the alpha, so the screen pass can tell the library's
+  // pixels (alpha 0) from what the cards and the pages' layers draw over
+  // them (their own alpha). The world's particles keep the alpha they find.
+  const maskMaterial = new ShaderMaterial({
+    vertexShader: VERTEX,
+    fragmentShader: "void main() { gl_FragColor = vec4(0.0); }",
+    blending: CustomBlending,
+    blendEquation: AddEquation,
+    blendSrc: ZeroFactor,
+    blendDst: OneFactor,
+    blendSrcAlpha: ZeroFactor,
+    blendDstAlpha: ZeroFactor,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const maskMesh = new Mesh(geometry, maskMaterial);
+  maskMesh.frustumCulled = false;
+  const libraryMask = new Scene();
+  libraryMask.add(maskMesh);
+
   return {
     scene,
     camera,
+    libraryMask,
     uniforms,
     resolution: new Vector2(),
     dispose() {
       geometry.dispose();
       material.dispose();
+      maskMaterial.dispose();
     },
   };
 }
