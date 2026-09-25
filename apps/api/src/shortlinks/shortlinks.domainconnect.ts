@@ -55,12 +55,13 @@ export function connectRecords(
   cnameTarget: string,
   verifyToken: string,
   railwayToken: string | null,
+  railwayTxtHost = "_railway-verify",
 ): ConnectRecords {
   return {
     cname: { name: hostname, content: cnameTarget },
     verifyTxt: { name: `_mgm-verify.${hostname}`, content: verifyToken },
     railwayTxt: railwayToken
-      ? { name: `_railway-verify.${hostname}`, content: railwayToken }
+      ? { name: `${railwayTxtHost}.${hostname}`, content: railwayToken }
       : null,
   };
 }

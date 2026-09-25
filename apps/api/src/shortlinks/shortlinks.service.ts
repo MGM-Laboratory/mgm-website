@@ -152,7 +152,10 @@ export class ShortlinksService implements OnApplicationBootstrap {
       },
       verifyTxt: { name: `_mgm-verify.${hostname}`, content: verifyToken ?? "" },
       railwayTxt: railway?.status?.verificationToken
-        ? { name: `_railway-verify.${hostname}`, content: railway.status.verificationToken }
+        ? {
+            name: `${railway.status.verificationDnsHost ?? "_railway-verify"}.${hostname}`,
+            content: railway.status.verificationToken,
+          }
         : null,
     };
   }
@@ -438,6 +441,7 @@ export class ShortlinksService implements OnApplicationBootstrap {
       railwayResult.cnameTarget,
       verifyToken,
       railwayResult.railway?.status?.verificationToken ?? null,
+      railwayResult.railway?.status?.verificationDnsHost,
     );
 
     const privateKey = this.config.get("DOMAIN_CONNECT_PRIVATE_KEY");
