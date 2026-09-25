@@ -110,12 +110,16 @@ test("background wake fades and reduced motion disables it", async ({ page, isMo
 });
 
 test("article covers respond to focus without reloading their image", async ({ page }) => {
-  await page.goto("/articles");
+  // The homepage's articles section (the /articles list draws its own cards).
+  await page.goto("/");
   const cover = page.locator(".article-cover").first();
   test.skip((await cover.count()) === 0, "No published articles in this environment");
   const requests: string[] = [];
   page.on("request", (request) => {
-    if (request.resourceType() === "image") requests.push(request.url());
+    // Only the covers' own pictures (the header logo, say, may load late).
+    if (request.resourceType() === "image" && request.url().includes("/api/articles-cms/media/")) {
+      requests.push(request.url());
+    }
   });
   await cover.locator("..").focus();
   await expect(cover.locator(".article-cover-arrow")).toHaveCSS("opacity", "1");
