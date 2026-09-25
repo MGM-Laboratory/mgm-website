@@ -215,7 +215,10 @@ export class ShortlinksController {
   @Get("admin/domains")
   async adminDomains(@Headers("x-cms-passphrase") passphrase = "") {
     this.assertAdmin(passphrase);
-    return { domains: await this.shortlinks.listDomains() };
+    return {
+      domains: await this.shortlinks.listDomains(),
+      cnameTarget: this.config.getOrThrow("SHORTLINKS_CNAME_TARGET"),
+    };
   }
 
   @Post("admin/domains")
