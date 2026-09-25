@@ -36,7 +36,7 @@ export default async function ArticlesPage({
     <>
       {/* Without JavaScript the world never runs: show the DOM cards as they are. */}
       <noscript>
-        <style>{`.article-card-cover,.article-card-meta{opacity:1!important}`}</style>
+        <style>{`.article-card-cover,.article-card-meta,.article-card-meta>*{opacity:1!important}[data-entrance] :is([data-title-char],[data-entrance-piece]){visibility:visible!important}.articles-top{display:none}`}</style>
       </noscript>
       <ArticlesIndex
         initial={{

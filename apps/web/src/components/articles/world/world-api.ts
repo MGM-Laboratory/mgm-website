@@ -39,6 +39,14 @@ export type WorldCard = {
   subtitle: string;
   /** Order in the list (0-based), for staggers. */
   index: number;
+  /**
+   * WP1: the card's grid slot (the element `content-visibility` applies to),
+   * measured instead of the card's inner pieces while the card sleeps.
+   * Defaults to `element`.
+   */
+  slot?: HTMLElement;
+  /** WP1: a placeholder sheet for a batch in flight (shimmering paper, no picture or text). */
+  placeholder?: boolean;
 };
 
 export type CardsLayerApi = {
@@ -51,7 +59,12 @@ export type CardsLayerApi = {
   /** Plays the filter swap: cards leaving sink into the fog, new ones rise. */
   playFilterOut(): Promise<void>;
   playFilterIn(): void;
-  /** The list intro: cards unroll out of the fog, row by row. */
+  /**
+   * WP1: holds the intro: every card (and every card registered until
+   * `playIntro()`) waits hidden deep in the fog.
+   */
+  prepareIntro(): void;
+  /** The list intro: the cards on screen rise out of the fog, row by row (the rest appear at once). */
   playIntro(): void;
   /**
    * Keeps every card drawing where it last was, even after its DOM goes
