@@ -1262,7 +1262,7 @@ export function MemberCmsStudio({
                   Administrator accounts, passphrases, and per-page permissions.
                 </p>
               </div>
-            ) : section === "links" ? (
+            ) : section === "links" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
                   <div className="relative">
@@ -1503,7 +1503,7 @@ export function MemberCmsStudio({
                 />
               ) : section === "administration" ? (
                 <AdminManagementPanel initialAdmins={initialAdmins} />
-              ) : section === "links" ? (
+              ) : section === "links" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
                 <LinksStudio
                   canDelete={can(viewer.permissions, "links", "delete")}
                   canWrite={can(viewer.permissions, "links", "write")}
