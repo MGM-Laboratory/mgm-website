@@ -77,6 +77,8 @@ type Run = {
   commitWaiters: (() => void)[];
   ended: boolean;
   instant: boolean;
+  /** The page being entered is on screen (the second half plays). */
+  revealing: boolean;
 };
 
 const LOCK = "articles-transition";
@@ -203,11 +205,17 @@ export class ArticleTransitions {
 
   private readonly onClick = (event: MouseEvent) => {
     if (this.run && !this.run.ended) {
-      // Mid-transition every click is swallowed: nothing may navigate or
-      // toggle under the cover.
-      event.preventDefault();
-      event.stopPropagation();
-      return;
+      if (this.run.revealing) {
+        // The new page is on screen: a click there is the visitor's. The
+        // transition lands at once and the click carries on.
+        this.finish(this.run);
+      } else {
+        // Covered: every click is swallowed. Nothing may navigate or
+        // toggle under the cover.
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
     }
     const link = linkOf(event);
     if (!link) return;
@@ -311,6 +319,7 @@ export class ArticleTransitions {
       commitWaiters: [],
       ended: false,
       instant,
+      revealing: false,
     };
     this.run = run;
     this.armFailsafe(run);
@@ -615,6 +624,7 @@ export class ArticleTransitions {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     if (run.ended || this.run !== run) return;
     document.documentElement.dataset.articleTransition = `${run.kind}-in`;
+    run.revealing = true;
     run.timeline?.kill();
     run.timeline = this.paced(
       run,
