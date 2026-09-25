@@ -84,14 +84,25 @@ const WAITING_AFTER = 1.2;
  * - world (in): for the library world to decide its mode (its host fails
  *   over to the DOM list at 6 s, far past this);
  * - cap: whatever is still missing, the portal uncovers after this long.
- * The DOM ones keep a visitor without WebGL (and the e2e suite, which
- * clicks the header logo 3.2 s after entering the library) well inside
- * three seconds for the whole way in.
+ * Every wait ends on its own bound, so a page that is already there never
+ * waits for it. The list's bounds keep the whole way in (the page handed
+ * back by commit + cap + the reveal's interactive share) inside the 3.2 s
+ * after which the e2e suite clicks the header logo, on both renderers: a
+ * list that is still loading at the cap is uncovered anyway, and its cards
+ * rise out of the fog when they arrive.
  */
 const HOLD = {
   gl: { content: 1.2, page: 0.45, world: 1.2, cap: 1.5 },
   dom: { content: 0.8, page: 0.3, world: 0.6, cap: 1.0 },
 } as const;
+/**
+ * Into an article with WebGL the fog waits longer for the content (an
+ * article read on a cold server cache can stream in seconds after the
+ * route commits, and its hero has nothing to rise out of without it): it
+ * is the library still writing the page, with the line of ink to say so,
+ * rather than a clearing onto an empty library that fills in afterwards.
+ */
+const ARTICLE_HOLD_GL = { content: 3.2, page: 0.45, world: 1.2, cap: 3.4 } as const;
 /** The plain cover, when no stage could load. */
 const PLAIN_COVER = 0.35;
 const PLAIN_REVEAL = 0.4;
@@ -617,7 +628,9 @@ export class PortalController {
   /** Covered and waiting: may the destination be shown now? */
   private ready(run: Run, dt: number) {
     if (!run.committed) return false;
-    const hold = HOLD[run.stage?.renderer ?? "dom"];
+    const renderer = run.stage?.renderer ?? "dom";
+    const article = run.direction === "in" && articleDetailSlug(run.target) !== null;
+    const hold = renderer === "gl" && article ? ARTICLE_HOLD_GL : HOLD[renderer];
     // The route commits with its loading shell when its content isn't
     // there yet: the content has arrived once the shell's sentinel is gone.
     const content =
