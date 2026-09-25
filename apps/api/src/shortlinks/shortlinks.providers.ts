@@ -34,6 +34,7 @@ export type RailwayDomainStatus = {
   domain: string;
   status: {
     verificationToken: string;
+    verificationDnsHost?: string;
     dnsRecords: { hostlabel: string; requiredValue: string; status: string }[];
     certificateStatus?: string;
   } | null;
@@ -63,6 +64,7 @@ export async function railwayCustomDomainCreate(
         domain
         status {
           verificationToken
+          verificationDnsHost
           dnsRecords { hostlabel requiredValue status }
         }
       }
@@ -86,6 +88,7 @@ export async function railwayCustomDomainStatus(
         domain
         status {
           verificationToken
+          verificationDnsHost
           dnsRecords { hostlabel requiredValue status }
           certificateStatus
         }
