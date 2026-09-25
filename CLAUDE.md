@@ -14,10 +14,11 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 8. `docs/projects-page.md`: the `/projects` index and the `/projects/[slug]` detail pages, the most animated pages (intro choreography, hero play, the WebGL cover stage, the horizontal themed detail page and its media stage, the project zoom transitions).
 9. `docs/articles-page.md`: the `/articles` library, a persistent WebGL world the list and every article live in (the paper-card river, themed article pages, the in-world transitions, and the portal in and out of the rest of the site).
 10. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
-11. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
-12. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
-13. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
-14. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
+11. `docs/shortlinks.md`: the link shortener (domains with Cloudflare setup, links with expiry and passphrases, the click path, per-link analytics).
+12. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
+13. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
+14. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
+15. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
 
 ## ⚠️ Next.js 16: not the Next.js in your training data
 
@@ -63,7 +64,7 @@ apps/web/            Next.js 16 marketing site (the focus of most work)
   src/lib/           env.ts (zod-validated), scroll-reveal.ts (fadeUpOnScroll), app-boot.ts, utils.ts
   src/hooks/         use-health.ts (API health polling); the WIB menu clock hook lives inside nav/nav-menu.tsx
   public/            logo.svg, patterns/*.svg (pattern tiles), logo/*.svg (dept logos, untracked)
-apps/api/            NestJS + Prisma API (health, mail [3-provider: Resend/SMTP/SES], storage modules; port 4000)
+apps/api/            NestJS + Prisma API (health, mail [3-provider: Resend/SMTP/SES], storage, shortlinks modules; port 4000)
 packages/@repo/shared  shared workspace package (workspace:*)
 .github/workflows/   ci.yaml (lint/typecheck/test/build), publish-docker-image-*.yml (Docker Hub)
 DESIGN_SYSTEM.md     brand/design source of truth

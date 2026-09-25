@@ -26,6 +26,7 @@ Only the superadmin can create, edit, or delete delegated administrators. Delega
 | `contact`           | Contact settings          | read, write, delete |
 | `contact-inquiries` | Contact inbox             | read only           |
 | `events`            | Events and registrations  | read, write, delete |
+| `links`             | Short links and domains   | read, write, delete |
 | `home`              | Homepage settings         | read, write, delete |
 | `other`             | Other settings namespace  | read, write, delete |
 
@@ -33,22 +34,23 @@ Permissions are rank-expanded: granting `write` also grants `read`; granting `de
 
 ## Editorial collections
 
-The workspace is composed in `apps/web/src/components/admin/member-cms-studio.tsx`. Its main collections are Articles, Projects, Publications, Research, Member, Careers, Contact Inquiries, Events, and Settings (Home and Contact Settings), plus superadmin-only Admin Management.
+The workspace is composed in `apps/web/src/components/admin/member-cms-studio.tsx`. Its main collections are Articles, Projects, Publications, Research, Member, Careers, Contact Inquiries, Events, Links, and Settings (Home and Contact Settings), plus superadmin-only Admin Management.
 
 The API stores each collection as a slug-keyed JSONB `data` record. Prisma defines the current tables in `apps/api/prisma/schema.prisma`: `CmsMember`, `CmsArticle`, `CmsPublication`, `CmsProject`, `CmsResearchInitiative`, `CmsJobPosting`, `CmsJobApplication`, `CmsEvent`, `CmsEventRegistration`, `CmsContactInquiry`, `CmsAdmin`, and the singleton `CmsHomeContent` and `CmsContactSettings` records. `PrismaService.onModuleInit()` creates these tables idempotently as an operational safety net; schema migrations remain the durable migration record.
 
-| Collection        | Public path                             | Notable admin capability                                                            |
-| ----------------- | --------------------------------------- | ----------------------------------------------------------------------------------- |
-| Members           | `/member`, `/member/[slug]`             | profile photo crop/upload and structured profile fields                             |
-| Articles          | `/articles`, `/articles/[slug]`         | BlockNote body, cover uploads, page theme                                           |
-| Publications      | `/publications`, `/publications/[slug]` | paper PDF, author photos, citations, preview metadata                               |
-| Projects          | `/projects`, `/projects/[slug]`         | detail page theme, CTA and services, ordered image and video media sections         |
-| Research          | `/research`, `/research/[slug]`         | initiative detail, linked outcomes, cover upload                                    |
-| Careers           | `/careers`, detail, apply               | openings, BlockNote detail, application inbox and CV files                          |
-| Events            | `/events`, `/events/[slug]`             | event media, registrations, calendar export, map-link resolution                    |
-| Contact inquiries | `/contact`                              | inbox state and bulk actions; the original inquiry is persisted before mail is sent |
-| Home              | `/`                                     | homepage video/settings singleton                                                   |
-| Contact settings  | `/contact`                              | addresses, map location, and mail routing strategy                                  |
+| Collection        | Public path                             | Notable admin capability                                                             |
+| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------ |
+| Members           | `/member`, `/member/[slug]`             | profile photo crop/upload and structured profile fields                              |
+| Articles          | `/articles`, `/articles/[slug]`         | BlockNote body, cover uploads, page theme                                            |
+| Publications      | `/publications`, `/publications/[slug]` | paper PDF, author photos, citations, preview metadata                                |
+| Projects          | `/projects`, `/projects/[slug]`         | detail page theme, CTA and services, ordered image and video media sections          |
+| Research          | `/research`, `/research/[slug]`         | initiative detail, linked outcomes, cover upload                                     |
+| Careers           | `/careers`, detail, apply               | openings, BlockNote detail, application inbox and CV files                           |
+| Events            | `/events`, `/events/[slug]`             | event media, registrations, calendar export, map-link resolution                     |
+| Links             | `/s/[slug]` and custom short domains    | domains with Cloudflare setup, links with expiry and passphrases, per-link analytics |
+| Contact inquiries | `/contact`                              | inbox state and bulk actions; the original inquiry is persisted before mail is sent  |
+| Home              | `/`                                     | homepage video/settings singleton                                                    |
+| Contact settings  | `/contact`                              | addresses, map location, and mail routing strategy                                   |
 
 The careers workflow has additional validation, upload constraints, and inbox behavior; read [`careers-cms.md`](careers-cms.md) before modifying it. Contact settings control mail routing, which is detailed in [`mail-system.md`](mail-system.md).
 
