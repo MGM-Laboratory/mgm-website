@@ -18,7 +18,12 @@ import { mountWorldCursor } from "@/components/articles/world/cursor/world-curso
 import type { LibraryEngine } from "@/components/articles/world/engine";
 import { qualityOverrides } from "@/components/articles/world/quality";
 import { runThemeWave, themeWaveMasksDom } from "@/components/articles/world/theme-wave";
-import { articleDetailSlug, registerArticleWorldLayer } from "@/lib/article-transition";
+import {
+  articleDetailSlug,
+  isArticleTransitionBusy,
+  onArticleTransitionChange,
+  registerArticleWorldLayer,
+} from "@/lib/article-transition";
 import { registerHeaderToneProvider } from "@/lib/header-tone";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 import { registerThemeSwitchHandler } from "@/lib/theme-switch";
@@ -164,6 +169,22 @@ export function ArticlesWorldHost() {
               onContextLost: () => {
                 teardown();
                 setWorldState("dom", null);
+              },
+              // Far too slow to use (a software renderer that hides its
+              // name): the DOM list serves the visit better. Never under a
+              // running transition, which still draws in this world.
+              onTooSlow: () => {
+                const handOver = () => {
+                  if (cancelled || isArticleTransitionBusy()) return false;
+                  teardown();
+                  setWorldState("dom", null);
+                  return true;
+                };
+                if (handOver()) return;
+                const off = onArticleTransitionChange(() => {
+                  if (handOver()) off();
+                });
+                offs.push(off);
               },
             });
           } catch {

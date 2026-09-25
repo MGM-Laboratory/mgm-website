@@ -38,7 +38,11 @@ import {
   createCursorMagic,
   type CursorMagic,
 } from "@/components/articles/world/particles/cursor-magic";
-import { QualityGovernor, type QualityLevel } from "@/components/articles/world/quality";
+import {
+  HopelessWatch,
+  QualityGovernor,
+  type QualityLevel,
+} from "@/components/articles/world/quality";
 import type {
   ArticlesWorldApi,
   QualityTier,
@@ -116,6 +120,8 @@ export type LibraryEngineOptions = {
   dark: boolean;
   route: WorldRoute;
   onContextLost: () => void;
+  /** Frames stay too slow to use at any quality (see HopelessWatch). */
+  onTooSlow?: () => void;
   /** Locks the governor (the `?worldtier=` and `?worlddpr=` overrides). */
   lockQuality?: boolean;
   /** Pixel ratio override. */
@@ -174,6 +180,7 @@ export class LibraryEngine implements ArticlesWorldApi {
   private readonly magic: CursorMagic;
   private target: WebGLRenderTarget;
   private readonly governor: QualityGovernor;
+  private readonly hopeless: HopelessWatch | null;
   private level: QualityLevel;
   private readonly pixelRatioOverride: number | null;
   private width = 1;
@@ -231,6 +238,9 @@ export class LibraryEngine implements ArticlesWorldApi {
     this.governor = new QualityGovernor(options.tier, (level) => this.applyLevel(level), {
       locked: options.lockQuality,
     });
+    // A forced quality (a dev or support override) keeps the world whatever it costs.
+    const onTooSlow = options.onTooSlow;
+    this.hopeless = onTooSlow && !options.lockQuality ? new HopelessWatch(onTooSlow) : null;
     this.level = this.governor.level;
 
     this.canvas = document.createElement("canvas");
@@ -800,6 +810,7 @@ export class LibraryEngine implements ArticlesWorldApi {
     if (this.paused || this.disposed) return;
     const now = performance.now();
     this.governor.sample(now - this.lastFrameAt);
+    this.hopeless?.sample(now - this.lastFrameAt);
     this.lastFrameAt = now;
     this.renderer.info.reset();
     this.time += dt;

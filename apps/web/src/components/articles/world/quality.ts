@@ -122,6 +122,51 @@ export class QualityGovernor {
   }
 }
 
+/** Visible seconds after a start before the world may be judged too slow for anyone. */
+const HOPELESS_GRACE_SECONDS = 2.5;
+/** Frames per judgement. */
+const HOPELESS_WINDOW = 24;
+/** Median frame time (ms) past which the world gives the visit to the DOM list (under 8 fps). */
+const HOPELESS_MS = 125;
+/** Longer than this is a stall (a tab switch, a debugger), not a frame. */
+const HOPELESS_STALL_MS = 3000;
+
+/**
+ * The ladder's last resort. A renderer that hides what it is (WebKit reports
+ * no renderer string, so a software rasteriser gets past the host's check)
+ * can draw the world at a few frames a second: far below anything the
+ * ladder can fix, and with frames too long for the governor, which ignores
+ * anything past 250 ms as a stall. Once the median of a window of visible
+ * frames is still past `HOPELESS_MS` after the start, `onHopeless` runs
+ * (once): the host hands the visit to the DOM list, as it does for a lost
+ * context.
+ */
+export class HopelessWatch {
+  private grace = HOPELESS_GRACE_SECONDS;
+  private readonly samples: number[] = [];
+  private fired = false;
+
+  constructor(private readonly onHopeless: () => void) {}
+
+  /** One rendered frame: `ms` since the previous one. */
+  sample(ms: number) {
+    if (this.fired || ms <= 0 || ms > HOPELESS_STALL_MS) return;
+    if (typeof document === "undefined" || document.hidden) return;
+    if (this.grace > 0) {
+      this.grace -= ms / 1000;
+      return;
+    }
+    this.samples.push(ms);
+    if (this.samples.length < HOPELESS_WINDOW) return;
+    const median = [...this.samples].sort((a, b) => a - b)[HOPELESS_WINDOW >> 1];
+    this.samples.length = 0;
+    if (median > HOPELESS_MS) {
+      this.fired = true;
+      this.onHopeless();
+    }
+  }
+}
+
 /** Dev and support overrides: `?worldtier=low|medium|high`, `?worlddpr=1.25`. */
 export function qualityOverrides(search: string) {
   const params = new URLSearchParams(search);
