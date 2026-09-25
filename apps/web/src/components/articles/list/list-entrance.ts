@@ -14,7 +14,7 @@ import { isRouteCoverActive, waitForRouteReveal } from "@/lib/route-reveal";
  * articles page):
  *
  * - A fresh load plays at once, after the fonts (bounded): the title's
- *   letters rise, the search and the pills follow, the world's lens
+ *   letters rise, the search row follows, the world's lens
  *   settles from a strongly warped frame, and the cards on screen rise out
  *   of the fog row by row.
  * - Arriving under a cover (the portal from another page, the route
@@ -166,10 +166,8 @@ export function startListEntrance(root: HTMLElement, kind: EntranceKind): ListEn
     }
     const chars = root.querySelectorAll<HTMLElement>("[data-title-char]");
     const search = root.querySelector<HTMLElement>('[data-entrance-piece="search"]');
-    const pills = root.querySelector<HTMLElement>('[data-entrance-piece="pills"]');
     gsap.set(chars, { yPercent: 118, rotate: 7 });
     if (search) gsap.set(search, { autoAlpha: 0, y: 18 });
-    if (pills) gsap.set(pills, { autoAlpha: 0, y: 18 });
     setState("playing");
     resolveShown();
     timeline
@@ -180,11 +178,6 @@ export function startListEntrance(root: HTMLElement, kind: EntranceKind): ListEn
         search ?? [],
         { autoAlpha: 1, y: 0, duration: 0.9, ease: "power3.out", clearProps: "transform" },
         0.22,
-      )
-      .to(
-        pills ?? [],
-        { autoAlpha: 1, y: 0, duration: 0.9, ease: "power3.out", clearProps: "transform" },
-        0.32,
       )
       .call(() => setState("done"), undefined, ">");
     timeline.play(0);

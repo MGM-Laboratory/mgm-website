@@ -1,6 +1,6 @@
 /*
- * The articles library's list: the fixed head (title, search, category
- * pills or the compact filter sheet), the card grid (the DOM the world
+ * The articles library's list: the fixed head (title, search and the
+ * Filter button with its sheet of categories), the card grid (the DOM the world
  * draws over, and the whole list when there is no world), the end of the
  * archive with its Home button, and the back-to-top button.
  *
@@ -123,7 +123,7 @@ html:has([data-articles-page]) body {
  */
 @media (prefers-reduced-motion: no-preference) {
   [data-articles-page][data-entrance="pending"]
-    :is([data-title-char], [data-entrance-piece="search"], [data-entrance-piece="pills"]) {
+    :is([data-title-char], [data-entrance-piece="search"]) {
     visibility: hidden;
   }
 }
@@ -201,7 +201,7 @@ html:has([data-articles-page]) body {
 .articles-controls {
   display: flex;
   gap: 0.5rem;
-  width: min(30rem, 100%);
+  width: min(34rem, 100%);
 }
 
 .articles-search {
@@ -378,180 +378,11 @@ html:has([data-articles-page]) body {
   }
 }
 
-/* ------------------------------------------------------------------ pills */
+/* ------------------------------------------------------------------ filter */
 
-.articles-pills-slot {
-  display: flex;
-  max-width: min(100%, 64rem);
-  justify-content: center;
-}
-
-.articles-pillbar {
-  max-width: 100%;
-  padding: 0.3rem;
-  border: 1px solid var(--world-pill-line);
-  border-radius: 999px;
-  background: var(--world-pill);
-  backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-}
-
-.articles-pills-scroller {
-  --fade-start: 0px;
-  --fade-end: 0px;
-  overflow-x: auto;
-  border-radius: 999px;
-  mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 var(--fade-start),
-    #000 calc(100% - var(--fade-end)),
-    transparent 100%
-  );
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  transition:
-    --fade-start 0.3s ease,
-    --fade-end 0.3s ease;
-}
-
-.articles-pills-scroller::-webkit-scrollbar {
-  display: none;
-}
-
-.articles-pills-scroller[data-fade-start="on"] {
-  --fade-start: 2.5rem;
-}
-
-.articles-pills-scroller[data-fade-end="on"] {
-  --fade-end: 2.5rem;
-}
-
-.articles-pills-scroller[data-overflow] {
-  cursor: grab;
-}
-
-.articles-pills-scroller[data-dragging] {
-  cursor: grabbing;
-}
-
-.articles-pills-scroller[data-dragging] .articles-pill {
-  pointer-events: none;
-}
-
-.articles-pills-track {
-  position: relative;
-  width: max-content;
-}
-
-.articles-pills {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.articles-pill {
-  display: inline-flex;
-  flex: none;
-  align-items: baseline;
-  gap: 0.3rem;
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--world-pill-line);
-  border-radius: 999px;
-  color: var(--world-ink);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  line-height: 1.2;
-  white-space: nowrap;
-  user-select: none;
-  transition:
-    background-color 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease,
-    translate 0.4s cubic-bezier(0.3, 0.7, 0.4, 1),
-    scale 0.2s ease;
-}
-
-.articles-pill-count {
-  font-size: 0.66rem;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.62;
-}
-
-.articles-pill[aria-pressed="true"] {
-  border-color: transparent;
-}
-
-.articles-pill:focus-visible {
-  outline: 2px solid var(--world-accent);
-  outline-offset: 2px;
-}
-
-@media (hover: hover) {
-  .articles-pill[aria-pressed="false"]:hover {
-    background: var(--world-pill-hover);
-    box-shadow: 0 8px 18px -12px var(--world-shadow);
-  }
-}
-
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .articles-pill[aria-pressed="false"]:hover {
-    translate: 0 -2px;
-  }
-
-  .articles-pill[aria-pressed="false"]:active {
-    scale: 0.95;
-  }
-}
-
-/*
- * The moving highlight: a copy of the row in the active colours, clipped
- * to the active pill. The leading edge moves first, so it stretches as it
- * travels (the direction comes from category-pills.tsx).
- */
-.articles-pills.is-highlight {
-  position: absolute;
-  inset: 0;
-  background: var(--world-pill-active);
-  clip-path: inset(var(--hl-top) var(--hl-right) var(--hl-bottom) var(--hl-left) round 999px);
-  color: var(--world-pill-active-text);
-  pointer-events: none;
-}
-
-.articles-pills.is-highlight .articles-pill {
-  border-color: transparent;
-  color: inherit;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .articles-pills.is-highlight {
-    --lead: 0s;
-    --trail: 0.08s;
-    transition:
-      --hl-left 0.55s var(--world-ease-io) var(--delay-left, 0s),
-      --hl-right 0.55s var(--world-ease-io) var(--delay-right, 0s),
-      --hl-top 0.3s ease,
-      --hl-bottom 0.3s ease;
-  }
-
-  .articles-pills.is-highlight[data-dir="right"] {
-    --delay-left: var(--trail);
-    --delay-right: var(--lead);
-  }
-
-  .articles-pills.is-highlight[data-dir="left"] {
-    --delay-left: var(--lead);
-    --delay-right: var(--trail);
-  }
-
-  .articles-pills.is-highlight[data-instant] {
-    transition: none;
-  }
-}
-
-/* ------------------------------------------------------------------ compact filter */
-
+/* Beside the search at every width: the categories live in its sheet. */
 .articles-filter {
-  display: none;
+  display: block;
 }
 
 .articles-filter-toggle {
@@ -635,6 +466,14 @@ html:has([data-articles-page]) body {
   backdrop-filter: blur(20px) saturate(1.3);
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
   overscroll-behavior: contain;
+}
+
+/* Wide screens: a panel centred under the search, not a full-width sheet. */
+@media (min-width: 768px) {
+  .articles-filter-sheet {
+    right: max(1rem, calc(50% - 20rem));
+    left: max(1rem, calc(50% - 20rem));
+  }
 }
 
 .articles-filter-sheet[data-state="closed"] {
@@ -1675,14 +1514,6 @@ html[data-articles-world="gl"]
 
   .articles-controls {
     width: min(30rem, 100%);
-  }
-
-  .articles-filter {
-    display: block;
-  }
-
-  .articles-pills-slot {
-    display: none;
   }
 }
 

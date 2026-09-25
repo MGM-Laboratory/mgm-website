@@ -9,9 +9,10 @@ import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 const LOCK_OWNER = "articles-filter";
 
 /**
- * The compact head's category filter (phones, and short landscape
- * screens): a "Filter" toggle that opens an animated sheet of categories,
- * like unseen.co's mobile filter. The sheet grows out of the toggle (its
+ * The list's category filter, beside the search at every width: a
+ * "Filter" button that opens an animated sheet of categories, like
+ * unseen.co's filter (a panel centred under the search on wide screens,
+ * a sheet across the screen on phones). The sheet grows out of the toggle (its
  * clip starts on the toggle's box), a fog veil dims the list, the pills
  * arrive one after another, and picking one closes it. Escape, the veil
  * and the toggle close it too; focus moves into the sheet and back.

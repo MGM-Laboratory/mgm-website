@@ -3,7 +3,6 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useRef, type CSSProperties } from "react";
 
-import { CategoryPills } from "@/components/articles/list/category-pills";
 import { FilterSheet } from "@/components/articles/list/filter-sheet";
 import type { ArticleCategory } from "@/lib/article-index";
 
@@ -11,19 +10,17 @@ const TITLE = "Articles";
 
 /**
  * The list's fixed head, over the library: the "Articles" title, the search
- * field and the category pills, the way unseen.co's title and filter bar
- * float over its river of cards (the cards fold away just under it).
- *
- * On phones and short landscape screens the head is compact: a smaller
- * title, the search, and a "Filter" toggle that opens the categories in a
- * sheet (filter-sheet.tsx) instead of the pill bar.
+ * field and beside it a "Filter" button that opens the categories in a
+ * sheet (filter-sheet.tsx), the way unseen.co's title and filter float
+ * over its river of cards (the cards fold away just under it). On phones
+ * and short landscape screens the head is compact: a smaller title.
  *
  * Filters are URL state (`?category=`, `?q=`, see articles-index.tsx), so a
  * filtered list survives going into an article and back, a reload and a
  * shared link. The head's bottom is published as `--articles-head`: the
  * grid starts under it and the world folds the cards just below it.
  *
- * The title's letters, the search and the pills are the entrance's pieces
+ * The title's letters and the search row are the entrance's pieces
  * (list-entrance.ts): hidden (visibility only) while the page waits for
  * its entrance, never the head itself, which the transitions move.
  */
@@ -157,15 +154,6 @@ export function ArticlesHero({
           <span aria-hidden="true" className="articles-search-glint" />
         </div>
         <FilterSheet
-          active={activeCategory}
-          all={all}
-          categories={categories}
-          onPick={onCategory}
-        />
-      </div>
-
-      <div className="articles-pills-slot" data-entrance-piece="pills">
-        <CategoryPills
           active={activeCategory}
           all={all}
           categories={categories}
