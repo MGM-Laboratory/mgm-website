@@ -3,7 +3,7 @@
   "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommitsDisabled"],
   "timezone": "Asia/Jakarta",
   "schedule": ["before 6am on monday"],
-  "labels": ["enhancement"],
+  "labels": ["enhancement", "bug"],
   "rangeStrategy": "bump",
   "lockFileMaintenance": {
     "enabled": true,
@@ -12,7 +12,7 @@
   "vulnerabilityAlerts": {
     "enabled": true,
     "schedule": ["at any time"],
-    "labels": ["enhancement"]
+    "labels": ["enhancement", "bug"]
   },
   "packageRules": [
     {
