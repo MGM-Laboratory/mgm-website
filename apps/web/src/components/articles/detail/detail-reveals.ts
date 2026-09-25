@@ -28,6 +28,8 @@ export class StoryReveals {
   private queue: HTMLElement[] = [];
   private flushTimer = 0;
   private readonly timers = new Set<number>();
+  /** Blocks of a batch waiting for their turn in the stagger, and their timers. */
+  private readonly staggered = new Map<HTMLElement, number>();
   private disposed = false;
 
   constructor(
@@ -55,9 +57,18 @@ export class StoryReveals {
 
   /** Shows everything at once (reduced motion switched on mid-visit). */
   showAll() {
+    // The batch still staggering too: its timers would otherwise play it.
+    for (const [block, timer] of this.staggered) {
+      window.clearTimeout(timer);
+      this.timers.delete(timer);
+      block.dataset.revealed = "instant";
+    }
+    this.staggered.clear();
     for (const block of this.pending) block.dataset.revealed = "instant";
     this.pending.clear();
     this.queue = [];
+    window.clearTimeout(this.flushTimer);
+    this.flushTimer = 0;
     this.observer?.disconnect();
   }
 
@@ -107,10 +118,12 @@ export class StoryReveals {
       this.pending.delete(block);
       const timer = window.setTimeout(() => {
         this.timers.delete(timer);
+        this.staggered.delete(block);
         this.pending.add(block);
         this.reveal(block, false);
       }, index * BATCH_STAGGER_MS);
       this.timers.add(timer);
+      this.staggered.set(block, timer);
     });
   }
 
