@@ -23,6 +23,7 @@ import { validateEnv } from "./config/env.validation.js";
 import { HealthModule } from "./health/health.module.js";
 import { MailModule } from "./mail/mail.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
+import { ShortlinksModule } from "./shortlinks/shortlinks.module.js";
 import { StorageModule } from "./storage/storage.module.js";
 
 @Module({
@@ -63,6 +64,7 @@ import { StorageModule } from "./storage/storage.module.js";
     HealthModule,
     StorageModule,
     MailModule,
+    ShortlinksModule,
   ],
   controllers: [AppController],
   providers: [
