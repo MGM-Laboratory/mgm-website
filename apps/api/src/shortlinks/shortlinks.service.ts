@@ -608,7 +608,17 @@ export class ShortlinksService implements OnApplicationBootstrap {
   private async findRoutableLink(hostname: string, slug: string) {
     const host = normalizeHostname(hostname);
     const domain = await this.prisma.shortLinkDomain.findUnique({ where: { hostname: host } });
-    if (!domain || (!domain.isPrimary && domain.status !== "connected")) return null;
+    if (domain && !domain.isPrimary && domain.status !== "connected") return null;
+    if (!domain) {
+      // Not a short domain: the site's own /s/ links resolve on every host
+      // the site answers on (www, the Railway domain, localhost), so fall
+      // back to the primary domain rather than 404ing by hostname.
+      const primary = await this.prisma.shortLinkDomain.findFirst({ where: { isPrimary: true } });
+      if (!primary) return null;
+      return this.prisma.shortLink.findUnique({
+        where: { domainId_slug: { domainId: primary.id, slug } },
+      });
+    }
     return this.prisma.shortLink.findUnique({
       where: { domainId_slug: { domainId: domain.id, slug } },
     });
