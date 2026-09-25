@@ -148,6 +148,8 @@ export function createAtmosphere(
   const sheetMesh = new InstancedMesh(sheetGeometry, sheetMaterial, Math.max(1, sheets.length));
   sheetMesh.frustumCulled = false;
   sheetMesh.renderOrder = 1;
+  // The tier's own count from the start (the governor only ever lowers it).
+  sheetMesh.count = Math.min(sheets.length, Math.max(0, options.sheets));
   // Far sheets first, so the nearer veils lay over them.
   const order = sheets.map((z, i) => ({ z, i })).sort((a, b) => a.z - b.z);
 
