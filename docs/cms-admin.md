@@ -40,7 +40,7 @@ The API stores each collection as a slug-keyed JSONB `data` record. Prisma defin
 | Collection        | Public path                             | Notable admin capability                                                            |
 | ----------------- | --------------------------------------- | ----------------------------------------------------------------------------------- |
 | Members           | `/member`, `/member/[slug]`             | profile photo crop/upload and structured profile fields                             |
-| Articles          | `/articles`, `/articles/[slug]`         | BlockNote body and cover uploads                                                    |
+| Articles          | `/articles`, `/articles/[slug]`         | BlockNote body, cover uploads, page theme                                           |
 | Publications      | `/publications`, `/publications/[slug]` | paper PDF, author photos, citations, preview metadata                               |
 | Projects          | `/projects`, `/projects/[slug]`         | detail page theme, CTA and services, ordered image and video media sections         |
 | Research          | `/research`, `/research/[slug]`         | initiative detail, linked outcomes, cover upload                                    |
@@ -66,6 +66,12 @@ Large bodies must be streamed through the Next proxy, not parsed into `request.f
 Publication papers carry a visibility flag of their own. The API serves a paper only when the record states `paperHidden: false`, and answers 404 for every other record, so a hidden paper cannot be read from a known storage key. Papers that predate the flag, and every fresh upload, start hidden: the publication page keeps showing the DOI alone until an editor switches the Paper (PDF) card to Visible.
 
 When adding a media type, enforce the byte limit at the API, preserve the stream through the Next route handler, validate the file type, and ensure deletion cleans up the object as well as the JSON record.
+
+### Article theme
+
+An article record may carry `theme`, one of the same 20 preset ids as projects (`apps/web/src/lib/project-themes.ts`). The editor's Page theme picker (`article-cms-editor.tsx`, reusing the project editor's `ThemePicker`) offers every preset and an Automatic option, which previews the stable pick from the slug (`lib/theme-pick.ts`) that a record without a theme gets. The article page wears it, the library world tints its fog toward it, and the list's cards carry it (`data-article-theme`) so opening one sweeps its color in. See [`articles-page.md`](articles-page.md).
+
+The article save and bootstrap routes validate their bodies and answer 400 naming the first invalid field (an unknown theme id included, which the editor shows next to that field), like the project routes, instead of failing with a 500.
 
 ### Project detail fields
 
