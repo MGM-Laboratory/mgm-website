@@ -79,6 +79,7 @@ const FRAGMENT = /* glsl */ `
   uniform float uBlur;
   uniform vec3 uWipeColor;
   uniform float uWipe;
+  uniform float uWipeOpacity;
   uniform float uGrainSeed;
   /** The list's fixed head: left, right, bottom (CSS px) and how much it veils. */
   uniform vec4 uHead;
@@ -250,7 +251,7 @@ const FRAGMENT = /* glsl */ `
       float front = (1.0 - uWipe) * (1.0 + soft);
       float m = smoothstep(front - soft, front, vUv.x);
       if (uWipe >= 1.0) m = 1.0;
-      color = mix(color, uWipeColor, m);
+      color = mix(color, uWipeColor, m * uWipeOpacity);
     }
 
     float grain = worldHash(gl_FragCoord.xy * 0.73 + uGrainSeed * 17.0) - 0.5;
@@ -272,6 +273,7 @@ export type Composite = {
     uBlur: { value: number };
     uWipeColor: { value: Color };
     uWipe: { value: number };
+    uWipeOpacity: { value: number };
     uGrainSeed: { value: number };
     uHead: { value: Vector4 };
     uPulses: { value: Vector4[] };
@@ -304,6 +306,7 @@ export function createComposite(world: WorldUniforms): Composite {
     uBlur: { value: 0 },
     uWipeColor: { value: new Color("#000000") },
     uWipe: { value: 0 },
+    uWipeOpacity: { value: 1 },
     uGrainSeed: { value: 0 },
     uHead: { value: new Vector4(0, 0, 0, 0) },
     uPulses: { value: Array.from({ length: PULSE_SLOTS }, () => new Vector4(0, 0, -100, 0)) },

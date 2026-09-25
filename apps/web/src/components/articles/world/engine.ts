@@ -298,9 +298,10 @@ export class LibraryEngine implements ArticlesWorldApi {
       setPan: (px) => {
         this.rig.offset.x = px;
       },
-      setWipe: (progress, color) => {
+      setWipe: (progress, color, opacity = 1) => {
         this.composite.uniforms.uWipe.value = progress;
         this.composite.uniforms.uWipeColor.value.set(color);
+        this.composite.uniforms.uWipeOpacity.value = opacity;
       },
       setLensAmount: (amount) => {
         this.composite.uniforms.uLens.value = amount;

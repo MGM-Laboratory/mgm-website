@@ -82,8 +82,12 @@ export type WorldTransitionApi = {
    * positive moves the view right so the cards travel left).
    */
   setPan(px: number): void;
-  /** The screen wipe to a flat colour: 0 none, 1 covered. From the right edge leftward. */
-  setWipe(progress: number, color: string): void;
+  /**
+   * The screen wipe to a flat colour: 0 none, 1 covered. From the right
+   * edge leftward. `opacity` (default 1) fades the whole cover, for a
+   * colour that should dissolve rather than recede.
+   */
+  setWipe(progress: number, color: string, opacity?: number): void;
   /** The list's lens effects (aberration, barrel, vignette): 1 full, 0 grain only. */
   setLensAmount(amount: number): void;
   /** Extra fog pushed toward the camera (0 none, 1 everything swallowed). */
