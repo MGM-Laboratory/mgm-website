@@ -19,6 +19,9 @@
  *   GET /api/cms/articles/feed         { records } (published, content [])
  *   GET /api/cms/articles/:slug        { record }, or a 404
  *   GET /api/cms/articles/media/:key   302 to /files/<key> on this server
+ *   GET /api/shortlinks/hosts          { hosts: [] } (no custom domains)
+ *   GET /api/shortlinks/public/:slug   redirect / gated / used / not_found
+ *   POST /api/shortlinks/verify        the gate's passphrase check
  *   GET /files/:key                    the file itself, with Range support
  *   GET /__cms-fixture                 readiness (the real API 404s it, so a
  *                                      busy port fails loudly instead of
@@ -198,11 +201,65 @@ function articleRoute(response, rest) {
   return false;
 }
 
+/** The shortlinks reads the public click path makes; returns false otherwise. */
+function shortlinksRoute(request, response, rest) {
+  const method = request.method;
+  if (method === "GET" && rest.length === 1 && rest[0] === "hosts") {
+    sendJson(response, 200, { hosts: [] });
+    return true;
+  }
+  if (method === "GET" && rest.length === 2 && rest[0] === "public") {
+    const slug = rest[1];
+    if (slug === "redirect") {
+      sendJson(response, 200, { status: "ok", longUrl: "https://fixture.example/destination" });
+    } else if (slug === "gated") {
+      sendJson(response, 200, { status: "passphrase", host: "labmgm.org" });
+    } else if (slug === "used") {
+      sendJson(response, 200, { status: "expired", kind: "consumed" });
+    } else {
+      sendJson(response, 200, { status: "not_found" });
+    }
+    return true;
+  }
+  if (method === "POST" && rest.length === 1 && rest[0] === "verify") {
+    let body = "";
+    request.setEncoding("utf8");
+    request.on("data", (chunk) => {
+      body += chunk;
+    });
+    request.on("end", () => {
+      try {
+        const { slug, passphrase } = JSON.parse(body);
+        if (slug === "gated" && passphrase === "sesame") {
+          sendJson(response, 201, { longUrl: "https://fixture.example/gated-destination" });
+        } else if (slug === "gated") {
+          sendError(response, 401, "That passphrase is not right.");
+        } else if (slug === "used") {
+          sendError(response, 410, "That link has expired.");
+        } else {
+          sendError(response, 404, "That link does not exist.");
+        }
+      } catch {
+        sendError(response, 400, "Invalid request");
+      }
+    });
+    return true;
+  }
+  return false;
+}
+
 /** Handles the routes above; returns false for anything it doesn't serve. */
 function route(request, response) {
-  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "POST") {
+    return false;
+  }
   const { pathname } = new URL(request.url ?? "/", ORIGIN);
   const parts = pathname.split("/").filter(Boolean).map(decodeURIComponent);
+
+  if (parts[0] === "api" && parts[1] === "shortlinks") {
+    return shortlinksRoute(request, response, parts.slice(2));
+  }
+  if (request.method === "POST") return false;
 
   if (pathname === "/__cms-fixture") {
     sendJson(response, 200, {

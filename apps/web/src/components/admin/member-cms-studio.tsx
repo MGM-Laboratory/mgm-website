@@ -16,6 +16,7 @@ import {
   GraduationCap,
   House,
   ImageSquare,
+  LinkSimple,
   Lock,
   MagnifyingGlass,
   MonitorPlay,
@@ -68,6 +69,8 @@ import { useResearchRecords } from "@/hooks/use-research-records";
 import { CareersCmsStudio } from "@/components/admin/careers-cms-studio";
 import { ContactInquiriesInbox } from "@/components/admin/contact-inquiries-inbox";
 import { EventsCmsStudio } from "@/components/admin/events-cms-studio";
+import { LinksStudio } from "@/components/admin/links-studio";
+import type { LinksAdminSnapshot } from "@/lib/links-cms-server";
 import type { CmsArticleRecord } from "@/lib/article-cms";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import type { CmsPublicationRecord } from "@/lib/publication-cms";
@@ -89,6 +92,7 @@ type EditorialSection =
   | "contact-inquiries"
   | "events"
   | "home"
+  | "links"
   | "other"
   | "administration";
 type DateValue = { month: number; year: number };
@@ -112,6 +116,7 @@ const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: st
   { id: "careers", label: "Careers" },
   { id: "contact-inquiries", label: "Contact Inquiries" },
   { id: "events", label: "Events" },
+  { id: "links", label: "Links" },
   { id: "other", label: "Settings" },
 ];
 
@@ -125,6 +130,7 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "careers", label: "Careers", tone: "text-brand-yellow" },
   { id: "contact-inquiries", label: "Contact Inquiries", tone: "text-brand-green" },
   { id: "events", label: "Events", tone: "text-brand-green" },
+  { id: "links", label: "Links", tone: "text-brand-blue" },
   { id: "other", label: "Settings", tone: "text-brand-yellow" },
   { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
@@ -140,6 +146,7 @@ const LIVE_WORKSPACES = new Set<EditorialSection>([
   "projects",
   "events",
   "home",
+  "links",
   "other",
 ]);
 
@@ -161,6 +168,7 @@ const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
   "contact-inquiries": "contact-inquiries",
   events: "events",
   home: "home",
+  links: "links",
   other: "other",
 };
 
@@ -184,6 +192,8 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
       return <EnvelopeOpen size={size} weight="duotone" />;
     case "events":
       return <CalendarBlank size={size} weight="duotone" />;
+    case "links":
+      return <LinkSimple size={size} weight="duotone" />;
     case "home":
       return <MonitorPlay size={size} weight="duotone" />;
     case "other":
@@ -475,6 +485,7 @@ export function MemberCmsStudio({
   initialEvents = [],
   initialEventRegistrations = [],
   initialContactInquiries = [],
+  initialLinksData = { domains: [], links: [], cnameTarget: "" },
   paperLimitBytes = 209_715_200,
   videoLimitBytes = 524_288_000,
   session,
@@ -489,6 +500,7 @@ export function MemberCmsStudio({
   initialEvents?: CmsEventRecord[];
   initialEventRegistrations?: CmsEventRegistrationRecord[];
   initialContactInquiries?: CmsContactInquiryRecord[];
+  initialLinksData?: LinksAdminSnapshot;
   paperLimitBytes?: number;
   videoLimitBytes?: number;
   session: AdminViewer;
@@ -516,6 +528,7 @@ export function MemberCmsStudio({
   } = useProjectRecords(initialProjects);
   const [contactInquiries, setContactInquiries] =
     useState<CmsContactInquiryRecord[]>(initialContactInquiries);
+  const [linksSearch, setLinksSearch] = useState("");
   const [section, setSection] = useState<EditorialSection>("overview");
   const [activeTab, setActiveTab] = useState<EditorTab>("profile");
   const [query, setQuery] = useState("");
@@ -1249,6 +1262,59 @@ export function MemberCmsStudio({
                   Administrator accounts, passphrases, and per-page permissions.
                 </p>
               </div>
+            ) : section === "links" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+              <div className="flex min-h-0 flex-col lg:h-full">
+                <div className="shrink-0">
+                  <div className="relative">
+                    <MagnifyingGlass
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
+                      size={17}
+                    />
+                    <input
+                      className={`${inputClass} pl-9`}
+                      onChange={(event) => setLinksSearch(event.target.value)}
+                      placeholder="Find a link"
+                      value={linksSearch}
+                    />
+                  </div>
+                  <button
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white active:scale-[0.98]"
+                    onClick={() => window.dispatchEvent(new Event("mgm:links-focus-form"))}
+                    type="button"
+                  >
+                    <Plus size={17} weight="bold" />
+                    Shorten a link
+                  </button>
+                  <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
+                    Domains · {initialLinksData.domains.length}
+                  </p>
+                </div>
+                <nav className="mt-2 min-h-0 space-y-1 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                  {initialLinksData.domains.map((domain) => (
+                    <div
+                      className="flex items-center gap-2.5 rounded-xl px-2.5 py-2"
+                      key={domain.id}
+                    >
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${
+                          domain.status === "connected"
+                            ? "bg-brand-green"
+                            : "bg-[#c3c9d6] dark:bg-white/25"
+                        }`}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">
+                          {domain.hostname}
+                        </span>
+                        <span className="block text-xs text-[#778299] dark:text-white/45">
+                          {domain.linkCount} link{domain.linkCount === 1 ? "" : "s"}
+                          {domain.isPrimary ? " · site" : ""}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </nav>
+              </div>
             ) : section === "other" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
               <SettingsSubNav
                 active={activeSettingsSection}
@@ -1437,6 +1503,16 @@ export function MemberCmsStudio({
                 />
               ) : section === "administration" ? (
                 <AdminManagementPanel initialAdmins={initialAdmins} />
+              ) : section === "links" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+                <LinksStudio
+                  canDelete={can(viewer.permissions, "links", "delete")}
+                  canWrite={can(viewer.permissions, "links", "write")}
+                  cnameTarget={initialLinksData.cnameTarget}
+                  initialDomains={initialLinksData.domains}
+                  initialLinks={initialLinksData.links}
+                  onSearchChange={setLinksSearch}
+                  search={linksSearch}
+                />
               ) : section === "other" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
                 activeSettingsSection === "contact" ? (
                   <ContactSettingsEditor
