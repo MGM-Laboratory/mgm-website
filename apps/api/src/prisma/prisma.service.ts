@@ -121,6 +121,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       ALTER TABLE "ShortLinkDomain" ADD COLUMN IF NOT EXISTS "railwayDomainId" TEXT
     `);
     await this.$executeRawUnsafe(`
+      ALTER TABLE "ShortLinkDomain" ADD COLUMN IF NOT EXISTS "verifyToken" TEXT
+    `);
+    await this.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "ShortLinkVisit" (
         "id" TEXT PRIMARY KEY,
         "linkId" TEXT NOT NULL REFERENCES "ShortLink"("id") ON DELETE CASCADE ON UPDATE CASCADE,

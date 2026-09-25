@@ -79,10 +79,6 @@ const addDomainSchema = z.object({
   hostname: z.string().trim().min(1).max(253),
 });
 
-const cloudflareSchema = z.object({
-  token: z.string().trim().min(1).max(200),
-});
-
 const verifySchema = z.object({
   slug: z.string().regex(SLUG_PATTERN),
   host: z.string().trim().min(1).max(253),
@@ -236,15 +232,10 @@ export class ShortlinksController {
     return result;
   }
 
-  @Post("admin/domains/:id/cloudflare")
-  async adminAutoconfigureCloudflare(
-    @Param("id") id: string,
-    @Body() body: unknown,
-    @Headers("x-cms-passphrase") passphrase = "",
-  ) {
+  @Post("admin/domains/:id/connect")
+  async adminConnectDomain(@Param("id") id: string, @Headers("x-cms-passphrase") passphrase = "") {
     this.assertAdmin(passphrase);
-    const input = parseSafe(cloudflareSchema, body);
-    const result = await this.run(() => this.shortlinks.autoconfigureCloudflare(id, input.token));
+    const result = await this.run(() => this.shortlinks.connectDomain(id));
     if (!result) throw new HttpException("That domain does not exist.", 404);
     return result;
   }
