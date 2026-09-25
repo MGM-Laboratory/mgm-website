@@ -320,7 +320,11 @@ export class ArticleController {
 
   private glCoverWithin(ms: number): Promise<ArticleCoverLayer | null> {
     if (this.glCover && this.glCoverReady) return Promise.resolve(this.glCover);
-    if (this.reduced || !this.fine || !this.o.data.coverUrl) return Promise.resolve(null);
+    // No world picture can come: reduced motion, touch, no cover, or the
+    // world already settled on the DOM (no WebGL, ?noworld, a lost context).
+    if (this.reduced || !this.fine || !this.o.data.coverUrl || this.coverFinal) {
+      return Promise.resolve(null);
+    }
     return new Promise((resolve) => {
       const timer = window.setTimeout(() => {
         const index = this.glWaiters.indexOf(done);
