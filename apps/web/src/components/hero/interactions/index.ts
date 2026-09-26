@@ -4,14 +4,15 @@ import { startDoze, type IdleLoops } from "./doze";
 import { createLetters } from "./letters";
 import { createMotifs } from "./motifs";
 import { createPieces } from "./pieces";
+import { startScrollCue } from "./scroll-cue";
 import { createStage } from "./stage";
 
 export type { IdleLoops } from "./doze";
 
 /**
  * Everything in the desktop hero that answers the visitor once the entrance
- * is over: the letters, the shapes, the arrow, the background motifs and
- * the doze. Started from the hero's idle phase (after the
+ * is over: the letters, the shapes, the arrow, the background motifs, the
+ * scroll cue and the doze. Started from the hero's idle phase (after the
  * entrance completes, or right away when it is skipped), only when motion
  * is allowed, and loaded lazily so the compact hero never downloads it.
  * Returns the teardown, which puts every element and the markup back
@@ -46,6 +47,7 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
   if (arrow) stage.add(arrow);
   stage.add(motifs);
   const stopDoze = startDoze(stage, options.loops, [letters, pieces]);
+  const stopCue = startScrollCue(stage);
 
   const onPointerDown = (event: PointerEvent) => {
     if (!stage.active() || event.button > 0) return;
@@ -69,6 +71,7 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
     root.removeEventListener("pointerdown", onPointerDown);
     window.removeEventListener("pointerup", onPointerUp);
     window.removeEventListener("pointercancel", onPointerUp);
+    stopCue();
     stopDoze();
     stage.destroy();
   };
