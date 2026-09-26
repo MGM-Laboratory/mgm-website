@@ -131,19 +131,58 @@ export function CtaFooter({ lead }: { lead?: ReactNode } = {}) {
     return () => tween?.scrollTrigger?.kill();
   }, []);
 
+  // The wordmark drifts left at a steady 90 px/s, and the page's scroll
+  // pushes it: scrolling down speeds it up, a quick scroll up throws it the
+  // other way for a moment, then it eases back to its drift. It only runs
+  // while the footer is on screen.
   useLayoutEffect(() => {
     const track = wordmarkTrackRef.current;
     if (!track || reducedMotion()) return;
-    const secondCopy = track.children[1] as HTMLElement | undefined;
-    const shiftPx = secondCopy ? secondCopy.offsetLeft : track.scrollWidth / 2;
-    const tween = gsap.to(track, {
-      x: -shiftPx,
-      duration: shiftPx / 90,
-      ease: "none",
-      repeat: -1,
+    const measure = () => {
+      const secondCopy = track.children[1] as HTMLElement | undefined;
+      return secondCopy ? secondCopy.offsetLeft : track.scrollWidth / 2;
+    };
+    let shiftPx = measure();
+    const setX = gsap.quickSetter(track, "x", "px") as (value: number) => void;
+    const DRIFT = 90;
+    let x = 0;
+    let push = 0;
+    let lastY = window.scrollY;
+    let lastT = performance.now();
+    const onScroll = () => {
+      const now = performance.now();
+      const dt = Math.max(16, now - lastT) / 1000;
+      const velocity = (window.scrollY - lastY) / dt;
+      lastY = window.scrollY;
+      lastT = now;
+      const target = Math.max(-700, Math.min(700, velocity * 0.4));
+      push += (target - push) * 0.5;
+    };
+    const tick = (_time: number, deltaMs: number) => {
+      const dt = Math.min(deltaMs, 50) / 1000;
+      push *= Math.exp(-dt * 2.6);
+      x -= (DRIFT + push) * dt;
+      if (shiftPx > 0) x = gsap.utils.wrap(-shiftPx, 0, x);
+      setX(x);
+    };
+    let running = false;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting === running) return;
+      running = entry.isIntersecting;
+      if (running) gsap.ticker.add(tick);
+      else gsap.ticker.remove(tick);
     });
+    observer.observe(track);
+    const onResize = () => {
+      shiftPx = measure();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
     return () => {
-      tween.kill();
+      observer.disconnect();
+      gsap.ticker.remove(tick);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
     };
   }, []);
 
