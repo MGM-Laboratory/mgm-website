@@ -61,9 +61,11 @@ export function FormRoot({
   className?: string;
   stage?: string;
 }) {
+  const hydrated = useHydrated();
   return (
     <div
       className={className ? `fx-root ${className}` : "fx-root"}
+      data-hydrated={hydrated ? "" : undefined}
       data-font={design.font}
       data-density={design.density}
       data-field-style={design.fieldStyle}
