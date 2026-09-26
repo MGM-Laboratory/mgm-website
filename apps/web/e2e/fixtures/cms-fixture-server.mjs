@@ -361,7 +361,7 @@ function formsRoute(request, response, rest, search) {
             statusCode: 401,
           });
         } else {
-          sendJson(response, 201, formPayload(record, FORM_TOKEN));
+          sendJson(response, 200, formPayload(record, FORM_TOKEN));
         }
       })
       .catch(fail);
