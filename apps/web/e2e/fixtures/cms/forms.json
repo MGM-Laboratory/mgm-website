@@ -1135,6 +1135,101 @@
       }
     },
     {
+      "slug": "e2e-intl",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Contact details",
+        "fields": [
+          {
+            "id": "phone",
+            "type": "phone",
+            "label": "Phone",
+            "required": false,
+            "width": "full",
+            "defaultCountry": "ID"
+          },
+          {
+            "id": "country",
+            "type": "country",
+            "label": "Country",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "address",
+            "type": "address",
+            "label": "Address",
+            "required": false,
+            "width": "full"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Thank you",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "atlas",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "paper",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "id",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": true,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 3,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
       "slug": "e2e-locked",
       "state": "locked",
       "passphrase": "sesame",
