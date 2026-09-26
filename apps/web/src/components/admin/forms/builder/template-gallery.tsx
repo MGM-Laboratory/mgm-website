@@ -28,6 +28,7 @@ import { FORM_TEMPLATES } from "../templates";
 import { TEMPLATE_CATEGORIES, type FormTemplate, type TemplateCategory } from "../templates/types";
 import { FieldIcon } from "./field-icons";
 import {
+  type ButtonRefs,
   Dialog,
   eyebrowClass,
   inputClass,
@@ -36,9 +37,27 @@ import {
   textareaClass,
 } from "./ui";
 
+const THEMES_BY_ID = new Map(Object.entries(PROJECT_THEMES));
+
+/** A project theme by id, or the laboratory theme for an unknown one. */
+export function themeOrDefault(id: string) {
+  return THEMES_BY_ID.get(id) ?? PROJECT_THEMES.laboratory;
+}
+
+const TYPE_LABELS = new Map(
+  Object.entries(FIELD_TYPE_INFO).map(([type, info]) => [type, info.label]),
+);
+
+/** Label and input widths (%) of the three skeleton questions. */
+const SKELETON_WIDTHS = [
+  [78, 92],
+  [62, 84],
+  [70, 88],
+] as const;
+
 /** A miniature of the form: its theme colours, title, and first questions as skeleton lines. */
 export function MiniPreview({ document }: { document: FormDocument }) {
-  const theme = PROJECT_THEMES[document.design.theme] ?? PROJECT_THEMES.laboratory;
+  const theme = themeOrDefault(document.design.theme);
   const questions = document.fields
     .filter(
       (field) => field.type !== "page_break" && field.type !== "spacer" && field.type !== "divider",
@@ -55,23 +74,26 @@ export function MiniPreview({ document }: { document: FormDocument }) {
         {document.welcome.title || document.title}
       </span>
       <div className="mt-2.5 space-y-2">
-        {questions.map((field, index) => (
-          <div className="flex items-center gap-2" key={field.id}>
-            <span className="grid size-5 shrink-0 place-items-center rounded-md bg-[var(--project-line)] text-[var(--project-muted)]">
-              <FieldIcon size={11} type={field.type} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span
-                className="block h-1.5 rounded-full bg-[var(--project-text)] opacity-60"
-                style={{ width: `${[78, 62, 70][index]}%` }}
-              />
-              <span
-                className="mt-1 block h-3 rounded-md border border-[var(--project-line)]"
-                style={{ width: `${[92, 84, 88][index]}%` }}
-              />
-            </span>
-          </div>
-        ))}
+        {questions.map((field, index) => {
+          const [labelWidth, inputWidth] = SKELETON_WIDTHS.at(index) ?? SKELETON_WIDTHS[2];
+          return (
+            <div className="flex items-center gap-2" key={field.id}>
+              <span className="grid size-5 shrink-0 place-items-center rounded-md bg-[var(--project-line)] text-[var(--project-muted)]">
+                <FieldIcon size={11} type={field.type} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span
+                  className="block h-1.5 rounded-full bg-[var(--project-text)] opacity-60"
+                  style={{ width: `${labelWidth}%` }}
+                />
+                <span
+                  className="mt-1 block h-3 rounded-md border border-[var(--project-line)]"
+                  style={{ width: `${inputWidth}%` }}
+                />
+              </span>
+            </div>
+          );
+        })}
       </div>
       <span className="mt-auto inline-flex h-5 w-14 items-center justify-center self-start rounded-full bg-[var(--project-button-bg)]">
         <span className="h-1 w-6 rounded-full bg-[var(--project-button-text)] opacity-80" />
@@ -97,7 +119,7 @@ function TileMeta({ document }: { document: FormDocument }) {
       </span>
       <span
         className="flex items-center gap-1"
-        title={types.map((type) => FIELD_TYPE_INFO[type].label).join(", ")}
+        title={types.map((type) => TYPE_LABELS.get(type)).join(", ")}
       >
         {types.map((type) => (
           <FieldIcon
@@ -176,7 +198,7 @@ export function TemplateGallery({
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
   const [mine, setMine] = useState<SavedTemplate[]>([]);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabRefs = useRef<ButtonRefs>(new Map());
 
   useEffect(() => {
     // Local storage is only readable in the browser, after mount.
@@ -214,8 +236,10 @@ export function TemplateGallery({
   const tabIndex = tabs.findIndex((item) => item.id === tab);
   const moveTab = (next: number) => {
     const target = (next + tabs.length) % tabs.length;
-    setTab(tabs[target].id);
-    tabRefs.current[target]?.focus();
+    const item = tabs.at(target);
+    if (!item) return;
+    setTab(item.id);
+    tabRefs.current.get(target)?.focus();
   };
 
   return (
@@ -279,7 +303,7 @@ export function TemplateGallery({
                     }
                   }}
                   ref={(element) => {
-                    tabRefs.current[index] = element;
+                    tabRefs.current.set(index, element);
                   }}
                   role="tab"
                   tabIndex={selected ? 0 : -1}
@@ -456,7 +480,7 @@ export function ImportDialog({
           <input
             accept="application/json,.json"
             className="sr-only"
-            onChange={async (event) => {
+            onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (!file) return;
@@ -464,8 +488,10 @@ export function ImportDialog({
                 setErrors(["That file is larger than 3 MB; a form export is much smaller."]);
                 return;
               }
-              setText(await file.text());
-              setErrors([]);
+              void file.text().then((text) => {
+                setText(text);
+                setErrors([]);
+              });
             }}
             ref={fileRef}
             tabIndex={-1}

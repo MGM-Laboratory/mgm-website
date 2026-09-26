@@ -80,14 +80,14 @@ function normalizeHref(value: string) {
   return `https://${trimmed}`;
 }
 
-const COLOR_NAMES: Record<RichTextColor, string> = {
-  blue: "Blue",
-  red: "Red",
-  green: "Green",
-  yellow: "Yellow",
-  ink: "Ink",
-  muted: "Muted",
-};
+const COLOR_NAMES = new Map<RichTextColor, string>([
+  ["blue", "Blue"],
+  ["red", "Red"],
+  ["green", "Green"],
+  ["yellow", "Yellow"],
+  ["ink", "Ink"],
+  ["muted", "Muted"],
+]);
 
 const isMac = () =>
   typeof navigator !== "undefined" && /Mac|iP(hone|ad|od)/.test(navigator.platform);
@@ -226,14 +226,14 @@ function ColorPopover({
         </button>
         {RICH_TEXT_COLORS.map((token) => (
           <button
-            aria-label={COLOR_NAMES[token]}
+            aria-label={COLOR_NAMES.get(token)}
             aria-pressed={current === token}
             className={`grid size-8 place-items-center rounded-lg border transition max-sm:size-10 ${current === token ? "border-brand-blue ring-2 ring-brand-blue/30" : "border-[#dfe4ee] hover:border-brand-blue/50 dark:border-white/15"}`}
             key={token}
             onClick={() => {
               onChoose(token);
             }}
-            title={COLOR_NAMES[token]}
+            title={COLOR_NAMES.get(token)}
             type="button"
           >
             {kind === "highlight" ? (
@@ -372,6 +372,7 @@ function Toolbar({
 }) {
   const [colorOpen, setColorOpen] = useState<"highlight" | "text" | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  // Typed as possibly null: the editor may not have produced a snapshot yet.
   const state = useEditorState({
     editor,
     selector: ({ editor: current }): Snapshot => {
@@ -399,20 +400,20 @@ function Toolbar({
         canRedo: current.can().redo(),
       };
     },
-  });
+  }) as Snapshot | null;
 
   const chain = () => editor.chain().focus();
 
   // Roving focus: arrow keys move between toolbar buttons, Tab leaves.
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    if (!(event.target instanceof HTMLElement) || !event.target.hasAttribute("data-toolbar-item")) {
+    if (!(event.target instanceof Element) || !event.target.hasAttribute("data-toolbar-item")) {
       return;
     }
     const items = [
       ...(toolbarRef.current?.querySelectorAll<HTMLButtonElement>("[data-toolbar-item]") ?? []),
     ].filter((item) => !item.disabled);
-    const index = items.indexOf(event.target as HTMLButtonElement);
+    const index = items.findIndex((item) => item === event.target);
     const next =
       event.key === "Home"
         ? 0
@@ -420,7 +421,7 @@ function Toolbar({
           ? items.length - 1
           : (index + (event.key === "ArrowRight" ? 1 : -1) + items.length) % items.length;
     event.preventDefault();
-    items[next]?.focus();
+    items.at(next)?.focus();
   };
 
   // The first enabled button is the toolbar's single tab stop.

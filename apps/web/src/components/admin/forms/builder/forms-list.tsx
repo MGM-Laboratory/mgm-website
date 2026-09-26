@@ -22,11 +22,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormStatus, FormSummary } from "@repo/shared";
 
 import { relativeTime } from "@/lib/forms/builder-document";
-import { PROJECT_THEMES } from "@/lib/project-themes";
 
 import { featuredTemplates } from "../templates";
 import type { FormTemplate } from "../templates/types";
-import { TemplateTile } from "./template-gallery";
+import { TemplateTile, themeOrDefault } from "./template-gallery";
 import {
   Menu,
   Segmented,
@@ -61,7 +60,7 @@ export function ThemeStrip({
   theme: FormSummary["theme"];
   className?: string;
 }) {
-  const palette = PROJECT_THEMES[theme] ?? PROJECT_THEMES.laboratory;
+  const palette = themeOrDefault(theme);
   const colors = [
     palette.light.bg,
     palette.light.highlight,
@@ -340,8 +339,13 @@ export function FormsList({
   };
 
   const counts = useMemo(() => {
-    const result = { all: forms.length, draft: 0, published: 0, closed: 0 };
-    for (const form of forms) result[form.status] += 1;
+    const result = new Map<StatusFilter, number>([
+      ["all", forms.length],
+      ["draft", 0],
+      ["published", 0],
+      ["closed", 0],
+    ]);
+    for (const form of forms) result.set(form.status, (result.get(form.status) ?? 0) + 1);
     return result;
   }, [forms]);
 
@@ -427,7 +431,7 @@ export function FormsList({
                 label: (
                   <>
                     {value === "all" ? "All" : value[0].toUpperCase() + value.slice(1)}
-                    <span className="font-mono text-[10px] opacity-60">{counts[value]}</span>
+                    <span className="font-mono text-[10px] opacity-60">{counts.get(value)}</span>
                   </>
                 ),
               }))}

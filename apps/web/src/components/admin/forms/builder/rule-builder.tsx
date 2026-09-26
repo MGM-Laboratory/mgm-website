@@ -41,6 +41,13 @@ export const OPERATOR_LABELS: Record<FormOperator, string> = {
   after: "is after",
 };
 
+const OPERATOR_LABEL_BY_ID = new Map<string, string>(Object.entries(OPERATOR_LABELS));
+
+/** An operator's words, or the operator itself if it is unknown. */
+function operatorLabel(operator: string) {
+  return OPERATOR_LABEL_BY_ID.get(operator) ?? operator;
+}
+
 const PRESENCE = new Set<FormOperator>(["is_answered", "is_not_answered"]);
 const LIST_OPERATORS = new Set<FormOperator>(["includes_any", "includes_all", "includes_none"]);
 
@@ -90,7 +97,7 @@ export function describeRule(document: FormDocument, rule: FormCondition): strin
   const field = isScore ? undefined : document.fields.find((item) => item.id === rule.subject);
   if (!isScore && !field) return "a deleted question";
   const subject = isScore ? "Score" : subjectName(document, field as FormField);
-  const operator = OPERATOR_LABELS[rule.operator] ?? rule.operator;
+  const operator = operatorLabel(rule.operator);
   if (PRESENCE.has(rule.operator)) return `${subject} ${operator}`;
   let value: string;
   if (typeof rule.value === "boolean") value = rule.value ? "Yes" : "No";
@@ -408,7 +415,7 @@ const RuleRow = memo(function RuleRow({
       >
         {operators.map((operator) => (
           <option key={operator} value={operator}>
-            {OPERATOR_LABELS[operator]}
+            {operatorLabel(operator)}
           </option>
         ))}
       </select>
@@ -478,7 +485,7 @@ export function RuleBuilder({
   };
 
   const addRule = () => {
-    const first = subjects[subjects.length - 1];
+    const first = subjects.at(-1);
     if (first) {
       const operator = operatorsFor(first.field.type)[0];
       emit([

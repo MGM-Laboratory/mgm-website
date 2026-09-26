@@ -845,12 +845,11 @@ const TestInput = memo(function TestInput({
 function TestPanel({ document }: { document: FormDocument }) {
   const [answers, setAnswers] = useState<FormAnswers>({});
   const setAnswer = useCallback((id: string, value: FormAnswerValue | undefined) => {
-    setAnswers((current) => {
-      const next = { ...current };
-      if (value === undefined) delete next[id];
-      else next[id] = value;
-      return next;
-    });
+    setAnswers((current) =>
+      value === undefined
+        ? Object.fromEntries(Object.entries(current).filter(([key]) => key !== id))
+        : { ...current, [id]: value },
+    );
   }, []);
 
   const questions = useMemo(
@@ -860,9 +859,12 @@ function TestPanel({ document }: { document: FormDocument }) {
   const result = useMemo(() => {
     const path = resolvePath(document, answers);
     const context = logicContext(document, answers);
+    // A form with no endings has nothing to pick.
+    const ending = pickEnding(document, answers, path.forcedEndingId) as
+      FormDocument["endings"][number] | undefined;
     const visible = new Set(visibleFields(document, answers).map((field) => field.id));
     const routed = new Set(
-      path.route.flatMap((index) => path.pages[index].fields.map((field) => field.id)),
+      path.route.flatMap((index) => path.pages.at(index)?.fields.map((field) => field.id) ?? []),
     );
     return {
       path,
@@ -871,7 +873,7 @@ function TestPanel({ document }: { document: FormDocument }) {
       context,
       score: computeScore(document, answers),
       max: document.settings.scoring.maxScore ?? maxScore(document),
-      ending: pickEnding(document, answers, path.forcedEndingId),
+      ending,
     };
   }, [answers, document]);
 
@@ -908,7 +910,7 @@ function TestPanel({ document }: { document: FormDocument }) {
           <p className={eyebrowClass}>Route</p>
           <p className="mt-1 leading-6">
             {result.path.route
-              .map((index) => result.path.pages[index].title?.trim() || `Page ${index + 1}`)
+              .map((index) => result.path.pages.at(index)?.title?.trim() || `Page ${index + 1}`)
               .join(" → ")}
             {" → "}
             {result.path.forcedEndingId ? "ending (by jump)" : "Submit"}

@@ -272,7 +272,8 @@ export const BlockCard = memo(function BlockCard({
     );
   }
 
-  const content = !info || field.type === "divider" || field.type === "spacer";
+  // Every block type has an entry in FIELD_TYPE_INFO (the card reads `info.label`).
+  const content = field.type === "divider" || field.type === "spacer";
   const isHeading = field.type === "heading";
   const labelEditable = !["paragraph", "callout", "divider", "spacer", "image", "video"].includes(
     field.type,

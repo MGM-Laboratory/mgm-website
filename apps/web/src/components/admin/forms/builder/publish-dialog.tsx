@@ -26,13 +26,15 @@ type Availability =
   | { state: "invalid"; message: string }
   | { state: "unknown" };
 
-async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
+/** Copies text, resolving whether the clipboard took it. */
+function copyText(text: string): Promise<boolean> {
+  // Inside the chain, so a missing clipboard API resolves false as well.
+  return Promise.resolve()
+    .then(() => navigator.clipboard.writeText(text))
+    .then(
+      () => true,
+      () => false,
+    );
 }
 
 /** Publish, unpublish, close or reopen a form, and choose its public link. */
@@ -78,7 +80,7 @@ export function PublishDialog({
     }
     setAvailability({ state: "checking" });
     let cancelled = false;
-    const timer = window.setTimeout(async () => {
+    const check = async () => {
       try {
         const result = await formsAdminApi.slugAvailable(parsed.data, record.id);
         if (cancelled) return;
@@ -90,6 +92,9 @@ export function PublishDialog({
       } catch {
         if (!cancelled) setAvailability({ state: "unknown" });
       }
+    };
+    const timer = window.setTimeout(() => {
+      void check();
     }, 350);
     return () => {
       cancelled = true;
@@ -164,7 +169,7 @@ export function PublishDialog({
   const button = (
     key: string,
     className: string,
-    onClick: () => void,
+    onClick: () => Promise<void>,
     label: string,
     disabled = false,
   ) => (
@@ -172,7 +177,9 @@ export function PublishDialog({
       className={className}
       disabled={disabled || busy !== null}
       key={key}
-      onClick={onClick}
+      onClick={() => {
+        void onClick();
+      }}
       type="button"
     >
       {busy && busy === (key as FormStatus | "slug") ? (
@@ -366,13 +373,14 @@ export function PublishDialog({
           <button
             aria-label="Copy the link"
             className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue-50 dark:hover:bg-brand-blue/15"
-            onClick={async () => {
-              if (await copyText(url)) {
+            onClick={() => {
+              void copyText(url).then((didCopy) => {
+                if (!didCopy) return;
                 setCopied(true);
                 window.setTimeout(() => {
                   setCopied(false);
                 }, 1400);
-              }
+              });
             }}
             type="button"
           >

@@ -56,25 +56,25 @@ const SECTIONS = [
   { id: "danger", label: "Danger zone" },
 ] as const;
 
-const LABEL_NAMES: Record<FormLabelKey, string> = {
-  start: "Start button",
-  next: "Next button",
-  back: "Back button",
-  submit: "Submit button",
-  required: "Required marker",
-  optional: "Optional marker",
-  other: "“Other” option",
-  pressEnter: "Press Enter hint",
-  chooseFile: "Choose file",
-  dropFiles: "Drop files hint",
-  uploading: "Uploading",
-  selectPlaceholder: "Dropdown placeholder",
-  searchPlaceholder: "Search placeholder",
-  clear: "Clear",
-  closed: "Closed title",
-  resume: "Resume prompt",
-  startOver: "Start over",
-};
+const LABEL_NAMES = new Map<FormLabelKey, string>([
+  ["start", "Start button"],
+  ["next", "Next button"],
+  ["back", "Back button"],
+  ["submit", "Submit button"],
+  ["required", "Required marker"],
+  ["optional", "Optional marker"],
+  ["other", "“Other” option"],
+  ["pressEnter", "Press Enter hint"],
+  ["chooseFile", "Choose file"],
+  ["dropFiles", "Drop files hint"],
+  ["uploading", "Uploading"],
+  ["selectPlaceholder", "Dropdown placeholder"],
+  ["searchPlaceholder", "Search placeholder"],
+  ["clear", "Clear"],
+  ["closed", "Closed title"],
+  ["resume", "Resume prompt"],
+  ["startOver", "Start over"],
+]);
 
 /** A plain email shape check (no user-built patterns). */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -393,7 +393,9 @@ function PassphraseCard({
             <button
               className={primaryButtonClass}
               disabled={!valid || busy}
-              onClick={save}
+              onClick={() => {
+                void save();
+              }}
               type="button"
             >
               {busy ? "Saving…" : "Save passphrase"}
@@ -409,7 +411,9 @@ function PassphraseCard({
           onCancel={() => {
             setRemoving(false);
           }}
-          onConfirm={remove}
+          onConfirm={() => {
+            void remove();
+          }}
           title="Remove the passphrase?"
         />
       ) : null}
@@ -434,6 +438,8 @@ export function SettingsTab({
   const settings = document.settings;
   const [labelsOpen, setLabelsOpen] = useState(() => Object.keys(settings.labels).length > 0);
   const defaults = useMemo(() => formLabels(settings.language), [settings.language]);
+  const defaultLabels = useMemo(() => new Map(Object.entries(defaults)), [defaults]);
+  const customLabels = new Map(Object.entries(settings.labels));
   const timezone = useMemo(() => {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -560,7 +566,7 @@ export function SettingsTab({
                   <div className="grid gap-3 sm:grid-cols-2">
                     {FORM_LABEL_KEYS.map((key) => (
                       <label className="block" key={key}>
-                        <span className={labelText}>{LABEL_NAMES[key]}</span>
+                        <span className={labelText}>{LABEL_NAMES.get(key)}</span>
                         <input
                           className={smallInputClass}
                           maxLength={80}
@@ -574,8 +580,8 @@ export function SettingsTab({
                               `settings.labels.${key}`,
                             );
                           }}
-                          placeholder={defaults[key]}
-                          value={settings.labels[key] ?? ""}
+                          placeholder={defaultLabels.get(key)}
+                          value={customLabels.get(key) ?? ""}
                         />
                       </label>
                     ))}

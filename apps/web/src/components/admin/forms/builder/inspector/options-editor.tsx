@@ -86,10 +86,10 @@ export function OptionsEditor({
     const pool = [...options];
     const taken = takenIds();
     const next = lines.map((line) => {
-      const [label, pointsText] = line.split(/\s*\|\s*/);
+      const [label, pointsText = ""] = line.split(/\s*\|\s*/);
       const index = pool.findIndex((option) => option.label === label);
       const existing = index === -1 ? undefined : pool.splice(index, 1)[0];
-      const points = pointsText !== undefined && pointsText !== "" ? Number(pointsText) : undefined;
+      const points = pointsText !== "" ? Number(pointsText) : undefined;
       return {
         ...(existing ?? { id: mintId("opt", taken) }),
         label,

@@ -164,7 +164,7 @@ export function BuildTab({
       });
       select(field.id);
       setPaletteOpen(false);
-      announce(`${FIELD_TYPE_INFO[type].label} added`);
+      announce(`${FIELD_TYPE_INFO[field.type].label} added`);
       focusBlock(field.id);
     },
     [announce, change, focusBlock, readOnly, select],
@@ -207,12 +207,13 @@ export function BuildTab({
       },
       remove: (id) => {
         const current = latest.current.document;
-        const index = current.fields.findIndex((field) => field.id === id);
-        const field = current.fields[index];
+        const field = current.fields.find((item) => item.id === id);
         if (!field) return;
+        const index = current.fields.indexOf(field);
         const users = referencesTo(current, id).filter((user) => user !== id);
         change((doc) => removeFields(doc, [id]));
-        const next = current.fields[index + 1] ?? current.fields[index - 1];
+        const next =
+          current.fields.at(index + 1) ?? (index > 0 ? current.fields.at(index - 1) : undefined);
         select(next ? next.id : null);
         announce(`${FIELD_TYPE_INFO[field.type].label} deleted`);
         toast(`Deleted “${field.label || FIELD_TYPE_INFO[field.type].label}”`, {
@@ -314,7 +315,7 @@ export function BuildTab({
   const selectedIndex = selection
     ? document.fields.findIndex((field) => field.id === selection)
     : -1;
-  const selectedField = selectedIndex >= 0 ? document.fields[selectedIndex] : undefined;
+  const selectedField = selectedIndex >= 0 ? document.fields.at(selectedIndex) : undefined;
   const selectedEnding = selection?.startsWith("ending:")
     ? document.endings.find((ending) => `ending:${ending.id}` === selection)
     : undefined;

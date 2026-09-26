@@ -41,6 +41,7 @@ import {
 } from "@/lib/forms/builder-media";
 
 import {
+  type ButtonRefs,
   Dialog,
   Field,
   Segmented,
@@ -181,7 +182,32 @@ async function uploadMediaFile(
 }
 
 function kindLabel(kind: FormMedia["kind"]) {
-  return { image: "Image", video: "Video", youtube: "YouTube", vimeo: "Vimeo" }[kind];
+  switch (kind) {
+    case "image":
+      return "Image";
+    case "video":
+      return "Video";
+    case "youtube":
+      return "YouTube";
+    case "vimeo":
+      return "Vimeo";
+  }
+}
+
+/** The focal-point nudge an arrow key makes, or null for any other key. */
+function arrowMove(key: string, step: number): [number, number] | null {
+  switch (key) {
+    case "ArrowLeft":
+      return [-step, 0];
+    case "ArrowRight":
+      return [step, 0];
+    case "ArrowUp":
+      return [0, -step];
+    case "ArrowDown":
+      return [0, step];
+    default:
+      return null;
+  }
 }
 
 /** The picture a media item is shown with (a thumbnail for embeds, the file for uploads). */
@@ -291,13 +317,7 @@ function FocalPointPicker({
         className="relative cursor-crosshair touch-none overflow-hidden rounded-xl bg-[#eef1f7] select-none focus-visible:ring-4 focus-visible:ring-brand-blue/25 focus-visible:outline-none dark:bg-white/[0.05]"
         onKeyDown={(event) => {
           const step = event.shiftKey ? 10 : 2;
-          const moves: Record<string, [number, number]> = {
-            ArrowLeft: [-step, 0],
-            ArrowRight: [step, 0],
-            ArrowUp: [0, -step],
-            ArrowDown: [0, step],
-          };
-          const move = moves[event.key];
+          const move = arrowMove(event.key, step);
           if (!move) return;
           event.preventDefault();
           onChange(
@@ -405,7 +425,7 @@ function DropZone({
       onDrop={(event) => {
         event.preventDefault();
         setOver(false);
-        const file = event.dataTransfer.files?.[0];
+        const file = event.dataTransfer.files.item(0);
         if (file) onFile(file);
       }}
     >
@@ -488,7 +508,7 @@ function MediaDialog({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabRefs = useRef<ButtonRefs>(new Map());
   const baseId = useId();
 
   const [linkUrl, setLinkUrl] = useState(
@@ -638,11 +658,13 @@ function MediaDialog({
                   if (!delta) return;
                   event.preventDefault();
                   const next = (index + delta + tabs.length) % tabs.length;
-                  setTab(tabs[next].id);
-                  tabRefs.current[next]?.focus();
+                  const target = tabs.at(next);
+                  if (!target) return;
+                  setTab(target.id);
+                  tabRefs.current.get(next)?.focus();
                 }}
                 ref={(element) => {
-                  tabRefs.current[index] = element;
+                  tabRefs.current.set(index, element);
                 }}
                 role="tab"
                 tabIndex={selected ? 0 : -1}
@@ -941,7 +963,7 @@ export function MediaPicker({
         onDrop: (event: React.DragEvent) => {
           event.preventDefault();
           setOver(false);
-          const file = event.dataTransfer.files?.[0];
+          const file = event.dataTransfer.files.item(0);
           if (file) openWith(file);
         },
       }

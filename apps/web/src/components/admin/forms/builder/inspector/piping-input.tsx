@@ -87,7 +87,7 @@ export function PipingInput({
             setActive((current) => (current - 1 + candidates.length) % candidates.length);
           } else if (event.key === "Enter") {
             event.preventDefault();
-            const choice = candidates[active];
+            const choice = candidates.at(active);
             if (choice) insert(choice.id);
           } else if (event.key === "Escape") {
             event.preventDefault();

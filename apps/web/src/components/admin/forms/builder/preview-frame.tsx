@@ -35,6 +35,17 @@ export const DEVICE_SIZES: Record<PreviewDevice, { width: number; height: number
     desktop: { width: 1280, height: 800, label: "Desktop" },
   };
 
+function deviceSize(device: PreviewDevice) {
+  switch (device) {
+    case "phone":
+      return DEVICE_SIZES.phone;
+    case "tablet":
+      return DEVICE_SIZES.tablet;
+    case "desktop":
+      return DEVICE_SIZES.desktop;
+  }
+}
+
 export type PreviewFrameProps = {
   /** The last valid parsed document (undefined keeps showing the last one sent). */
   document: FormDocument | undefined;
@@ -160,7 +171,7 @@ export function PreviewFrame({
     };
   }, []);
 
-  const size = DEVICE_SIZES[device];
+  const size = deviceSize(device);
   const bezel = device === "desktop" ? 0 : device === "phone" ? 12 : 14;
   const bar = device === "desktop" ? 28 : 0;
   const availableWidth = Math.max(0, box.width - bezel * 2);
@@ -282,7 +293,7 @@ export function PreviewToolbar({
   follow?: boolean;
   onFollow?: (value: boolean) => void;
 }) {
-  const stageValue = stage === "ending" ? `ending:${endingId ?? endings[0]?.id ?? ""}` : stage;
+  const stageValue = stage === "ending" ? `ending:${endingId ?? endings.at(0)?.id ?? ""}` : stage;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Segmented<PreviewDevice>

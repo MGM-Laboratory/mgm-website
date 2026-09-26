@@ -43,6 +43,8 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 
+import { createElement } from "react";
+
 import type { FormFieldType } from "@repo/shared";
 
 import type { FieldFamily } from "@/lib/forms/builder-fields";
@@ -89,6 +91,8 @@ export const FIELD_ICONS: Record<FormFieldType, Icon> = {
   page_break: Files,
 };
 
+const ICON_BY_TYPE = new Map(Object.entries(FIELD_ICONS) as [FormFieldType, Icon][]);
+
 /** Each family's tint, so the palette and the cards read at a glance. */
 export const FAMILY_TONES: Record<FieldFamily, string> = {
   text: "bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/15 dark:text-[#8fb0ec]",
@@ -110,6 +114,7 @@ export function FieldIcon({
   size?: number;
   className?: string;
 }) {
-  const Component = FIELD_ICONS[type];
-  return <Component aria-hidden="true" className={className} size={size} weight="bold" />;
+  const icon = ICON_BY_TYPE.get(type);
+  if (!icon) return null;
+  return createElement(icon, { "aria-hidden": "true", className, size, weight: "bold" });
 }

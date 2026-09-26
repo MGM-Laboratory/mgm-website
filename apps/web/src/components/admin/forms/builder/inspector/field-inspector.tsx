@@ -22,20 +22,23 @@ const labelText = "mb-1 block text-[11px] font-semibold text-[#687187] dark:text
 
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 1400);
+    } catch {
+      // Clipboard refused (insecure context): nothing to do.
+    }
+  };
   return (
     <button
       aria-label={label}
       className="grid size-8 shrink-0 place-items-center rounded-lg text-[#667187] transition hover:bg-[#eef1f7] hover:text-brand-blue dark:text-white/50 dark:hover:bg-white/10"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          setCopied(true);
-          window.setTimeout(() => {
-            setCopied(false);
-          }, 1400);
-        } catch {
-          // Clipboard refused (insecure context): nothing to do.
-        }
+      onClick={() => {
+        void copy();
       }}
       title={label}
       type="button"

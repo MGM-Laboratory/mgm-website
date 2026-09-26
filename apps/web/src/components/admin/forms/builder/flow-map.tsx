@@ -79,6 +79,7 @@ export function FlowMap({
       edges.push({ from: index, to: index + 1, kind: "next", lane: 0 });
     });
     let lane = 0;
+    const titleOf = (position: number) => nodes.at(position)?.title ?? "";
     pages.forEach((page, index) => {
       (page.closer?.jumps ?? []).forEach((jump, jumpIndex) => {
         let to: number;
@@ -96,11 +97,9 @@ export function FlowMap({
           title: summary,
           lane: lane++,
         });
-        routes.push(
-          `${nodes[index].title}, jump ${jumpIndex + 1}: ${summary}, go to ${nodes[to].title}.`,
-        );
+        routes.push(`${titleOf(index)}, jump ${jumpIndex + 1}: ${summary}, go to ${titleOf(to)}.`);
       });
-      routes.push(`${nodes[index].title} then ${nodes[index + 1].title} by default.`);
+      routes.push(`${titleOf(index)} then ${titleOf(index + 1)} by default.`);
     });
     document.endings.forEach((ending, index) => {
       edges.push({

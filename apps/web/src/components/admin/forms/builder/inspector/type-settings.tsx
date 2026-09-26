@@ -36,17 +36,17 @@ function Pair({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 gap-2">{children}</div>;
 }
 
-const FILE_CATEGORY_LABELS: Record<(typeof FORM_FILE_CATEGORIES)[number], string> = {
-  image: "Images",
-  pdf: "PDF",
-  document: "Documents",
-  spreadsheet: "Spreadsheets",
-  presentation: "Slides",
-  audio: "Audio",
-  video: "Video",
-  archive: "Archives",
-  text: "Plain text",
-};
+const FILE_CATEGORY_LABELS = new Map<(typeof FORM_FILE_CATEGORIES)[number], string>([
+  ["image", "Images"],
+  ["pdf", "PDF"],
+  ["document", "Documents"],
+  ["spreadsheet", "Spreadsheets"],
+  ["presentation", "Slides"],
+  ["audio", "Audio"],
+  ["video", "Video"],
+  ["archive", "Archives"],
+  ["text", "Plain text"],
+]);
 
 const MASK_PRESETS: { label: string; mask: string; example: string }[] = [
   { label: "NIM (15 digits)", mask: "###############", example: "225150200111001" },
@@ -635,7 +635,7 @@ export function TypeSettings({
                         }}
                         type="checkbox"
                       />
-                      {FILE_CATEGORY_LABELS[category]}
+                      {FILE_CATEGORY_LABELS.get(category)}
                     </label>
                   );
                 })}

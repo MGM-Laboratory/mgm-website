@@ -45,7 +45,7 @@ export const Palette = memo(function Palette({
       })).filter((group) => group.items.length),
     [needle],
   );
-  const first = groups[0]?.items[0];
+  const first = groups.at(0)?.items.at(0);
 
   return (
     <div className="flex min-h-0 flex-col">

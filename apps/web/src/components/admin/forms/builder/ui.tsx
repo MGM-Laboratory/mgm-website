@@ -57,7 +57,7 @@ export function useFocusTrap(
   });
   useEffect(() => {
     if (!active) return;
-    const opener = document.activeElement as HTMLElement | null;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const node = container.current;
     const first =
       node?.querySelector<HTMLElement>("[data-autofocus]") ??
@@ -107,6 +107,21 @@ export function useFocusTrap(
  * A modal dialog in a portal: a dimmed backdrop, a centred card (or a
  * bottom sheet on phones), a title bar with a close button, focus trapped.
  */
+function dialogWidthClass(size: "sm" | "md" | "lg" | "xl" | "full") {
+  switch (size) {
+    case "sm":
+      return "sm:max-w-md";
+    case "md":
+      return "sm:max-w-xl";
+    case "lg":
+      return "sm:max-w-3xl";
+    case "xl":
+      return "sm:max-w-6xl";
+    case "full":
+      return "sm:max-w-[min(96vw,1600px)]";
+  }
+}
+
 export function Dialog({
   children,
   description,
@@ -136,13 +151,7 @@ export function Dialog({
       document.body.style.overflow = previous;
     };
   }, []);
-  const width = {
-    sm: "sm:max-w-md",
-    md: "sm:max-w-xl",
-    lg: "sm:max-w-3xl",
-    xl: "sm:max-w-6xl",
-    full: "sm:max-w-[min(96vw,1600px)]",
-  }[size];
+  const width = dialogWidthClass(size);
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-6">
@@ -308,15 +317,17 @@ export function Segmented<T extends string>({
   size?: "sm" | "md";
   fullWidth?: boolean;
 }) {
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const refs = useRef<ButtonRefs>(new Map());
   const index = Math.max(
     0,
     options.findIndex((option) => option.value === value),
   );
   const move = (next: number) => {
     const target = (next + options.length) % options.length;
-    onChange(options[target].value);
-    refs.current[target]?.focus();
+    const option = options.at(target);
+    if (!option) return;
+    onChange(option.value);
+    refs.current.get(target)?.focus();
   };
   return (
     <div
@@ -344,7 +355,7 @@ export function Segmented<T extends string>({
               onChange(option.value);
             }}
             ref={(element) => {
-              refs.current[position] = element;
+              refs.current.set(position, element);
             }}
             role="radio"
             tabIndex={selected ? 0 : -1}
@@ -387,6 +398,9 @@ export function Section({
   );
 }
 
+/** Buttons of a roving-focus group, by position. */
+export type ButtonRefs = Map<number, HTMLButtonElement | null>;
+
 export type MenuItem =
   | {
       label: string;
@@ -418,8 +432,18 @@ export function Menu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+
+  /** The enabled items, in menu order. */
+  const focusable = useCallback(
+    () =>
+      Array.from(
+        menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ??
+          [],
+      ),
+    [],
+  );
 
   const close = useCallback((restore = true) => {
     setOpen(false);
@@ -432,15 +456,11 @@ export function Menu({
       if (event.target instanceof Node && !rootRef.current?.contains(event.target)) close(false);
     };
     document.addEventListener("mousedown", onDown);
-    const first = itemRefs.current.find((item) => item && !item.disabled);
-    first?.focus();
+    focusable().at(0)?.focus();
     return () => {
       document.removeEventListener("mousedown", onDown);
     };
-  }, [close, open]);
-
-  const focusable = () =>
-    itemRefs.current.filter((item): item is HTMLButtonElement => Boolean(item && !item.disabled));
+  }, [close, focusable, open]);
 
   return (
     <div className="relative" ref={rootRef}>
@@ -476,7 +496,7 @@ export function Menu({
           }}
           onKeyDown={(event) => {
             const list = focusable();
-            const current = list.indexOf(document.activeElement as HTMLButtonElement);
+            const current = list.findIndex((item) => item === document.activeElement);
             if (event.key === "ArrowDown") {
               event.preventDefault();
               list[(current + 1) % list.length]?.focus();
@@ -497,6 +517,7 @@ export function Menu({
               close(false);
             }
           }}
+          ref={menuRef}
           role="menu"
         >
           {items.map((item, index) =>
@@ -514,9 +535,6 @@ export function Menu({
                 onClick={() => {
                   close();
                   item.onSelect();
-                }}
-                ref={(element) => {
-                  itemRefs.current[index] = element;
                 }}
                 role="menuitem"
                 tabIndex={-1}
@@ -609,17 +627,29 @@ export function useAnnouncer() {
   return { announce, node };
 }
 
+function statusBadgeLook(status: "draft" | "published" | "closed") {
+  switch (status) {
+    case "draft":
+      return {
+        tone: "bg-brand-yellow-50 text-[#8a6412] ring-brand-yellow/40 dark:bg-brand-yellow/15 dark:text-brand-yellow",
+        label: "Draft",
+      };
+    case "published":
+      return {
+        tone: "bg-brand-green-50 text-brand-green ring-brand-green/25 dark:bg-brand-green/15 dark:text-[#5fd3a2]",
+        label: "Published",
+      };
+    case "closed":
+      return {
+        tone: "bg-[#eef1f6] text-[#5d687d] ring-[#cfd6e3] dark:bg-white/10 dark:text-white/60 dark:ring-white/15",
+        label: "Closed",
+      };
+  }
+}
+
 /** Status badge used by the list and the builder header. */
 export function StatusBadge({ status }: { status: "draft" | "published" | "closed" }) {
-  const tone = {
-    draft:
-      "bg-brand-yellow-50 text-[#8a6412] ring-brand-yellow/40 dark:bg-brand-yellow/15 dark:text-brand-yellow",
-    published:
-      "bg-brand-green-50 text-brand-green ring-brand-green/25 dark:bg-brand-green/15 dark:text-[#5fd3a2]",
-    closed:
-      "bg-[#eef1f6] text-[#5d687d] ring-[#cfd6e3] dark:bg-white/10 dark:text-white/60 dark:ring-white/15",
-  }[status];
-  const label = { draft: "Draft", published: "Published", closed: "Closed" }[status];
+  const { tone, label } = statusBadgeLook(status);
   return (
     <span
       className={`inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full px-2.5 font-mono text-[10px] font-bold tracking-[0.1em] uppercase ring-1 ${tone}`}

@@ -239,7 +239,7 @@ export function Canvas({
     if (!cards?.length) return 0;
     let index = cards.length;
     for (let position = 0; position < cards.length; position += 1) {
-      const rect = cards[position].getBoundingClientRect();
+      const rect = cards.item(position).getBoundingClientRect();
       if (clientY < rect.top + rect.height / 2) {
         index = position;
         break;
@@ -301,10 +301,10 @@ export function Canvas({
             if (index !== dropIndex) setDropIndex(index);
           }}
           onDrop={(event) => {
-            const type = event.dataTransfer.getData(FIELD_DRAG_TYPE) as FormFieldType;
+            const type = event.dataTransfer.getData(FIELD_DRAG_TYPE);
             if (!type) return;
             event.preventDefault();
-            onAddAt(indexFromPointer(event.clientY), type);
+            onAddAt(indexFromPointer(event.clientY), type as FormFieldType);
             setDropIndex(null);
           }}
         >

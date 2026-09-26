@@ -40,6 +40,7 @@ import { PublishDialog } from "./publish-dialog";
 import { SettingsTab } from "./settings-tab";
 import type { Selection } from "./types";
 import {
+  type ButtonRefs,
   ConfirmDialog,
   Dialog,
   Menu,
@@ -200,7 +201,7 @@ export function FormBuilder({
   const [origin, setOrigin] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabRefs = useRef<ButtonRefs>(new Map());
   const readOnly = !canWrite;
 
   useEffect(() => {
@@ -327,8 +328,10 @@ export function FormBuilder({
   const tabIndex = BUILDER_TABS.findIndex((item) => item.id === tab);
   const moveTab = (next: number) => {
     const target = (next + BUILDER_TABS.length) % BUILDER_TABS.length;
-    setTab(BUILDER_TABS[target].id);
-    tabRefs.current[target]?.focus();
+    const item = BUILDER_TABS.at(target);
+    if (!item) return;
+    setTab(item.id);
+    tabRefs.current.get(target)?.focus();
   };
 
   const tabProps = { change, document, record, readOnly, selection, select };
@@ -570,7 +573,7 @@ export function FormBuilder({
                     }
                   }}
                   ref={(element) => {
-                    tabRefs.current[index] = element;
+                    tabRefs.current.set(index, element);
                   }}
                   role="tab"
                   tabIndex={selected ? 0 : -1}
@@ -699,7 +702,8 @@ function targetFromPath(document: FormDocument, path: string) {
   const [head, index] = path.split(".");
   if (head === "fields") return document.fields[Number(index)]?.id ?? "form";
   if (head === "endings") {
-    const ending = document.endings[Number(index)];
+    // Out of range (or no index at all) reads as undefined.
+    const ending = document.endings[Number(index)] as FormDocument["endings"][number] | undefined;
     return ending ? `ending:${ending.id}` : "form";
   }
   return head === "settings" || head === "design" ? head : head === "welcome" ? "welcome" : "form";
