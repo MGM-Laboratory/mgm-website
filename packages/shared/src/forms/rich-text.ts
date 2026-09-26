@@ -48,7 +48,9 @@ export const RICH_TEXT_LIMITS = {
   maxDepth: 5,
 } as const;
 
-const COLOR_VALUE = new RegExp(`^var\\(--rt-(${RICH_TEXT_COLORS.join("|")})\\)$`);
+// Spelled out rather than built from RICH_TEXT_COLORS so no regular expression
+// is ever constructed at runtime; keep the two lists in step.
+const COLOR_VALUE = /^var\(--rt-(blue|red|green|yellow|ink|muted)\)$/;
 // Site paths (a single leading slash, never protocol-relative), http(s),
 // mailto: and tel: only; javascript:, data: and every other scheme are refused.
 const SAFE_HREF = /^(\/(?!\/)|https?:\/\/|mailto:|tel:)/i;

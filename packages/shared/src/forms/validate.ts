@@ -54,6 +54,59 @@ function fileExtension(name: string) {
   return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
 }
 
+function maskCharMatches(token: string, char: string) {
+  switch (token) {
+    case "#":
+      return char >= "0" && char <= "9";
+    case "A":
+      return char.toLowerCase() !== char.toUpperCase();
+    case "*":
+      return (char >= "0" && char <= "9") || char.toLowerCase() !== char.toUpperCase();
+    case "?":
+      return true;
+    default:
+      return token === char;
+  }
+}
+
+/** Splits one mask alternative into tokens, `\\x` becoming the literal `x`. */
+function maskTokens(mask: string): { token: string; literal: boolean }[] {
+  const tokens: { token: string; literal: boolean }[] = [];
+  for (let index = 0; index < mask.length; index += 1) {
+    if (mask[index] === "\\" && index + 1 < mask.length) {
+      tokens.push({ token: mask[index + 1], literal: true });
+      index += 1;
+    } else {
+      tokens.push({ token: mask[index], literal: false });
+    }
+  }
+  return tokens;
+}
+
+/**
+ * Whether a value fits a format mask (`field.pattern`): character by
+ * character, linear in the value's length, no regular expressions.
+ * Letters in the value compare case-insensitively with literal letters.
+ */
+export function matchesFormatMask(value: string, mask: string): boolean {
+  const alternatives = mask
+    .split(" | ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!alternatives.length) return true;
+  const chars = [...value];
+  return alternatives.some((alternative) => {
+    const tokens = maskTokens(alternative);
+    if (tokens.length !== chars.length) return false;
+    return tokens.every(({ token, literal }, index) =>
+      literal
+        ? token.toLowerCase() === chars[index].toLowerCase()
+        : maskCharMatches(token, chars[index]) ||
+          (!"#A*?".includes(token) && token.toLowerCase() === chars[index].toLowerCase()),
+    );
+  });
+}
+
 /** Whether a file's type or extension falls in one of the field's accepted categories. */
 export function fileAccepted(
   field: Pick<FormField, "type" | "accept">,
@@ -142,12 +195,12 @@ export function validateFieldAnswer(
       if (field.minLength && length < field.minLength)
         return { code: "minLength", min: field.minLength };
       if (length > maxLength) return { code: "maxLength", max: maxLength };
-      if (field.pattern && field.type === "short_text") {
-        try {
-          if (!new RegExp(field.pattern).test(answer.trim())) return { code: "pattern" };
-        } catch {
-          return null;
-        }
+      if (
+        field.pattern &&
+        field.type === "short_text" &&
+        !matchesFormatMask(answer.trim(), field.pattern)
+      ) {
+        return { code: "pattern" };
       }
       return null;
     }
