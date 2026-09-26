@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -73,7 +72,6 @@ export function Calendar({
   const copy = pickerCopy(language);
   const today = useMemo(() => todayIso(), []);
   const weekStart = weekStartOf(language);
-  const headingId = useId();
   const [focus, setFocus] = useState(() =>
     clampIso(value && parseIso(value) ? value : today, min, max),
   );
@@ -264,7 +262,7 @@ export function Calendar({
         >
           <ChevronLeft aria-hidden strokeWidth={2.25} size={18} />
         </button>
-        <div className="pk-cal-title" id={headingId}>
+        <div className="pk-cal-title">
           <button
             type="button"
             className="pk-title-btn"
@@ -312,14 +310,14 @@ export function Calendar({
           <table
             role="grid"
             className="pk-grid"
-            aria-labelledby={headingId}
+            aria-label={heading}
             key={`${current.y}-${current.m}`}
             data-direction={direction ?? undefined}
           >
             <thead>
               <tr>
                 {weekdaysShort.map((name, index) => (
-                  <th key={name + String(index)} scope="col" abbr={weekdaysLong.at(index)}>
+                  <th key={name} scope="col" abbr={weekdaysLong.at(index)}>
                     {name}
                   </th>
                 ))}

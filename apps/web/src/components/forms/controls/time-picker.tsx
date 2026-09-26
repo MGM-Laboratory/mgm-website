@@ -165,6 +165,7 @@ function Column({
         return;
     }
     event.preventDefault();
+    userScroll.current = false;
     const item = items.at(next);
     if (item) onSelect(item.value);
   };
@@ -184,8 +185,8 @@ function Column({
         data-wheel={wheel ? "" : undefined}
         onKeyDown={onKeyDown}
         onScroll={onScroll}
-        onTouchStart={markUser}
-        onWheel={markUser}
+        onTouchMove={wheel ? markUser : undefined}
+        onWheel={wheel ? markUser : undefined}
       >
         {items.map((item, position) => (
           <div
@@ -196,6 +197,7 @@ function Column({
             data-index={position}
             className="pk-opt"
             onClick={() => {
+              userScroll.current = false;
               onSelect(item.value);
             }}
             onKeyDown={(event) => {

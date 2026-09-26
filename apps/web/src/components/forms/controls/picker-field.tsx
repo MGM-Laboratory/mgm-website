@@ -200,6 +200,16 @@ export function PickerField({
   const show = (focusPanel: boolean) => {
     if (disabled) return;
     if (draft !== null) readDraft(draft, true);
+    if (open) {
+      // Already showing (a click opened it): the keyboard moves in.
+      if (focusPanel) {
+        document
+          .getElementById(dialogId)
+          ?.querySelector<HTMLElement>('[role="gridcell"][tabindex="0"], [role="listbox"]')
+          ?.focus();
+      }
+      return;
+    }
     setAutoFocus(focusPanel);
     setOpen(true);
   };
@@ -224,7 +234,18 @@ export function PickerField({
   const Icon = kind === "time" ? Clock3 : CalendarDays;
 
   return (
-    <div className={`pk-wrap pk-skin-${skin}`}>
+    <div
+      className={`pk-wrap pk-skin-${skin}`}
+      onBlur={(event) => {
+        // Focus leaving both the field and its (portaled) panel closes it. A
+        // null target is a cell unmounting as the view changes: stay open.
+        const next = event.relatedTarget as Node | null;
+        if (!open || !next) return;
+        if (anchorRef.current?.contains(next)) return;
+        if (document.getElementById(dialogId)?.contains(next)) return;
+        setOpen(false);
+      }}
+    >
       <div
         ref={anchorRef}
         className={skin === "form" ? "fx-input fx-affix pk-field" : `pk-field ${className ?? ""}`}
