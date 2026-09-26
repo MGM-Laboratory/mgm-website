@@ -931,9 +931,17 @@ export function createToybox(options: ToyboxOptions): Toybox {
   // -- Resizing ------------------------------------------------------------
 
   let resizeFrame = 0;
+  let measured = "";
+  const sizeKey = () =>
+    `${box.clientWidth}x${box.clientHeight}:${words.offsetWidth}x${words.offsetHeight}`;
   function relayout() {
     resizeFrame = 0;
     if (destroyed) return;
+    // The observers report once on start, and the page's own reflows can
+    // report an unchanged size: only a real change re-lays the box.
+    const key = sizeKey();
+    if (key === measured) return;
+    measured = key;
     const before = base;
     cancelTouch();
     endGrab(false);
@@ -959,7 +967,12 @@ export function createToybox(options: ToyboxOptions): Toybox {
       const half = Math.max(live.w, live.h) / 2;
       let x = clamp(c.x, half, W - half);
       let y = Math.min(c.y, floorY - half);
-      if (Query.collides(live.body, statics).length) {
+      // Resting on a letter is touching it; only a shape the reflow left
+      // inside the type is lifted out above the words.
+      const inside = Query.collides(live.body, statics).some(
+        (collision) => collision.depth > base * 0.12,
+      );
+      if (inside) {
         x = clamp(c.x, half, W - half);
         y = top - half - 2;
       }
@@ -1013,6 +1026,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
   // -- Start ---------------------------------------------------------------
 
   measure();
+  measured = sizeKey();
   buildStatics();
   buildShapes();
   resizer.observe(box);
