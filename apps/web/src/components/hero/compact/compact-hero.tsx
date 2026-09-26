@@ -114,7 +114,9 @@ export function CompactHero() {
     const cta = box.querySelector<HTMLElement>(".compact-hero-cta");
 
     let revealed = false;
+    let failsafe = 0;
     const revealCta = (animated: boolean) => {
+      window.clearInterval(failsafe);
       if (revealed || !cta) return;
       revealed = true;
       if (animated) {
@@ -148,14 +150,13 @@ export function CompactHero() {
     // Counts visible time only: a tab opened in the background must not
     // reveal the call to action over an entrance nobody has seen.
     let visibleMs = 0;
-    const failsafe = window.setInterval(() => {
-      if (document.hidden) return;
-      visibleMs += 250;
-      if (visibleMs >= CTA_FAILSAFE_MS) {
-        window.clearInterval(failsafe);
-        revealCta(true);
-      }
-    }, 250);
+    if (!revealed) {
+      failsafe = window.setInterval(() => {
+        if (document.hidden) return;
+        visibleMs += 250;
+        if (visibleMs >= CTA_FAILSAFE_MS) revealCta(true);
+      }, 250);
+    }
 
     let cancelled = false;
     let engine: Toybox | null = null;

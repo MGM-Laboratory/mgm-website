@@ -1157,6 +1157,9 @@ export function createToybox(options: ToyboxOptions): Toybox {
       Events.off(engine, "collisionStart");
       Composite.clear(world, false, true);
       Engine.clear(engine);
+      // The letters and words go back to rest; the split is reverted next.
+      gsap.killTweensOf(charEls);
+      gsap.set(wordEls, { clearProps: "transform" });
       for (const live of lives) {
         gsap.killTweensOf([live.nodes.lift, live.nodes.squash]);
         live.nodes.outer.style.cssText = "";
