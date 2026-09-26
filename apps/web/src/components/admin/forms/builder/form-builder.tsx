@@ -320,21 +320,23 @@ export function FormBuilder({
   const tabProps = { change, document, record, readOnly, selection, select };
   const saveError = status.kind === "error" ? status : undefined;
   // A save the API refused for a named field shows on that field too.
+  const errorPath = saveError?.path;
+  const errorMessage = saveError?.message;
   const problems = useMemo<Problem[]>(
     () =>
-      saveError?.path
+      errorPath
         ? [
             {
-              key: `api:${saveError.path}`,
-              message: `Not saved: ${saveError.message}`,
+              key: `api:${errorPath}`,
+              message: `Not saved: ${errorMessage}`,
               severity: "error",
-              target: targetFromPath(document, saveError.path),
-              path: saveError.path,
+              target: targetFromPath(document, errorPath),
+              path: errorPath,
             },
             ...check.problems,
           ]
         : check.problems,
-    [check.problems, document, saveError?.message, saveError?.path],
+    [check.problems, document, errorMessage, errorPath],
   );
 
   return (
