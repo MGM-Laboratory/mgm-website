@@ -279,7 +279,7 @@ h5.fx-rich-heading {
 }
 .fx-layer-pattern {
   z-index: 0;
-  opacity: 0.9;
+  opacity: calc(var(--fx-pattern-alpha, 1) * var(--fx-pattern-dim, 0.9));
 }
 .fx-pattern-block {
   position: absolute;
@@ -292,12 +292,12 @@ h5.fx-rich-heading {
   height: var(--tile);
   display: block;
 }
-.fx-pattern-block[data-corner="tr"] {
-  right: 0;
+.fx-pattern-block[data-corner="tl"] {
+  left: 0;
   top: 64px;
 }
-.fx-pattern-block[data-corner="br"] {
-  right: 0;
+.fx-pattern-block[data-corner="bl"] {
+  left: 0;
   bottom: 0;
 }
 .fx-layer-scene {
@@ -1038,6 +1038,13 @@ h5.fx-rich-heading {
 .fx-collapse {
   grid-column: span 2;
   min-width: 0;
+}
+/* An open list must paint over the blocks after it (each revealed block is
+   its own stacking context once GSAP has moved it). */
+.fx-collapse:has(.fx-combo[data-open]),
+.fx-subfield:has(.fx-combo[data-open]) {
+  position: relative;
+  z-index: 10;
 }
 .fx-collapse[hidden] {
   display: none;
@@ -2425,6 +2432,8 @@ h5.fx-rich-heading {
 }
 .fx-signature-pad {
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
   height: 190px;
   border-radius: calc(var(--fx-radius) + 6px);
   border: 1.5px solid var(--fx-line-strong);
