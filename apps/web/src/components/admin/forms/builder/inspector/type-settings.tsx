@@ -373,12 +373,9 @@ export function TypeSettings({
               min={2}
               onChange={(value) => {
                 update(
-                  {
-                    rows:
-                      value === undefined
-                        ? undefined
-                        : Math.min(20, Math.max(2, Math.round(value))),
-                  },
+                  // Kept as typed (clamping each keystroke made 10-19 untypeable);
+                  // the schema flags an out-of-range value in the Problems list.
+                  { rows: value === undefined ? undefined : Math.round(value) },
                   `${field.id}:rows`,
                 );
               }}
@@ -679,15 +676,7 @@ export function TypeSettings({
                   max={FORM_LIMITS.fileMbMax}
                   min={0.1}
                   onChange={(value) => {
-                    update(
-                      {
-                        maxFileMb:
-                          value === undefined
-                            ? undefined
-                            : Math.min(FORM_LIMITS.fileMbMax, Math.max(0.1, value)),
-                      },
-                      `${field.id}:maxFileMb`,
-                    );
+                    update({ maxFileMb: value }, `${field.id}:maxFileMb`);
                   }}
                   placeholder="10"
                   step="any"
