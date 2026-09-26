@@ -17,6 +17,7 @@ import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
+import { startHeroInteractions } from "@/components/hero/interactions";
 
 import {
   ArrowConnector,
@@ -707,6 +708,7 @@ export function Hero() {
                 const idleContext = gsap.context(() => {}, root);
                 let idleLoops: gsap.core.Animation[] = [];
                 let removeParallax = () => {};
+                let stopInteractions = () => {};
                 let observer: IntersectionObserver | undefined;
                 let visible = true;
                 const pauseWhenHidden = () => {
@@ -723,8 +725,23 @@ export function Hero() {
                     observer.observe(root);
                     document.addEventListener("visibilitychange", pauseWhenHidden);
                   });
+                  // The play (hover, press, proximity, doze) is motion by
+                  // definition: never under reduced motion.
+                  if (reduced) return;
+                  stopInteractions = startHeroInteractions(root, {
+                    words: [
+                      mediaSplit!.chars as HTMLElement[],
+                      gameSplit!.chars as HTMLElement[],
+                      ...(mobileSplit!.words as HTMLElement[]).map((word) =>
+                        Array.from(word.querySelectorAll<HTMLElement>(".mobile-char")),
+                      ),
+                    ],
+                    flipper: (mediaSplit!.chars[MEDIA_I_INDEX] as HTMLElement) ?? null,
+                  });
                 };
                 const stopIdle = () => {
+                  stopInteractions();
+                  stopInteractions = () => {};
                   observer?.disconnect();
                   document.removeEventListener("visibilitychange", pauseWhenHidden);
                   removeParallax();
