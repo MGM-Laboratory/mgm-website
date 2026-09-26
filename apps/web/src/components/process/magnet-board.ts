@@ -19,6 +19,7 @@ import {
   type Bounds,
   type Box,
 } from "./magnet-geometry";
+import { startMagnetEntrance } from "./magnet-entrance";
 import { loadArrangement, saveArrangement, type Arrangement } from "./magnet-storage";
 import { playTileMove, setLeavesOpen } from "./magnet-tile-moves";
 import type { PatternKind } from "./pattern-tile";
@@ -1064,11 +1065,7 @@ export function createMagnetBoard(section: HTMLElement) {
     tileMove,
   };
 
-  for (const m of magnets) {
-    m.ready = true;
-    gsap.set(m.el, { opacity: 1 });
-  }
-  void board;
+  cleanups.push(startMagnetEntrance(board, rows));
 
   return () => {
     endPress();
