@@ -298,8 +298,9 @@ export function YesNo({
   const { copy, sound } = useFormController();
   const name = `fx-${field.id}`;
   const choices = [
-    { answer: true, label: copy.yes, letter: "Y", Icon: ThumbsUp },
-    { answer: false, label: copy.no, letter: "N", Icon: ThumbsDown },
+    // The keys follow the words: Y and N, or Y and T in Indonesian.
+    { answer: true, label: copy.yes, letter: copy.yes.charAt(0).toUpperCase(), Icon: ThumbsUp },
+    { answer: false, label: copy.no, letter: copy.no.charAt(0).toUpperCase(), Icon: ThumbsDown },
   ];
   return (
     <div
