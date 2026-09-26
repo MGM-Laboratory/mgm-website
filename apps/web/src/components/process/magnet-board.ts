@@ -20,6 +20,7 @@ import {
   type Box,
 } from "./magnet-geometry";
 import { loadArrangement, saveArrangement, type Arrangement } from "./magnet-storage";
+import { playTileMove, setLeavesOpen } from "./magnet-tile-moves";
 import type { PatternKind } from "./pattern-tile";
 
 gsap.registerPlugin(InertiaPlugin, MotionPathPlugin, ScrollTrigger);
@@ -385,7 +386,8 @@ export function createMagnetBoard(section: HTMLElement) {
   }
 
   function tileMove(m: MagnetState) {
-    void m;
+    if (!motionAllowed()) return;
+    playTileMove(m.motif, m.kind, !m.hovered);
   }
 
   // ---- Moves, collisions, saving ------------------------------------------
@@ -811,6 +813,7 @@ export function createMagnetBoard(section: HTMLElement) {
     if (!isScrollIdle() || !m.ready) return;
     m.hovered = true;
     ensureTicking();
+    if (motionAllowed()) playTileMove(m.motif, m.kind);
   }
 
   function onPointerEnter(m: MagnetState, event: PointerEvent) {
@@ -822,6 +825,7 @@ export function createMagnetBoard(section: HTMLElement) {
     if (!m.hovered) return;
     m.hovered = false;
     ensureTicking();
+    if (m.kind === "leaves") setLeavesOpen(m.motif, false);
   }
 
   // ---- Keyboard ------------------------------------------------------------
