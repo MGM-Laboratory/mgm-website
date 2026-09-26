@@ -366,7 +366,8 @@ function DateInsight({ field, answered }: { field: FormField; answered: unknown[
     const key = field.type === "time" ? text.slice(0, 2) : text.slice(0, 7);
     if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  const keys = [...counts.keys()].sort();
+  // Code-unit order, as a bare sort() had: "YYYY-MM" and "HH" keys sort by time.
+  const keys = [...counts.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const monthFormat = new Intl.DateTimeFormat(undefined, { month: "short", year: "2-digit" });
   const data = keys.map((key) => {
     const label =
@@ -395,16 +396,14 @@ function DateInsight({ field, answered }: { field: FormField; answered: unknown[
 function MatrixInsight({ field, answered }: { field: FormField; answered: unknown[] }) {
   const columns = field.columnsList ?? [];
   const rows = (field.rowsList ?? []).map((row) => {
-    const values = columns.map(() => 0);
+    const picks = new Map<string, number>();
     for (const value of answered) {
       if (!value || typeof value !== "object" || Array.isArray(value)) continue;
-      const cell = (value as Record<string, string | string[]>)[row.id];
+      const cell = (value as Partial<Record<string, string | string[]>>)[row.id];
       const ids = cell === undefined ? [] : Array.isArray(cell) ? cell : [cell];
-      for (const id of ids) {
-        const index = columns.findIndex((column) => column.id === id);
-        if (index >= 0) values[index] += 1;
-      }
+      for (const id of ids) picks.set(id, (picks.get(id) ?? 0) + 1);
     }
+    const values = columns.map((column) => picks.get(column.id) ?? 0);
     return { key: row.id, label: row.label, values };
   });
   // Ordered columns (Poor → Excellent) read best as a ramp of one hue.

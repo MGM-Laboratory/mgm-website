@@ -78,13 +78,13 @@ export function TimeSeriesChart({
       y: padding.top + 8,
       content: (
         <>
-          <TooltipTitle>{formatBucket(buckets[clamped], false)}</TooltipTitle>
+          <TooltipTitle>{formatBucket(buckets.at(clamped) ?? "", false)}</TooltipTitle>
           {series.map((item) => (
             <TooltipRow
               color={item.color}
               key={item.key}
               label={item.label}
-              value={formatCount(item.values[clamped])}
+              value={formatCount(item.values.at(clamped) ?? 0)}
             />
           ))}
         </>
@@ -112,9 +112,12 @@ export function TimeSeriesChart({
     }
   };
 
-  const totals = series.map((item) => item.values.reduce((a, b) => a + b, 0));
-  const description = series
-    .map((item, index) => `${item.label}: ${formatCount(totals[index])} in total`)
+  const withTotals = series.map((item) => ({
+    item,
+    total: item.values.reduce((a, b) => a + b, 0),
+  }));
+  const description = withTotals
+    .map(({ item, total }) => `${item.label}: ${formatCount(total)} in total`)
     .join("; ");
 
   return (
@@ -122,10 +125,10 @@ export function TimeSeriesChart({
       {series.length > 1 ? (
         <div className="mb-2">
           <Legend
-            items={series.map((item, index) => ({
+            items={withTotals.map(({ item, total }) => ({
               label: item.label,
               color: item.color,
-              value: formatCount(totals[index]),
+              value: formatCount(total),
             }))}
             shape={mode === "line" ? "line" : "rect"}
           />
@@ -228,7 +231,7 @@ export function TimeSeriesChart({
               {series.map((item) => (
                 <circle
                   cx={x(active)}
-                  cy={y(item.values[active])}
+                  cy={y(item.values.at(active) ?? 0)}
                   fill={item.color}
                   key={item.key}
                   r={4}
@@ -279,6 +282,8 @@ export function Sparkline({
     .map((value, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(value).toFixed(1)}`)
     .join("");
   const last = values.length - 1;
+  // At least two values here, so both ends exist.
+  const [previous = 0, latest = 0] = values.slice(-2);
   return (
     <div ref={ref}>
       <svg aria-label={label} className="block" height={height} role="img" width={width}>
@@ -292,13 +297,13 @@ export function Sparkline({
           strokeWidth={1.5}
         />
         <path
-          d={`M${x(last - 1).toFixed(1)},${y(values[last - 1]).toFixed(1)}L${x(last).toFixed(1)},${y(values[last]).toFixed(1)}`}
+          d={`M${x(last - 1).toFixed(1)},${y(previous).toFixed(1)}L${x(last).toFixed(1)},${y(latest).toFixed(1)}`}
           fill="none"
           stroke={color}
           strokeLinecap="round"
           strokeWidth={2}
         />
-        <circle cx={x(last)} cy={y(values[last])} fill={color} r={2.5} />
+        <circle cx={x(last)} cy={y(latest)} fill={color} r={2.5} />
       </svg>
     </div>
   );

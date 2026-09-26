@@ -166,16 +166,15 @@ export function ColumnChart({
   const barWidth = Math.max(2, Math.min(24, band - 2));
   const y = (value: number) => padding.top + innerHeight - (value / top) * innerHeight;
   const [active, setActive] = useState<number | null>(null);
-  const geometry = (index: number) => {
-    const item = data[index];
+  const geometry = (item: (typeof data)[number], index: number) => {
     const cx = padding.left + band * index + band / 2;
     const barHeight = Math.max(item.value > 0 ? 2 : 0, (item.value / top) * innerHeight);
     return { cx, barHeight, y0: padding.top + innerHeight - barHeight };
   };
   const tipFor = (index: number) => {
-    const item = data[index];
+    const item = data.at(index);
     if (!item) return;
-    const { cx, y0 } = geometry(index);
+    const { cx, y0 } = geometry(item, index);
     show({
       x: cx,
       y: y0,
@@ -418,7 +417,7 @@ export function StackedRows({
                 label={`${label}, ${row.label}`}
                 segments={categories.map((category, index) => ({
                   ...category,
-                  value: row.values[index] ?? 0,
+                  value: row.values.at(index) ?? 0,
                 }))}
                 showLegend={false}
               />
@@ -642,7 +641,7 @@ export function BoxPlot({
             key={index}
             textAnchor="middle"
             x={x(value)}
-            y={index % 2 ? 52 : 52}
+            y={52}
             opacity={index === 1 || index === 3 ? (x(q3) - x(q1) > 60 ? 1 : 0) : 1}
           >
             {format(value)}

@@ -101,6 +101,8 @@ export function WorldMap({
     (sum, bucket) => ({ view: sum.view + bucket.view, submit: sum.submit + bucket.submit }),
     { view: 0, submit: 0 },
   );
+  const countOf = (counts: { view: number; submit: number }, kind: "view" | "submit") =>
+    kind === "view" ? counts.view : counts.submit;
   const toggle = (kind: "view" | "submit") => {
     setHidden((current) => {
       const next = new Set(current);
@@ -132,7 +134,7 @@ export function WorldMap({
               }}
             />
             {kind === "view" ? "Views" : "Submissions"}
-            <span className="font-semibold tabular-nums">{formatCount(totals[kind])}</span>
+            <span className="font-semibold tabular-nums">{formatCount(countOf(totals, kind))}</span>
           </button>
         ))}
       </div>
@@ -145,11 +147,11 @@ export function WorldMap({
             hidden.has(kind)
               ? null
               : merged
-                  .filter((bucket) => bucket[kind] > 0)
-                  .sort((a, b) => b[kind] - a[kind])
+                  .filter((bucket) => countOf(bucket, kind) > 0)
+                  .sort((a, b) => countOf(b, kind) - countOf(a, kind))
                   .map((bucket, index) => {
                     const { x, y } = project(bucket.latitude, bucket.longitude);
-                    const r = radiusOf(bucket[kind]);
+                    const r = radiusOf(countOf(bucket, kind));
                     const tip = () => {
                       show({
                         x,

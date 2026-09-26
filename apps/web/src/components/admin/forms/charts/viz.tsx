@@ -36,7 +36,7 @@ export const OTHER_COLOR = "var(--viz-other)";
 
 /** The colour of the n-th category; past four everything is "Other" grey. */
 export function seriesColor(index: number) {
-  return index < SERIES.length ? SERIES[index] : OTHER_COLOR;
+  return SERIES.at(index) ?? OTHER_COLOR;
 }
 
 export const labelClass =

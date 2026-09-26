@@ -172,8 +172,8 @@ function Stats({ items }: { items: [string, string][] }) {
 }
 
 function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: WorkingRow[] }) {
-  const [aKey, setA] = useState(categorical[0]?.key ?? "");
-  const [bKey, setB] = useState(categorical[1]?.key ?? categorical[0]?.key ?? "");
+  const [aKey, setA] = useState(categorical.at(0)?.key ?? "");
+  const [bKey, setB] = useState(categorical.at(1)?.key ?? categorical.at(0)?.key ?? "");
   const [mode, setMode] = useState<"count" | "row" | "column">("count");
   const a = categorical.find((column) => column.key === aKey);
   const b = categorical.find((column) => column.key === bKey);
@@ -205,9 +205,13 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
         ? Number(p) - Number(q)
         : (columnTotals.get(q) ?? 0) - (columnTotals.get(p) ?? 0),
     );
-    const matrix = rowKeys.map((x) => columnKeys.map((y) => table.get(x)?.get(y) ?? 0));
+    const lines = rowKeys.map((x) => ({
+      key: x,
+      values: columnKeys.map((y) => table.get(x)?.get(y) ?? 0),
+    }));
+    const matrix = lines.map((line) => line.values);
     return {
-      rowKeys,
+      lines,
       columnKeys,
       matrix,
       test: chiSquareTest(matrix),
@@ -300,15 +304,15 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
                 </tr>
               </thead>
               <tbody>
-                {shown.rowKeys.map((key, rowIndex) => {
-                  const rowTotal = shown.matrix[rowIndex].reduce((p, q) => p + q, 0);
+                {shown.lines.map(({ key, values }, rowIndex) => {
+                  const rowTotal = values.reduce((p, q) => p + q, 0);
                   return (
                     <tr className="border-t border-[#eef0f4] dark:border-white/5" key={key}>
                       <th className="px-3 py-1.5 text-left font-medium" scope="row">
                         {key}
                       </th>
-                      {shown.matrix[rowIndex].map((value, columnIndex) => {
-                        const expected = shown.test.expected[rowIndex]?.[columnIndex];
+                      {values.map((value, columnIndex) => {
+                        const expected = shown.test.expected.at(rowIndex)?.at(columnIndex);
                         const over = expected ? (value - expected) / Math.sqrt(expected) : 0;
                         return (
                           <td
@@ -318,7 +322,7 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
                               expected ? `Expected ${expected.toFixed(1)} if unrelated` : undefined
                             }
                           >
-                            {cell(value, rowTotal, shown.columnTotals[columnIndex])}
+                            {cell(value, rowTotal, shown.columnTotals.at(columnIndex) ?? 0)}
                           </td>
                         );
                       })}
@@ -338,8 +342,7 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
           <StackedRows
             categories={chartCategories}
             label={`${a?.label} by ${b?.label}`}
-            rows={shown.rowKeys.map((key, rowIndex) => {
-              const values = shown.matrix[rowIndex];
+            rows={shown.lines.map(({ key, values }) => {
               return {
                 key,
                 label: key,
@@ -366,7 +369,7 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
             = {shown.test.df}, p = {formatP(shown.test.p)}). The association is{" "}
             {describeCramersV(
               shown.test.cramersV,
-              Math.min(shown.rowKeys.length, shown.columnKeys.length) - 1,
+              Math.min(shown.lines.length, shown.columnKeys.length) - 1,
             )}{" "}
             (V = {formatNumber(shown.test.cramersV, 2)}).
             {shown.test.lowExpectedShare > 0.2
@@ -512,14 +515,14 @@ function NumericExplorer({ numeric, rows }: { numeric: DataColumn[]; rows: Worki
 function pairs(x: DataColumn, y: DataColumn, rows: WorkingRow[]) {
   const xs: number[] = [];
   const ys: number[] = [];
-  const kept: WorkingRow[] = [];
+  const kept: { x: number; y: number; row: WorkingRow }[] = [];
   for (const row of rows) {
     const a = numberOf(x, row);
     const b = numberOf(y, row);
     if (a === null || b === null) continue;
     xs.push(a);
     ys.push(b);
-    kept.push(row);
+    kept.push({ x: a, y: b, row });
   }
   return { xs, ys, kept };
 }
@@ -535,8 +538,8 @@ function Scatter({
   rows: WorkingRow[];
   initial?: [string, string] | null;
 }) {
-  const [xKey, setX] = useState(initial?.[0] ?? numeric[0]?.key ?? "");
-  const [yKey, setY] = useState(initial?.[1] ?? numeric[1]?.key ?? numeric[0]?.key ?? "");
+  const [xKey, setX] = useState(initial?.[0] ?? numeric.at(0)?.key ?? "");
+  const [yKey, setY] = useState(initial?.[1] ?? numeric.at(1)?.key ?? numeric.at(0)?.key ?? "");
   const [groupKey, setGroup] = useState("");
   const [lastInitial, setLastInitial] = useState(initial);
   if (initial && initial !== lastInitial) {
@@ -556,7 +559,7 @@ function Scatter({
   const groups = useMemo(() => {
     if (!group) return undefined;
     const counts = new Map<string, number>();
-    for (const row of data.kept) {
+    for (const { row } of data.kept) {
       const value = categoryOf(group, row);
       if (value !== null) counts.set(value, (counts.get(value) ?? 0) + 1);
     }
@@ -568,13 +571,12 @@ function Scatter({
     }));
   }, [group, data.kept]);
   if (numeric.length < 2) return <EmptyChart>Scatter plots need two numeric columns.</EmptyChart>;
-  const points = data.xs.map((value, index) => {
-    const row = data.kept[index];
+  const points = data.kept.map(({ x: value, y: yValue, row }) => {
     const g = group ? (categoryOf(group, row) ?? undefined) : undefined;
     const slot = g && groups ? groups.findIndex((item) => item.key === g) : -1;
     return {
       x: value,
-      y: data.ys[index],
+      y: yValue,
       id: row.id,
       group: slot >= 4 ? "__other" : g,
       label: new Date(row.record.createdAt).toLocaleDateString(),
@@ -685,7 +687,9 @@ function Correlations({
         labels={columns.map((column) => column.label)}
         onPick={(i, j) => {
           setSelected([i, j]);
-          onPick(columns[j].key, columns[i].key);
+          const across = columns.at(j);
+          const down = columns.at(i);
+          if (across && down) onPick(across.key, down.key);
         }}
         selected={selected}
         title={`${method === "pearson" ? "Pearson" : "Spearman"} correlation matrix`}

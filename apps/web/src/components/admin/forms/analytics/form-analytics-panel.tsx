@@ -67,7 +67,7 @@ export function FormAnalyticsPanel({ form }: FormAnalyticsPanelProps) {
   useEffect(() => {
     let cancelled = false;
     const tz = -new Date().getTimezoneOffset();
-    const compareRange = COMPARE_RANGE[range];
+    const compareRange = COMPARE_RANGE.get(range);
     Promise.all([
       formsAdminApi.analytics(form.id, range, tz),
       compareRange
@@ -234,7 +234,7 @@ export function FormAnalyticsPanel({ form }: FormAnalyticsPanelProps) {
           <div className={`space-y-4 transition-opacity ${loading ? "opacity-60" : ""}`}>
             <OverviewKpis
               analytics={analytics}
-              compare={loaded?.compare ?? null}
+              compare={loaded.compare ?? null}
               form={form}
               rows={data.rows}
             />

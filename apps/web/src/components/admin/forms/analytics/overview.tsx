@@ -31,14 +31,14 @@ export const RANGE_MS: Record<Exclude<FormAnalyticsRange, "all">, number> = {
 };
 
 /** The wider range fetched to read the previous period from. */
-export const COMPARE_RANGE: Record<FormAnalyticsRange, FormAnalyticsRange | null> = {
-  "24h": "7d",
-  "7d": "30d",
-  "30d": "90d",
-  "90d": "365d",
-  "365d": "all",
-  all: null,
-};
+/** The longer range each range is compared against ("all" has none). */
+export const COMPARE_RANGE = new Map<FormAnalyticsRange, FormAnalyticsRange>([
+  ["24h", "7d"],
+  ["7d", "30d"],
+  ["30d", "90d"],
+  ["90d", "365d"],
+  ["365d", "all"],
+]);
 
 type Delta = { value: number | null; goodWhenUp: boolean };
 
@@ -185,8 +185,7 @@ export function OverviewKpis({
   ).length;
 
   const series = analytics.series;
-  const trend = (key: "views" | "starts" | "submissions") =>
-    downsample(series.map((point) => point[key]));
+  const trend = (pick: (point: (typeof series)[number]) => number) => downsample(series.map(pick));
   const scoring = form.document.settings.scoring.enabled;
   const previousMedian =
     hasPrevious && durations(earlier).length ? median(durations(earlier)) : null;
@@ -200,7 +199,7 @@ export function OverviewKpis({
       <KpiCard
         delta={{ value: change(totals.views, prev?.views ?? null), goodWhenUp: true }}
         label="Views"
-        trend={trend("views")}
+        trend={trend((point) => point.views)}
         value={formatCount(totals.views)}
       />
       <KpiCard
@@ -211,14 +210,14 @@ export function OverviewKpis({
       <KpiCard
         delta={{ value: change(totals.starts, prev?.starts ?? null), goodWhenUp: true }}
         label="Starts"
-        trend={trend("starts")}
+        trend={trend((point) => point.starts)}
         value={formatCount(totals.starts)}
       />
       <KpiCard
         color={SERIES[3]}
         delta={{ value: change(totals.submissions, prev?.submissions ?? null), goodWhenUp: true }}
         label="Submissions"
-        trend={trend("submissions")}
+        trend={trend((point) => point.submissions)}
         value={formatCount(totals.submissions)}
       />
       <KpiCard

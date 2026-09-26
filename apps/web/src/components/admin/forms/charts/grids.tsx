@@ -49,7 +49,7 @@ export function WeekHourHeatmap({
   const cell = Math.max(8, Math.min(26, (width - left) / 24));
   const gap = 2;
   const height = 7 * cell + 18;
-  const busiest = [...grid.entries()].sort((a, b) => b[1] - a[1])[0];
+  const busiest = [...grid.entries()].sort((a, b) => b[1] - a[1]).at(0);
   return (
     <div>
       <div className="relative" ref={ref}>
@@ -68,7 +68,7 @@ export function WeekHourHeatmap({
                 x={0}
                 y={row * cell + cell / 2}
               >
-                {WEEKDAYS[weekday]}
+                {WEEKDAYS.at(weekday)}
               </text>
               {Array.from({ length: 24 }, (_, hour) => {
                 const count = grid.get(`${weekday}:${hour}`) ?? 0;
@@ -81,7 +81,7 @@ export function WeekHourHeatmap({
                     content: (
                       <>
                         <TooltipTitle>
-                          {WEEKDAYS[weekday]} {String(hour).padStart(2, "0")}:00–
+                          {WEEKDAYS.at(weekday)} {String(hour).padStart(2, "0")}:00–
                           {String(hour).padStart(2, "0")}:59
                         </TooltipTitle>
                         <TooltipRow label="views" value={formatCount(count)} />
@@ -179,13 +179,13 @@ export function CorrelationGrid({
         </thead>
         <tbody>
           {values.map((row, rowIndex) => (
-            <tr key={labels[rowIndex]}>
+            <tr key={labels.at(rowIndex)}>
               <th
                 className="max-w-40 pr-2 text-left font-semibold text-[#7e899d] dark:text-white/45"
                 scope="row"
-                title={labels[rowIndex]}
+                title={labels.at(rowIndex)}
               >
-                <span className="block max-w-40 truncate">{labels[rowIndex]}</span>
+                <span className="block max-w-40 truncate">{labels.at(rowIndex)}</span>
               </th>
               {row.slice(0, size).map((value, columnIndex) => {
                 const strong = Math.abs(value) > 0.55;
@@ -194,7 +194,7 @@ export function CorrelationGrid({
                 return (
                   <td className="p-0" key={columnIndex}>
                     <button
-                      aria-label={`${labels[rowIndex]} and ${labels[columnIndex]}: ${formatNumber(value)}`}
+                      aria-label={`${labels.at(rowIndex) ?? ""} and ${labels.at(columnIndex) ?? ""}: ${formatNumber(value)}`}
                       className={`flex h-9 w-14 items-center justify-center rounded-md font-semibold tabular-nums outline-none transition hover:ring-2 hover:ring-[#171b25]/30 focus-visible:ring-2 focus-visible:ring-brand-blue dark:hover:ring-white/40 ${strong ? "text-white" : "text-[#171b25] dark:text-white/85"} ${isSelected ? "ring-2 ring-[#171b25] dark:ring-white" : ""}`}
                       disabled={!onPick || rowIndex === columnIndex}
                       onClick={() => onPick?.(rowIndex, columnIndex)}
@@ -279,22 +279,21 @@ export function ScatterPlot({
     const rect = event.currentTarget.getBoundingClientRect();
     const px = event.clientX - rect.left + padding.left;
     const py = event.clientY - rect.top + padding.top;
-    let best = -1;
+    let point: (typeof drawn)[number] | undefined;
     let bestDistance = 24 * 24;
-    drawn.forEach((point, index) => {
-      const dx = sx(point.x) - px;
-      const dy = sy(point.y) - py;
+    for (const candidate of drawn) {
+      const dx = sx(candidate.x) - px;
+      const dy = sy(candidate.y) - py;
       const distance = dx * dx + dy * dy;
       if (distance < bestDistance) {
         bestDistance = distance;
-        best = index;
+        point = candidate;
       }
-    });
-    if (best < 0) {
+    }
+    if (!point) {
       hide();
       return;
     }
-    const point = drawn[best];
     show({
       x: sx(point.x),
       y: sy(point.y),
