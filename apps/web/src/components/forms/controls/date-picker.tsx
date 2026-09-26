@@ -118,9 +118,8 @@ export function Calendar({
     if (list && year) {
       list.scrollTop = year.offsetTop - list.clientHeight / 2 + year.offsetHeight / 2;
     }
-    // Only when the list opens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]);
+    // The shown year only changes here by picking one, which leaves the list.
+  }, [view, current.y]);
 
   const go = (next: string | null, withFocus: boolean) => {
     if (!next) return;

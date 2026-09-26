@@ -80,10 +80,10 @@ function Column({
     list.scrollTo({ top, behavior: smooth ? "smooth" : "instant" });
   }, [centred]);
 
+  // Focus on mount only, whatever `autoFocus` later says.
+  const focusOnMount = useRef(autoFocus);
   useEffect(() => {
-    if (autoFocus) listRef.current?.focus({ preventScroll: true });
-    // Only on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (focusOnMount.current) listRef.current?.focus({ preventScroll: true });
   }, []);
 
   useEffect(
