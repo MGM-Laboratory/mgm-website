@@ -88,12 +88,25 @@ export function FieldBlock({
   const onFocus = () => {
     controller.onFieldFocus(field.id);
   };
-  const onBlur = (event: FocusEvent<HTMLElement>) => {
-    const next = event.relatedTarget as Node | null;
-    if (next && event.currentTarget.contains(next)) return;
+  const staysInField = (root: HTMLElement, next: Node | null) => {
+    if (next && root.contains(next)) return true;
     // A picker's panel is portaled out of the field but still part of it.
-    if (next instanceof Element && next.closest(`[data-popover-for="${inputId}"]`)) return;
-    controller.onFieldBlur(field.id);
+    return next instanceof Element && next.closest(`[data-popover-for="${inputId}"]`) !== null;
+  };
+  const onBlur = (event: FocusEvent<HTMLElement>) => {
+    const root = event.currentTarget;
+    const next = event.relatedTarget as Node | null;
+    if (staysInField(root, next)) return;
+    if (next) {
+      controller.onFieldBlur(field.id);
+      return;
+    }
+    // Focus can pass through the body for a frame while a picker's panel
+    // mounts; judge by where it lands, so opening a panel never counts as
+    // leaving the question (which would show "needs an answer" at once).
+    requestAnimationFrame(() => {
+      if (!staysInField(root, document.activeElement)) controller.onFieldBlur(field.id);
+    });
   };
 
   const control = (
