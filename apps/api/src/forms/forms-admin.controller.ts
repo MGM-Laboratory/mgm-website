@@ -4,26 +4,33 @@ import {
   Delete,
   Get,
   Headers,
+  HttpCode,
   Param,
+  Patch,
   Post,
   Put,
   Query,
   Req,
+  Res,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiTags } from "@nestjs/swagger";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 
 import { safeEqual } from "../cms/admin-auth.util.js";
 import { parseVideoUploadBody } from "../cms/video-validation.util.js";
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { FormsError, runForms } from "./forms.common.js";
+import { FormsResponsesService } from "./forms-responses.service.js";
 import {
+  applySchema,
+  bulkSchema,
   createFormSchema,
   mediaImageSchema,
   parseSafe,
+  responsePatchSchema,
   updateFormSchema,
 } from "./forms.schemas.js";
 import { FormsService } from "./forms.service.js";
@@ -37,6 +44,7 @@ const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 export class FormsAdminController {
   constructor(
     private readonly forms: FormsService,
+    private readonly responses: FormsResponsesService,
     private readonly storage: StorageService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -153,5 +161,81 @@ export class FormsAdminController {
       }
       return { key };
     });
+  }
+
+  // --- Responses ---
+
+  @Get(":id/responses")
+  async listResponses(@Param("id") id: string, @Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    return { responses: await runForms(() => this.responses.list(id)) };
+  }
+
+  // Fixed response paths sit above ":responseId".
+  @Post(":id/responses/bulk")
+  @HttpCode(200)
+  async bulk(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    const input = parseSafe(bulkSchema, body);
+    return runForms(() => this.responses.bulk(id, input));
+  }
+
+  @Post(":id/responses/apply")
+  @HttpCode(200)
+  async apply(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    const input = parseSafe(applySchema, body);
+    return runForms(() => this.responses.apply(id, input));
+  }
+
+  @Patch(":id/responses/:responseId")
+  async patchResponse(
+    @Param("id") id: string,
+    @Param("responseId") responseId: string,
+    @Body() body: unknown,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    const patch = parseSafe(responsePatchSchema, body);
+    return { response: await runForms(() => this.responses.patch(id, responseId, patch)) };
+  }
+
+  /**
+   * A respondent's upload: its signed URL and metadata, or with
+   * `?download=1` the bytes themselves as an attachment (the web app relays
+   * them so the admin can zip files same-origin).
+   */
+  @Get(":id/files/:key")
+  async file(
+    @Param("id") id: string,
+    @Param("key") key: string,
+    @Query("download") download: unknown,
+    @Res() response: Response,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    if (download !== "1") {
+      response.json(await runForms(() => this.responses.fileLink(id, key)));
+      return;
+    }
+    const file = await runForms(() =>
+      this.responses.fileBytes(id, key, this.config.getOrThrow<number>("FORMS_MAX_UPLOAD_BYTES")),
+    );
+    response.setHeader("Content-Type", file.type);
+    response.setHeader(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+    );
+    response.setHeader("Cache-Control", "private, no-store");
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.send(file.body);
   }
 }
