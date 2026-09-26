@@ -1196,6 +1196,11 @@ h5.fx-rich-heading {
 .fx-input:hover {
   border-color: color-mix(in srgb, var(--project-text) 45%, var(--fx-line-strong));
 }
+.fx-input:focus-visible,
+.fx-input :focus-visible,
+.fx-combo-field input:focus-visible {
+  outline: none;
+}
 .fx-input:focus,
 .fx-input:focus-within {
   border-color: var(--project-highlight);
@@ -1258,6 +1263,7 @@ h5.fx-rich-heading {
 }
 .fx-suggestion {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
   font-size: 0.9rem;
@@ -1266,6 +1272,9 @@ h5.fx-rich-heading {
 }
 .fx-suggestion:empty {
   display: none;
+}
+.fx-suggestion .fx-link-button {
+  min-height: 32px;
 }
 .fx-suggestion svg {
   color: var(--project-highlight);

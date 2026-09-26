@@ -211,7 +211,9 @@ export function ConversationalLayout({
         );
       }
     }
-    if (!first || document.welcome.enabled) {
+    // On the very first step without a welcome, only desktop pointers get focus
+    // (a phone would throw its keyboard up over the question).
+    if (!first || document.welcome.enabled || window.matchMedia("(pointer: fine)").matches) {
       const control = element.querySelector<HTMLElement>(
         "input:not([type=hidden]):not([tabindex='-1']):not([type=radio]):not([type=checkbox]), textarea, [role=combobox], .fx-rank-row",
       );
