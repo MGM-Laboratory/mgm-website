@@ -645,6 +645,8 @@ function Toolbar({
                   .setHighlight({ color: richTextColorValue(token) })
                   .run();
               else chain().unsetHighlight().run();
+              // The popover took focus; hand it back once it has unmounted.
+              window.requestAnimationFrame(() => editor.commands.focus());
             }}
             onClose={() => setColorOpen(null)}
           />
@@ -674,6 +676,7 @@ function Toolbar({
               setColorOpen(null);
               if (token) chain().setColor(richTextColorValue(token)).run();
               else chain().unsetColor().run();
+              window.requestAnimationFrame(() => editor.commands.focus());
             }}
             onClose={() => setColorOpen(null)}
           />
