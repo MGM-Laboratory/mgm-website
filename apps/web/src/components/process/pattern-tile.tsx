@@ -34,7 +34,12 @@ export function toneColor(tone: PatternTone): string {
   return TONE_VAR[tone];
 }
 
-function PatternShape({ kind, fg }: { kind: PatternKind; fg: string }) {
+/**
+ * The motif alone, drawn in the 100x100 tile space with no background, for
+ * tiles that animate their shape separately from their field (the process
+ * board's magnets wrap it in their own group).
+ */
+export function PatternShape({ kind, fg }: { kind: PatternKind; fg: string }) {
   switch (kind) {
     case "fans":
       // Four circles (radius 50), one centered on each corner of the tile,
