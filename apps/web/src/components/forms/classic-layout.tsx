@@ -297,7 +297,6 @@ export function ClassicLayout({
         >
           {submitError ?? ""}
         </p>
-        {mode === "preview" ? <p className="fx-preview-note">{copy.preview}</p> : null}
       </div>
     </form>
   );

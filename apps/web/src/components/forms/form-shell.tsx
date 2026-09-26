@@ -72,6 +72,11 @@ export function FormShell({
         <main className="fx-main" id="fx-main">
           {children}
         </main>
+        {preview ? (
+          <p className="fx-preview-note" aria-hidden>
+            Preview
+          </p>
+        ) : null}
       </div>
     </FormRoot>
   );

@@ -400,7 +400,6 @@ export function ConversationalLayout({
           <ChevronDown aria-hidden strokeWidth={2.25} size={20} />
         </button>
       </nav>
-      {mode === "preview" ? <p className="fx-preview-note">{copy.preview}</p> : null}
     </div>
   );
 }

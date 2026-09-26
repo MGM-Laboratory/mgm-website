@@ -107,6 +107,7 @@
   line-height: 1.04;
   font-size: clamp(2.35rem, 5.2vw + 0.8rem, 4.6rem);
   text-wrap: balance;
+  overflow-wrap: break-word;
 }
 .fx-root[data-font="fraunces"] .fx-display {
   font-weight: 560;
@@ -509,8 +510,10 @@ h5.fx-rich-heading {
     margin-inline: max(0px, calc((100vw - 1680px) / 2)) auto;
     max-width: min(720px, calc(100vw - var(--poster-size) - 14vw));
   }
+  /* A split cover takes the whole width: the poster only forms later. */
   .fx-welcome[data-cover="split"] {
-    max-width: min(1080px, calc(100vw - var(--poster-size) - 14vw));
+    max-width: 1120px;
+    margin-inline: auto;
   }
 }
 
@@ -937,6 +940,9 @@ h5.fx-rich-heading {
   .fx-welcome[data-cover="split"] .fx-welcome-content {
     justify-content: center;
   }
+  .fx-welcome[data-cover="split"] .fx-display {
+    font-size: clamp(2.2rem, 3.4vw + 0.6rem, 3.8rem);
+  }
 }
 
 /* ----------------------------------------------------------------- media */
@@ -1034,6 +1040,21 @@ h5.fx-rich-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   column-gap: 20px;
+}
+/* Paired half-width questions line their inputs up when a label wraps. */
+@media (min-width: 720px) {
+  .fx-collapse[data-width="half"] .fx-block,
+  .fx-collapse[data-width="half"] .fx-field {
+    height: 100%;
+  }
+  .fx-collapse[data-width="half"] .fx-field {
+    display: flex;
+    flex-direction: column;
+  }
+  .fx-collapse[data-width="half"] .fx-qheading {
+    flex: 1;
+    align-items: flex-end;
+  }
 }
 .fx-collapse {
   grid-column: span 2;
