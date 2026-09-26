@@ -49,7 +49,7 @@ export function formLabels(
   language: FormLanguage = "en",
   overrides: Partial<Record<FormLabelKey, string>> = {},
 ): Record<FormLabelKey, string> {
-  const base = FORM_DEFAULT_LABELS[language] ?? FORM_DEFAULT_LABELS.en;
+  const base = language === "id" ? FORM_DEFAULT_LABELS.id : FORM_DEFAULT_LABELS.en;
   const merged = { ...base };
   for (const [key, value] of Object.entries(overrides)) {
     if (value && value.trim()) merged[key as FormLabelKey] = value.trim();

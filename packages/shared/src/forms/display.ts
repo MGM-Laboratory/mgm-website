@@ -1,8 +1,8 @@
 import {
-  ADDRESS_PARTS,
   OTHER_OPTION_ID,
   isFileAnswer,
   otherKey,
+  type AddressPart,
   type FormAnswers,
   type FormAnswerValue,
 } from "./answers.js";
@@ -21,7 +21,7 @@ export function optionLabel(field: Pick<FormField, "options" | "otherLabel">, id
 
 export function answerToText(
   field: FormField,
-  value: FormAnswerValue | undefined,
+  value: FormAnswerValue | null | undefined,
   answers?: FormAnswers,
 ): string {
   if (value === undefined || value === null) return "";
@@ -49,7 +49,7 @@ export function answerToText(
       if (typeof value !== "object" || Array.isArray(value)) return String(value);
       return (field.rowsList ?? [])
         .map((row) => {
-          const cell = (value as Record<string, string | string[]>)[row.id];
+          const cell = (value as Partial<Record<string, string | string[]>>)[row.id];
           if (cell === undefined) return "";
           const columns = (Array.isArray(cell) ? cell : [cell]).map(
             (id) => field.columnsList?.find((column) => column.id === id)?.label ?? id,
@@ -66,10 +66,10 @@ export function answerToText(
     }
     case "address": {
       if (typeof value !== "object" || Array.isArray(value)) return String(value);
-      const parts = value as Record<string, string>;
-      return ADDRESS_PARTS.map((part) => parts[part])
-        .filter(Boolean)
-        .join(", ");
+      const { line1, line2, city, region, postal, country } = value as Partial<
+        Record<AddressPart, string>
+      >;
+      return [line1, line2, city, region, postal, country].filter(Boolean).join(", ");
     }
     case "file_upload":
     case "image_upload":
@@ -112,7 +112,7 @@ export function pipeText(
   const byId = new Map(fields.map((field) => [field.id, field]));
   const piped = text.replace(PIPE_PATTERN, (_match, id: string) => {
     const field = byId.get(id);
-    const rendered = field ? answerToText(field, answers[id], answers) : "";
+    const rendered = field ? answerToText(field, answers[field.id], answers) : "";
     return rendered || fallback || EMPTY_PIPE;
   });
   if (!piped.includes(EMPTY_PIPE)) return piped;
@@ -179,7 +179,7 @@ export function columnText(column: AnswerColumn, answers: FormAnswers): string {
   const value = answers[column.fieldId];
   if (column.part?.kind === "row") {
     if (!value || typeof value !== "object" || Array.isArray(value)) return "";
-    const cell = (value as Record<string, string | string[]>)[column.part.rowId];
+    const cell = (value as Partial<Record<string, string | string[]>>)[column.part.rowId];
     if (cell === undefined) return "";
     return (Array.isArray(cell) ? cell : [cell])
       .map((id) => column.field.columnsList?.find((item) => item.id === id)?.label ?? id)

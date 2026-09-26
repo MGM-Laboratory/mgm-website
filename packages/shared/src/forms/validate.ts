@@ -138,10 +138,12 @@ export function fileAccepted(
         : null;
   if (!categories) return true;
   const extension = fileExtension(file.name);
-  return categories.some((category) => {
-    const accepted = FORM_FILE_CATEGORY_TYPES[category];
-    return accepted.mimes.includes(file.type) || accepted.extensions.includes(extension);
-  });
+  const wanted: readonly string[] = categories;
+  return Object.entries(FORM_FILE_CATEGORY_TYPES).some(
+    ([category, accepted]) =>
+      wanted.includes(category) &&
+      (accepted.mimes.includes(file.type) || accepted.extensions.includes(extension)),
+  );
 }
 
 /** Bytes one file of this field may have. */
@@ -284,7 +286,8 @@ export function validateFieldAnswer(
         if (!field.matrixMultiple && Array.isArray(cell)) return { code: "invalid" };
         if (picked.some((id) => !columns.has(String(id)))) return { code: "invalid" };
       }
-      if (field.required && [...rows].some((rowId) => !isAnswered(cells[rowId]))) {
+      const cellsByRow = new Map(Object.entries(cells));
+      if (field.required && [...rows].some((rowId) => !isAnswered(cellsByRow.get(rowId)))) {
         return { code: "required" };
       }
       return null;

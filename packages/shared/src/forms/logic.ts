@@ -50,7 +50,7 @@ function asList(value: unknown): string[] {
 }
 
 /** The answer as comparable text: option ids stay ids, parts are joined. */
-function asText(value: FormAnswerValue | undefined): string {
+function asText(value: FormAnswerValue | null | undefined): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
@@ -300,7 +300,7 @@ export function resolvePath(document: LogicDocument, answers: FormAnswers): Form
   let forcedEndingId: string | undefined;
   while (index < pages.length) {
     route.push(index);
-    const jumps = pages[index].closer?.jumps ?? [];
+    const jumps = pages.at(index)?.closer?.jumps ?? [];
     const jump = jumps.find((candidate) => evaluateGroup(candidate.when, context));
     if (!jump) {
       index += 1;
@@ -330,8 +330,8 @@ export function isFieldVisible(field: FormField, context: LogicContext) {
 export function visibleFields(document: LogicDocument, answers: FormAnswers): FormField[] {
   const path = resolvePath(document, answers);
   const context = logicContext(document, answers);
-  return path.route.flatMap((index) =>
-    path.pages[index].fields.filter((field) => isFieldVisible(field, context)),
+  return path.route.flatMap(
+    (index) => path.pages.at(index)?.fields.filter((field) => isFieldVisible(field, context)) ?? [],
   );
 }
 

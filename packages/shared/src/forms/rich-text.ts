@@ -221,12 +221,12 @@ export function richTextToPlain(doc: RichTextDoc | undefined | null): string {
           break;
         case "bulletList":
         case "orderedList":
-          block.content.forEach((item, index) =>
+          block.content.forEach((item, index) => {
             walk(
               item.content,
               `${prefix}${block.type === "orderedList" ? `${index + 1}. ` : "- "}`,
-            ),
-          );
+            );
+          });
           break;
         case "blockquote":
           walk(block.content, `${prefix}> `);
