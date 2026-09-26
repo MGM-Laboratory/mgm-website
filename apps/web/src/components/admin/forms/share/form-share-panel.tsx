@@ -253,7 +253,7 @@ export function FormSharePanel({
 
       <div ref={qrRef}>
         <Section
-          description="Print it on posters and slides. Scan-tested contrast in both colour choices."
+          description="Print it on posters and slides. Both colour choices keep dark modules on a light background."
           testId="share-qr"
           title="QR code"
         >
