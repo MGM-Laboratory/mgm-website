@@ -573,10 +573,10 @@ function MediaDialog({
     if (!linkValid) return;
     let size: { width?: number; height?: number } = {};
     try {
-      size =
-        linkKind === "image"
-          ? await measureImage(url)
-          : await probeVideo(url).then((probe) => ({ width: probe.width, height: probe.height }));
+      // Only linked pictures are measured. A linked video keeps an unknown
+      // size (the page lays it out at 16:9 until it loads) rather than
+      // loading a pasted address into a hidden player here.
+      if (linkKind === "image") size = await measureImage(url);
     } catch {
       toast.message("Couldn't load that link to measure it", {
         description: "It is kept anyway; check that the address opens in a browser.",
