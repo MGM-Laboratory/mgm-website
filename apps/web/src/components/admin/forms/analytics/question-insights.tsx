@@ -26,7 +26,6 @@ import {
   formatCount,
   formatNumber,
   formatPercent,
-  seriesColor,
 } from "@/components/admin/forms/charts/viz";
 import { FileTypeIcon, isImageFile } from "@/components/admin/forms/responses/cells";
 import { formFileUrl } from "@/lib/forms/admin-api";
@@ -400,10 +399,7 @@ function MatrixInsight({ field, answered }: { field: FormField; answered: unknow
   const categories = columns.map((column, index) => ({
     key: column.id,
     label: column.label,
-    color:
-      columns.length <= 4
-        ? seriesColor(index)
-        : `color-mix(in oklab, var(--viz-1) ${Math.round(25 + (index / Math.max(1, columns.length - 1)) * 75)}%, var(--viz-surface))`,
+    color: `color-mix(in oklab, var(--viz-1) ${Math.round(25 + (index / Math.max(1, columns.length - 1)) * 75)}%, var(--viz-surface))`,
   }));
   return <StackedRows categories={categories} label={field.label} rows={rows} />;
 }

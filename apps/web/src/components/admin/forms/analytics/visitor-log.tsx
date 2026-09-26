@@ -137,9 +137,9 @@ export function VisitorLog({ form }: { form: FormRecord }) {
       {!filtered.length ? (
         <EmptyChart>No visits match.</EmptyChart>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[#eef0f4] dark:border-white/10">
+        <div className="max-h-[70vh] overflow-auto overscroll-contain rounded-xl border border-[#eef0f4] dark:border-white/10">
           <table className="w-full min-w-[860px] border-collapse text-xs">
-            <thead className="bg-[#fbfbfa] text-left text-[#7e899d] dark:bg-white/[0.03] dark:text-white/45">
+            <thead className="sticky top-0 z-10 bg-[#fbfbfa] text-left text-[#7e899d] dark:bg-[#171b22] dark:text-white/45">
               <tr>
                 {["Time", "Event", "Question reached", "IP", "Location", "Device", "Referrer"].map(
                   (title) => (

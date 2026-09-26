@@ -32,7 +32,7 @@ export function Funnel({ steps }: { steps: FunnelStep[] }) {
     }
   });
   return (
-    <ol className="space-y-2">
+    <ol className={`gap-x-8 ${steps.length > 10 ? "lg:columns-2" : ""}`}>
       {steps.map((step, index) => {
         const previous = index ? steps[index - 1].sessions : step.sessions;
         const drop = index && previous > 0 ? (previous - step.sessions) / previous : 0;
@@ -45,7 +45,7 @@ export function Funnel({ steps }: { steps: FunnelStep[] }) {
               : "var(--viz-1)";
         return (
           <li
-            className={`rounded-lg px-2 py-1.5 ${isBiggest ? "bg-brand-red-50/60 dark:bg-brand-red/10" : ""}`}
+            className={`mb-2 break-inside-avoid rounded-lg px-2 py-1.5 ${isBiggest ? "bg-brand-red-50/60 dark:bg-brand-red/10" : ""}`}
             key={step.key}
           >
             <div className="flex items-baseline gap-2 text-xs">

@@ -384,7 +384,7 @@ export function FunnelCard({ form, analytics }: { form: FormRecord; analytics: F
     {
       key: "views",
       label: "Viewed the form",
-      sessions: analytics.totals.uniqueVisitors || analytics.totals.views,
+      sessions: analytics.totals.views,
       kind: "view",
     },
     { key: "starts", label: "Started", sessions: analytics.totals.starts, kind: "start" },
@@ -398,6 +398,7 @@ export function FunnelCard({ form, analytics }: { form: FormRecord; analytics: F
   ];
   return (
     <ChartCard
+      className="lg:col-span-2"
       subtitle="Sessions that reached each step, in form order. Drops are from the step before."
       table={{
         columns: ["Step", "Sessions", "Share of first"],
@@ -594,7 +595,13 @@ export function BreakdownCards({ analytics }: { analytics: FormAnalytics }) {
 }
 
 /** Completion time histogram and responses by hour, from the (filtered, cleaned) responses. */
-export function ResponseTimingCards({ rows }: { rows: WorkingRow[] }) {
+export function ResponseTimingCards({
+  rows,
+  only,
+}: {
+  rows: WorkingRow[];
+  only?: "duration" | "hours";
+}) {
   const { durationBins, hours } = useMemo(() => {
     const seconds = rows
       .map((row) => row.record.meta.durationMs)
@@ -613,47 +620,55 @@ export function ResponseTimingCards({ rows }: { rows: WorkingRow[] }) {
   }, [rows]);
   return (
     <>
-      <ChartCard
-        subtitle="Minutes from start to submit (the slowest 5% are grouped in the last bar)"
-        table={{
-          columns: ["Minutes", "Responses"],
-          rows: durationBins.map((bin) => [`${bin.x0.toFixed(1)}–${bin.x1.toFixed(1)}`, bin.count]),
-        }}
-        title="Completion time"
-      >
-        {durationBins.length ? (
-          <ColumnChart
-            data={durationBins.map((bin, index) => ({
-              key: String(index),
-              label: bin.x0.toFixed(bin.x1 - bin.x0 < 1 ? 1 : 0),
-              value: bin.count,
-              detail: `${bin.x0.toFixed(1)}–${bin.x1.toFixed(1)} min`,
-            }))}
-            title="Completion time histogram"
-          />
-        ) : (
-          <EmptyChart />
-        )}
-      </ChartCard>
-      <ChartCard
-        subtitle="Your local time"
-        table={{
-          columns: ["Hour", "Responses"],
-          rows: hours.map((count, hour) => [`${String(hour).padStart(2, "0")}:00`, count]),
-        }}
-        title="Responses by hour of day"
-      >
-        <ColumnChart
-          data={hours.map((count, hour) => ({
-            key: String(hour),
-            label: String(hour).padStart(2, "0"),
-            value: count,
-            detail: `${String(hour).padStart(2, "0")}:00–${String(hour).padStart(2, "0")}:59`,
-          }))}
-          labelEvery={3}
+      {only !== "hours" ? (
+        <ChartCard
+          className={only ? "lg:col-span-2" : ""}
+          subtitle="Minutes from start to submit (the slowest 5% are grouped in the last bar)"
+          table={{
+            columns: ["Minutes", "Responses"],
+            rows: durationBins.map((bin) => [
+              `${bin.x0.toFixed(1)}–${bin.x1.toFixed(1)}`,
+              bin.count,
+            ]),
+          }}
+          title="Completion time"
+        >
+          {durationBins.length ? (
+            <ColumnChart
+              data={durationBins.map((bin, index) => ({
+                key: String(index),
+                label: bin.x0.toFixed(bin.x1 - bin.x0 < 1 ? 1 : 0),
+                value: bin.count,
+                detail: `${bin.x0.toFixed(1)}–${bin.x1.toFixed(1)} min`,
+              }))}
+              title="Completion time histogram"
+            />
+          ) : (
+            <EmptyChart />
+          )}
+        </ChartCard>
+      ) : null}
+      {only !== "duration" ? (
+        <ChartCard
+          subtitle="Your local time"
+          table={{
+            columns: ["Hour", "Responses"],
+            rows: hours.map((count, hour) => [`${String(hour).padStart(2, "0")}:00`, count]),
+          }}
           title="Responses by hour of day"
-        />
-      </ChartCard>
+        >
+          <ColumnChart
+            data={hours.map((count, hour) => ({
+              key: String(hour),
+              label: String(hour).padStart(2, "0"),
+              value: count,
+              detail: `${String(hour).padStart(2, "0")}:00–${String(hour).padStart(2, "0")}:59`,
+            }))}
+            labelEvery={3}
+            title="Responses by hour of day"
+          />
+        </ChartCard>
+      ) : null}
     </>
   );
 }

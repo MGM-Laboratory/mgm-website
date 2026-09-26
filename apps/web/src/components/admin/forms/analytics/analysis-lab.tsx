@@ -80,8 +80,16 @@ export function categoricalColumns(columns: DataColumn[], rows: WorkingRow[]) {
   });
 }
 
-export function numericColumns(columns: DataColumn[]) {
-  return columns.filter((column) => column.valueType === "number");
+export function numericColumns(columns: DataColumn[], rows: WorkingRow[]) {
+  // Columns that are numeric but empty here (a score on a form without scoring) are left out.
+  return columns.filter((column) => {
+    if (column.valueType !== "number") return false;
+    let seen = 0;
+    for (const row of rows) {
+      if (typeof sortKey(column, row) === "number" && ++seen >= 3) return true;
+    }
+    return false;
+  });
 }
 
 function categoryOf(column: DataColumn, row: WorkingRow): string | null {
@@ -180,9 +188,20 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
       table.set(x, line);
       columnTotals.set(y, (columnTotals.get(y) ?? 0) + 1);
     }
-    const rowKeys = [...table.keys()].sort((p, q) => sumMap(table.get(q)) - sumMap(table.get(p)));
-    const columnKeys = [...columnTotals.keys()].sort(
-      (p, q) => (columnTotals.get(q) ?? 0) - (columnTotals.get(p) ?? 0),
+    const numericRows = [...table.keys()].every(
+      (key) => key !== "" && Number.isFinite(Number(key)),
+    );
+    const rowKeys = [...table.keys()].sort((p, q) =>
+      numericRows ? Number(p) - Number(q) : sumMap(table.get(q)) - sumMap(table.get(p)),
+    );
+    // Numeric categories (ratings, scales) keep their natural order; others go by size.
+    const numericColumnKeys = [...columnTotals.keys()].every(
+      (key) => key !== "" && Number.isFinite(Number(key)),
+    );
+    const columnKeys = [...columnTotals.keys()].sort((p, q) =>
+      numericColumnKeys
+        ? Number(p) - Number(q)
+        : (columnTotals.get(q) ?? 0) - (columnTotals.get(p) ?? 0),
     );
     const matrix = rowKeys.map((x) => columnKeys.map((y) => table.get(x)?.get(y) ?? 0));
     return {
@@ -207,16 +226,29 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
       : mode === "row"
         ? formatPercent(rowTotal ? value / rowTotal : 0, 0)
         : formatPercent(columnTotal ? value / columnTotal : 0, 0);
-  const chartCategories = shown
-    ? shown.columnKeys
-        .slice(0, 4)
-        .map((key, index) => ({ key, label: key, color: seriesColor(index) }))
-        .concat(
-          shown.columnKeys.length > 4
-            ? [{ key: "__rest", label: "Other", color: OTHER_COLOR }]
-            : [],
-        )
-    : [];
+  // Ordered numeric categories (a 1-5 scale) read as one hue from light to dark, all shown.
+  const ordinal = Boolean(
+    shown &&
+    shown.columnKeys.length > 1 &&
+    shown.columnKeys.every((key) => Number.isFinite(Number(key))),
+  );
+  const chartCategories =
+    ordinal && shown
+      ? shown.columnKeys.map((key, index) => ({
+          key,
+          label: key,
+          color: `color-mix(in oklab, var(--viz-1) ${Math.round(22 + (index / Math.max(1, shown.columnKeys.length - 1)) * 78)}%, var(--viz-surface))`,
+        }))
+      : shown
+        ? shown.columnKeys
+            .slice(0, 4)
+            .map((key, index) => ({ key, label: key, color: seriesColor(index) }))
+            .concat(
+              shown.columnKeys.length > 4
+                ? [{ key: "__rest", label: "Other", color: OTHER_COLOR }]
+                : [],
+            )
+        : [];
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
@@ -307,10 +339,12 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
               return {
                 key,
                 label: key,
-                values: [
-                  ...values.slice(0, 4),
-                  ...(values.length > 4 ? [values.slice(4).reduce((p, q) => p + q, 0)] : []),
-                ],
+                values: ordinal
+                  ? values
+                  : [
+                      ...values.slice(0, 4),
+                      ...(values.length > 4 ? [values.slice(4).reduce((p, q) => p + q, 0)] : []),
+                    ],
               };
             })}
           />
@@ -362,7 +396,17 @@ function NumericExplorer({ numeric, rows }: { numeric: DataColumn[]; rows: Worki
   const summary = useMemo(() => summarize(values), [values]);
   const [bins, setBins] = useState<number | null>(null);
   const binCount = bins ?? suggestedBinCount(values);
-  const data = useMemo(() => histogram(values, binCount), [values, binCount]);
+  const integers = useMemo(
+    () =>
+      values.length > 0 &&
+      values.every(Number.isInteger) &&
+      Math.max(...values) - Math.min(...values) <= 40,
+    [values],
+  );
+  const data = useMemo(
+    () => histogram(values, binCount, { integer: integers }),
+    [values, binCount, integers],
+  );
   if (!numeric.length) return <EmptyChart>No numeric questions or computed columns.</EmptyChart>;
   return (
     <div className="space-y-4">
@@ -735,7 +779,7 @@ export function AnalysisLab({
   total: number;
 }) {
   const categorical = useMemo(() => categoricalColumns(columns, rows), [columns, rows]);
-  const numeric = useMemo(() => numericColumns(columns), [columns]);
+  const numeric = useMemo(() => numericColumns(columns, rows), [columns, rows]);
   const [scatterPick, setScatterPick] = useState<[string, string] | null>(null);
   return (
     <div className="space-y-4" data-testid="analysis-lab">
