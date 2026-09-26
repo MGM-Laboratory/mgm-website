@@ -1,0 +1,733 @@
+/*
+ * The homepage reel (reel-section.tsx). Layout values follow the section
+ * grid it quotes: a 12 column grid with 2vw gaps, a 10vw two line title,
+ * the description in the right half, a 16:9 thumbnail rect under it and a
+ * big video frame (at most 2:1, centred under the header when pinned).
+ *
+ * `em` inside the section is the section font size, clamp(.875rem, 1vw,
+ * 2rem): 14.4 px at 1440 wide, 19.2 px at 1920. Heights stay in CSS so the
+ * server HTML already has the final section height, and nothing below it
+ * moves once scripts run.
+ *
+ * Transforms: every element the controller moves (pin, morph, parallax,
+ * entrances, reveal scales) carries none from this file.
+ */
+
+.section {
+  --reel-gap: 2vw;
+  --reel-pad-x: max(5vw, 40px);
+  --reel-pad-y: clamp(30px, 4vw, 50px);
+  --reel-cross: clamp(0.875rem, 1vw, 2rem);
+  --reel-radius: 20px;
+  --reel-header: 64px;
+  --reel-ease: cubic-bezier(0.35, 0, 0, 1);
+
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--reel-gap);
+  padding: var(--reel-pad-y) var(--reel-pad-x);
+  overflow-x: clip;
+  font-size: clamp(0.875rem, 1vw, 2rem);
+  color: var(--foreground);
+  background: transparent;
+}
+
+/* The ribbon (DOM version). Under the text, over the section's own box. */
+.lineSvg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.linePath {
+  fill: none;
+  stroke: var(--brand-blue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------------------------------------------------------------- title */
+
+.title {
+  position: relative;
+  left: -0.03em;
+  grid-column: 1 / -1;
+  margin: 1em 0 0.5em;
+  font-family: var(--font-display);
+  font-size: 10vw;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--foreground);
+}
+
+.titleInner {
+  display: block;
+}
+
+.titleLine {
+  display: block;
+  overflow: hidden;
+  /* Room for the comma's tail and the lean of the rising words. */
+  padding-bottom: 0.1em;
+}
+
+.titleLineFirst {
+  /* Two columns and two gaps: the first word starts on column three. */
+  padding-left: calc((100% - 11 * var(--reel-gap)) / 12 * 2 + 2 * var(--reel-gap));
+}
+
+.word {
+  position: relative;
+  display: inline-block;
+}
+
+/* -------------------------------------------------------------- content */
+
+.content {
+  grid-column: 7 / span 6;
+  font-size: clamp(1rem, 1.5vw, 3rem);
+}
+
+.desc {
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+.descWord {
+  display: inline-block;
+}
+
+.ctaLift {
+  width: fit-content;
+  margin-top: 3em;
+  font-size: clamp(0.875rem, 1vw, 1.75rem);
+}
+
+.ctaMagnet {
+  display: inline-block;
+}
+
+.cta {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 1em;
+  height: 3.375em;
+  padding: 1em 1.5em 1em 1.625em;
+  overflow: hidden;
+  border-radius: 5.3125em;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow:
+    0 6px 10px rgb(14 17 22 / 4%),
+    0 2px 4px rgb(14 17 22 / 4%);
+  transition: background-color 0.2s var(--reel-ease);
+}
+
+:global(.dark) .cta {
+  background: var(--foreground);
+  color: var(--surface-inverse);
+}
+
+.ctaDot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: currentColor;
+  transition:
+    background-color 0.5s var(--reel-ease),
+    transform 0.4s var(--reel-ease);
+}
+
+.ctaText {
+  position: relative;
+  z-index: 1;
+  transition:
+    color 0.5s var(--reel-ease),
+    transform 0.4s var(--reel-ease);
+}
+
+.ctaArrow {
+  position: absolute;
+  right: 1em;
+  z-index: 1;
+  width: 1.2em;
+  height: 1.2em;
+  color: #fff;
+  transform: translate3d(3em, 0, 0);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0, 1);
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .cta:hover,
+  .cta:focus-visible {
+    background: var(--brand-blue);
+    transition: background-color 0.5s var(--reel-ease) 0.3s;
+  }
+  .cta:hover .ctaDot,
+  .cta:focus-visible .ctaDot {
+    background: var(--brand-blue);
+    transform: translate3d(3em, 0, 0) scale(20);
+  }
+  .cta:hover .ctaText,
+  .cta:focus-visible .ctaText {
+    color: #fff;
+    transform: translate3d(-1.5em, 0, 0);
+  }
+  .cta:hover .ctaArrow,
+  .cta:focus-visible .ctaArrow {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* ------------------------------------------------------------ thumbnail */
+
+.thumbWrap {
+  position: relative;
+  top: -10em;
+  grid-column: 1 / span 5;
+  width: calc(100% + 2 * var(--reel-gap));
+  height: 0;
+}
+
+.thumb {
+  height: 0;
+  padding-top: 56.25%;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------ the big video */
+
+.container {
+  grid-column: 1 / -1;
+  /* The pin's travel: the video holds while the page scrolls this far. */
+  padding-bottom: 100vh;
+  margin-bottom: 10vh;
+}
+
+.videoContainer {
+  position: relative;
+  width: 100%;
+  margin-top: calc(var(--reel-header) / 2);
+}
+
+.frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  max-height: calc(100vh - var(--reel-header) - 6 * var(--reel-cross));
+  border-radius: var(--reel-radius);
+}
+
+/* The DOM picture. The controller maps it from the thumbnail to the frame. */
+.visual {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--reel-radius);
+  transform-origin: 0 0;
+  background: var(--surface-inverse);
+  backface-visibility: hidden;
+}
+
+.media {
+  position: absolute;
+  inset: 0;
+}
+
+.video,
+.card {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The thumbnail's blue: grey the picture, then lighten it with brand blue,
+   so blacks become blue and highlights stay light. It clears in a sweep
+   from the top right corner as the picture grows (--reel-sweep, 0 to 1),
+   like the WebGL plane's corners, and opens a soft window of true colour
+   under the pointer (--reel-hover-*). */
+.tintGrey,
+.tintBlue {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mask-image:
+    radial-gradient(
+      circle var(--reel-hover-r, 0px) at var(--reel-hover-x, 50%) var(--reel-hover-y, 50%),
+      transparent 30%,
+      #000 100%
+    ),
+    linear-gradient(
+      to bottom left,
+      transparent calc(var(--reel-sweep, 0) * 135% - 35%),
+      #000 calc(var(--reel-sweep, 0) * 135%)
+    );
+  mask-composite: intersect;
+}
+
+.tintGrey {
+  background: #fff;
+  mix-blend-mode: saturation;
+}
+
+.tintBlue {
+  background: var(--brand-blue);
+  mix-blend-mode: lighten;
+}
+
+.section[data-reel-mode="gl"] .visual,
+.section[data-reel-mode="gl"] .lineSvg {
+  visibility: hidden;
+}
+
+/* ----------------------------------------------------------- decoration */
+
+.deco {
+  position: absolute;
+  top: calc(-2 * var(--reel-cross));
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: calc(100% + 4 * var(--reel-cross));
+  pointer-events: none;
+}
+
+.band {
+  position: relative;
+  height: var(--reel-cross);
+  overflow: hidden;
+}
+
+.marks {
+  position: absolute;
+  inset: 0;
+}
+
+.markSlot {
+  position: absolute;
+  top: 0;
+  width: var(--reel-cross);
+  height: var(--reel-cross);
+}
+
+.markSlot:nth-child(1) {
+  left: 0;
+}
+.markSlot:nth-child(2) {
+  left: calc(25% - var(--reel-cross) / 2);
+}
+.markSlot:nth-child(3) {
+  left: calc(50% - var(--reel-cross) / 2);
+}
+.markSlot:nth-child(4) {
+  left: calc(75% - var(--reel-cross) / 2);
+}
+.markSlot:nth-child(5) {
+  left: calc(100% - var(--reel-cross));
+}
+
+.markEmerge,
+.markSwap {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--foreground);
+}
+
+.mark > g {
+  display: none;
+}
+
+.markSwap[data-kind="plus"] .kindPlus,
+.markSwap[data-kind="x"] .kindX,
+.markSwap[data-kind="circle"] .kindCircle,
+.markSwap[data-kind="triangle"] .kindTriangle,
+.markSwap[data-kind="half"] .kindHalf {
+  display: inline;
+}
+
+.strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: 200%;
+  height: 100%;
+}
+
+.stripItem {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  min-width: 0;
+  height: 100%;
+  font-size: calc(var(--reel-cross) * 0.78);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+
+.stripArrows {
+  display: block;
+  flex: none;
+  width: 2.6em;
+  height: 0.8em;
+  color: currentColor;
+}
+
+.stripMask {
+  display: grid;
+  justify-items: start;
+  height: 1.1em;
+  overflow: hidden;
+}
+
+/* The two rolling lines and a sizer share one cell: the box is as wide as
+   the longest line, so nothing shifts when the lines change. */
+.stripText,
+.stripSizer {
+  grid-area: 1 / 1;
+  display: block;
+  height: 1.1em;
+  line-height: 1.1em;
+}
+
+.stripSizer {
+  visibility: hidden;
+}
+
+/* ---------------------------------------------- words, button, readout */
+
+.words {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  /* The gap stays centred on the button whatever the two words' widths. */
+  grid-template-columns: 1fr 2em 1fr;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 7.5em;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0.02em 0.12em rgb(14 17 22 / 28%);
+  pointer-events: none;
+}
+
+.playWord {
+  display: flex;
+  justify-self: end;
+}
+
+.playWord + .playWord {
+  grid-column: 3;
+  justify-self: start;
+}
+
+.char {
+  display: block;
+  transform-origin: 50% 100%;
+}
+
+.charMask {
+  display: block;
+  height: 0.9em;
+  overflow: hidden;
+}
+
+.charTrack {
+  display: block;
+}
+
+.glyph {
+  display: block;
+  height: 0.9em;
+  line-height: 1;
+  /* Caps sit in the middle of the mask, overshoots (O, C) included. */
+  margin-top: -0.02em;
+  margin-bottom: 0.02em;
+}
+
+.watchMagnet {
+  position: absolute;
+  top: calc(50% - 3em);
+  left: calc(50% - 4.7em);
+  width: 9.4em;
+  height: 6em;
+}
+
+.watch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 22.5em;
+  background: var(--brand-yellow);
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.watch:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 7px var(--brand-blue);
+}
+
+/* A blue disc that rises from the bottom edge: its top reads as a half
+   disc sweeping up through the yellow. */
+.watchFill {
+  position: absolute;
+  top: calc(100% - 8em);
+  left: calc(50% - 8em);
+  width: 16em;
+  height: 16em;
+  border-radius: 50%;
+  background: var(--brand-blue);
+  transform: translate3d(0, 8em, 0) scale(0);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.1, 1);
+}
+
+.watchIcon {
+  position: relative;
+  width: 2em;
+  height: 2em;
+  transition: color 0.3s var(--reel-ease);
+}
+
+.watch[data-hover="true"] .watchFill {
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.watch[data-hover="true"] .watchIcon {
+  color: #fff;
+}
+
+.captionWrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.caption {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0;
+  padding: 0.85em 1.35em;
+  border-radius: 999px;
+  font-size: clamp(0.9375rem, 1.1vw, 1.375rem);
+  font-weight: 500;
+  line-height: 1;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-2);
+}
+
+.captionMark {
+  flex: none;
+  width: 0.9em;
+  height: 0.9em;
+}
+
+.readout {
+  position: absolute;
+  top: 1.1em;
+  left: 1.1em;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.45em 0.8em 0.45em 0.7em;
+  border-radius: 999px;
+  background: rgb(14 17 22 / 55%);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-mono);
+  font-size: max(11px, 0.78em);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  pointer-events: none;
+}
+
+.readoutDot {
+  flex: none;
+  width: 0.62em;
+  height: 0.62em;
+  border-radius: 50%;
+  background: var(--brand-red);
+  box-shadow: 0 0 0 1px rgb(14 17 22 / 25%);
+}
+
+.readoutMask {
+  position: relative;
+  display: block;
+  width: 21ch;
+  height: 1.2em;
+  overflow: hidden;
+  transition: width 0.45s var(--reel-ease);
+}
+
+.readoutLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  height: 1.2em;
+  line-height: 1.2em;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------- wide and narrow */
+
+@media (min-aspect-ratio: 21 / 9) {
+  .section {
+    --reel-pad-x: max(6vw, 60px);
+  }
+  .title {
+    font-size: 6.7vw;
+  }
+  .content {
+    grid-column: 8 / span 3;
+  }
+}
+
+/* Phones and upright tablets: one column, no thumbnail, no morph, no pin.
+   The same query is REEL_COMPACT_QUERY in reel-controller.ts. */
+@media (max-width: 812px), (orientation: portrait) and (max-width: 1100px) {
+  .section {
+    --reel-gap: 4vw;
+    --reel-pad-x: 25px;
+    --reel-pad-y: 25px;
+    --reel-radius: 12px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .title {
+    margin: 1em 0 0.5em;
+    font-size: 13.8vw;
+  }
+  .titleLine {
+    overflow: visible;
+  }
+  .titleLineFirst {
+    padding-left: 0;
+  }
+  .content {
+    grid-column: 1 / -1;
+  }
+  .ctaLift {
+    margin-bottom: 4em;
+  }
+  .thumbWrap {
+    top: 0;
+  }
+  .thumb {
+    padding-top: 0;
+  }
+  .container {
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+  .frame {
+    max-height: none;
+  }
+  .marks,
+  .words {
+    display: none;
+  }
+  .strip {
+    width: 600%;
+  }
+}
+
+@media (max-width: 560px) {
+  .videoContainer {
+    margin-top: 0;
+  }
+  .frame {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 18.5vw;
+  }
+}
+
+@media (max-width: 400px) {
+  .section {
+    --reel-pad-x: 15px;
+    --reel-pad-y: 15px;
+  }
+}
+
+/* Reduced motion: the finished big state, in place. No pin travel. */
+@media (prefers-reduced-motion: reduce) {
+  .container {
+    padding-bottom: 0;
+  }
+  .cta,
+  .ctaDot,
+  .ctaText,
+  .ctaArrow,
+  .watchFill,
+  .watchIcon {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}
