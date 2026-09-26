@@ -106,6 +106,7 @@ export function PickerField({
   className,
   disabled,
   ariaLabel,
+  showHint = true,
   panel,
   footer,
 }: {
@@ -124,6 +125,8 @@ export function PickerField({
   className?: string;
   disabled?: boolean;
   ariaLabel?: string;
+  /** Show the typing hint under the field while it has focus. */
+  showHint?: boolean;
   panel: (api: PanelApi) => ReactNode;
   footer?: (api: PanelApi) => ReactNode;
 }) {
@@ -300,7 +303,7 @@ export function PickerField({
       <p
         id={hintId}
         className="pk-hint"
-        data-show={focused || localError ? "" : undefined}
+        data-show={(showHint && focused) || localError ? "" : undefined}
         data-error={localError ? "" : undefined}
         aria-live="polite"
       >

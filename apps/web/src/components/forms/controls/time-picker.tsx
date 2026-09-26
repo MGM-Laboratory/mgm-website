@@ -329,6 +329,7 @@ export type TimePickerProps = {
   className?: string;
   disabled?: boolean;
   ariaLabel?: string;
+  showHint?: boolean;
 };
 
 /** A time (`HH:mm`, 24h) picker. */

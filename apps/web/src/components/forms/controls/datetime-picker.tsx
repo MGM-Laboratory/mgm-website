@@ -39,6 +39,7 @@ export type DateTimePickerProps = {
   className?: string;
   disabled?: boolean;
   ariaLabel?: string;
+  showHint?: boolean;
 };
 
 function halves(value: string | undefined) {

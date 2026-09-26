@@ -449,6 +449,7 @@ export type DatePickerProps = {
   className?: string;
   disabled?: boolean;
   ariaLabel?: string;
+  showHint?: boolean;
 };
 
 /** A date (`YYYY-MM-DD`) picker. */

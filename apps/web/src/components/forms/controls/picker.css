@@ -212,6 +212,9 @@
 .pk-pop[data-kind="datetime"] {
   width: 568px;
 }
+.pk-pop.pk-skin-admin {
+  font-size: 0.875rem;
+}
 .pk-pop *,
 .pk-pop *::before,
 .pk-pop *::after {
