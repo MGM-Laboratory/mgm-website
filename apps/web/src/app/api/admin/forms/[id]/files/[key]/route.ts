@@ -10,50 +10,53 @@ export const runtime = "nodejs";
 
 type Context = { params: Promise<{ id: string; key: string }> };
 
-type SignedFile = { url?: string; name?: string; type?: string; size?: number; message?: unknown };
+type SignedFile = { url?: string; message?: unknown };
 
 /**
  * A respondent's upload: a 302 to its short-lived signed URL, or with
- * `?download=1` the bytes streamed through this origin as an attachment,
- * so the responses panel can fetch and zip files same-origin.
+ * `?download=1` the bytes the API streams back, relayed through this origin
+ * as an attachment so the responses panel can fetch and zip files
+ * same-origin.
  */
 export async function GET(request: Request, { params }: Context) {
   const gate = await gateAdminRequest("forms", "read");
   if (!gate.ok) return gate.response;
   const { id, key } = await params;
+  const download = new URL(request.url).searchParams.get("download") === "1";
+  const path = formPath(id, `/files/${enc(key)}${download ? "?download=1" : ""}`);
 
-  let signed: SignedFile;
-  let status: number;
+  let response: Response;
   try {
-    const response = await cmsApi(formPath(id, `/files/${enc(key)}`));
-    status = response.status;
-    signed = (await response.json().catch(() => ({}))) as SignedFile;
+    response = await cmsApi(path);
   } catch {
     return NextResponse.json({ message: "The forms API is not reachable." }, { status: 502 });
   }
-  if (status !== 200 || !signed.url) {
-    return NextResponse.json(
-      { message: signed.message ?? "File not found." },
-      { status: status === 200 ? 404 : status },
-    );
-  }
 
-  if (new URL(request.url).searchParams.get("download") !== "1") {
+  if (!download) {
+    const signed = (await response.json().catch(() => ({}))) as SignedFile;
+    if (response.status !== 200 || !signed.url) {
+      return NextResponse.json(
+        { message: signed.message ?? "File not found." },
+        { status: response.status === 200 ? 404 : response.status },
+      );
+    }
     return NextResponse.redirect(signed.url, 302);
   }
 
-  const source = await fetch(signed.url, { cache: "no-store" }).catch(() => null);
-  if (!source?.ok || !source.body) {
-    return NextResponse.json({ message: "The file could not be read." }, { status: 502 });
+  if (!response.ok || !response.body) {
+    const body = (await response.json().catch(() => ({}))) as SignedFile;
+    return NextResponse.json(
+      { message: body.message ?? "The file could not be read." },
+      { status: response.ok ? 502 : response.status },
+    );
   }
-  const name = signed.name || key;
   const headers = new Headers({
-    "content-type": signed.type || source.headers.get("content-type") || "application/octet-stream",
-    "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(name)}`,
+    "content-type": response.headers.get("content-type") ?? "application/octet-stream",
+    "content-disposition": response.headers.get("content-disposition") ?? "attachment",
     "cache-control": "private, no-store",
     "x-content-type-options": "nosniff",
   });
-  const length = source.headers.get("content-length");
+  const length = response.headers.get("content-length");
   if (length) headers.set("content-length", length);
-  return new NextResponse(source.body, { headers });
+  return new NextResponse(response.body, { headers });
 }

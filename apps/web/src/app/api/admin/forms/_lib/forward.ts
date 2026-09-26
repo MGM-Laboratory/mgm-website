@@ -2,7 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 
-import { apiBaseUrl, cmsApi } from "@/lib/cms-api";
+import { cmsApi } from "@/lib/cms-api";
 
 /**
  * Shared plumbing of the forms admin proxies (`/api/admin/forms/**`): every
@@ -72,24 +72,19 @@ export function passQuery(request: Request, keys: readonly string[]): string {
 export async function streamUpload(
   request: Request,
   path: string,
-  extraHeaders: Record<string, string> = {},
+  contentType = request.headers.get("content-type") ?? "application/octet-stream",
 ): Promise<NextResponse> {
-  const headers: Record<string, string> = {
-    "content-type": request.headers.get("content-type") ?? "application/octet-stream",
-    "x-cms-passphrase": process.env.ADMIN_PASSPHRASE ?? "",
-    ...extraHeaders,
-  };
+  const headers: Record<string, string> = { "content-type": contentType };
   const length = request.headers.get("content-length");
   if (length) headers["content-length"] = length;
   const fileName = request.headers.get("x-file-name");
   if (fileName) headers["x-file-name"] = fileName;
   let response: Response;
   try {
-    response = await fetch(`${apiBaseUrl()}${path}`, {
+    response = await cmsApi(path, {
       method: "POST",
       body: request.body,
       headers,
-      cache: "no-store",
       duplex: "half",
     } as RequestInit);
   } catch {

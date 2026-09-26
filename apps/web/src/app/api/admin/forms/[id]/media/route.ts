@@ -33,5 +33,5 @@ export async function POST(request: Request, { params }: Context) {
       { status: 413 },
     );
   }
-  return streamUpload(request, path, { "content-type": contentType });
+  return streamUpload(request, path, contentType);
 }
