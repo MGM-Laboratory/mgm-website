@@ -2959,3 +2959,20 @@ h5.fx-rich-heading {
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
+
+/* The WebGL scene draws the pieces once its first frame is up; the DOM
+   blueprint stays underneath it. */
+.fx-scene-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.fx-layer-scene[data-scene-mode="gl"] .fx-piece {
+  visibility: hidden;
+}
+/* The blocks lean in 3D, so the flat blueprint would not line up under them. */
+.fx-layer-scene[data-scene-mode="gl"][data-scene="blocks"] .fx-poster-frame {
+  visibility: hidden;
+}
