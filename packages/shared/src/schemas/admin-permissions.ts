@@ -15,6 +15,7 @@ export const ADMIN_PAGE_IDS = [
   "events",
   "home",
   "links",
+  "forms",
   "other",
 ] as const;
 

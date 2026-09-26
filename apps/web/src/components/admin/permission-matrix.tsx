@@ -18,6 +18,8 @@ export const MATRIX_PAGES: { id: AdminPageId; label: string; soon: boolean }[] =
   { id: "careers", label: "Careers", soon: false },
   { id: "contact-inquiries", label: "Contact Inquiries", soon: false },
   { id: "events", label: "Events", soon: false },
+  { id: "links", label: "Links", soon: false },
+  { id: "forms", label: "Forms", soon: false },
   { id: "home", label: "Settings: Home", soon: false },
   { id: "contact", label: "Settings: Contact", soon: false },
 ];
