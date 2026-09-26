@@ -468,6 +468,8 @@ export class FormSceneEngine {
       this.last = now;
       this.governor.sample(ms);
       this.hopeless.sample(ms);
+      // Sampling can hand the visit to the DOM scene and dispose this engine.
+      if (!this.running) return;
       this.step(Math.min(0.05, ms / 1000));
       this.renderer.render(this.scene, this.camera);
       if (!this.ready) {
