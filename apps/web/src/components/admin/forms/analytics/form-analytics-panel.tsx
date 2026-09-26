@@ -236,9 +236,10 @@ export function FormAnalyticsPanel({ form }: FormAnalyticsPanelProps) {
             <div className="grid gap-4 lg:grid-cols-2">
               <FunnelCard analytics={analytics} form={form} />
               <HeatmapCard analytics={analytics} />
+              <ResponseTimingCards only="hours" rows={rangeRows} />
               <MapCard analytics={analytics} />
               <BreakdownCards analytics={analytics} />
-              <ResponseTimingCards rows={rangeRows} />
+              <ResponseTimingCards only="duration" rows={rangeRows} />
             </div>
           </div>
         )

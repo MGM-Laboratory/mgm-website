@@ -139,7 +139,8 @@ export function divergingColor(value: number) {
   if (!Number.isFinite(value)) return "var(--viz-grid)";
   const strength = Math.min(1, Math.abs(value));
   const hue = value >= 0 ? "var(--viz-1)" : "var(--viz-2)";
-  return `color-mix(in oklab, ${hue} ${Math.round(strength * 88)}%, var(--viz-neutral) ${Math.round((1 - strength) * 30)}%, var(--viz-surface))`;
+  // Zero is the neutral grid grey; the hue grows with the strength.
+  return `color-mix(in oklab, ${hue} ${Math.round(8 + strength * 84)}%, var(--viz-grid))`;
 }
 
 /** A matrix of coefficients (-1..1) with values printed; clicking a cell calls `onPick`. */
