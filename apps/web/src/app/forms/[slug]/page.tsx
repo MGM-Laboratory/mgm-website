@@ -20,7 +20,9 @@ function designOf(payload: PublicFormPayload) {
 
 function originUrl(protocol: string, host: string | undefined) {
   try {
-    return host && /^https?$/.test(protocol) ? new URL(`${protocol}://${host}`) : undefined;
+    return host && (protocol === "http" || protocol === "https")
+      ? new URL(`${protocol}://${host}`)
+      : undefined;
   } catch {
     return undefined;
   }
