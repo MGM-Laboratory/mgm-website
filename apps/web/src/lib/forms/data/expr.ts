@@ -180,6 +180,9 @@ export const EXPR_FUNCTIONS: Record<string, FunctionSpec> = {
 
 const KEYWORDS: Record<string, ExprValue> = { true: true, false: false, null: null, empty: null };
 
+const MAX_TOKENS = 2000;
+const MAX_NESTING = 64;
+
 class Parser {
   private position = 0;
   private readonly tokens: Token[];
@@ -204,8 +207,28 @@ class Parser {
     return token.kind === "ident" && token.value === value;
   }
 
+  /**
+   * Bounds the recursion of parsing and evaluating: the parser descends once
+   * per bracket and per prefix operator, so a formula has at most
+   * MAX_TOKENS tokens and MAX_NESTING levels of brackets.
+   */
+  private checkSize() {
+    if (this.tokens.length > MAX_TOKENS) {
+      throw new ExprSyntaxError("This formula is too long. Split it into two columns.", 0, 0);
+    }
+    let depth = 0;
+    for (const token of this.tokens) {
+      if (token.kind === "op" && token.value === "(") depth += 1;
+      if (token.kind === "op" && token.value === ")") depth -= 1;
+      if (depth > MAX_NESTING) {
+        throw new ExprSyntaxError("This formula nests too many brackets.", 0, 0);
+      }
+    }
+  }
+
   parse(): ExprNode {
     if (this.peek().kind === "eof") throw new ExprSyntaxError("Write a formula.", 0, 0);
+    this.checkSize();
     const node = this.or();
     const rest = this.peek();
     if (rest.kind !== "eof") {
