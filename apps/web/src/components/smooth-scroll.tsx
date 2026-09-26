@@ -19,7 +19,9 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const pendingKillRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
   const pathname = usePathname();
-  const isAdminRoute = pathname.startsWith("/admin");
+  // Admin and the public forms own their chrome and scroll natively.
+  const isAdminRoute =
+    pathname.startsWith("/admin") || pathname === "/forms" || pathname.startsWith("/forms/");
   const isProjectDetail = projectDetailSlug(pathname) !== null;
   const isArticles = isArticlesPath(pathname);
   const shouldSmooth = pathname === "/";
