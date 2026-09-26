@@ -122,41 +122,50 @@ function formatter(language: PickerLanguage, options: Intl.DateTimeFormatOptions
   return found;
 }
 
-/** "Sat, 26 September 2026" / "Sab, 26 September 2026". */
-export function formatDateLong(iso: string, language: PickerLanguage) {
-  return formatter(language, {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(utc(iso));
+/**
+ * Dates are spelled out from single-field names (the weekday alone, the
+ * month alone) and plain numbers, never from one multi-field Intl format:
+ * engines ship different ICU versions that disagree on commas and short
+ * month names ("Sep" or "Sept"), and a label must read the same everywhere.
+ * Short names are the first three letters, which is the usual abbreviation
+ * in English and in Indonesian alike.
+ */
+function dateParts(iso: string, language: PickerLanguage) {
+  const date = utc(iso);
+  const weekday = formatter(language, { weekday: "long" }).format(date);
+  const month = formatter(language, { month: "long" }).format(date);
+  return {
+    weekday,
+    weekdayShort: weekday.slice(0, 3),
+    month,
+    monthShort: month.slice(0, 3),
+    day: date.getUTCDate(),
+    year: date.getUTCFullYear(),
+  };
 }
 
-/** "Sat, 26 Sept 2026": the date half of a datetime. */
+/** "Sat, 26 September 2026" / "Sab, 26 September 2026". */
+export function formatDateLong(iso: string, language: PickerLanguage) {
+  const part = dateParts(iso, language);
+  return `${part.weekdayShort}, ${part.day} ${part.month} ${part.year}`;
+}
+
+/** "Sat, 26 Sep 2026": the date half of a datetime. */
 export function formatDateShort(iso: string, language: PickerLanguage) {
-  return formatter(language, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(utc(iso));
+  const part = dateParts(iso, language);
+  return `${part.weekdayShort}, ${part.day} ${part.monthShort} ${part.year}`;
 }
 
 /** "Saturday, 26 September 2026": what a day cell announces. */
 export function formatDateFull(iso: string, language: PickerLanguage) {
-  return formatter(language, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(utc(iso));
+  const part = dateParts(iso, language);
+  return `${part.weekday}, ${part.day} ${part.month} ${part.year}`;
 }
 
 /** "September 2026". */
 export function formatMonthYear(y: number, m: number, language: PickerLanguage) {
-  return formatter(language, { month: "long", year: "numeric" }).format(
-    new Date(Date.UTC(y, m - 1, 1)),
-  );
+  const month = formatter(language, { month: "long" }).format(new Date(Date.UTC(y, m - 1, 1)));
+  return `${month} ${y}`;
 }
 
 /** The twelve month names, January first. */

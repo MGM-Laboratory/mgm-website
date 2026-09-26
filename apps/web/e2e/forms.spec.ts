@@ -298,8 +298,7 @@ test.describe("date and time pickers", () => {
       await expect(field(page, "birthday")).toHaveValue("Mon, 14 March 1994");
       await expect(question(page, "birthday").getByText("Enter a valid date.")).toBeHidden();
     }
-    // Engines' Intl data abbreviate September as "Sept" or "Sep".
-    await expect(field(page, "call")).toHaveValue(/^Sun, 27 Sept? 2026, 9:05 AM$/);
+    await expect(field(page, "call")).toHaveValue("Sun, 27 Sep 2026, 9:05 AM");
 
     await page.getByRole("button", { name: /Submit/ }).click();
     await expect.poll(async () => (await submissions(page, "e2e-dates")).length).toBe(1);
