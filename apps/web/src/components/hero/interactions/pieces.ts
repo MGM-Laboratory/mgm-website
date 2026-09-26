@@ -41,7 +41,8 @@ import {
  * - X: a fidget spinner, turned by the cursor's movement around it.
  * - Red circle: a heartbeat on hover; a press pops it into four.
  * - Clover: the petals open on hover like a flower; a press claps them
- *   shut and turns it a quarter.
+ *   shut and whirls it round once (it isn't symmetric under a quarter
+ *   turn, so it always lands back on its rest pose).
  * - Star: a pinwheel, blown round by the cursor passing by.
  * - Domes: a mouth that opens on hover and bites on press.
  * - Logo: an exploded view on hover; a press snaps it back together with
@@ -62,7 +63,7 @@ export type PieceName =
 
 // Slide toward targets (gaze, doze).
 const KP: SpringConfig = [110, 13];
-// Rotation: gaze leans and the clover's quarter turns, a little bouncy.
+// Rotation: gaze leans, a little bouncy.
 const KR: SpringConfig = [150, 11];
 // The square's thrown quarter turn: firm, so it lands instead of wobbling.
 const KR_THROWN: SpringConfig = [260, 21];
@@ -82,7 +83,9 @@ const GAZE_REACH = 220;
 /** The triangle rocking back onto its base: angular acceleration, deg/s^2. */
 const TIP_ACCEL = 1500;
 /** Spinner friction time constants, s (a pinwheel coasts longer). */
-const SPIN_TAU = { x: 1.4, fans: 2.1 } as const;
+const SPIN_TAU = { x: 1.4, fans: 1.7 } as const;
+/** The fastest a press or the cursor can spin them, deg/s. */
+const SPIN_MAX = 1600;
 
 type Piece = {
   name: PieceName;
@@ -232,12 +235,23 @@ export function createPieces(stage: Stage): PiecesSystem {
     ...redBits,
   ].filter((el): el is NonNullable<typeof el> => !!el);
 
+  // Each part turns about a fixed point of its shape, set once while it is
+  // at rest. Passing an svgOrigin on every tween re-derives it from the
+  // part's current transform, and GSAP's compensation for that drifts.
+  gsap.set(petals, { svgOrigin: "50 50" });
+  if (domeTop) gsap.set(domeTop, { svgOrigin: "0 0" });
+  if (domeBottom) gsap.set(domeBottom, { svgOrigin: "0 100" });
+  ["391 289", "253 490", "521 490"].forEach((origin, i) => {
+    if (shards[i]) gsap.set(shards[i], { svgOrigin: origin });
+  });
+
   let doze = 0;
   let toggleOn = true;
   let pressedPiece: Piece | null = null;
   let flipBack: gsap.core.Tween | null = null;
   let popping: gsap.core.Timeline | null = null;
   let biting: gsap.core.Timeline | null = null;
+  let whirl: gsap.core.Tween | null = null;
   let desaturate: gsap.core.Timeline | null = null;
   const now = () => stage.now();
 
@@ -283,11 +297,12 @@ export function createPieces(stage: Stage): PiecesSystem {
         y: open ? dirs[i][1] * 7 : 0,
         rotation: open ? 18 : 0,
         scale: open ? 0.94 : 1,
-        svgOrigin: "50 50",
         duration: open ? 0.55 : 0.8,
         ease: open ? "back.out(2.4)" : "elastic.out(1, 0.45)",
         delay: open ? i * 0.03 : 0,
-        overwrite: "auto",
+        // Kill every earlier tween on the petal at once, including a
+        // delayed open that hasn't started yet ("auto" would let it win).
+        overwrite: true,
       });
     });
   }
@@ -297,27 +312,25 @@ export function createPieces(stage: Stage): PiecesSystem {
     gsap.to(domeTop, {
       y: open ? -13 : 0,
       rotation: open ? -9 : 0,
-      svgOrigin: "0 0",
       duration: open ? 0.4 : 0.32,
       ease: open ? "back.out(2)" : "back.out(3)",
-      overwrite: "auto",
+      overwrite: true,
     });
     gsap.to(domeBottom, {
       y: open ? 9 : 0,
       rotation: open ? 5 : 0,
-      svgOrigin: "0 100",
       duration: open ? 0.4 : 0.32,
       ease: open ? "back.out(2)" : "back.out(3)",
-      overwrite: "auto",
+      overwrite: true,
     });
   }
 
   // Each shard slides out from the mark's centre, in user units (the mark
   // is 660 units across, so 40 is about 6 px at the hero's size).
   const SHARD_OUT = [
-    { x: 0, y: -44, rotation: -5, svgOrigin: "391 289" },
-    { x: -38, y: 30, rotation: -7, svgOrigin: "253 490" },
-    { x: 38, y: 30, rotation: 7, svgOrigin: "521 490" },
+    { x: 0, y: -44, rotation: -5 },
+    { x: -38, y: 30, rotation: -7 },
+    { x: 38, y: 30, rotation: 7 },
   ];
   function explode(open: boolean, fast = false) {
     shards.forEach((shard, i) => {
@@ -327,11 +340,10 @@ export function createPieces(stage: Stage): PiecesSystem {
         x: open ? out.x : 0,
         y: open ? out.y : 0,
         rotation: open ? out.rotation : 0,
-        svgOrigin: out.svgOrigin,
         duration: fast ? 0.12 : open ? 0.5 : 0.7,
         ease: fast ? "power3.in" : open ? "back.out(2.2)" : "elastic.out(1, 0.5)",
         delay: open && !fast ? i * 0.04 : 0,
-        overwrite: "auto",
+        overwrite: true,
       });
     });
   }
@@ -424,7 +436,9 @@ export function createPieces(stage: Stage): PiecesSystem {
       // The click: the knob lands against the end cap and squashes.
       .fromTo(
         knob,
-        { scaleX: 0.78, scaleY: 1.16, svgOrigin: `${cx} 45` },
+        // The knob's centre moves between the ends, so its origin moves too;
+        // without smoothOrigin GSAP never adds offsets that outlive the squash.
+        { scaleX: 0.78, scaleY: 1.16, svgOrigin: `${cx} 45`, smoothOrigin: false },
         {
           scaleX: 1,
           scaleY: 1,
@@ -499,7 +513,7 @@ export function createPieces(stage: Stage): PiecesSystem {
       )
       // A breath apart, then they fall back in and merge.
       .to(redBits, { x: 0, y: 0, scale: 0.7, duration: 0.3, ease: "back.in(1.8)" }, 0.78)
-      .set(redBits, { opacity: 0 }, 1.08)
+      .set(redBits, { opacity: 0, x: 0, y: 0, rotation: 0, scale: 1 }, 1.08)
       .fromTo(
         redCircle,
         { scale: 0.6, opacity: 1 },
@@ -512,8 +526,8 @@ export function createPieces(stage: Stage): PiecesSystem {
     if (!domeTop || !domeBottom) return;
     biting?.kill();
     p.s.v -= 2.6;
-    const top = { svgOrigin: "0 0", overwrite: "auto" as const };
-    const bottom = { svgOrigin: "0 100", overwrite: "auto" as const };
+    const top = { overwrite: "auto" as const };
+    const bottom = { overwrite: "auto" as const };
     // Open wide, snap shut past closed (the chomp), once more, then settle
     // back open if the cursor is still there.
     biting = gsap
@@ -554,7 +568,7 @@ export function createPieces(stage: Stage): PiecesSystem {
         p.baseJelly = -0.16;
         break;
       case "x":
-        p.omega += (side >= 0 ? 1 : -1) * 1000;
+        p.omega = clamp(-SPIN_MAX, SPIN_MAX, p.omega + (side >= 0 ? 1 : -1) * 1000);
         p.s.v -= 1.2;
         break;
       case "circle-red":
@@ -562,11 +576,25 @@ export function createPieces(stage: Stage): PiecesSystem {
         break;
       case "leaves":
         bloom(false);
-        p.baseR += 90;
         p.s.v -= 1.4;
+        if (!whirl?.isActive()) {
+          const release = stage.hold();
+          whirl = gsap.to(p, {
+            spin: p.spin + 360,
+            duration: 1,
+            ease: "back.out(1.3)",
+            onComplete: () => {
+              // A whole turn is the rest pose.
+              p.spin = 0;
+              release();
+              stage.wake();
+            },
+            onInterrupt: release,
+          });
+        }
         break;
       case "fans":
-        p.omega += (side >= 0 ? 1 : -1) * 1300;
+        p.omega = clamp(-SPIN_MAX, SPIN_MAX, p.omega + (side >= 0 ? 1 : -1) * 1300);
         break;
       case "domes":
         bite(p);
@@ -684,7 +712,7 @@ export function createPieces(stage: Stage): PiecesSystem {
           if (p.lastAngle !== null && distance > 4) {
             const rate = wrap180(angle - p.lastAngle) / pointer.dt;
             const grip = 0.28 * (1 - distance / reach);
-            p.omega = clamp(-1500, 1500, p.omega + (rate - p.omega) * grip);
+            p.omega = clamp(-SPIN_MAX, SPIN_MAX, p.omega + (rate - p.omega) * grip);
           }
           p.lastAngle = angle;
         } else {
@@ -697,7 +725,7 @@ export function createPieces(stage: Stage): PiecesSystem {
         if (distance < reach && distance > 1) {
           const tangential = (dx * pointer.vy - dy * pointer.vx) / Math.max(distance, 24);
           const f = 1 - distance / reach;
-          p.omega = clamp(-1600, 1600, p.omega + tangential * 7 * f * pointer.dt);
+          p.omega = clamp(-SPIN_MAX, SPIN_MAX, p.omega + tangential * 7 * f * pointer.dt);
         }
       } else if (p.name === "circle-yellow") {
         if (distance < p.w / 2 + 24 && pointer.speed > 140) wobble(p, 0.08);
@@ -822,11 +850,14 @@ export function createPieces(stage: Stage): PiecesSystem {
       p.ry.x = p.baseRy;
       p.jelly.x = p.baseJelly;
       p.x.v = p.y.v = p.r.v = p.s.v = p.k.v = p.ry.v = p.jelly.v = 0;
-      // Whole turns are the rest pose: keep the numbers small.
-      if (p.baseR !== 0 && p.baseR % 360 === 0 && tr === p.baseR) {
+      // The square looks the same after any quarter turn: fold its turns
+      // back to zero at rest, so the numbers stay small.
+      if (p.baseR !== 0 && p.baseR % 90 === 0) {
+        p.r.x -= p.baseR;
         p.baseR = 0;
-        p.r.x = 0;
       }
+      // Round again: the jelly's axis no longer matters.
+      if (p.name === "circle-yellow" && p.baseJelly === 0) p.jellyAngle = 0;
       if (p.baseRy !== 0 && p.baseRy % 360 === 0) {
         p.baseRy = 0;
         p.ry.x = 0;
@@ -906,6 +937,7 @@ export function createPieces(stage: Stage): PiecesSystem {
 
   function park() {
     flipBack?.kill();
+    whirl?.kill();
     popping?.progress(1);
     biting?.progress(1);
     pressedPiece = null;
@@ -956,6 +988,7 @@ export function createPieces(stage: Stage): PiecesSystem {
       desaturate?.kill();
       popping?.kill();
       biting?.kill();
+      whirl?.kill();
       gsap.killTweensOf(partEls);
       gsap.set(partEls, { clearProps: "transform,opacity" });
       if (knob) knob.setAttribute("cx", "175");
