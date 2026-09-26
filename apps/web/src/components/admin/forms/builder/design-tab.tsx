@@ -610,6 +610,20 @@ export function DesignTab({
               ]}
               value={design.layout}
             />
+            <div>
+              <p className={`${eyebrowClass} mb-2`}>Position on wide screens</p>
+              <Segmented<FormDesign["placement"]>
+                label="Position on wide screens"
+                onChange={(value) => {
+                  if (!readOnly) set("placement", value);
+                }}
+                options={[
+                  { value: "center", label: "Centered" },
+                  { value: "side", label: "Beside the poster" },
+                ]}
+                value={design.placement}
+              />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <p className={`${eyebrowClass} mb-2`}>Alignment</p>
