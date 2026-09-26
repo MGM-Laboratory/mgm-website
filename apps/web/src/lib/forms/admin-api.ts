@@ -106,8 +106,22 @@ export const formsAdminApi = {
       body: file,
       headers: { "content-type": file.type },
     }),
-  responses: (id: string) =>
-    request<{ responses: FormResponseRecord[] }>(`${base}/${enc(id)}/responses`),
+  /** Every response of the form, newest first, fetched page by page. */
+  responses: async (id: string) => {
+    const responses: FormResponseRecord[] = [];
+    let cursor: string | null = null;
+    // The API answers at most 5000 per page; a hard stop guards against a loop.
+    for (let page = 0; page < 200; page += 1) {
+      const query: string = cursor ? `?cursor=${enc(cursor)}` : "";
+      const body: { responses: FormResponseRecord[]; nextCursor: string | null } = await request(
+        `${base}/${enc(id)}/responses${query}`,
+      );
+      responses.push(...body.responses);
+      cursor = body.nextCursor;
+      if (!cursor) break;
+    }
+    return { responses };
+  },
   patchResponse: (id: string, responseId: string, patch: FormResponsePatch) =>
     request<{ response: FormResponseRecord }>(`${base}/${enc(id)}/responses/${enc(responseId)}`, {
       method: "PATCH",

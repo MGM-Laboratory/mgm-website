@@ -169,9 +169,18 @@ export class FormsAdminController {
   // --- Responses ---
 
   @Get(":id/responses")
-  async listResponses(@Param("id") id: string, @Headers("x-cms-passphrase") passphrase = "") {
+  async listResponses(
+    @Param("id") id: string,
+    @Query("cursor") cursor: string | undefined,
+    @Query("limit") limit: string | undefined,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
     this.assertAdmin(passphrase);
-    return { responses: await runForms(() => this.responses.list(id)) };
+    const pageCursor =
+      typeof cursor === "string" && /^[a-z0-9]{1,40}$/.test(cursor) ? cursor : undefined;
+    const pageLimit =
+      typeof limit === "string" && /^\d{1,5}$/.test(limit) ? Number(limit) : undefined;
+    return runForms(() => this.responses.list(id, pageCursor, pageLimit));
   }
 
   // Fixed response paths sit above ":responseId".

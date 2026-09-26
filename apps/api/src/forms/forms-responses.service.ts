@@ -23,7 +23,8 @@ import type { ApplyBody, BulkBody, ResponsePatchBody } from "./forms.schemas.js"
 import { FormsService } from "./forms.service.js";
 import { TAG_LENGTH_MAX, TAGS_MAX, normalizeTags, uploadKeyFormId } from "./forms.utils.js";
 
-export const RESPONSES_LIST_MAX = 20_000;
+/** Responses per page of the admin list; the workspace fetches every page. */
+export const RESPONSES_PAGE_MAX = 5000;
 
 export function toResponseRecord(row: FormResponse): FormResponseRecord {
   return {
@@ -144,14 +145,25 @@ export class FormsResponsesService {
     private readonly forms: FormsService,
   ) {}
 
-  async list(formId: string): Promise<FormResponseRecord[]> {
+  /** One page of responses, newest first, and the cursor of the next page (null at the end). */
+  async list(
+    formId: string,
+    cursor?: string,
+    limit = RESPONSES_PAGE_MAX,
+  ): Promise<{ responses: FormResponseRecord[]; nextCursor: string | null }> {
     await this.forms.require(formId);
+    const take = Math.min(Math.max(1, Math.floor(limit)), RESPONSES_PAGE_MAX);
     const rows = await this.prisma.formResponse.findMany({
       where: { formId },
-      orderBy: { createdAt: "desc" },
-      take: RESPONSES_LIST_MAX,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: take + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
-    return rows.map(toResponseRecord);
+    const page = rows.slice(0, take);
+    return {
+      responses: page.map(toResponseRecord),
+      nextCursor: rows.length > take ? (page.at(-1)?.id ?? null) : null,
+    };
   }
 
   async patch(
