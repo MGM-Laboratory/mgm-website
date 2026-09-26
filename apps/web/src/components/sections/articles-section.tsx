@@ -22,6 +22,7 @@ export function ArticlesSection({ initialRecords = [] }: { initialRecords?: CmsA
       title="Notes from the lab"
       intro="Stories and notes on research, design, and engineering, written in plain words."
       seeMoreHref="/articles"
+      seeMoreLabel="All articles"
       emptyMessage="No articles to show right now. New notes are on their way."
       count={shown.length}
     >

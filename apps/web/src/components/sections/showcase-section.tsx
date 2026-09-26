@@ -1,13 +1,19 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import gsap from "gsap";
 
 import type { HomeChapter } from "@/components/home-extras/chapters";
 import { KineticHeading } from "@/components/home-extras/kinetic-heading";
+import { Magnetic } from "@/components/home-extras/magnetic";
+import { SeeMoreLink } from "@/components/home-extras/see-more-link";
+import { motionAllowed } from "@/lib/reduced-motion";
 import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
+
+const ARROW_BUTTON =
+  "group flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-[color,border-color,opacity] hover:border-foreground/30 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)] aria-disabled:opacity-40";
 
 /**
  * A "Netflix row": header (title/intro/see-more/arrows) plus a
@@ -57,8 +63,54 @@ export function ShowcaseSection({
     return () => tween?.scrollTrigger?.kill();
   }, []);
 
+  // Which ends of the track are showing, so the arrow that can't go any
+  // further says so (dimmed) and answers a press with a little bump.
+  const [edges, setEdges] = useState({ start: true, end: false });
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      const max = track.scrollWidth - track.clientWidth;
+      const start = track.scrollLeft <= 2;
+      const end = track.scrollLeft >= max - 2;
+      setEdges((prev) => (prev.start === start && prev.end === end ? prev : { start, end }));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(read);
+    };
+    read();
+    track.addEventListener("scroll", onScroll, { passive: true });
+    const observer = new ResizeObserver(onScroll);
+    observer.observe(track);
+    return () => {
+      track.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [count]);
+
   function scrollTrack(dir: 1 | -1) {
-    trackRef.current?.scrollBy({ left: dir * 332, behavior: "smooth" });
+    const track = trackRef.current;
+    if (!track) return;
+    const blocked = dir > 0 ? edges.end : edges.start;
+    if (blocked) {
+      // Already at the end: the row leans that way and springs back.
+      if (!motionAllowed()) return;
+      gsap.fromTo(
+        track,
+        { x: 0 },
+        {
+          keyframes: [
+            { x: -dir * 14, duration: 0.12, ease: "power2.out" },
+            { x: 0, duration: 0.6, ease: "elastic.out(1, 0.35)" },
+          ],
+        },
+      );
+      return;
+    }
+    track.scrollBy({ left: dir * 332, behavior: motionAllowed() ? "smooth" : "auto" });
   }
 
   return (
@@ -85,32 +137,37 @@ export function ShowcaseSection({
             <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">{intro}</p>
           </div>
           <div className="reveal-card flex shrink-0 items-center gap-4 opacity-0">
-            {seeMoreHref ? (
-              <Link
-                href={seeMoreHref}
-                className="text-sm font-medium text-foreground/60 whitespace-nowrap transition-colors hover:text-brand-blue"
-              >
-                {seeMoreLabel} →
-              </Link>
-            ) : null}
+            {seeMoreHref ? <SeeMoreLink href={seeMoreHref}>{seeMoreLabel}</SeeMoreLink> : null}
             {count ? (
               <div className="hidden gap-2 sm:flex">
-                <button
-                  type="button"
-                  aria-label={`Scroll ${title} left`}
-                  onClick={() => scrollTrack(-1)}
-                  className="flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-colors hover:text-foreground"
-                >
-                  <ArrowLeft className="size-4" strokeWidth={2.25} />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Scroll ${title} right`}
-                  onClick={() => scrollTrack(1)}
-                  className="flex size-9 items-center justify-center rounded-full border border-[var(--line)] text-foreground/60 transition-colors hover:text-foreground"
-                >
-                  <ArrowRight className="size-4" strokeWidth={2.25} />
-                </button>
+                <Magnetic radius={40} strength={0.4} max={8}>
+                  <button
+                    type="button"
+                    aria-label={`Scroll ${title} left`}
+                    aria-disabled={edges.start || undefined}
+                    onClick={() => scrollTrack(-1)}
+                    className={ARROW_BUTTON}
+                  >
+                    <ArrowLeft
+                      className="size-4 transition-transform duration-300 group-hover:-translate-x-0.5 motion-reduce:transition-none"
+                      strokeWidth={2.25}
+                    />
+                  </button>
+                </Magnetic>
+                <Magnetic radius={40} strength={0.4} max={8}>
+                  <button
+                    type="button"
+                    aria-label={`Scroll ${title} right`}
+                    aria-disabled={edges.end || undefined}
+                    onClick={() => scrollTrack(1)}
+                    className={ARROW_BUTTON}
+                  >
+                    <ArrowRight
+                      className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                      strokeWidth={2.25}
+                    />
+                  </button>
+                </Magnetic>
               </div>
             ) : null}
           </div>

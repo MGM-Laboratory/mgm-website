@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
 import { KineticHeading } from "@/components/home-extras/kinetic-heading";
+import { SeeMoreLink } from "@/components/home-extras/see-more-link";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import {
   publicationTypeLabel,
@@ -62,12 +63,9 @@ export function PublicationsPreviewSection({
               of what we learn.
             </p>
           </div>
-          <Link
-            href="/publications"
-            className="reveal-card shrink-0 text-sm font-medium whitespace-nowrap text-foreground/60 opacity-0 transition-colors hover:text-brand-blue"
-          >
-            See more →
-          </Link>
+          <div className="reveal-card shrink-0 opacity-0">
+            <SeeMoreLink href="/publications">All publications</SeeMoreLink>
+          </div>
         </div>
 
         {records.length ? (

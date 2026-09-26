@@ -15,6 +15,8 @@ import Link from "next/link";
 
 import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
 import { KineticHeading } from "@/components/home-extras/kinetic-heading";
+import { Magnetic } from "@/components/home-extras/magnetic";
+import { SeeMoreLink } from "@/components/home-extras/see-more-link";
 import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import {
@@ -23,6 +25,9 @@ import {
   projectThemeId,
   type CmsProjectRecord,
 } from "@/lib/project-cms";
+
+const CAROUSEL_BUTTON =
+  "group inline-flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white transition-colors hover:bg-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80";
 
 /** How long each featured project holds the image before the next one crossfades in. */
 const AUTOPLAY_DELAY = 6;
@@ -173,12 +178,9 @@ export function FeaturedProjectsSection({
               A few research-driven products we built end to end. Pick one and step inside.
             </p>
           </div>
-          <Link
-            href="/projects"
-            className="reveal-card shrink-0 text-sm font-medium whitespace-nowrap text-foreground/60 opacity-0 transition-colors hover:text-brand-blue"
-          >
-            See more →
-          </Link>
+          <div className="reveal-card shrink-0 opacity-0">
+            <SeeMoreLink href="/projects">All projects</SeeMoreLink>
+          </div>
         </div>
 
         {active ? (
@@ -227,22 +229,38 @@ export function FeaturedProjectsSection({
 
               {count > 1 ? (
                 <>
-                  <button
-                    aria-label="Previous project"
-                    className="absolute top-1/2 left-3 z-10 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white transition-colors hover:bg-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
-                    onClick={() => step(-1)}
-                    type="button"
-                  >
-                    <ChevronLeft aria-hidden="true" className="size-5" />
-                  </button>
-                  <button
-                    aria-label="Next project"
-                    className="absolute top-1/2 right-3 z-10 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white transition-colors hover:bg-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
-                    onClick={() => step(1)}
-                    type="button"
-                  >
-                    <ChevronRight aria-hidden="true" className="size-5" />
-                  </button>
+                  {/* The positioning spans own the centring translate; the
+                      magnetic wrapper inside owns the pull (gotcha #1). */}
+                  <span className="absolute top-1/2 left-3 z-10 -translate-y-1/2">
+                    <Magnetic radius={36} strength={0.4} max={8}>
+                      <button
+                        aria-label="Previous project"
+                        className={CAROUSEL_BUTTON}
+                        onClick={() => step(-1)}
+                        type="button"
+                      >
+                        <ChevronLeft
+                          aria-hidden="true"
+                          className="size-5 transition-transform duration-300 group-hover:-translate-x-0.5 motion-reduce:transition-none"
+                        />
+                      </button>
+                    </Magnetic>
+                  </span>
+                  <span className="absolute top-1/2 right-3 z-10 -translate-y-1/2">
+                    <Magnetic radius={36} strength={0.4} max={8}>
+                      <button
+                        aria-label="Next project"
+                        className={CAROUSEL_BUTTON}
+                        onClick={() => step(1)}
+                        type="button"
+                      >
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="size-5 transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                        />
+                      </button>
+                    </Magnetic>
+                  </span>
                   <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center gap-1.5">
                     {slides.map((slide, i) => (
                       <button
@@ -277,16 +295,24 @@ export function FeaturedProjectsSection({
                 {active.project.title}
               </h3>
               <p className="mt-4 text-foreground/65">{active.project.summary}</p>
-              <Link
-                href={`/projects/${active.slug}`}
-                data-project-transition=""
-                data-project-slug={active.slug}
-                data-project-theme={projectThemeId(active.project)}
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90"
-              >
-                View project
-                <ArrowRight className="size-4" />
-              </Link>
+              <Magnetic className="mt-6" radius={60} strength={0.3} max={10}>
+                <Link
+                  href={`/projects/${active.slug}`}
+                  data-project-transition=""
+                  data-project-slug={active.slug}
+                  data-project-theme={projectThemeId(active.project)}
+                  className="group inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                >
+                  <span data-magnetic-inner className="inline-block">
+                    View project
+                  </span>
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="size-4 transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none"
+                    strokeWidth={2.25}
+                  />
+                </Link>
+              </Magnetic>
             </div>
           </div>
         ) : (
