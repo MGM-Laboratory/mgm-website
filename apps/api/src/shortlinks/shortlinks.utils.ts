@@ -156,31 +156,43 @@ function isPrivateAddress(address: string): boolean {
  * addresses right before the socket connects, so no DNS answer that
  * arrives between a check and a connect can retarget the request.
  */
+/**
+ * The lookup callback handed to http(s).request options: resolves the
+ * hostname itself and refuses private or restricted addresses right before
+ * the socket connects, so no DNS answer that arrives between a check and a
+ * connect can retarget the request. Node asks for `all: true` when its
+ * Happy-Eyeballs selection is on, and expects an array back in that shape.
+ */
+export const guardedLookup: LookupFunction = (hostname, options, callback) => {
+  lookup(hostname, { all: true })
+    .then((addresses) => {
+      if (addresses.length === 0 || addresses.some(({ address }) => isPrivateAddress(address))) {
+        const refused = new Error(
+          "Refusing to connect to a private address",
+        ) as NodeJS.ErrnoException;
+        refused.code = "EACCES";
+        callback(refused, "", 0);
+        return;
+      }
+      if ((options as { all?: boolean }).all) {
+        callback(null, addresses, 0);
+        return;
+      }
+      callback(null, addresses[0].address, addresses[0].family);
+    })
+    .catch((error: NodeJS.ErrnoException) => callback(error, "", 0));
+};
+
 function requestChecked(parsed: URL, method: "HEAD" | "GET"): Promise<number | null> {
   const driver = parsed.protocol === "https:" ? httpsRequest : httpRequest;
   const port = parsed.port ? Number(parsed.port) : parsed.protocol === "https:" ? 443 : 80;
-  const lookupGuarded: LookupFunction = (hostname, _options, callback) => {
-    lookup(hostname, { all: true })
-      .then((addresses) => {
-        if (addresses.length === 0 || addresses.some(({ address }) => isPrivateAddress(address))) {
-          const refused = new Error(
-            "Refusing to connect to a private address",
-          ) as NodeJS.ErrnoException;
-          refused.code = "EACCES";
-          callback(refused, "", 0);
-          return;
-        }
-        callback(null, addresses[0].address, addresses[0].family);
-      })
-      .catch((error: NodeJS.ErrnoException) => callback(error, "", 0));
-  };
   const options = {
     hostname: parsed.hostname,
     port,
     method,
     path: parsed.pathname + parsed.search,
     signal: AbortSignal.timeout(5000),
-    lookup: lookupGuarded,
+    lookup: guardedLookup,
   };
   return new Promise((resolve, reject) => {
     const req = driver(options, (response) => {
