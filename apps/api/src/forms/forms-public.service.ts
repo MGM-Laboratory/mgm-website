@@ -282,7 +282,12 @@ export class FormsPublicService {
       throw new FormsError("That question does not take files.", 400);
     }
     // The route's own raw parser hands over a Buffer; anything else is not a file.
-    const body = Buffer.isBuffer(file.body) ? file.body : null;
+    // A fresh view over the raw bytes (no copy): from here on the body is a
+    // Buffer this service made, never the request's own parameter value.
+    const raw: unknown = file.body;
+    const body = Buffer.isBuffer(raw)
+      ? Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength)
+      : null;
     if (!body?.length) throw new FormsError("The file is empty.", 400);
 
     const limit = Math.min(
