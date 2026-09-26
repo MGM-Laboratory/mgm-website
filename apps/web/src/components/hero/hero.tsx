@@ -17,6 +17,7 @@ import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
+import type { IdleLoops } from "@/components/hero/interactions";
 import { arrowPathD, type ArrowGeometry } from "@/components/hero/interactions/arrow-path";
 
 import {
@@ -101,10 +102,22 @@ const BURST_POOL = Array.from({ length: 24 }, (_, i) => ({
   size: 12 + ((i * 5) % 4) * 2,
 }));
 
-function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
+// The X's idle rhythm: a still rest, then an eased quarter turn.
+const X_TURN_REST = 2.8;
+const X_TURN_DURATION = 1.1;
+
+function startIdleLoops(root: HTMLElement): IdleLoops {
   const q = gsap.utils.selector(root);
   const loops: gsap.core.Animation[] = [];
 
+  const logo = gsap.to(q(".hero-logo"), {
+    scale: 1.05,
+    transformOrigin: "50% 50%",
+    duration: 2.6,
+    ease: "sine.inOut",
+    yoyo: true,
+    repeat: -1,
+  });
   // A small number of clear, long-running motions preserves the hero's
   // energy without continuously repainting every decorative element.
   loops.push(
@@ -122,14 +135,7 @@ function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
       yoyo: true,
       repeat: -1,
     }),
-    gsap.to(q(".hero-logo"), {
-      scale: 1.05,
-      transformOrigin: "50% 50%",
-      duration: 2.6,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
-    }),
+    logo,
     gsap.to(q(".corner-pattern"), {
       y: -8,
       duration: 3.8,
@@ -148,10 +154,10 @@ function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
       q("div.shape-x"),
       {
         rotation: quarter * 90,
-        duration: 1.1,
+        duration: X_TURN_DURATION,
         ease: "sine.inOut",
       },
-      "+=2.8",
+      `+=${X_TURN_REST}`,
     );
   }
   loops.push(turns);
@@ -182,7 +188,13 @@ function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
     );
   });
 
-  return loops;
+  return {
+    all: loops,
+    turns,
+    turnRest: X_TURN_REST,
+    turnDuration: X_TURN_DURATION,
+    logo,
+  };
 }
 
 function buildEntranceTimeline(
@@ -718,6 +730,7 @@ export function Hero() {
                 }
                 const idleContext = gsap.context(() => {}, root);
                 let idleLoops: gsap.core.Animation[] = [];
+                let idleLoopSet: IdleLoops | null = null;
                 let removeParallax = () => {};
                 let stopInteractions = () => {};
                 let observer: IntersectionObserver | undefined;
@@ -727,7 +740,8 @@ export function Hero() {
                 };
                 const startIdle = () => {
                   idleContext.add(() => {
-                    idleLoops = startIdleLoops(root);
+                    idleLoopSet = startIdleLoops(root);
+                    idleLoops = idleLoopSet.all;
                     removeParallax = setupParallax(root);
                     observer = new IntersectionObserver(([entry]) => {
                       visible = entry.isIntersecting;
@@ -740,13 +754,14 @@ export function Hero() {
                   // definition: never under reduced motion. Loaded on first
                   // use, so the compact hero never downloads it.
                   if (reduced) return;
+                  const loops = idleLoopSet;
                   let stopped = false;
                   stopInteractions = () => {
                     stopped = true;
                   };
                   loadInteractions()
                     .then(({ startHeroInteractions }) => {
-                      if (stopped) return;
+                      if (stopped || !loops) return;
                       stopInteractions = startHeroInteractions(root, {
                         words: [
                           mediaSplit!.chars as HTMLElement[],
@@ -756,6 +771,7 @@ export function Hero() {
                           ),
                         ],
                         flipper: (mediaSplit!.chars[MEDIA_I_INDEX] as HTMLElement) ?? null,
+                        loops,
                         arrowGeometry: () => arrowGeometryRef.current,
                       });
                     })

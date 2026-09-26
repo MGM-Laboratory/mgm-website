@@ -1,13 +1,17 @@
 import { createArrow } from "./arrow";
 import type { ArrowGeometry } from "./arrow-path";
+import { startDoze, type IdleLoops } from "./doze";
 import { createLetters } from "./letters";
 import { createMotifs } from "./motifs";
 import { createPieces } from "./pieces";
 import { createStage } from "./stage";
 
+export type { IdleLoops } from "./doze";
+
 /**
  * Everything in the desktop hero that answers the visitor once the entrance
- * is over: the letters, the shapes, the arrow and the background motifs. Started from the hero's idle phase (after the
+ * is over: the letters, the shapes, the arrow, the background motifs and
+ * the doze. Started from the hero's idle phase (after the
  * entrance completes, or right away when it is skipped), only when motion
  * is allowed, and loaded lazily so the compact hero never downloads it.
  * Returns the teardown, which puts every element and the markup back
@@ -22,6 +26,8 @@ export type HeroInteractionsOptions = {
   words: HTMLElement[][];
   /** The "i" in Media. */
   flipper: HTMLElement | null;
+  /** The idle loops, which the doze slows down. */
+  loops: IdleLoops;
   /** The arrow's current geometry, as hero.tsx last measured it. */
   arrowGeometry: () => ArrowGeometry | null;
 };
@@ -39,6 +45,7 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
   stage.add(pieces);
   if (arrow) stage.add(arrow);
   stage.add(motifs);
+  const stopDoze = startDoze(stage, options.loops, [letters, pieces]);
 
   const onPointerDown = (event: PointerEvent) => {
     if (!stage.active() || event.button > 0) return;
@@ -62,6 +69,7 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
     root.removeEventListener("pointerdown", onPointerDown);
     window.removeEventListener("pointerup", onPointerUp);
     window.removeEventListener("pointercancel", onPointerUp);
+    stopDoze();
     stage.destroy();
   };
 }
