@@ -10,6 +10,8 @@ import { PROJECT_THEMES } from "@/lib/project-themes";
 
 import { labelClass, selectClass } from "./share-ui";
 
+const THEMES = new Map(Object.entries(PROJECT_THEMES));
+
 type Ecc = "L" | "M" | "Q" | "H";
 
 export type QrOptions = {
@@ -40,9 +42,9 @@ export function qrModel(text: string, options: QrOptions): QrModel {
   const logoCells = options.logo ? Math.ceil(size * LOGO_FRACTION) | 1 : 0;
   const logoStart = Math.floor((size - logoCells) / 2);
   let path = "";
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      if (!qr.data[y][x]) continue;
+  for (const [y, line] of qr.data.entries()) {
+    for (const [x, dark] of line.entries()) {
+      if (!dark) continue;
       if (
         options.logo &&
         x >= logoStart - 1 &&
@@ -117,15 +119,15 @@ function QrPreview({
 
 const HEX = /^#[0-9a-f]{3,8}$/i;
 
+/** The site logo as a data URL, or undefined when it can't be fetched. */
 async function fetchLogoDataUrl(): Promise<string | undefined> {
-  try {
-    const request = await fetch("/logo.svg");
-    if (!request.ok) return undefined;
-    const text = await request.text();
-    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(text)))}`;
-  } catch {
-    return undefined;
-  }
+  return fetch("/logo.svg")
+    .then(async (request) => {
+      if (!request.ok) return undefined;
+      const text = await request.text();
+      return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(text)))}`;
+    })
+    .catch(() => undefined);
 }
 
 function download(href: string, name: string) {
@@ -155,7 +157,7 @@ export function QrCard({
   const url = targets.some((target) => target.url === targetUrl)
     ? targetUrl
     : (targets[0]?.url ?? "");
-  const palette = PROJECT_THEMES[form.document.design.theme]?.light;
+  const palette = THEMES.get(form.document.design.theme)?.light;
   const colors =
     options.colors === "theme" && palette && HEX.test(palette.text) && HEX.test(palette.bg)
       ? { fg: palette.text, bg: palette.bg }

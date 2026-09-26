@@ -33,7 +33,7 @@ async function jsonOrThrow<T>(response: Response): Promise<T> {
       message?: string | string[];
       error?: string;
     } | null;
-    const message = Array.isArray(body?.message) ? body?.message.join(" ") : body?.message;
+    const message = Array.isArray(body?.message) ? body.message.join(" ") : body?.message;
     throw new Error(message ?? body?.error ?? "Something went wrong.");
   }
   return response.json() as Promise<T>;
@@ -55,7 +55,7 @@ function getAdminJson<T>(path: string): Promise<T> {
       else
         reject(
           new Error(
-            (Array.isArray(body?.message) ? body?.message.join(" ") : body?.message) ??
+            (Array.isArray(body?.message) ? body.message.join(" ") : body?.message) ??
               body?.error ??
               `Request failed (${request.status}).`,
           ),
@@ -98,8 +98,9 @@ export function buildLongUrl(
   prefill: Record<string, string>,
 ) {
   const url = new URL(formUrl);
+  const utmValues = new Map(Object.entries(utm));
   for (const key of UTM_KEYS) {
-    const value = utm[key]?.trim();
+    const value = utmValues.get(key)?.trim();
     if (value) url.searchParams.set(`utm_${key}`, value);
   }
   for (const [key, value] of Object.entries(prefill)) {
@@ -166,7 +167,8 @@ export function ShortLinks({
         const connected = domainsBody.domains.filter((domain) => domain.status === "connected");
         setDomains(connected);
         const remembered = readLastDomain();
-        const fallback = connected.find((domain) => domain.isPrimary)?.id ?? connected[0]?.id ?? "";
+        const fallback =
+          connected.find((domain) => domain.isPrimary)?.id ?? connected.at(0)?.id ?? "";
         setDomainId(
           connected.some((domain) => domain.id === remembered) ? (remembered as string) : fallback,
         );
@@ -252,6 +254,9 @@ export function ShortLinks({
   };
 
   const slugInvalid = Boolean(slug.trim()) && !SLUG_PATTERN.test(slug.trim());
+
+  const utmValues = new Map(Object.entries(utm));
+  const prefillValues = new Map(Object.entries(prefill));
 
   return (
     <div className="space-y-5" data-testid="short-links">
@@ -430,7 +435,7 @@ export function ShortLinks({
                             ? "launch"
                             : ""
                     }
-                    value={utm[key] ?? ""}
+                    value={utmValues.get(key) ?? ""}
                   />
                 </label>
               ))}
@@ -455,7 +460,7 @@ export function ShortLinks({
                       onChange={(event) => {
                         setPrefill((current) => ({ ...current, [item.param]: event.target.value }));
                       }}
-                      value={prefill[item.param] ?? ""}
+                      value={prefillValues.get(item.param) ?? ""}
                     />
                   </label>
                 ))}

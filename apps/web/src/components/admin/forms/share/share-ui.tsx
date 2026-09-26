@@ -14,14 +14,17 @@ export const chipClass =
   "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.1em]";
 
 export async function copyText(text: string, what = "Link") {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(`${what} copied`, {
-      description: text.length > 120 ? `${text.slice(0, 117)}…` : text,
+  // Inside the chain, so a missing clipboard API lands in the catch as well.
+  return Promise.resolve()
+    .then(() => navigator.clipboard.writeText(text))
+    .then(() => {
+      toast.success(`${what} copied`, {
+        description: text.length > 120 ? `${text.slice(0, 117)}…` : text,
+      });
+    })
+    .catch(() => {
+      toast.error(`Could not copy the ${what.toLowerCase()}`);
     });
-  } catch {
-    toast.error(`Could not copy the ${what.toLowerCase()}`);
-  }
 }
 
 export function CopyButton({
