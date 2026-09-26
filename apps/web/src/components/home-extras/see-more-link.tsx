@@ -22,7 +22,7 @@ export function SeeMoreLink({
   className?: string;
 }) {
   return (
-    <Magnetic className={cn("shrink-0", className)} radius={60} strength={0.3} max={10}>
+    <Magnetic className={cn("-ml-2 shrink-0", className)} radius={60} strength={0.3} max={10}>
       <Link
         href={href}
         className="group inline-flex items-center gap-2.5 rounded-full py-1 pr-1 pl-2 text-sm font-medium whitespace-nowrap text-foreground/70 transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"

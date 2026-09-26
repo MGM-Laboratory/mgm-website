@@ -274,11 +274,18 @@ export function CoreCompetenciesSection() {
                       this inner wrapper instead of the face element itself. */}
                     <div
                       className={cn(
-                        "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-6",
+                        "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-4 sm:p-6",
                         CARD_BG[c.color],
                       )}
                     >
-                      <h3 className={cn("relative z-10 text-lg font-semibold", CARD_TEXT[c.color])}>
+                      <h3
+                        className={cn(
+                          // Half a 320 px phone is narrow for "Development": it
+                          // hyphenates there instead of running off the card.
+                          "relative z-10 text-base font-semibold hyphens-auto sm:text-lg",
+                          CARD_TEXT[c.color],
+                        )}
+                      >
                         {c.title}
                       </h3>
                       <div

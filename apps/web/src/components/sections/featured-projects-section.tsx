@@ -167,7 +167,7 @@ export function FeaturedProjectsSection({
       </noscript>
 
       <div className="mx-auto max-w-5xl">
-        <div className="flex items-start justify-between gap-6">
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-5">
           <div>
             <KineticHeading
               chapter={HOME_CHAPTERS.projects}
