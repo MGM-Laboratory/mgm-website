@@ -68,18 +68,21 @@ export function visitMeta(req: Request): VisitMeta {
     const value = headers.get(name);
     return typeof value === "string" && value ? value : undefined;
   };
+  // The forwarded visitor details are only believed from the web app, which
+  // proves itself with the CMS passphrase; a direct caller gets its own
+  // connection's address and client, never the ones it claims.
+  const configured = process.env.ADMIN_PASSPHRASE ?? "";
+  const trusted = configured.length > 0 && safeEqual(header("x-cms-passphrase") ?? "", configured);
   const firstForwarded = (value: string | undefined) =>
     value ? value.split(",")[0].trim() || null : null;
-  const ip =
-    firstForwarded(header("x-visitor-ip")) ??
-    firstForwarded(header("cf-connecting-ip")) ??
-    firstForwarded(header("x-forwarded-for")) ??
-    req.ip ??
-    null;
+  const ip = trusted
+    ? (firstForwarded(header("x-visitor-ip")) ?? req.ip ?? null)
+    : (req.ip ?? null);
   return {
     ip,
-    userAgent: header("x-visitor-user-agent") ?? header("user-agent") ?? null,
-    referer: header("x-visitor-referer") ?? header("referer") ?? null,
+    userAgent:
+      (trusted ? header("x-visitor-user-agent") : undefined) ?? header("user-agent") ?? null,
+    referer: (trusted ? header("x-visitor-referer") : undefined) ?? header("referer") ?? null,
   };
 }
 
