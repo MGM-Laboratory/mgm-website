@@ -561,6 +561,93 @@
   font-size: 1.1rem;
 }
 
+/* ------------------------------------------------------------------- time */
+
+.pk-time {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px;
+  flex: 1 1 auto;
+}
+.pk-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 60px;
+  max-width: 88px;
+}
+.pk-col-label {
+  padding: 8px 0 6px;
+  font: 600 0.68rem / 1 var(--pk-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--pk-muted);
+}
+.pk-col-list {
+  position: relative;
+  height: 236px;
+  padding-block: 98px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  border-radius: min(var(--pk-cell-radius), 14px);
+  outline: none;
+  mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+}
+.pk-col-list::-webkit-scrollbar {
+  display: none;
+}
+.pk-pop .pk-col-list:focus-visible {
+  outline: none;
+  background: var(--pk-hover);
+}
+.pk-col-list[data-wheel] {
+  scroll-snap-type: y mandatory;
+}
+.pk-opt {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  border-radius: min(var(--pk-cell-radius), 12px);
+  font-weight: 500;
+  font-feature-settings: "tnum";
+  scroll-snap-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.15s var(--pk-ease),
+    color 0.15s var(--pk-ease);
+}
+@media (hover: hover) {
+  .pk-opt:hover {
+    background: var(--pk-hover);
+  }
+}
+.pk-opt[aria-selected="true"] {
+  background: var(--pk-accent);
+  color: var(--pk-on-accent);
+  font-weight: 700;
+}
+.pk-colon {
+  align-self: center;
+  padding-top: 22px;
+  font: 700 1.1rem var(--pk-display);
+  color: var(--pk-muted);
+}
+.pk-pop[data-sheet] .pk-col {
+  max-width: 110px;
+}
+.pk-pop[data-sheet] .pk-opt {
+  height: 44px;
+  font-size: 1.1rem;
+}
+.pk-pop[data-sheet] .pk-col-list {
+  height: 220px;
+  padding-block: 88px;
+}
+
 /* ----------------------------------------------------------------- footer */
 
 .pk-foot {
