@@ -89,6 +89,8 @@ export type FormSubmissionInput = {
   /** When the respondent pressed Start (ISO). */
   startedAt?: string;
   context?: FormClientContext;
+  /** A random id the browser keeps, for "one response per device". */
+  deviceId?: string;
   /** The honeypot input; a real person leaves it empty. */
   website?: string;
   /** From a passphrase unlock. */
@@ -131,6 +133,7 @@ export type FormResponseRecord = {
     os: string | null;
     language: string | null;
     screen: string | null;
+    deviceId: string | null;
     utm: FormClientContext["utm"] | null;
     startedAt: string | null;
     durationMs: number | null;

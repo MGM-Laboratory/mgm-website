@@ -7,6 +7,7 @@ import {
   CalendarBlank,
   Camera,
   CaretUpDown,
+  ClipboardText,
   Check,
   Envelope,
   EnvelopeOpen,
@@ -69,8 +70,10 @@ import { useResearchRecords } from "@/hooks/use-research-records";
 import { CareersCmsStudio } from "@/components/admin/careers-cms-studio";
 import { ContactInquiriesInbox } from "@/components/admin/contact-inquiries-inbox";
 import { EventsCmsStudio } from "@/components/admin/events-cms-studio";
+import { FormsStudio } from "@/components/admin/forms/forms-studio";
 import { LinksStudio } from "@/components/admin/links-studio";
 import type { LinksAdminSnapshot } from "@/lib/links-cms-server";
+import type { FormSummary } from "@repo/shared";
 import type { CmsArticleRecord } from "@/lib/article-cms";
 import type { CmsProjectRecord } from "@/lib/project-cms";
 import type { CmsPublicationRecord } from "@/lib/publication-cms";
@@ -93,6 +96,7 @@ type EditorialSection =
   | "events"
   | "home"
   | "links"
+  | "forms"
   | "other"
   | "administration";
 type DateValue = { month: number; year: number };
@@ -117,6 +121,7 @@ const EDITORIAL_SECTIONS: { id: Exclude<EditorialSection, "overview">; label: st
   { id: "contact-inquiries", label: "Contact Inquiries" },
   { id: "events", label: "Events" },
   { id: "links", label: "Links" },
+  { id: "forms", label: "Forms" },
   { id: "other", label: "Settings" },
 ];
 
@@ -131,6 +136,7 @@ const WORKSPACES: { id: EditorialSection; label: string; tone: string }[] = [
   { id: "contact-inquiries", label: "Contact Inquiries", tone: "text-brand-green" },
   { id: "events", label: "Events", tone: "text-brand-green" },
   { id: "links", label: "Links", tone: "text-brand-blue" },
+  { id: "forms", label: "Forms", tone: "text-brand-red" },
   { id: "other", label: "Settings", tone: "text-brand-yellow" },
   { id: "administration", label: "Admin Management", tone: "text-brand-blue" },
 ];
@@ -147,6 +153,7 @@ const LIVE_WORKSPACES = new Set<EditorialSection>([
   "events",
   "home",
   "links",
+  "forms",
   "other",
 ]);
 
@@ -169,6 +176,7 @@ const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
   events: "events",
   home: "home",
   links: "links",
+  forms: "forms",
   other: "other",
 };
 
@@ -194,6 +202,8 @@ function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size
       return <CalendarBlank size={size} weight="duotone" />;
     case "links":
       return <LinkSimple size={size} weight="duotone" />;
+    case "forms":
+      return <ClipboardText size={size} weight="duotone" />;
     case "home":
       return <MonitorPlay size={size} weight="duotone" />;
     case "other":
@@ -486,6 +496,7 @@ export function MemberCmsStudio({
   initialEventRegistrations = [],
   initialContactInquiries = [],
   initialLinksData = { domains: [], links: [] },
+  initialForms = [],
   paperLimitBytes = 209_715_200,
   videoLimitBytes = 524_288_000,
   session,
@@ -501,6 +512,7 @@ export function MemberCmsStudio({
   initialEventRegistrations?: CmsEventRegistrationRecord[];
   initialContactInquiries?: CmsContactInquiryRecord[];
   initialLinksData?: LinksAdminSnapshot;
+  initialForms?: FormSummary[];
   paperLimitBytes?: number;
   videoLimitBytes?: number;
   session: AdminViewer;
@@ -908,6 +920,16 @@ export function MemberCmsStudio({
         <EventsCmsStudio
           initialEvents={initialEvents}
           initialRegistrations={initialEventRegistrations}
+        />
+      ) : section === "forms" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
+        // Full-bleed like events: the forms list, the builder, and each
+        // form's share, responses and analytics tabs live in FormsStudio.
+        <FormsStudio
+          canDelete={can(viewer.permissions, "forms", "delete")}
+          canReadLinks={can(viewer.permissions, "links", "read")}
+          canWrite={can(viewer.permissions, "forms", "write")}
+          canWriteLinks={can(viewer.permissions, "links", "write")}
+          initialForms={initialForms}
         />
       ) : section === "contact-inquiries" ? ( // NOSONAR: won't-fix, see docs/repo-history.md
         // Full-bleed, no-aside-rail: the inbox is the whole workspace, same
