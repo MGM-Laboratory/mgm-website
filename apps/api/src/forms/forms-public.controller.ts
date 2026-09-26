@@ -131,6 +131,6 @@ export class FormsPublicController {
     } catch {
       throw new NotFoundException("Media storage is not configured in this environment.");
     }
-    return response.redirect(url);
+    response.redirect(url);
   }
 }
