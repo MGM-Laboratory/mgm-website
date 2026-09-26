@@ -8,6 +8,7 @@ import { Vibrate } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { motionAllowed, useMotionPreference } from "@/lib/reduced-motion";
+import { isRouteCoverActive, onRouteCoverChange } from "@/lib/route-reveal";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
 
 import type { Toybox, ToyNodes } from "./toybox-engine";
@@ -34,6 +35,8 @@ const LINES = [
 // The call to action shows by this much visible time at the latest, however
 // slowly the physics loads or runs.
 const CTA_FAILSAFE_MS = 4500;
+// A return whose physics takes longer than this to arrive drops the shapes in.
+const LATE_MS = 350;
 
 function posterStyle(toy: Toy) {
   const stack = POSTER.stack[toy.id];
@@ -133,6 +136,12 @@ export function CompactHero() {
       };
     }
 
+    // When the page was last uncovered (the route curtain lifts after a
+    // return), to tell whether the physics arrived late.
+    let uncoveredAt = isRouteCoverActive() ? Infinity : performance.now();
+    const offCover = onRouteCoverChange(() => {
+      uncoveredAt = isRouteCoverActive() ? Infinity : performance.now();
+    });
     const entrance = !playedRef.current && !returningRef.current && window.scrollY <= 40;
     if (!entrance) revealCta(false);
 
@@ -168,6 +177,13 @@ export function CompactHero() {
           splits = wordEls.map((el) =>
             SplitText.create(el, { type: "chars", aria: "none", charsClass: "toybox-char" }),
           );
+          // A return normally finds the physics already loaded and shows the
+          // pile at rest before the page is uncovered. When it arrives late,
+          // with the hero already on screen, the shapes drop in instead of
+          // popping up.
+          const rect = box.getBoundingClientRect();
+          const onScreen = rect.bottom > 0 && rect.top < window.innerHeight;
+          const late = performance.now() - uncoveredAt > LATE_MS;
           engine = module.createToybox({
             box,
             words,
@@ -175,7 +191,7 @@ export function CompactHero() {
             wordEls,
             chars: splits.map((split) => split.chars as HTMLElement[]),
             nodes: collectNodes(layer),
-            entrance,
+            entrance: entrance ? "full" : late && onScreen ? "drop" : "settled",
             onReveal: () => revealCta(true),
           });
           engineRef.current = engine;
@@ -194,6 +210,7 @@ export function CompactHero() {
 
     return () => {
       cancelled = true;
+      offCover();
       cancelAnimationFrame(frame);
       window.clearInterval(failsafe);
       engine?.destroy();

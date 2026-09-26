@@ -51,8 +51,13 @@ export type ToyboxOptions = {
   /** Each word's letters (SplitText chars). */
   chars: HTMLElement[][];
   nodes: Record<ToyId, ToyNodes>;
-  /** Drop the shapes in (a fresh visit) or start from the settled pile. */
-  entrance: boolean;
+  /**
+   * "full": the fresh visit's entrance (the words play, the shapes drop in).
+   * "drop": the shapes alone drop in, quicker (a return where the physics
+   * arrived after the page was already on screen). "settled": start from the
+   * pile at rest (a return, or a visit that starts scrolled down).
+   */
+  entrance: "full" | "drop" | "settled";
   /** The entrance's cue for the call to action (the logo has landed). */
   onReveal: () => void;
 };
@@ -161,7 +166,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
   let visible = true;
   let accumulator = 0;
   let entrance: gsap.core.Timeline | null = null;
-  let entranceDone = !options.entrance;
+  let entranceDone = options.entrance === "settled";
   let grab: Grab | null = null;
   let touch: TouchTrack | null = null;
   let flung = false;
@@ -1043,7 +1048,13 @@ export function createToybox(options: ToyboxOptions): Toybox {
     onReveal();
   }
 
-  if (options.entrance) {
+  if (options.entrance === "drop") {
+    const tl = gsap.timeline({ onComplete: finishEntrance });
+    for (const item of DROPS[layout]) tl.add(() => drop(item.id, item.x), item.at * 0.55);
+    tl.add(() => {}, 1.8);
+    entrance = tl;
+    start();
+  } else if (options.entrance === "full") {
     const tl = gsap.timeline({ onComplete: finishEntrance });
     const media = chars[0] ?? [];
     tl.add(() => {
