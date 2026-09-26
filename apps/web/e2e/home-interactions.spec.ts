@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // Two complete entrances plus a route round-trip can exceed the default
 // budget on software-rendered CI browsers.
@@ -97,26 +97,103 @@ test("divider has a connected spine through its repeat seam", async ({ page }) =
   expect(columns.every(Boolean)).toBe(true);
 });
 
-test("background wake fades and reduced motion disables it", async ({ page, isMobile }) => {
-  test.skip(isMobile, "Touch devices do not create cursor wakes");
-  await page.goto("/");
-  const canvas = page.locator(".interactive-background");
-  const hasInk = () =>
-    canvas.evaluate((element) => {
-      const c = element as HTMLCanvasElement;
-      return c
-        .getContext("2d")!
-        .getImageData(0, 0, c.width, c.height)
-        .data.some((value, index) => index % 4 === 3 && value > 0);
+// The cursor flow (components/cursor-distortion) is a WebGL canvas behind the
+// page that only starts on a hardware WebGL2 context, a fine pointer and with
+// motion allowed. These specs refuse WebGL outright (as on a machine without
+// it) so they hold on every engine, whatever its renderer. The WebGL path
+// needs a GPU: `E2E_WEBGL=1` runs the last one on a machine that has one.
+const flowCanvas = "canvas[data-cursor-flow]";
+
+function refuseWebGL() {
+  const refuses = (type: string) => /^(webgl2?|experimental-webgl)$/.test(type);
+  for (const target of [HTMLCanvasElement, globalThis.OffscreenCanvas]) {
+    if (!target) continue;
+    const original = target.prototype.getContext as (...args: unknown[]) => unknown;
+    Object.defineProperty(target.prototype, "getContext", {
+      configurable: true,
+      value(this: unknown, type: string, ...rest: unknown[]) {
+        return refuses(type) ? null : original.call(this, type, ...rest);
+      },
     });
-  await page.mouse.move(300, 300);
-  await page.mouse.move(600, 400, { steps: 12 });
-  await expect.poll(hasInk).toBe(true);
-  await expect.poll(hasInk, { timeout: 4000 }).toBe(false);
+  }
+}
+
+const flowMarked = (page: Page) =>
+  page.evaluate(() => ({
+    flow: document.documentElement.hasAttribute("data-flow"),
+    cleared: document.querySelectorAll("[data-flow-clear]").length,
+  }));
+
+test("without WebGL the cursor flow leaves the page as it is", async ({ page, isMobile }) => {
+  await page.addInitScript(refuseWebGL);
+  await page.goto("/");
+  await expect(page.locator(".hero-cta, .compact-hero-cta").filter({ visible: true })).toHaveCSS(
+    "opacity",
+    "1",
+    { timeout: 15000 },
+  );
+  if (!isMobile) {
+    await page.mouse.move(300, 300);
+    await page.mouse.move(700, 450, { steps: 12 });
+  }
+  // The stage would load once the browser is idle, or soon after a move.
+  await page.waitForTimeout(3000);
+  await expect(page.locator(flowCanvas)).toHaveCount(0);
+  expect(await flowMarked(page)).toEqual({ flow: false, cleared: 0 });
+  // The page's own surfaces keep their backgrounds.
+  await expect(page.locator(".hero")).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+});
+
+test("reduced motion never starts the cursor flow", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.mouse.move(400, 500);
-  expect(await hasInk()).toBe(false);
-  await expect(canvas).toBeHidden();
+  await page.goto("/");
+  await page.mouse.move(300, 300);
+  await page.mouse.move(700, 450, { steps: 12 });
+  await page.waitForTimeout(3000);
+  await expect(page.locator(flowCanvas)).toHaveCount(0);
+  expect(await flowMarked(page)).toEqual({ flow: false, cleared: 0 });
+});
+
+test("the cursor flow shows through the page on a GPU and gives it back", async ({
+  playwright,
+  browserName,
+  isMobile,
+  baseURL,
+}) => {
+  test.skip(
+    process.env.E2E_WEBGL !== "1" || browserName !== "chromium" || isMobile,
+    "Needs E2E_WEBGL=1, Chromium, a mouse and a machine with a GPU",
+  );
+  // Playwright's stock Chromium renders WebGL in software (SwiftShader), which
+  // the flow rejects by design: this browser asks for the real GPU.
+  const browser = await playwright.chromium.launch({
+    args: [
+      "--ignore-gpu-blocklist",
+      "--enable-gpu",
+      ...(process.platform === "darwin" ? ["--use-angle=metal"] : []),
+    ],
+  });
+  try {
+    const page = await browser.newPage({ baseURL, viewport: { width: 1280, height: 800 } });
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto("/");
+    await page.mouse.move(300, 300);
+    await page.mouse.move(700, 450, { steps: 12 });
+    await expect(page.locator(flowCanvas)).toHaveCount(1, { timeout: 10000 });
+    await expect.poll(() => flowMarked(page).then((marks) => marks.flow)).toBe(true);
+    // The hero paints the page colour, so it turns see-through; the footer never does.
+    await expect(page.locator(".hero")).toHaveAttribute("data-flow-clear", "");
+    await expect(page.locator("footer[data-flow-clear]")).toHaveCount(0);
+    await expect(page.locator("body")).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    // Reduced motion switched on mid-visit: the canvas and every marker go.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(page.locator(flowCanvas)).toHaveCount(0);
+    expect(await flowMarked(page)).toEqual({ flow: false, cleared: 0 });
+    expect(errors).toEqual([]);
+  } finally {
+    await browser.close();
+  }
 });
 
 test("article covers respond to focus without reloading their image", async ({ page }) => {
