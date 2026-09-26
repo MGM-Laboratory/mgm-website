@@ -62,7 +62,13 @@ export class FlowSurfaces {
     if (!this.attached) {
       this.attached = true;
       this.observer = new MutationObserver(this.onMutation);
-      this.observer.observe(document.body, { childList: true, subtree: true });
+      // New content, and class changes (a section switching its colour).
+      this.observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["class"],
+      });
     }
     return color;
   }
@@ -126,14 +132,23 @@ export class FlowSurfaces {
 
   private readonly onMutation = (records: MutationRecord[]) => {
     if (!this.attached) return;
-    // Only page content matters, not the portals and overlays on <body>.
-    const relevant = records.some((record) => {
+    let relevant = false;
+    for (const record of records) {
       const target = record.target;
-      return (
-        target instanceof Element &&
-        (target.id === "smooth-content" || target.closest("#smooth-content") !== null)
-      );
-    });
+      // Only page content matters, not the portals and overlays on <body>.
+      if (!(target instanceof Element)) continue;
+      if (target.id !== "smooth-content" && !target.closest("#smooth-content")) continue;
+      // A cleared surface (or a box around one) changing its classes may
+      // have changed its colour: rescan now, before it paints.
+      if (
+        record.type === "attributes" &&
+        (target.hasAttribute(MARK) || target.querySelector(`[${MARK}]`))
+      ) {
+        this.scan();
+        return;
+      }
+      relevant = true;
+    }
     if (!relevant || this.timer) return;
     const wait = Math.max(0, SCAN_THROTTLE_MS - (performance.now() - this.lastScan));
     this.timer = window.setTimeout(() => {
