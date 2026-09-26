@@ -79,9 +79,8 @@ function cellXml(ref: string, value: XlsxCell, header: boolean): string {
 function estimateWidths(sheet: XlsxSheet): number[] {
   return sheet.header.map((title, column) => {
     let longest = title.length;
-    const sample = Math.min(sheet.rows.length, 500);
-    for (let index = 0; index < sample; index += 1) {
-      const value = sheet.rows[index][column];
+    for (const row of sheet.rows.slice(0, 500)) {
+      const value = row.at(column);
       const length =
         value instanceof Date
           ? 18
@@ -98,34 +97,21 @@ export function worksheetXml(sheet: XlsxSheet): string {
   const widths = sheet.widths ?? estimateWidths(sheet);
   const lastColumn = columnLetter(Math.max(0, sheet.header.length - 1));
   const lastRow = sheet.rows.length + 1;
-  const parts: string[] = [
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
-    `<dimension ref="A1:${lastColumn}${lastRow}"/>`,
-    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>',
-    '<sheetFormatPr defaultRowHeight="15"/>',
-  ];
-  if (widths.length) {
-    parts.push(
-      `<cols>${widths.map((width, index) => `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`).join("")}</cols>`,
-    );
-  }
-  parts.push("<sheetData>");
+  const cols = widths.length
+    ? `<cols>${widths.map((width, index) => `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`).join("")}</cols>`
+    : "";
   const letters = sheet.header.map((_, index) => columnLetter(index));
-  parts.push(
-    `<row r="1">${sheet.header.map((title, index) => cellXml(`${letters[index]}1`, title, true)).join("")}</row>`,
-  );
-  sheet.rows.forEach((row, rowIndex) => {
-    const r = rowIndex + 2;
-    let cells = "";
-    for (let index = 0; index < letters.length; index += 1)
-      cells += cellXml(`${letters[index]}${r}`, row[index], false);
-    parts.push(`<row r="${r}">${cells}</row>`);
-  });
-  parts.push("</sheetData>");
-  if (sheet.header.length) parts.push(`<autoFilter ref="A1:${lastColumn}${lastRow}"/>`);
-  parts.push("</worksheet>");
-  return parts.join("");
+  const headerRow = `<row r="1">${sheet.header.map((title, index) => cellXml(`${columnLetter(index)}1`, title, true)).join("")}</row>`;
+  // Each data row has one cell per header column, whatever its own length.
+  const dataRows = sheet.rows
+    .map((row, rowIndex) => {
+      const r = rowIndex + 2;
+      const cells = letters.map((letter, index) => cellXml(`${letter}${r}`, row.at(index), false));
+      return `<row r="${r}">${cells.join("")}</row>`;
+    })
+    .join("");
+  const autoFilter = sheet.header.length ? `<autoFilter ref="A1:${lastColumn}${lastRow}"/>` : "";
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:${lastColumn}${lastRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols}<sheetData>${headerRow}${dataRows}</sheetData>${autoFilter}</worksheet>`;
 }
 
 const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

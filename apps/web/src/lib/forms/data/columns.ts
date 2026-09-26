@@ -34,7 +34,8 @@ export type WorkingRow = {
   index: number;
   record: FormResponseRecord;
   answers: FormAnswers;
-  extra: Record<string, ExprValue>;
+  /** Computed and split columns; a row has no entry until a step writes one. */
+  extra: Partial<Record<string, ExprValue>>;
 };
 
 /** How a column filters and sorts. */
@@ -59,7 +60,7 @@ export type DataColumn = {
   width: number;
 };
 
-const COUNTRY_NAMES: Record<string, string> = {};
+const COUNTRY_NAMES = new Map<string, string>();
 
 /** An English country name for an ISO 3166 alpha-2 code (falls back to the code). */
 export function countryName(code: string | null | undefined): string {
@@ -67,10 +68,11 @@ export function countryName(code: string | null | undefined): string {
   // Geolocation stores country names; answers store ISO codes.
   if (!/^[a-z]{2}$/i.test(code)) return code;
   const upper = code.toUpperCase();
-  if (COUNTRY_NAMES[upper]) return COUNTRY_NAMES[upper];
+  const known = COUNTRY_NAMES.get(upper);
+  if (known) return known;
   try {
     const name = new Intl.DisplayNames(["en"], { type: "region" }).of(upper) ?? upper;
-    COUNTRY_NAMES[upper] = name;
+    COUNTRY_NAMES.set(upper, name);
     return name;
   } catch {
     return upper;
@@ -328,13 +330,21 @@ export function extraDataColumn(
 // ---------------------------------------------------------------------------
 
 /** The raw value of an answer column in a row (the Other text for Other columns). */
-export function answerValue(column: DataColumn, answers: FormAnswers): FormAnswerValue | undefined {
+/** An answer cell; stored JSON may hold `null` where a type says otherwise. */
+export function answerValue(
+  column: DataColumn,
+  answers: FormAnswers,
+): FormAnswerValue | null | undefined {
   if (!column.answer) return undefined;
   if (column.answer.part?.kind === "other") return answers[column.key];
   return answers[column.answer.fieldId];
 }
 
-export function metaValue(key: string, record: FormResponseRecord): ExprValue | string[] {
+/** A response's meta value; older responses may lack a field (`undefined`). */
+export function metaValue(
+  key: string,
+  record: FormResponseRecord,
+): ExprValue | string[] | undefined {
   const meta = record.meta;
   switch (key) {
     case "$submittedAt":
@@ -420,7 +430,7 @@ function rawAnswerText(column: DataColumn, answers: FormAnswers): string {
   }
   if (typeof value === "object") {
     if (column.answer?.part?.kind === "row") {
-      const cell = (value as Record<string, string | string[]>)[column.answer.part.rowId];
+      const cell = (value as Partial<Record<string, string | string[]>>)[column.answer.part.rowId];
       return Array.isArray(cell) ? cell.join(", ") : (cell ?? "");
     }
     return JSON.stringify(value);
@@ -516,7 +526,7 @@ export function cellIds(column: DataColumn, row: WorkingRow): string[] {
   const value = answerValue(column, row.answers);
   if (value === undefined || value === null) return [];
   if (column.answer?.part?.kind === "row" && typeof value === "object" && !Array.isArray(value)) {
-    const cell = (value as Record<string, string | string[]>)[column.answer.part.rowId];
+    const cell = (value as Partial<Record<string, string | string[]>>)[column.answer.part.rowId];
     return cell === undefined ? [] : Array.isArray(cell) ? cell : [cell];
   }
   if (Array.isArray(value)) return isFileAnswer(value) ? [] : value.map(String);

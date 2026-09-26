@@ -20,6 +20,7 @@ import {
 } from "@repo/shared";
 
 import {
+  answerValue,
   cellText,
   columnResolver,
   exprValue,
@@ -172,12 +173,23 @@ export function levenshtein(a: string, b: string, limit = 3): number {
   if (Math.abs(a.length - b.length) > limit) return limit + 1;
   let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
   for (let i = 1; i <= a.length; i += 1) {
+    const char = a[i - 1];
     const current = [i];
     let best = i;
-    for (let j = 1; j <= b.length; j += 1) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost);
-      best = Math.min(best, current[j]);
+    // Walk the previous row once: `up` is its cell j, `diagonal` its cell
+    // j - 1 and `left` the current row's cell j - 1.
+    let diagonal = 0;
+    let left = i;
+    let j = 0;
+    for (const up of previous) {
+      if (j > 0) {
+        const cost = char === b[j - 1] ? 0 : 1;
+        left = Math.min(up + 1, left + 1, diagonal + cost);
+        current.push(left);
+        best = Math.min(best, left);
+      }
+      diagonal = up;
+      j += 1;
     }
     if (best > limit) return limit + 1;
     previous = current;
@@ -221,10 +233,8 @@ export function suggestStandardize(
     return root;
   };
   if (keys.length <= 1500) {
-    for (let i = 0; i < keys.length; i += 1) {
-      for (let j = i + 1; j < keys.length; j += 1) {
-        const a = keys[i];
-        const b = keys[j];
+    for (const [i, a] of keys.entries()) {
+      for (const b of keys.slice(i + 1)) {
         const shortest = Math.min(a.length, b.length);
         if (shortest < 4) continue;
         const limit = shortest >= 9 ? 2 : 1;
@@ -281,18 +291,21 @@ export type PipelineResult = {
 function mapStrings(value: FormAnswerValue, fn: (text: string) => string): FormAnswerValue {
   if (typeof value === "string") return fn(value);
   if (value && typeof value === "object" && !Array.isArray(value)) {
-    let changed = false;
-    const out: Record<string, string | string[]> = {};
-    for (const [key, part] of Object.entries(value)) {
-      if (typeof part === "string") {
-        const next = fn(part);
-        if (next !== part) changed = true;
-        out[key] = next;
-      } else out[key] = part;
-    }
-    return changed ? out : value;
+    const parts = Object.entries(value).map(([key, part]) => ({
+      key,
+      part,
+      next: typeof part === "string" ? fn(part) : part,
+    }));
+    if (parts.every(({ part, next }) => next === part)) return value;
+    return Object.fromEntries(parts.map(({ key, next }) => [key, next]));
   }
   return value;
+}
+
+/** Writes one answer, copying the answers first so the loaded record stays untouched. */
+function writeAnswer(row: WorkingRow, key: string, value: FormAnswerValue) {
+  if (row.answers === row.record.answers) row.answers = { ...row.answers };
+  Object.assign(row.answers, { [key]: value });
 }
 
 function valuesEqual(a: unknown, b: unknown) {
@@ -324,12 +337,11 @@ function rewriteCell(row: WorkingRow, column: DataColumn, fn: (text: string) => 
   }
   if (column.group !== "answer" || !column.answer) return false;
   const key = column.answer.part?.kind === "other" ? column.key : column.answer.fieldId;
-  const value = row.answers[key];
+  const value = answerValue(column, row.answers);
   if (value === undefined || value === null) return false;
   const next = mapStrings(value, fn);
   if (next === value || valuesEqual(next, value)) return false;
-  if (row.answers === row.record.answers) row.answers = { ...row.answers };
-  row.answers[key] = next;
+  writeAnswer(row, key, next);
   return true;
 }
 
@@ -420,7 +432,7 @@ export function runPipeline(
             }
             if (!column.answer || column.answer.part?.kind === "row") continue;
             const key = column.answer.part?.kind === "other" ? column.key : column.answer.fieldId;
-            if (isAnswered(row.answers[key])) continue;
+            if (isAnswered(answerValue(column, row.answers))) continue;
             let next: FormAnswerValue | null = null;
             if (column.valueType === "number") {
               const number = Number(step.value);
@@ -430,8 +442,7 @@ export function runPipeline(
               next = step.value;
             }
             if (next === null) continue;
-            if (row.answers === row.record.answers) row.answers = { ...row.answers };
-            row.answers[key] = next;
+            writeAnswer(row, key, next);
             result.changedCells += 1;
           }
         }
@@ -517,7 +528,7 @@ export function runPipeline(
               parts.length,
               parts.slice(maxParts - 1).join(step.delimiter),
             );
-          return parts;
+          return { row, parts };
         });
         const count = Math.max(2, partsSeen);
         const added: DataColumn[] = [];
@@ -525,16 +536,15 @@ export function runPipeline(
           const extra = extraDataColumn(`${step.id}:${part + 1}`, `${column.label} (${part + 1})`);
           added.push(extra);
         }
-        rows.forEach((row, index) => {
-          const parts = split[index];
+        for (const { row, parts } of split) {
           const next = { ...row.extra };
           added.forEach((extra, part) => {
-            const value = parts[part] ?? "";
+            const value = parts.at(part) ?? "";
             next[extra.key] = value || null;
             if (value) result.changedCells += 1;
           });
           row.extra = next;
-        });
+        }
         for (const extra of added) {
           extraColumns.push(extra);
           context.columns.push(extra);
@@ -551,12 +561,14 @@ export function runPipeline(
           result.error = compiled.error.message;
           break;
         }
-        const values: ExprValue[] = rows.map((row) =>
-          evaluate(compiled.expr.ast, (ref) => {
+        const evaluated = rows.map((row) => ({
+          row,
+          value: evaluate(compiled.expr.ast, (ref) => {
             const column = resolve(ref);
             return column ? exprValue(column, row) : null;
           }),
-        );
+        }));
+        const values: ExprValue[] = evaluated.map(({ value }) => value);
         const numeric = values.every((value) => value === null || typeof value === "number");
         const boolean = values.every((value) => value === null || typeof value === "boolean");
         const extra = extraDataColumn(
@@ -568,11 +580,10 @@ export function runPipeline(
               ? "boolean"
               : "text",
         );
-        rows.forEach((row, index) => {
-          const value = values[index];
+        for (const { row, value } of evaluated) {
           row.extra = { ...row.extra, [extra.key]: value };
           if (value !== null && value !== "") result.changedCells += 1;
-        });
+        }
         extraColumns.push(extra);
         context.columns.push(extra);
         context.byKey.set(extra.key, extra);
@@ -595,8 +606,10 @@ export function answerChanges(
   for (const row of result.rows) {
     if (row.answers === row.record.answers) continue;
     let cells = 0;
-    const keys = new Set([...Object.keys(row.answers), ...Object.keys(row.record.answers)]);
-    for (const key of keys) if (!valuesEqual(row.answers[key], row.record.answers[key])) cells += 1;
+    const after = new Map(Object.entries(row.answers));
+    const before = new Map(Object.entries(row.record.answers));
+    const keys = new Set([...after.keys(), ...before.keys()]);
+    for (const key of keys) if (!valuesEqual(after.get(key), before.get(key))) cells += 1;
     if (cells) out.push({ id: row.id, answers: row.answers, cells });
   }
   return out;

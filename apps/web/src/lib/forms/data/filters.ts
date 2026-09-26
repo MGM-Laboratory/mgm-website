@@ -223,23 +223,22 @@ export function sortRows(
   column: DataColumn,
   direction: "asc" | "desc",
 ): WorkingRow[] {
-  const keys = rows.map((row) => sortKey(column, row));
-  const order = rows.map((_, index) => index);
+  const keyed = rows.map((row, index) => ({ row, index, key: sortKey(column, row) }));
   const sign = direction === "asc" ? 1 : -1;
-  order.sort((a, b) => {
-    const ka = keys[a];
-    const kb = keys[b];
+  keyed.sort((a, b) => {
+    const ka = a.key;
+    const kb = b.key;
     // Empty cells always sink to the bottom.
-    if (ka === null && kb === null) return a - b;
+    if (ka === null && kb === null) return a.index - b.index;
     if (ka === null) return 1;
     if (kb === null) return -1;
     let result: number;
     if (typeof ka === "number" && typeof kb === "number") result = ka - kb;
     else if (collator) result = collator.compare(String(ka), String(kb));
     else result = String(ka) < String(kb) ? -1 : String(ka) > String(kb) ? 1 : 0;
-    return result === 0 ? a - b : result * sign;
+    return result === 0 ? a.index - b.index : result * sign;
   });
-  return order.map((index) => rows[index]);
+  return keyed.map(({ row }) => row);
 }
 
 /** Segment, search and filters (no sort): the rows every chart describes. */

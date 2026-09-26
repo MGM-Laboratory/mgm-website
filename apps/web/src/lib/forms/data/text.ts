@@ -21,6 +21,11 @@ export function words(text: string): string[] {
     .filter(Boolean);
 }
 
+/** A word worth counting: longer than a letter, not a stop word, not a bare number. */
+function isContentWord(token: string) {
+  return token.length > 1 && !STOP_WORDS.has(token) && !/^\d+$/.test(token);
+}
+
 export type TermCount = { term: string; count: number };
 
 function top(counts: Map<string, number>, limit: number): TermCount[] {
@@ -54,14 +59,13 @@ export function summarizeText(texts: readonly string[], limit = 15): TextSummary
     totalWords += tokens.length;
     const seenWords = new Set<string>();
     const seenPhrases = new Set<string>();
-    for (let index = 0; index < tokens.length; index += 1) {
-      const token = tokens[index];
-      const content = token.length > 1 && !STOP_WORDS.has(token) && !/^\d+$/.test(token);
+    // A phrase is two content words in a row.
+    let previous: string | null = null;
+    for (const token of tokens) {
+      const content = isContentWord(token);
       if (content) seenWords.add(token);
-      const next = tokens[index + 1];
-      if (content && next && next.length > 1 && !STOP_WORDS.has(next) && !/^\d+$/.test(next)) {
-        seenPhrases.add(`${token} ${next}`);
-      }
+      if (content && previous !== null) seenPhrases.add(`${previous} ${token}`);
+      previous = content ? token : null;
     }
     for (const word of seenWords) wordCounts.set(word, (wordCounts.get(word) ?? 0) + 1);
     for (const phrase of seenPhrases) phraseCounts.set(phrase, (phraseCounts.get(phrase) ?? 0) + 1);

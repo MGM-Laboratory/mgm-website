@@ -5,21 +5,17 @@
  * the browser never holds more than the files themselves plus the headers.
  */
 
-const CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
-  for (let n = 0; n < 256; n += 1) {
-    let c = n;
-    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    table[n] = c >>> 0;
-  }
-  return table;
-})();
+const CRC_TABLE = Uint32Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
 
 /** CRC-32 (IEEE 802.3), continuing from `crc` when given. */
 export function crc32(data: Uint8Array, crc = 0): number {
   let value = (crc ^ 0xffffffff) >>> 0;
-  for (let index = 0; index < data.length; index += 1) {
-    value = CRC_TABLE[(value ^ data[index]) & 0xff] ^ (value >>> 8);
+  for (const byte of data) {
+    value = CRC_TABLE[(value ^ byte) & 0xff] ^ (value >>> 8);
   }
   return (value ^ 0xffffffff) >>> 0;
 }

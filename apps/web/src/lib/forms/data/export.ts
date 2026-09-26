@@ -91,8 +91,12 @@ export function toCsvBytes(table: ExportTable): Uint8Array {
   return out;
 }
 
+// Markdown tables have no line breaks of their own; an inline HTML break stands in.
+const LINE_BREAK_HTML = "<br>";
+
 export function toMarkdown(table: ExportTable): string {
-  const escape = (value: string) => value.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+  const escape = (value: string) =>
+    value.replace(/\|/g, "\\|").replace(/\r?\n/g, () => LINE_BREAK_HTML);
   const lines = [
     `| ${table.header.map(escape).join(" | ")} |`,
     `| ${table.header.map(() => "---").join(" | ")} |`,
@@ -108,19 +112,18 @@ export function toMarkdown(table: ExportTable): string {
 /** Flat rows keyed by column label (duplicated labels get their key appended). */
 export function toFlatJson(table: ExportTable): string {
   const names = new Set<string>(["id"]);
-  const keys = table.columns.map((column) => {
+  const named = table.columns.map((column) => {
     let name = column.label;
     if (names.has(name)) name = `${column.label} [${column.key}]`;
     names.add(name);
-    return name;
+    return { column, name };
   });
-  const out = table.rows.map((row) => {
-    const item: Record<string, unknown> = { id: row.id };
-    table.columns.forEach((column, index) => {
-      item[keys[index]] = typedValue(column, row, table.options);
-    });
-    return item;
-  });
+  const out = table.rows.map((row): Record<string, unknown> =>
+    Object.fromEntries([
+      ["id", row.id],
+      ...named.map(({ column, name }) => [name, typedValue(column, row, table.options)]),
+    ]),
+  );
   return JSON.stringify(out, null, 2);
 }
 
@@ -158,15 +161,10 @@ function typedValue(
   if (column.valueType === "date" && column.group === "answer" && dates) {
     const raw = row.answers[column.answer?.fieldId ?? ""];
     const match =
-      typeof raw === "string" ? /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(raw) : null;
+      typeof raw === "string" ? /^(\d{4})-(\d{2})-(\d{2})(?:$|T(\d{2}):(\d{2})$)/.exec(raw) : null;
     if (match) {
-      return new Date(
-        Number(match[1]),
-        Number(match[2]) - 1,
-        Number(match[3]),
-        Number(match[4] ?? 0),
-        Number(match[5] ?? 0),
-      );
+      const [, year, month, day, hours = "0", minutes = "0"] = match;
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hours), Number(minutes));
     }
   }
   if (column.valueType === "file") {

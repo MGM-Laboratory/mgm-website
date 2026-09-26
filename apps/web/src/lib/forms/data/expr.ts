@@ -65,19 +65,26 @@ const OPERATORS = [
   ",",
 ];
 
+// A number literal: `12`, `1.5`, `.5`, `3.`, then an optional exponent
+// (`1e3`, `2.5E-4`), matched in two steps to keep each pattern linear.
+const NUMBER_MANTISSA = /^(?:\d+\.?\d*|\.\d+)/;
+const NUMBER_EXPONENT = /^[eE][+-]?\d+/;
+
 export function tokenize(source: string): Token[] {
   const tokens: Token[] = [];
   let index = 0;
   while (index < source.length) {
-    const char = source[index];
+    const char = source.charAt(index);
     if (/\s/.test(char)) {
       index += 1;
       continue;
     }
     const start = index;
     if (/[0-9.]/.test(char) && /[0-9]/.test(source[index + (char === "." ? 1 : 0)] ?? "")) {
-      const match = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/.exec(source.slice(index));
-      const text = match ? match[0] : char;
+      const rest = source.slice(index);
+      const mantissa = NUMBER_MANTISSA.exec(rest)?.[0] ?? "";
+      const exponent = NUMBER_EXPONENT.exec(rest.slice(mantissa.length))?.[0] ?? "";
+      const text = mantissa ? mantissa + exponent : char;
       index += text.length;
       tokens.push({ kind: "number", value: Number(text), start, end: index });
       continue;
@@ -85,17 +92,17 @@ export function tokenize(source: string): Token[] {
     if (char === '"' || char === "'") {
       index += 1;
       let value = "";
-      while (index < source.length && source[index] !== char) {
-        if (source[index] === "\\" && index + 1 < source.length) {
+      while (index < source.length && source.charAt(index) !== char) {
+        if (source.charAt(index) === "\\" && index + 1 < source.length) {
           const next = source[index + 1];
           value += next === "n" ? "\n" : next === "t" ? "\t" : next;
           index += 2;
         } else {
-          value += source[index];
+          value += source.charAt(index);
           index += 1;
         }
       }
-      if (source[index] !== char) {
+      if (source.charAt(index) !== char) {
         throw new ExprSyntaxError(
           `This text is missing its closing ${char}.`,
           start,
@@ -318,7 +325,7 @@ class Parser {
             token.end,
           );
         }
-        const spec = EXPR_FUNCTIONS[token.value];
+        const spec = (EXPR_FUNCTIONS as Partial<Record<string, FunctionSpec>>)[token.value];
         if (!spec) {
           throw new ExprSyntaxError(
             `There's no function called ${token.value}.`,
@@ -514,12 +521,10 @@ export function toDate(value: ExprValue): Date | null {
   if (value === null || typeof value === "boolean") return null;
   if (typeof value === "number") return null;
   const text = value.trim();
-  const plain = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?$/.exec(text);
+  const plain = /^(\d{4})-(\d{2})-(\d{2})(?:$|[T ](\d{2}):(\d{2})$)/.exec(text);
   if (plain) {
-    const [, y, m, d, hh, mm] = plain;
-    const date = new Date(
-      Date.UTC(Number(y), Number(m) - 1, Number(d), Number(hh ?? 0), Number(mm ?? 0)),
-    );
+    const [, y, m, d, hh = "0", mm = "0"] = plain;
+    const date = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm)));
     return Number.isNaN(date.getTime()) ? null : date;
   }
   if (!/^\d{4}-\d{2}-\d{2}T/.test(text)) return null;

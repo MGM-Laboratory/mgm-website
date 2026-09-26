@@ -28,8 +28,8 @@ export function logGamma(x: number): number {
   }
   const z = x - 1;
   let sum = 0.99999999999980993;
-  for (let index = 0; index < LANCZOS.length; index += 1) {
-    sum += LANCZOS[index] / (z + index + 1);
+  for (const [index, coefficient] of LANCZOS.entries()) {
+    sum += coefficient / (z + index + 1);
   }
   const t = z + LANCZOS.length - 0.5;
   return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(sum);
@@ -208,7 +208,7 @@ export function sorted(values: readonly number[]): number[] {
 }
 
 /** Linear-interpolation quantile of already sorted values (p in 0..1). */
-export function quantileSorted(values: ArrayLike<number>, p: number): number {
+export function quantileSorted(values: readonly number[], p: number): number {
   const n = values.length;
   if (!n) return Number.NaN;
   if (n === 1) return values[0];
@@ -216,7 +216,8 @@ export function quantileSorted(values: ArrayLike<number>, p: number): number {
   const base = Math.floor(position);
   const rest = position - base;
   const next = values[Math.min(n - 1, base + 1)];
-  return values[base] + rest * (next - values[base]);
+  const low = values.at(base) ?? Number.NaN;
+  return low + rest * (next - low);
 }
 
 export function quantile(values: readonly number[], p: number): number {
@@ -412,8 +413,8 @@ export function histogram(
       count: 0,
     }));
     for (const value of values) {
-      const index = Math.min(count - 1, Math.max(0, Math.floor((value - low) / width)));
-      bins[index].count += 1;
+      const bin = bins.at(Math.min(count - 1, Math.max(0, Math.floor((value - low) / width))));
+      if (bin) bin.count += 1;
     }
     return bins;
   }
@@ -425,8 +426,8 @@ export function histogram(
   }));
   for (const value of values) {
     if (value < low || value > high) continue;
-    const index = Math.min(count - 1, Math.floor((value - low) / width));
-    bins[index].count += 1;
+    const bin = bins.at(Math.min(count - 1, Math.floor((value - low) / width)));
+    if (bin) bin.count += 1;
   }
   return bins;
 }
@@ -439,14 +440,23 @@ export function histogram(
 export function ranks(values: readonly number[]): number[] {
   const order = values.map((value, index) => ({ value, index })).sort((a, b) => a.value - b.value);
   const out = new Array<number>(values.length);
+  // Walk the sorted values in runs of equal ones; each run shares one rank.
   let start = 0;
-  while (start < order.length) {
-    let end = start;
-    while (end + 1 < order.length && order[end + 1].value === order[start].value) end += 1;
+  let run: typeof order = [];
+  const rankRun = () => {
+    const end = start + run.length - 1;
     const rank = (start + end) / 2 + 1;
-    for (let k = start; k <= end; k += 1) out[order[k].index] = rank;
+    for (const item of run) out[item.index] = rank;
     start = end + 1;
+  };
+  for (const item of order) {
+    if (run.length && item.value !== run[0].value) {
+      rankRun();
+      run = [];
+    }
+    run.push(item);
   }
+  if (run.length) rankRun();
   return out;
 }
 
@@ -460,9 +470,10 @@ export function pearson(xs: readonly number[], ys: readonly number[]): Correlati
   let sxy = 0;
   let sxx = 0;
   let syy = 0;
+  // `at` past the end reads NaN, as an index read of undefined would.
   for (let i = 0; i < n; i += 1) {
-    const dx = xs[i] - mx;
-    const dy = ys[i] - my;
+    const dx = (xs.at(i) ?? Number.NaN) - mx;
+    const dy = (ys.at(i) ?? Number.NaN) - my;
     sxy += dx * dy;
     sxx += dx * dx;
     syy += dy * dy;
@@ -497,9 +508,11 @@ export function linearRegression(xs: readonly number[], ys: readonly number[]): 
   let sxx = 0;
   let syy = 0;
   for (let i = 0; i < n; i += 1) {
-    sxy += (xs[i] - mx) * (ys[i] - my);
-    sxx += (xs[i] - mx) ** 2;
-    syy += (ys[i] - my) ** 2;
+    const x = xs.at(i) ?? Number.NaN;
+    const y = ys.at(i) ?? Number.NaN;
+    sxy += (x - mx) * (y - my);
+    sxx += (x - mx) ** 2;
+    syy += (y - my) ** 2;
   }
   const slope = sxx ? sxy / sxx : Number.NaN;
   const intercept = my - slope * mx;
@@ -529,27 +542,30 @@ export function chiSquareTest(table: readonly (readonly number[])[]): ChiSquare 
   const rowsKept = table.filter((row) => row.some((value) => value > 0));
   const columnCount = rowsKept[0]?.length ?? 0;
   const columnsKept: number[] = [];
+  // A ragged row's missing cell reads NaN, as an index read of undefined would.
+  const cell = (row: readonly number[], c: number) => row.at(c) ?? Number.NaN;
   for (let c = 0; c < columnCount; c += 1) {
-    if (rowsKept.some((row) => row[c] > 0)) columnsKept.push(c);
+    if (rowsKept.some((row) => cell(row, c) > 0)) columnsKept.push(c);
   }
-  const matrix = rowsKept.map((row) => columnsKept.map((c) => row[c]));
+  const matrix = rowsKept.map((row) => columnsKept.map((c) => cell(row, c)));
   const r = matrix.length;
   const k = columnsKept.length;
   const rowTotals = matrix.map((row) => row.reduce((a, b) => a + b, 0));
-  const columnTotals = columnsKept.map((_, c) => matrix.reduce((a, row) => a + row[c], 0));
+  const columnTotals = columnsKept.map((_, c) => matrix.reduce((a, row) => a + cell(row, c), 0));
   const n = rowTotals.reduce((a, b) => a + b, 0);
-  const expected = matrix.map((_, i) =>
-    columnsKept.map((__, j) => (rowTotals[i] * columnTotals[j]) / n),
+  const expected = rowTotals.map((rowTotal) =>
+    columnTotals.map((columnTotal) => (rowTotal * columnTotal) / n),
   );
   let statistic = 0;
   let low = 0;
-  for (let i = 0; i < r; i += 1) {
-    for (let j = 0; j < k; j += 1) {
-      const e = expected[i][j];
+  matrix.forEach((row, i) => {
+    const expectedRow = expected.at(i) ?? [];
+    row.forEach((observed, j) => {
+      const e = cell(expectedRow, j);
       if (e < 5) low += 1;
-      if (e > 0) statistic += (matrix[i][j] - e) ** 2 / e;
-    }
-  }
+      if (e > 0) statistic += (observed - e) ** 2 / e;
+    });
+  });
   const df = (r - 1) * (k - 1);
   const minDim = Math.min(r, k) - 1;
   return {
