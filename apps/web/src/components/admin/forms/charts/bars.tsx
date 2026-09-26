@@ -163,12 +163,66 @@ export function ColumnChart({
   const band = innerWidth / Math.max(1, data.length);
   const barWidth = Math.max(2, Math.min(24, band - 2));
   const y = (value: number) => padding.top + innerHeight - (value / top) * innerHeight;
+  const [active, setActive] = useState<number | null>(null);
+  const geometry = (index: number) => {
+    const item = data[index];
+    const cx = padding.left + band * index + band / 2;
+    const barHeight = Math.max(item.value > 0 ? 2 : 0, (item.value / top) * innerHeight);
+    return { cx, barHeight, y0: padding.top + innerHeight - barHeight };
+  };
+  const tipFor = (index: number) => {
+    const item = data[index];
+    if (!item) return;
+    const { cx, y0 } = geometry(index);
+    show({
+      x: cx,
+      y: y0,
+      content: (
+        <>
+          <TooltipTitle>{item.label}</TooltipTitle>
+          <TooltipRow
+            color={item.color ?? color}
+            label={item.detail ?? ""}
+            value={valueFormat(item.value)}
+          />
+        </>
+      ),
+    });
+  };
+  const onKeyDown = (event: React.KeyboardEvent<SVGSVGElement>) => {
+    if (!data.length) return;
+    let next = active ?? -1;
+    if (event.key === "ArrowRight") next = Math.min(data.length - 1, next + 1);
+    else if (event.key === "ArrowLeft") next = Math.max(0, (active ?? data.length) - 1);
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = data.length - 1;
+    else if (event.key === "Escape") {
+      setActive(null);
+      hide();
+      return;
+    } else return;
+    event.preventDefault();
+    setActive(next);
+    tipFor(next);
+  };
   const labelEvery =
     labelEveryOverride ??
     Math.max(1, Math.ceil(data.length / Math.max(2, Math.floor(innerWidth / 34))));
   return (
     <div className="relative" ref={ref}>
-      <svg aria-label={title} className="block" height={height} role="img" width={width}>
+      <svg
+        aria-label={`${title}. Use the arrow keys to read each column.`}
+        className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40"
+        height={height}
+        onBlur={() => {
+          setActive(null);
+          hide();
+        }}
+        onKeyDown={onKeyDown}
+        role="img"
+        tabIndex={0}
+        width={width}
+      >
         <title>{title}</title>
         <desc>{data.map((item) => `${item.label}: ${valueFormat(item.value)}`).join("; ")}</desc>
         {ticks.map((tick) => (
@@ -201,21 +255,7 @@ export function ColumnChart({
             barHeight > 0
               ? `M${x0},${y0 + barHeight}V${y0 + radius}Q${x0},${y0} ${x0 + radius},${y0}H${x0 + barWidth - radius}Q${x0 + barWidth},${y0} ${x0 + barWidth},${y0 + radius}V${y0 + barHeight}Z`
               : "";
-          const tip = () =>
-            show({
-              x: cx,
-              y: y0,
-              content: (
-                <>
-                  <TooltipTitle>{item.label}</TooltipTitle>
-                  <TooltipRow
-                    color={item.color ?? color}
-                    label={item.detail ?? ""}
-                    value={valueFormat(item.value)}
-                  />
-                </>
-              ),
-            });
+          const tip = () => tipFor(index);
           return (
             <g key={item.key}>
               {d ? (
@@ -250,11 +290,10 @@ export function ColumnChart({
                 className="outline-none"
                 fill="transparent"
                 height={innerHeight + padding.top}
-                onBlur={hide}
-                onFocus={tip}
                 onPointerEnter={tip}
                 onPointerLeave={hide}
-                tabIndex={-1}
+                stroke={active === index ? "var(--viz-axis)" : "none"}
+                strokeOpacity={0.5}
                 width={band}
                 x={padding.left + band * index}
                 y={0}
