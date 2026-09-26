@@ -1,4 +1,3 @@
-◇ injected env (25) from .env // tip: ⌘ enable debugging { debug: true }
 -- CreateTable
 CREATE TABLE "Form" (
     "id" TEXT NOT NULL,
