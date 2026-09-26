@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, randomInt, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 
 import {
   FORM_FILE_CATEGORY_TYPES,
@@ -66,9 +66,21 @@ export function slugCandidates(base: string): string[] {
 
 export const FORM_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
-/** The token secret: derived from the admin passphrase with a fixed, forms-only prefix. */
+const TOKEN_SECRET_SALT = "mgm-forms-unlock:v1";
+const tokenSecrets = new Map<string, Buffer>();
+
+/**
+ * The token secret: derived from the admin passphrase with scrypt and a
+ * fixed, forms-only salt, computed once per passphrase (a slow derivation
+ * on every request would slow every form read).
+ */
 export function formTokenSecret(adminPassphrase: string): Buffer {
-  return createHash("sha256").update(`mgm-forms-unlock:v1:${adminPassphrase}`).digest();
+  const cached = tokenSecrets.get(adminPassphrase);
+  if (cached) return cached;
+  const secret = scryptSync(adminPassphrase, TOKEN_SECRET_SALT, 32);
+  tokenSecrets.clear();
+  tokenSecrets.set(adminPassphrase, secret);
+  return secret;
 }
 
 function tokenSignature(secret: Buffer, formId: string, expiresAt: number, passphraseHash: string) {
