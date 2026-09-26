@@ -1,12 +1,13 @@
 import { createArrow } from "./arrow";
 import type { ArrowGeometry } from "./arrow-path";
 import { createLetters } from "./letters";
+import { createMotifs } from "./motifs";
 import { createPieces } from "./pieces";
 import { createStage } from "./stage";
 
 /**
  * Everything in the desktop hero that answers the visitor once the entrance
- * is over: the letters, the shapes and the arrow. Started from the hero's idle phase (after the
+ * is over: the letters, the shapes, the arrow and the background motifs. Started from the hero's idle phase (after the
  * entrance completes, or right away when it is skipped), only when motion
  * is allowed, and loaded lazily so the compact hero never downloads it.
  * Returns the teardown, which puts every element and the markup back
@@ -33,9 +34,11 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
   const letters = createLetters(stage, options.words, options.flipper);
   const pieces = createPieces(stage);
   const arrow = createArrow(stage, options.arrowGeometry);
+  const motifs = createMotifs(stage);
   stage.add(letters);
   stage.add(pieces);
   if (arrow) stage.add(arrow);
+  stage.add(motifs);
 
   const onPointerDown = (event: PointerEvent) => {
     if (!stage.active() || event.button > 0) return;
@@ -48,6 +51,7 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
     if (letters.press(target, x)) return;
     if (pieces.press(target, x, touch)) return;
     if (arrow?.press(x, y, touch)) return;
+    motifs.burst(x, y);
   };
   const onPointerUp = () => pieces.release();
   root.addEventListener("pointerdown", onPointerDown);
