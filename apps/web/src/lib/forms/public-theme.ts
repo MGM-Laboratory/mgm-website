@@ -136,6 +136,8 @@ export function formThemeVars(
     4.5,
     text,
   );
+  // The white pattern tiles glare on a dark page: quieter there.
+  vars["--fx-pattern-alpha"] = scheme === "light" ? "1" : "0.32";
   vars["--fx-on-rt"] = scheme === "light" ? "#ffffff" : bg;
   vars["--fx-scrim"] = scheme === "light" ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)";
   vars["--fx-shadow"] =

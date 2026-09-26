@@ -77,7 +77,19 @@ export function SignatureField({
       if (!canvas) return;
       const mine = (version.current += 1);
       setStatus("saving");
-      canvas.toBlob((blob) => {
+      // The stored signature is dark ink on transparent, whatever the page's
+      // scheme drew it in, so it reads in the admin's light workspace.
+      const out = document.createElement("canvas");
+      out.width = canvas.width;
+      out.height = canvas.height;
+      const context = out.getContext("2d");
+      if (context) {
+        context.drawImage(canvas, 0, 0);
+        context.globalCompositeOperation = "source-in";
+        context.fillStyle = "#0e1116";
+        context.fillRect(0, 0, out.width, out.height);
+      }
+      (context ? out : canvas).toBlob((blob) => {
         if (!blob || mine !== version.current) return;
         abortRef.current?.abort();
         const abort = new AbortController();
@@ -148,6 +160,7 @@ export function SignatureField({
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    event.preventDefault();
     canvas.setPointerCapture(event.pointerId);
     const rect = canvas.getBoundingClientRect();
     last.current = { x: event.clientX - rect.left, y: event.clientY - rect.top, width: 2.6 };
