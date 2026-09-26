@@ -200,7 +200,10 @@ export function QrCard({
   };
 
   return (
-    <div className="grid gap-5 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]" data-testid="qr-card">
+    <div
+      className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]"
+      data-testid="qr-card"
+    >
       <div className="mx-auto w-full max-w-[220px]">
         {preview ? (
           <div className="aspect-square w-full overflow-hidden rounded-2xl border border-[#e4e8f0] dark:border-white/10">
