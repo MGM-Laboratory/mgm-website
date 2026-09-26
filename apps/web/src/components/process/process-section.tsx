@@ -57,6 +57,21 @@ export function ProcessSection() {
           if (!cancelled) reveal();
         });
     };
+    // A keyboard visitor tabbing in before the board has loaded: show the
+    // magnets now and load straight away (the board then skips its throw).
+    const onFocusIn = () => {
+      if (requested && !idle) return;
+      if (idle) {
+        if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
+        window.clearTimeout(idle);
+        idle = 0;
+      }
+      requested = true;
+      observer.disconnect();
+      reveal();
+      start();
+    };
+    root.addEventListener("focusin", onFocusIn);
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) load();
@@ -66,6 +81,7 @@ export function ProcessSection() {
     observer.observe(root);
     return () => {
       cancelled = true;
+      root.removeEventListener("focusin", onFocusIn);
       observer.disconnect();
       if (idle) {
         if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);

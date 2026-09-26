@@ -579,6 +579,9 @@ export function createMagnetBoard(section: HTMLElement) {
     m.flipBack?.kill();
     m.flipBack = null;
     m.lowerTimer?.kill();
+    // The note takes clicks only while it shows (it is wider than the front,
+    // and a click on it should turn this magnet back, not grab a neighbour).
+    m.back.style.pointerEvents = on ? "auto" : "";
     if (on) {
       placeBack(m);
       m.el.style.zIndex = "40";
@@ -1020,6 +1023,8 @@ export function createMagnetBoard(section: HTMLElement) {
 
   // ---- Wiring --------------------------------------------------------------
 
+  let finishEntrance = () => {};
+
   measure();
   for (const m of magnets) {
     const inside = clampOffset(m.home, bounds, m);
@@ -1038,6 +1043,9 @@ export function createMagnetBoard(section: HTMLElement) {
     listen(m.el, "pointerleave", (e: PointerEvent) => onPointerLeave(m, e));
     listen(m.el, "keydown", (e: KeyboardEvent) => onKeyDown(m, e));
     listen(m.el, "focus", () => {
+      // Tabbing in before the throw: every magnet lands at once, so focus
+      // never sits on an invisible magnet that ignores the keys.
+      if (!m.ready) finishEntrance();
       m.focused = m.el.matches(":focus-visible");
       ensureTicking();
     });
@@ -1118,7 +1126,9 @@ export function createMagnetBoard(section: HTMLElement) {
     tileMove,
   };
 
-  cleanups.push(startMagnetEntrance(board, rows));
+  const entrance = startMagnetEntrance(board, rows);
+  finishEntrance = entrance.finish;
+  cleanups.push(entrance.dispose);
   cleanups.push(startMagnetIdle(board));
   // For tests and anything else that needs to know the board is live.
   section.dataset.magnetBoard = "ready";

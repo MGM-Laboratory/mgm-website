@@ -25,7 +25,13 @@ const START = "top 72%";
  *
  * Under reduced motion the magnets are simply there.
  */
-export function startMagnetEntrance(board: MagnetBoard, trigger: HTMLElement) {
+export type MagnetEntrance = {
+  /** Lands every magnet at once (keyboard focus arriving before the throw). */
+  finish: () => void;
+  dispose: () => void;
+};
+
+export function startMagnetEntrance(board: MagnetBoard, trigger: HTMLElement): MagnetEntrance {
   const { magnets, section } = board;
 
   const settle = (m: MagnetState) => {
@@ -38,10 +44,14 @@ export function startMagnetEntrance(board: MagnetBoard, trigger: HTMLElement) {
     gsap.set(m.squash, { scaleX: 1, scaleY: 1 });
   };
 
-  if (!motionAllowed()) {
+  // Reduced motion, or a keyboard visitor already on a magnet: no throw.
+  // (The section reveals the magnets itself when focus arrives before the
+  // board has loaded; those must not be thrown in again.)
+  const shown = magnets.some((m) => m.el.style.opacity === "1");
+  if (!motionAllowed() || shown || section.contains(document.activeElement)) {
     magnets.forEach(settle);
     board.ensureTicking();
-    return () => {};
+    return { finish: () => {}, dispose: () => {} };
   }
 
   const landed = (m: MagnetState) => {
@@ -163,9 +173,18 @@ export function startMagnetEntrance(board: MagnetBoard, trigger: HTMLElement) {
   ScrollTrigger.addEventListener("refresh", onRefresh);
   check();
 
-  return () => {
-    resolve();
-    tl.scrollTrigger?.kill();
-    tl.kill();
+  return {
+    finish: () => {
+      if (magnets.every((m) => m.ready)) return;
+      resolve();
+      tl.scrollTrigger?.kill();
+      tl.progress(1, true);
+      magnets.forEach(settle);
+    },
+    dispose: () => {
+      resolve();
+      tl.scrollTrigger?.kill();
+      tl.kill();
+    },
   };
 }
