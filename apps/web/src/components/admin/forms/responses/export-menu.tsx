@@ -71,16 +71,16 @@ async function downloadWithRetry(
   url: string,
   signal: AbortSignal,
   onWait: (seconds: number) => void,
-) {
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      return await downloadFileBytes(url, signal);
-    } catch (error) {
-      if (!(error instanceof DownloadError) || error.status !== 429 || attempt >= 30) throw error;
-      const seconds = Math.max(2, Math.min(60, error.retryAfter ?? 10));
-      onWait(seconds);
-      await wait(seconds * 1000, signal);
-    }
+  attempt = 0,
+): Promise<Uint8Array> {
+  try {
+    return await downloadFileBytes(url, signal);
+  } catch (error) {
+    if (!(error instanceof DownloadError) || error.status !== 429 || attempt >= 30) throw error;
+    const seconds = Math.max(2, Math.min(60, error.retryAfter ?? 10));
+    onWait(seconds);
+    await wait(seconds * 1000, signal);
+    return downloadWithRetry(url, signal, onWait, attempt + 1);
   }
 }
 
@@ -269,9 +269,8 @@ export function ExportMenu({
     setZipping({ done: 0, total: jobs.length, bytes: 0, waiting: 0 });
     let failed = 0;
     try {
-      for (let index = 0; index < jobs.length; index += 1) {
+      for (const [index, job] of jobs.entries()) {
         if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
-        const job = jobs[index];
         try {
           const data = await downloadWithRetry(
             formFileUrl(form.id, job.key, "download"),
@@ -348,7 +347,13 @@ export function ExportMenu({
         <div>
           <p className={`${labelClass} mb-2`}>Rows</p>
           <div className="flex flex-wrap gap-3">
-            {(["all", "filtered", "selected"] as Scope[]).map((item) => (
+            {(
+              [
+                ["all", counts.all],
+                ["filtered", counts.filtered],
+                ["selected", counts.selected],
+              ] as [Scope, number][]
+            ).map(([item, count]) => (
               <label className={option} key={item}>
                 <input
                   checked={scope === item}
@@ -361,7 +366,7 @@ export function ExportMenu({
                   type="radio"
                 />
                 {item === "all" ? "All" : item === "filtered" ? "Filtered" : "Selected"}{" "}
-                <span className="tabular-nums text-[#8a93a6]">{counts[item]}</span>
+                <span className="tabular-nums text-[#8a93a6]">{count}</span>
               </label>
             ))}
           </div>

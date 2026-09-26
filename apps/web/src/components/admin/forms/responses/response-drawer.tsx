@@ -94,8 +94,9 @@ export function ResponseDrawer({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (target.closest("input, textarea, select, [contenteditable]")) return;
+      const target = event.target;
+      if (target instanceof Element && target.closest("input, textarea, select, [contenteditable]"))
+        return;
       if (event.key === "Escape") onClose();
       else if (event.key === "j" || event.key === "J") onStep(1);
       else if (event.key === "k" || event.key === "K") onStep(-1);
@@ -125,7 +126,14 @@ export function ResponseDrawer({
     .join(", ");
 
   const toggle = (key: "starred" | "flagged" | "reviewed" | "spam") => {
-    const current = key === "spam" ? record.spam : record.admin[key];
+    const current =
+      key === "spam"
+        ? record.spam
+        : key === "starred"
+          ? record.admin.starred
+          : key === "flagged"
+            ? record.admin.flagged
+            : record.admin.reviewed;
     void onPatch({ [key]: !current });
   };
 
@@ -227,7 +235,7 @@ export function ResponseDrawer({
       meta.utm
         ? Object.entries(meta.utm)
             .filter(([, value]) => value)
-            .map(([key, value]) => `${key}=${value}`)
+            .map(([key, value]) => `${key}=${String(value)}`)
             .join(" · ")
         : null,
     ],

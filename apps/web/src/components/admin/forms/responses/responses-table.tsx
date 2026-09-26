@@ -19,7 +19,16 @@ import { AnswerEditor } from "./answer-editor";
 import { CellView, answerIsEditable, type OpenFile } from "./cells";
 
 export type Density = "compact" | "normal" | "roomy";
-export const ROW_HEIGHT: Record<Density, number> = { compact: 34, normal: 44, roomy: 60 };
+export function rowHeightOf(density: Density) {
+  switch (density) {
+    case "compact":
+      return 34;
+    case "normal":
+      return 44;
+    case "roomy":
+      return 60;
+  }
+}
 const LEAD_WIDTH = 76;
 const OVERSCAN = 8;
 
@@ -27,7 +36,7 @@ type Props = {
   formId: string;
   rows: WorkingRow[];
   columns: DataColumn[];
-  widths: Record<string, number>;
+  widths: Partial<Record<string, number>>;
   pinned: number;
   density: Density;
   sort: SortState;
@@ -67,14 +76,13 @@ export function ResponsesTable(props: Props) {
   const [editing, setEditing] = useState<{ rowId: string; key: string } | null>(null);
   const clickTimer = useRef<number | null>(null);
   const [focused, setFocused] = useState(false);
-  const rowHeight = ROW_HEIGHT[density];
+  const rowHeight = rowHeightOf(density);
   const headerHeight = 40;
 
   const layout = useMemo(() => {
     const cells: LayoutCell[] = [];
     let left = LEAD_WIDTH;
-    for (let index = 0; index < columns.length; index += 1) {
-      const column = columns[index];
+    for (const [index, column] of columns.entries()) {
       const width = widths[column.key] ?? column.width;
       cells.push({ column, width, left, pinned: index < pinned });
       left += width;
@@ -126,9 +134,13 @@ export function ResponsesTable(props: Props) {
       element.scrollTop = bottom - element.clientHeight;
   };
 
+  // Out-of-range positions (including -1, the lead column) have nothing, as with plain indexing.
+  const rowAt = (index: number) => (index >= 0 ? rows.at(index) : undefined);
+  const columnAt = (col: number) => (col >= 0 ? columns.at(col) : undefined);
+
   const scrollToColumn = (col: number) => {
     const element = scrollRef.current;
-    const cell = layout.cells[col];
+    const cell = col >= 0 ? layout.cells.at(col) : undefined;
     if (!element || !cell || cell.pinned) return;
     const pinnedWidth = layout.cells
       .filter((item) => item.pinned)
@@ -177,21 +189,25 @@ export function ResponsesTable(props: Props) {
         col = maxCol;
         break;
       case "Enter": {
-        const target = rows[row];
+        const target = rowAt(row);
         if (!target) return;
         event.preventDefault();
-        const column = columns[col];
+        const column = columnAt(col);
         if (!(column && startEdit(target, column))) props.onOpen(target);
         return;
       }
       case "o":
-      case "O":
-        if (rows[row]) props.onOpen(rows[row]);
+      case "O": {
+        const target = rowAt(row);
+        if (target) props.onOpen(target);
         return;
-      case " ":
+      }
+      case " ": {
         event.preventDefault();
-        if (rows[row]) props.onToggleRow(rows[row].id, row, event.shiftKey);
+        const target = rowAt(row);
+        if (target) props.onToggleRow(target.id, row, event.shiftKey);
         return;
+      }
       default:
         return;
     }
@@ -201,9 +217,46 @@ export function ResponsesTable(props: Props) {
     scrollToColumn(col);
   };
 
+  /** The body cell a pointer event landed in (not the lead column, not an open editor). */
+  const cellOf = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (!(target instanceof Element) || target.closest("[data-cell-editor]")) return null;
+    const cell = target.closest<HTMLElement>("[data-grid-col]");
+    const rowElement = cell?.closest<HTMLElement>("[data-grid-row]");
+    if (!cell || !rowElement || !event.currentTarget.contains(rowElement)) return null;
+    const index = Number(rowElement.dataset.gridRow);
+    const row = rowAt(index);
+    return row ? { row, index, col: Number(cell.dataset.gridCol) } : null;
+  };
+
+  // Clicks are handled here, on the grid that also owns the keyboard: a
+  // click activates the cell and opens the row, a double click edits an
+  // answer cell (Enter does the same from the keyboard).
+  const onGridClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const hit = cellOf(event);
+    if (!hit) return;
+    setActive({ row: hit.index, col: hit.col });
+    if (clickTimer.current) window.clearTimeout(clickTimer.current);
+    clickTimer.current = window.setTimeout(() => {
+      clickTimer.current = null;
+      props.onOpen(hit.row);
+    }, 230);
+  };
+
+  const onGridDoubleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const hit = cellOf(event);
+    if (!hit) return;
+    if (clickTimer.current) {
+      window.clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+    const column = columnAt(hit.col);
+    if (!column || !startEdit(hit.row, column)) props.onOpen(hit.row);
+  };
+
   const allSelected = rows.length > 0 && rows.every((row) => selected.has(row.id));
   const someSelected = !allSelected && rows.some((row) => selected.has(row.id));
-  const activeRow = rows[active.row];
+  const activeRow = rowAt(active.row);
   const activeId = activeRow ? `cell-${activeRow.id}-${active.col}` : undefined;
   const pinnedEdge = layout.cells.filter((cell) => cell.pinned).at(-1);
 
@@ -222,6 +275,8 @@ export function ResponsesTable(props: Props) {
       onFocus={() => {
         setFocused(true);
       }}
+      onClick={onGridClick}
+      onDoubleClick={onGridDoubleClick}
       onKeyDown={onKeyDown}
       onScroll={onScroll}
       ref={scrollRef}
@@ -286,22 +341,6 @@ export function ResponsesTable(props: Props) {
               key={row.id}
               onCancelEdit={() => {
                 setEditing(null);
-              }}
-              onCellClick={(col) => {
-                setActive({ row: index, col });
-                if (clickTimer.current) window.clearTimeout(clickTimer.current);
-                clickTimer.current = window.setTimeout(() => {
-                  clickTimer.current = null;
-                  props.onOpen(row);
-                }, 230);
-              }}
-              onCellDoubleClick={(col) => {
-                if (clickTimer.current) {
-                  window.clearTimeout(clickTimer.current);
-                  clickTimer.current = null;
-                }
-                const column = columns[col];
-                if (!column || !startEdit(row, column)) props.onOpen(row);
               }}
               onCommitEdit={(column, value) => {
                 setEditing(null);
@@ -432,8 +471,6 @@ const Row = memo(function Row({
   formId,
   canWrite,
   onToggle,
-  onCellClick,
-  onCellDoubleClick,
   onCommitEdit,
   onCancelEdit,
   onOpenFile,
@@ -452,8 +489,6 @@ const Row = memo(function Row({
   formId: string;
   canWrite: boolean;
   onToggle: (shift: boolean) => void;
-  onCellClick: (col: number) => void;
-  onCellDoubleClick: (col: number) => void;
   onCommitEdit: (column: DataColumn, value: FormAnswerValue | undefined) => void;
   onCancelEdit: () => void;
   onOpenFile: OpenFile;
@@ -471,6 +506,7 @@ const Row = memo(function Row({
       aria-rowindex={index + 2}
       aria-selected={selected}
       className={`group/row absolute left-0 flex border-b border-[#f0f2f6] dark:border-white/[0.04] ${base} hover:bg-[#f6f8fc] dark:hover:bg-[#181c24]`}
+      data-grid-row={index}
       data-response-id={row.id}
       role="row"
       style={{ top: index * rowHeight, height: rowHeight, width: total }}
@@ -518,14 +554,9 @@ const Row = memo(function Row({
         return (
           <div
             className={`relative flex shrink-0 items-center overflow-hidden border-r border-[#f0f2f6] px-3 text-[#252a36] dark:border-white/[0.04] dark:text-white/80 ${cell.pinned ? `sticky z-[5] ${base} group-hover/row:bg-[#f6f8fc] dark:group-hover/row:bg-[#181c24]` : ""} ${isEdgeKey === cell.column.key ? "shadow-[6px_0_8px_-6px_rgba(20,32,58,0.18)]" : ""} ${activeCol === col ? "ring-2 ring-inset ring-brand-blue" : ""} ${isEditing ? "overflow-visible z-30" : ""} ${editable ? "cursor-text" : "cursor-pointer"}`}
+            data-grid-col={col}
             id={`cell-${row.id}-${col}`}
             key={cell.column.key}
-            onClick={() => {
-              onCellClick(col);
-            }}
-            onDoubleClick={() => {
-              onCellDoubleClick(col);
-            }}
             role="gridcell"
             style={{
               width: cell.width,
@@ -536,12 +567,7 @@ const Row = memo(function Row({
             {isEditing ? (
               <div
                 className="absolute top-1 left-1 z-30"
-                onClick={(event) => {
-                  event.stopPropagation();
-                }}
-                onDoubleClick={(event) => {
-                  event.stopPropagation();
-                }}
+                data-cell-editor=""
                 style={{ minWidth: Math.max(cell.width - 8, 220) }}
               >
                 <AnswerEditor

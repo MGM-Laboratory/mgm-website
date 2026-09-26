@@ -205,7 +205,7 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
           </button>
           {adding ? (
             <div className="mt-2 grid grid-cols-2 gap-1.5 rounded-xl border border-[#e4e8f0] p-2 dark:border-white/10">
-              {(Object.keys(STEP_LABELS) as CleanStepKind[]).map((kind) => (
+              {(Object.entries(STEP_LABELS) as [CleanStepKind, string][]).map(([kind, label]) => (
                 <button
                   className="rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-[#3b4150] hover:bg-brand-blue-50 hover:text-brand-blue dark:text-white/70 dark:hover:bg-white/5"
                   key={kind}
@@ -214,7 +214,7 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
                   }}
                   type="button"
                 >
-                  {STEP_LABELS[kind]}
+                  {label}
                 </button>
               ))}
             </div>
@@ -679,13 +679,13 @@ function StepEditor({
           <div className="flex flex-wrap gap-3 text-xs">
             {(
               [
-                ["caseSensitive", "Match case"],
-                ["wholeCell", "Whole cell"],
+                ["caseSensitive", "Match case", step.caseSensitive],
+                ["wholeCell", "Whole cell", step.wholeCell],
               ] as const
-            ).map(([key, label]) => (
+            ).map(([key, label, checked]) => (
               <label className="flex items-center gap-1.5" key={key}>
                 <input
-                  checked={step[key]}
+                  checked={checked}
                   className="size-3.5 accent-brand-blue"
                   onChange={(event) => {
                     onUpdate({ [key]: event.target.checked });

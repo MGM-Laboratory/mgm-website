@@ -207,7 +207,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
   const rows = data.viewRows;
   const rowById = useMemo(() => new Map(data.rows.map((row) => [row.id, row])), [data.rows]);
   const openIndex = openId ? rows.findIndex((row) => row.id === openId) : -1;
-  const openRow = openId ? (rows[openIndex] ?? rowById.get(openId) ?? null) : null;
+  // Out-of-range positions (including -1) have no row, as with plain indexing.
+  const rowAt = (index: number) => (index >= 0 ? rows.at(index) : undefined);
+  const openRow = openId ? (rowAt(openIndex) ?? rowById.get(openId) ?? null) : null;
   const selectedRows = useMemo(
     () => data.rows.filter((row) => selected.has(row.id)),
     [data.rows, selected],
@@ -290,7 +292,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
   const editAnswer = useCallback(
     async (row: WorkingRow, column: DataColumn, value: FormAnswerValue | undefined) => {
       const key = answerKeyOf(column);
-      const before = row.record.answers[key];
+      const before = new Map(Object.entries(row.record.answers)).get(key);
       if (JSON.stringify(before) === JSON.stringify(value)) return;
       // The API merges answers into the stored ones; a blank value clears a question.
       await patch(
@@ -311,7 +313,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           const [from, to] = [Math.min(anchor, index), Math.max(anchor, index)];
           const turnOn = !current.has(id);
           for (let i = from; i <= to; i += 1) {
-            const rowId = rows[i]?.id;
+            const rowId = rows.at(i)?.id;
             if (!rowId) continue;
             if (turnOn) next.add(rowId);
             else next.delete(rowId);
@@ -1045,7 +1047,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           onDelete={async () => {
             try {
               await formsAdminApi.bulk(form.id, { ids: [openRow.id], action: "delete" });
-              const next = rows[openIndex + 1] ?? rows[openIndex - 1];
+              const next = rowAt(openIndex + 1) ?? rowAt(openIndex - 1);
               updateResponses(form.id, (responses) =>
                 responses.filter((response) => response.id !== openRow.id),
               );
@@ -1061,7 +1063,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           onOpenFile={openFiles}
           onPatch={(body) => patch(openRow, body)}
           onStep={(delta) => {
-            const next = rows[openIndex + delta];
+            const next = rowAt(openIndex + delta);
             if (next) setOpenId(next.id);
           }}
           position={Math.max(0, openIndex)}

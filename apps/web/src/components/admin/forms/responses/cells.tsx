@@ -263,7 +263,7 @@ export function MatrixMini({
   value,
 }: {
   field: FormField;
-  value: Record<string, string | string[]>;
+  value: Partial<Record<string, string | string[]>>;
 }) {
   const rows = field.rowsList ?? [];
   const columns = field.columnsList ?? [];
@@ -310,7 +310,7 @@ export function CellView({
 }) {
   const empty = <span className="text-[#c3c9d4] dark:text-white/15">—</span>;
   if (column.group === "meta") {
-    const value = metaValue(column.key, row.record);
+    const value: ReturnType<typeof metaValue> | undefined = metaValue(column.key, row.record);
     if (
       value === null ||
       value === undefined ||
@@ -365,7 +365,7 @@ export function CellView({
   }
 
   const field = column.field;
-  const value = answerValue(column, row.answers);
+  const value: ReturnType<typeof answerValue> | null = answerValue(column, row.answers);
   if (!field || value === undefined || value === null || value === "") return empty;
 
   if (column.answer?.part?.kind === "other")
@@ -526,17 +526,15 @@ const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 });
 
+const DATE_ANSWER = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DATE_TIME_ANSWER = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
 /** Wall-clock answers (`YYYY-MM-DD`, `YYYY-MM-DDTHH:mm`, `HH:mm`) in the admin's locale, never shifted. */
 export function formatAnswerDate(field: Pick<FormField, "type">, text: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(text);
+  const match = DATE_TIME_ANSWER.exec(text) ?? DATE_ANSWER.exec(text);
   if (!match) return text;
-  const date = new Date(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-    Number(match[4] ?? 0),
-    Number(match[5] ?? 0),
-  );
+  const [, year, month, day, hour = "0", minute = "0"] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
   return field.type === "datetime" ? dateTimeFormat.format(date) : dateFormat.format(date);
 }
 

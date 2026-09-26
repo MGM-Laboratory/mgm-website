@@ -22,10 +22,8 @@ export function withAnswer(
   value: FormAnswerValue | undefined,
 ): FormAnswers {
   const key = answerKeyOf(column);
-  const next = { ...answers };
-  if (value === undefined) delete next[key];
-  else next[key] = value;
-  return next;
+  if (value !== undefined) return { ...answers, [key]: value };
+  return Object.fromEntries(Object.entries(answers).filter(([name]) => name !== key));
 }
 
 /**
@@ -46,7 +44,7 @@ export function AnswerEditor({
   compact?: boolean;
 }) {
   const field = column.field;
-  const original = answerValue(column, answers);
+  const original: FormAnswerValue | null | undefined = answerValue(column, answers);
   const isOther = column.answer?.part?.kind === "other";
   const [text, setText] = useState(() => {
     if (original === undefined || original === null) return "";
@@ -63,9 +61,11 @@ export function AnswerEditor({
   const ref = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const element = ref.current as HTMLInputElement | null;
+    const element = ref.current;
     element?.focus();
-    if (element && "select" in element && typeof element.select === "function") element.select();
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      element.select();
+    }
   }, []);
 
   if (!field) return null;

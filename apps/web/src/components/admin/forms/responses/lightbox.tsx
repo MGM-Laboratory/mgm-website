@@ -43,7 +43,7 @@ export function Lightbox({
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const [dragging, setDragging] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const item = items[index];
+  const item = index >= 0 ? items.at(index) : undefined;
 
   const go = useCallback(
     (delta: number) => {
@@ -56,13 +56,14 @@ export function Lightbox({
   );
 
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
+    const active = document.activeElement;
+    const previous = active instanceof HTMLElement || active instanceof SVGElement ? active : null;
     dialogRef.current?.focus();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = overflow;
-      previous?.focus?.();
+      previous?.focus();
     };
   }, []);
 
@@ -175,6 +176,12 @@ export function Lightbox({
             onClick={() => {
               if (zoom === 1) setZoom(2);
             }}
+            onKeyDown={(event) => {
+              // Enter or Space zooms in, like a click (+ and - work anywhere).
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              if (zoom === 1) setZoom(2);
+            }}
             onPointerDown={(event) => {
               if (zoom <= 1) return;
               drag.current = { x: event.clientX, y: event.clientY, ox: offset.x, oy: offset.y };
@@ -197,11 +204,13 @@ export function Lightbox({
                 Math.max(1, Math.min(6, value * (event.deltaY < 0 ? 1.15 : 1 / 1.15))),
               );
             }}
+            role="button"
             src={formFileUrl(formId, item.key)}
             style={{
               transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
               transition: dragging ? "none" : "transform 160ms ease-out",
             }}
+            tabIndex={0}
           />
         ) : video ? (
           <video

@@ -83,6 +83,8 @@ export function Popover({
   );
 }
 
+const opLabels = new Map(Object.entries(FILTER_OP_LABELS));
+
 function optionsFor(column: DataColumn, rows: WorkingRow[]) {
   if (column.options?.length) return column.options;
   // Meta choices (countries, devices...): the values present, most common first.
@@ -130,7 +132,7 @@ export function FilterEditor({
         >
           {ops.map((op) => (
             <option key={op} value={op}>
-              {FILTER_OP_LABELS[op]}
+              {opLabels.get(op)}
             </option>
           ))}
         </select>
