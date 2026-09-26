@@ -356,10 +356,10 @@ const RuleRow = memo(function RuleRow({
   const operators = type ? operatorsFor(type) : [];
 
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-[#e3e7f0] bg-[#fbfcfe] p-2.5 sm:flex-row sm:flex-wrap sm:items-center dark:border-white/10 dark:bg-white/[0.025]">
+    <li className="flex flex-col gap-2 rounded-xl border border-[#e3e7f0] bg-[#fbfcfe] p-2.5 @xl:flex-row @xl:flex-wrap @xl:items-center dark:border-white/10 dark:bg-white/[0.025]">
       <select
         aria-label={`Rule ${index + 1} question`}
-        className={`${smallInputClass} min-w-0 sm:max-w-[15rem] sm:flex-1`}
+        className={`${smallInputClass} min-w-0 @xl:max-w-[15rem] @xl:flex-1`}
         disabled={readOnly}
         onChange={(event) => {
           const subject = event.target.value;
@@ -388,7 +388,7 @@ const RuleRow = memo(function RuleRow({
       </select>
       <select
         aria-label={`Rule ${index + 1} comparison`}
-        className={`${smallInputClass} sm:w-44`}
+        className={`${smallInputClass} @xl:w-44`}
         disabled={readOnly}
         onChange={(event) => {
           const operator = event.target.value as FormOperator;
@@ -402,7 +402,7 @@ const RuleRow = memo(function RuleRow({
           </option>
         ))}
       </select>
-      <div className="min-w-0 sm:flex-1">
+      <div className="min-w-0 @xl:flex-1">
         <ValueEditor
           field={field}
           isScore={isScore}
@@ -414,7 +414,7 @@ const RuleRow = memo(function RuleRow({
       {readOnly ? null : (
         <button
           aria-label={`Remove rule ${index + 1}`}
-          className={`${iconButtonClass} self-end sm:self-auto hover:!text-brand-red`}
+          className={`${iconButtonClass} self-end @xl:self-auto hover:!text-brand-red`}
           onClick={() => onRemove(index)}
           type="button"
         >
@@ -498,7 +498,7 @@ export function RuleBuilder({
         ) : null}
       </div>
       {rules.length ? (
-        <ul className="space-y-1.5">
+        <ul className="@container space-y-1.5">
           {rules.map((rule, index) => (
             <RuleRow
               allowScore={allowScore}
