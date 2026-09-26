@@ -23,6 +23,8 @@ import { parseVideoUploadBody } from "../cms/video-validation.util.js";
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { FormsError, runForms } from "./forms.common.js";
+import { clampTzOffset, parseRange } from "./forms.analytics.js";
+import { FormsAnalyticsService } from "./forms-analytics.service.js";
 import { FormsResponsesService } from "./forms-responses.service.js";
 import {
   applySchema,
@@ -45,6 +47,7 @@ export class FormsAdminController {
   constructor(
     private readonly forms: FormsService,
     private readonly responses: FormsResponsesService,
+    private readonly analyticsService: FormsAnalyticsService,
     private readonly storage: StorageService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -237,5 +240,31 @@ export class FormsAdminController {
     response.setHeader("Cache-Control", "private, no-store");
     response.setHeader("X-Content-Type-Options", "nosniff");
     response.send(file.body);
+  }
+
+  // --- Traffic ---
+
+  @Get(":id/analytics")
+  async analytics(
+    @Param("id") id: string,
+    @Query("range") range: unknown,
+    @Query("tzOffset") tzOffset: unknown,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    return runForms(() =>
+      this.analyticsService.analytics(id, parseRange(range), clampTzOffset(tzOffset)),
+    );
+  }
+
+  @Get(":id/visits")
+  async visits(
+    @Param("id") id: string,
+    @Query("limit") limit: unknown,
+    @Headers("x-cms-passphrase") passphrase = "",
+  ) {
+    this.assertAdmin(passphrase);
+    const count = limit === undefined ? 200 : Number(limit);
+    return { visits: await runForms(() => this.analyticsService.visits(id, count)) };
   }
 }
