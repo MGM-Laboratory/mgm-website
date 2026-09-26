@@ -277,6 +277,16 @@ test.describe("date and time pickers", () => {
         .click();
       await dialog(page).getByRole("button", { name: "Done" }).click();
     } else {
+      // A click opens the panel with focus kept in the field; ArrowDown moves
+      // in, and focus leaving for another field closes it.
+      await field(page, "call").click();
+      await expect(dialog(page)).toBeVisible();
+      await expect(field(page, "call")).toBeFocused();
+      await page.keyboard.press("ArrowDown");
+      await expect(dialog(page).locator('[role="gridcell"][tabindex="0"]')).toBeFocused();
+      await field(page, "arrival").focus();
+      await expect(dialog(page)).toBeHidden();
+
       // Typed values are read leniently; one that can't be read says so.
       await field(page, "call").fill("27/09/2026 9:05 am");
       await field(page, "call").blur();
