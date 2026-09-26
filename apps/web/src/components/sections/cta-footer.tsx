@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import gsap from "gsap";
@@ -107,7 +107,13 @@ function BackToTop() {
   );
 }
 
-export function CtaFooter() {
+/**
+ * The footer every page shares. `lead` is an optional block rendered at its
+ * top, for a page's own closing words: the homepage passes its "Your turn"
+ * finale (components/home-extras/home-finale.tsx) there, and every other
+ * page leaves it out, so their footer reads exactly as before.
+ */
+export function CtaFooter({ lead }: { lead?: ReactNode } = {}) {
   const rootRef = useRef<HTMLElement>(null);
   const wordmarkTrackRef = useRef<HTMLDivElement>(null);
   const year = new Date().getFullYear();
@@ -143,6 +149,7 @@ export function CtaFooter() {
 
   return (
     <footer ref={rootRef} className="relative overflow-hidden bg-background text-foreground">
+      {lead}
       <div className="footer-reveal mx-auto grid max-w-5xl gap-10 px-6 py-14 sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-end lg:px-16">
         <div>
           <Image src="/logo.svg" alt="MGM Laboratory" width={32} height={32} />
