@@ -37,7 +37,12 @@ export function blankDocument(title = "Untitled form"): FormDocument {
           content: [
             {
               type: "paragraph",
-              content: [{ type: "text", text: "Your answers are in. We appreciate your time." }],
+              content: [
+                {
+                  type: "text",
+                  text: "Your answers are safely in. Thank you, truly, for the time and care you put into them: every reply is read, and it shapes what we do next.",
+                },
+              ],
             },
           ],
         },

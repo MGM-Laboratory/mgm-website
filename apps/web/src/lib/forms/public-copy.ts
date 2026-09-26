@@ -95,6 +95,8 @@ type Copy = {
   autoAdvance: string;
   preview: string;
   thanks: string;
+  /** Shown under the title when an ending has no message of its own. */
+  thanksBody: string;
 };
 
 const en: Copy = {
@@ -195,6 +197,8 @@ const en: Copy = {
   autoAdvance: "Moving on",
   preview: "Preview",
   thanks: "Thank you",
+  thanksBody:
+    "Your answers are safely in. Thank you, truly, for the time and care you put into them: every reply is read, and it shapes what we do next.",
 };
 
 const id: Copy = {
@@ -296,6 +300,8 @@ const id: Copy = {
   autoAdvance: "Lanjut",
   preview: "Pratinjau",
   thanks: "Terima kasih",
+  thanksBody:
+    "Jawabanmu sudah kami terima dengan aman. Terima kasih banyak atas waktu dan perhatian yang kamu berikan: setiap jawaban kami baca, dan itu menentukan langkah kami berikutnya.",
 };
 
 export const FORM_COPY: Record<FormLanguage, Copy> = { en, id };
