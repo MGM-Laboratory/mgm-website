@@ -536,9 +536,10 @@ export class PlayerEngine {
     const track = this.boxes.track;
     if (!this.reduced && track) {
       this.burst.fire(track.x + track.width, track.y + track.height / 2, {
-        from: -172,
-        to: -38,
-        speed: [420, 1050],
+        from: -168,
+        to: -44,
+        speed: [680, 1420],
+        life: [1.15, 1.7],
       });
       const ticks = Array.from(this.el.ticks.children);
       this.tweens.push(

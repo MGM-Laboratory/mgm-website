@@ -84,7 +84,7 @@ function outline(glyph: Glyph, u: number): Point[] {
     case "star": {
       // The lab notes' star: four tips joined by quarter circles centred
       // on the corners of its box.
-      const r = 32 * u;
+      const r = 38 * u;
       arc(out, r, -r, r, Math.PI, Math.PI / 2);
       arc(out, r, r, r, (Math.PI * 3) / 2, Math.PI);
       arc(out, -r, r, r, Math.PI * 2, (Math.PI * 3) / 2);
