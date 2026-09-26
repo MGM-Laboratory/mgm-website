@@ -259,7 +259,12 @@ export async function submitFormResponse(
       message: typeof body.message === "string" ? body.message : undefined,
     };
   }
-  if (status === 409) return { kind: "conflict", reason: conflictReason(body) };
+  if (status === 409) {
+    // A file sent twice is a problem with this submission, not with the form.
+    const message = typeof body.message === "string" ? body.message : "";
+    if (/file/i.test(message)) return { kind: "failed", message };
+    return { kind: "conflict", reason: conflictReason(body) };
+  }
   return { kind: "failed", message: typeof body.message === "string" ? body.message : undefined };
 }
 

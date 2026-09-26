@@ -274,7 +274,7 @@ export function Combobox(props: Props) {
         className="fx-listbox"
         hidden={!open}
       >
-        {matches.length ? (
+        {!open ? null : matches.length ? (
           matches.map((option, index) => {
             const isSelected = selected.includes(option.id);
             const disabled = !isSelected && full;
