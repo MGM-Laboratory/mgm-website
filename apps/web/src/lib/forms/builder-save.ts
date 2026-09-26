@@ -144,14 +144,16 @@ export function useAutosave({
   useEffect(
     () => () => {
       // Unmounting (switching workspace) with a valid unsaved document:
-      // fire one last save. The request outlives the component because the
+      // queue one last save. The request outlives the component because the
       // page itself stays open; a full page unload is covered by the
       // beforeunload warning above.
       const current = latest.current;
       if (!canWrite || current.document === current.savedRaw || !current.parsed) return;
-      void formsAdminApi.update(formId, { document: current.parsed }).catch(() => undefined);
+      // Through the same queue as every other save: behind a request that is
+      // still out, so the newest document is always the last one written.
+      void send(current.document, current.parsed);
     },
-    [canWrite, formId],
+    [canWrite, send],
   );
 
   let status: SaveStatus;
