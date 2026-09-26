@@ -51,7 +51,7 @@ function PatternBlock({
   offset,
 }: {
   pattern: FormPattern;
-  corner: "tl" | "br";
+  corner: "tr" | "br";
   cols: number;
   rows: number;
   offset: number;
@@ -61,7 +61,7 @@ function PatternBlock({
   const kept = (index: number) => {
     const col = index % cols;
     const row = Math.floor(index / cols);
-    const fromEdge = corner === "tl" ? col + row : cols - 1 - col + (rows - 1 - row);
+    const fromEdge = corner === "tr" ? cols - 1 - col + row : cols - 1 - col + (rows - 1 - row);
     return fromEdge < Math.max(cols, rows);
   };
   return (
@@ -138,7 +138,7 @@ export function FormBackdrop({
           aria-hidden
           style={{ opacity: Math.max(0.25, 1 - background.dim / 100) }}
         >
-          <PatternBlock pattern={background.pattern} corner="tl" cols={3} rows={2} offset={0} />
+          <PatternBlock pattern={background.pattern} corner="tr" cols={3} rows={2} offset={0} />
           <PatternBlock pattern={background.pattern} corner="br" cols={4} rows={3} offset={5} />
         </div>
       ) : null}

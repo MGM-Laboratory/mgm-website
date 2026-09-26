@@ -292,9 +292,9 @@ h5.fx-rich-heading {
   height: var(--tile);
   display: block;
 }
-.fx-pattern-block[data-corner="tl"] {
-  left: 0;
-  top: 0;
+.fx-pattern-block[data-corner="tr"] {
+  right: 0;
+  top: 64px;
 }
 .fx-pattern-block[data-corner="br"] {
   right: 0;
