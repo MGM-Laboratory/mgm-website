@@ -225,6 +225,15 @@ export function ripple(chars: HTMLElement[], from: number, size: number) {
   });
 }
 
+/** A letter the cursor runs over bobs up like a key, then settles. */
+export function bob(char: HTMLElement, size: number) {
+  if (gsap.isTweening(char)) return;
+  gsap
+    .timeline()
+    .to(char, { y: -size * 0.09, duration: 0.14, ease: "power2.out" })
+    .to(char, { y: 0, duration: 0.6, ease: "elastic.out(1, 0.35)" });
+}
+
 /** A letter something landed on gives under it, then springs back. */
 export function dip(char: HTMLElement, amount: number, size: number) {
   gsap.fromTo(

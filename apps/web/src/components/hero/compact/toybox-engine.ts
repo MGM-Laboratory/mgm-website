@@ -802,6 +802,14 @@ export function createToybox(options: ToyboxOptions): Toybox {
     }
   });
 
+  // A cursor running over the words bobs each letter it touches.
+  const onLetterOver = (event: PointerEvent) => {
+    if (event.pointerType === "touch" || grab) return;
+    const char = (event.target as HTMLElement).closest?.(".toybox-char") as HTMLElement | null;
+    if (char) fx.bob(char, size);
+  };
+  words.addEventListener("pointerover", onLetterOver);
+
   // Tapping a word bounces its letters and tosses whatever sits on it.
   const wordOff: (() => void)[] = [];
   wordEls.forEach((wordEl, word) => {
@@ -1144,6 +1152,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
       layer.removeEventListener("touchend", onTouchEnd);
       layer.removeEventListener("touchcancel", onTouchEnd);
       layer.removeEventListener("dragstart", noDrag);
+      words.removeEventListener("pointerover", onLetterOver);
       debug?.canvas.remove();
       Events.off(engine, "collisionStart");
       Composite.clear(world, false, true);
