@@ -37,7 +37,7 @@ export function ArticlesSection({ initialRecords = [] }: { initialRecords?: CmsA
             >
               <ArticleCover src={cover} className="aspect-[4/3] rounded-xl" />
               {record.article.categories[0] ? (
-                <p className="mt-3 text-xs font-medium tracking-wide text-foreground/45 uppercase">
+                <p className="mt-3 text-xs font-medium tracking-wide text-foreground/60 uppercase">
                   {record.article.categories[0]}
                 </p>
               ) : null}

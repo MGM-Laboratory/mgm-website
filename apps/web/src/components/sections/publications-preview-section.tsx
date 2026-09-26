@@ -78,26 +78,55 @@ export function PublicationsPreviewSection({
                   .filter(Boolean)
                   .join(" · ");
                 return (
+                  // Hover or focus: a blue bar grows down the left edge, the
+                  // text slides in after it with a little overshoot, and an
+                  // arrow draws itself (shaft, then head) beside the year.
+                  // CSS only, nothing here is touched by GSAP.
                   <Link
                     key={record.slug}
                     href={`/publications/${record.slug}`}
-                    className="group flex items-start justify-between gap-4 px-5 py-4 transition-colors hover:bg-[var(--surface-muted)]"
+                    className="group relative flex items-start justify-between gap-4 px-5 py-4 transition-colors duration-300 outline-none hover:bg-foreground/[0.03] focus-visible:bg-foreground/[0.04]"
                   >
-                    <div className="min-w-0">
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-3 left-0 w-[3px] origin-top scale-y-0 rounded-full bg-brand-blue transition-transform duration-300 ease-out group-hover:scale-y-100 group-focus-visible:scale-y-100 motion-reduce:transition-none"
+                    />
+                    <div className="min-w-0 transition-transform duration-500 ease-[cubic-bezier(.2,.9,.25,1.3)] group-hover:translate-x-2 group-focus-visible:translate-x-2 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 motion-reduce:group-focus-visible:translate-x-0">
                       {venue ? (
-                        <p className="truncate text-xs font-medium tracking-wide text-foreground/45 uppercase">
+                        <p className="truncate text-xs font-medium tracking-wide text-foreground/60 uppercase">
                           {venue}
                         </p>
                       ) : null}
-                      <h3 className="mt-1 truncate font-display font-medium text-foreground transition group-hover:text-brand-blue">
+                      <h3 className="mt-1 truncate font-display font-medium text-foreground transition group-hover:text-brand-blue group-focus-visible:text-brand-blue">
                         {publication.title}
                       </h3>
                       {authors ? (
                         <p className="mt-1 truncate text-sm text-foreground/60">{authors}</p>
                       ) : null}
                     </div>
-                    <span className="shrink-0 text-xs font-medium whitespace-nowrap text-foreground/40">
+                    <span className="flex shrink-0 items-center gap-2 text-xs font-medium whitespace-nowrap text-foreground/60">
                       {publication.date.slice(0, 4)}
+                      <svg
+                        aria-hidden
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.25}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="size-4 text-brand-blue"
+                      >
+                        <path
+                          d="M4 12H19"
+                          pathLength={1}
+                          className="[stroke-dasharray:1] [stroke-dashoffset:1] transition-[stroke-dashoffset] duration-300 ease-out group-hover:[stroke-dashoffset:0] group-focus-visible:[stroke-dashoffset:0] motion-reduce:transition-none"
+                        />
+                        <path
+                          d="M13 6L19 12L13 18"
+                          pathLength={1}
+                          className="[stroke-dasharray:1] [stroke-dashoffset:1] transition-[stroke-dashoffset] duration-200 ease-out group-hover:[stroke-dashoffset:0] group-hover:delay-200 group-focus-visible:[stroke-dashoffset:0] group-focus-visible:delay-200 motion-reduce:transition-none motion-reduce:group-hover:delay-0"
+                        />
+                      </svg>
                     </span>
                   </Link>
                 );
