@@ -56,7 +56,9 @@ export function SignatureField({
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       if (snapshot) {
         const image = new Image();
-        image.onload = () => context.drawImage(image, 0, 0, rect.width, rect.height);
+        image.onload = () => {
+          context.drawImage(image, 0, 0, rect.width, rect.height);
+        };
         image.src = snapshot;
       }
     };

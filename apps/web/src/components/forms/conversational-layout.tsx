@@ -231,7 +231,9 @@ export function ConversationalLayout({
   // Any other input cancels a pending auto-advance.
   useEffect(() => {
     if (!pending) return;
-    const cancel = () => cancelAuto();
+    const cancel = () => {
+      cancelAuto();
+    };
     const timer = window.setTimeout(() => {
       window.addEventListener("pointerdown", cancel, { once: true, capture: true });
     }, 50);
@@ -240,7 +242,12 @@ export function ConversationalLayout({
       window.removeEventListener("pointerdown", cancel, { capture: true });
     };
   }, [pending, cancelAuto]);
-  useEffect(() => () => window.clearTimeout(autoTimer.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(autoTimer.current);
+    },
+    [],
+  );
 
   // Keyboard: Enter, letters, digits, arrows.
   useEffect(() => {
@@ -296,7 +303,9 @@ export function ConversationalLayout({
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, [cancelAuto]);
 
   // The admin preview asks for one field: jump straight to it (the runner set the trail).
@@ -307,7 +316,9 @@ export function ConversationalLayout({
         ?.querySelector<HTMLElement>("input, textarea, [tabindex='0']")
         ?.focus({ preventScroll: true });
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
   }, [focusFieldId, focusNonce, mode]);
 
   if (!step) return null;

@@ -132,7 +132,9 @@ export function ClassicLayout({
         .querySelector<HTMLElement>("input, textarea, [tabindex='0']")
         ?.focus({ preventScroll: true });
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
   }, [focusFieldId, focusNonce, mode]);
 
   const go = (nextTrail: string[]) => {

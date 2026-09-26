@@ -108,7 +108,9 @@ function ShareRow() {
               ?.writeText(url)
               .then(() => {
                 setCopied(true);
-                window.setTimeout(() => setCopied(false), 2200);
+                window.setTimeout(() => {
+                  setCopied(false);
+                }, 2200);
               })
               .catch(() => undefined);
           }}
@@ -141,7 +143,9 @@ function Redirect({ url, seconds }: { url: string; seconds: number }) {
       // Visible time only: a background tab doesn't leave on its own.
       if (!document.hidden) setLeft((value) => Math.max(0, value - 1));
     }, 1000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+    };
   }, [cancelled]);
   useEffect(() => {
     if (!cancelled && left <= 0 && mode === "live") window.location.assign(url);
@@ -155,7 +159,13 @@ function Redirect({ url, seconds }: { url: string; seconds: number }) {
         style={{ ["--left" as string]: seconds ? left / seconds : 0 } as React.CSSProperties}
       />
       <span>{copy.redirecting(Math.max(0, left))}</span>
-      <button type="button" className="fx-link-button" onClick={() => setCancelled(true)}>
+      <button
+        type="button"
+        className="fx-link-button"
+        onClick={() => {
+          setCancelled(true);
+        }}
+      >
         {copy.cancel}
       </button>
     </div>

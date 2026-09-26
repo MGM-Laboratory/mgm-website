@@ -111,7 +111,13 @@ export function FormMediaView({
       ) : (
         <span className="fx-media-placeholder" aria-hidden />
       )}
-      <button type="button" className="fx-media-play" onClick={() => setPlaying(true)}>
+      <button
+        type="button"
+        className="fx-media-play"
+        onClick={() => {
+          setPlaying(true);
+        }}
+      >
         <span className="fx-media-play-disc">
           <Play aria-hidden strokeWidth={2.25} size={22} />
         </span>

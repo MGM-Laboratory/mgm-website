@@ -17,7 +17,9 @@ const coarseQuery = "(pointer: coarse) and (max-width: 820px)";
 function subscribeCoarse(callback: () => void) {
   const query = window.matchMedia(coarseQuery);
   query.addEventListener("change", callback);
-  return () => query.removeEventListener("change", callback);
+  return () => {
+    query.removeEventListener("change", callback);
+  };
 }
 function useCoarse() {
   return useSyncExternalStore(
@@ -96,7 +98,9 @@ export function Combobox(props: Props) {
         <select
           id={inputId}
           value={props.value ?? ""}
-          onChange={(event) => props.onChange(event.target.value || undefined)}
+          onChange={(event) => {
+            props.onChange(event.target.value || undefined);
+          }}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
           aria-required={required || undefined}
@@ -248,8 +252,12 @@ export function Combobox(props: Props) {
             setOpen(true);
             setActive(0);
           }}
-          onClick={() => setOpen(true)}
-          onFocus={() => setOpen(true)}
+          onClick={() => {
+            setOpen(true);
+          }}
+          onFocus={() => {
+            setOpen(true);
+          }}
           onKeyDown={onKeyDown}
         />
         <button
@@ -257,7 +265,9 @@ export function Combobox(props: Props) {
           tabIndex={-1}
           className="fx-combo-toggle"
           aria-hidden
-          onMouseDown={(event) => event.preventDefault()}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
           onClick={() => {
             setOpen((value) => !value);
             inputRef.current?.focus();
@@ -288,9 +298,15 @@ export function Combobox(props: Props) {
                 data-active={index === active ? "" : undefined}
                 data-index={index}
                 className="fx-option"
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseMove={() => setActive(index)}
-                onClick={() => choose(option)}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                }}
+                onMouseMove={() => {
+                  setActive(index);
+                }}
+                onClick={() => {
+                  choose(option);
+                }}
               >
                 <span className="fx-option-check" aria-hidden>
                   {isSelected ? <Check strokeWidth={2.25} size={16} /> : null}

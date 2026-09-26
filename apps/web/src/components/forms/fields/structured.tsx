@@ -33,7 +33,9 @@ export function DateField({
         value={typeof value === "string" ? value : ""}
         min={field.minDate}
         max={field.maxDate}
-        onChange={(event) => onChange(event.target.value || undefined)}
+        onChange={(event) => {
+          onChange(event.target.value || undefined);
+        }}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         aria-required={field.required || undefined}
@@ -57,9 +59,9 @@ export function TimeField({
         id={inputId}
         type="time"
         value={typeof value === "string" ? value : ""}
-        onChange={(event) =>
-          onChange(event.target.value ? event.target.value.slice(0, 5) : undefined)
-        }
+        onChange={(event) => {
+          onChange(event.target.value ? event.target.value.slice(0, 5) : undefined);
+        }}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         aria-required={field.required || undefined}
@@ -85,9 +87,9 @@ export function DateTimeField({
         value={typeof value === "string" ? value : ""}
         min={field.minDate ? `${field.minDate}T00:00` : undefined}
         max={field.maxDate ? `${field.maxDate}T23:59` : undefined}
-        onChange={(event) =>
-          onChange(event.target.value ? event.target.value.slice(0, 16) : undefined)
-        }
+        onChange={(event) => {
+          onChange(event.target.value ? event.target.value.slice(0, 16) : undefined);
+        }}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         aria-required={field.required || undefined}
@@ -136,7 +138,9 @@ export function NameField({
             value={parts[part] ?? ""}
             maxLength={200}
             autoComplete={part === "first" ? "given-name" : "family-name"}
-            onChange={(event) => onChange(withPart(parts, part, event.target.value))}
+            onChange={(event) => {
+              onChange(withPart(parts, part, event.target.value));
+            }}
             aria-invalid={(invalid && part === "first") || undefined}
             aria-describedby={describedBy}
             aria-required={(field.required && part === "first") || undefined}
@@ -230,7 +234,9 @@ export function AddressField({
               <CountryPicker
                 inputId={id}
                 value={parts.country}
-                onChange={(code) => onChange(withPart(parts, "country", code ?? ""))}
+                onChange={(code) => {
+                  onChange(withPart(parts, "country", code ?? ""));
+                }}
                 describedBy={describedBy}
               />
             ) : (
@@ -241,7 +247,9 @@ export function AddressField({
                 value={parts[part] ?? ""}
                 maxLength={300}
                 autoComplete={ADDRESS_AUTOCOMPLETE[part]}
-                onChange={(event) => onChange(withPart(parts, part, event.target.value))}
+                onChange={(event) => {
+                  onChange(withPart(parts, part, event.target.value));
+                }}
                 aria-invalid={(invalid && part === "line1") || undefined}
                 aria-describedby={describedBy}
                 aria-required={(field.required && part === "line1") || undefined}
@@ -341,7 +349,9 @@ export function ColorField({
         <input
           type="color"
           value={current ?? "#3a6dc5"}
-          onChange={(event) => onChange(event.target.value.toLowerCase())}
+          onChange={(event) => {
+            onChange(event.target.value.toLowerCase());
+          }}
           aria-label={copy.customColor}
         />
         <span

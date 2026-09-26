@@ -43,7 +43,9 @@ export function Rating({
       role="radiogroup"
       aria-describedby={describedBy}
       aria-invalid={invalid || undefined}
-      onPointerLeave={() => setHover(null)}
+      onPointerLeave={() => {
+        setHover(null);
+      }}
     >
       {Array.from({ length: count }, (_, index) => {
         const rating = index + 1;
@@ -55,7 +57,9 @@ export function Rating({
             data-preview={hover !== null && rating <= hover ? "" : undefined}
             data-choice-key={rating <= 9 ? String(rating) : undefined}
             style={{ ["--i" as string]: index } as CSSProperties}
-            onPointerEnter={() => setHover(rating)}
+            onPointerEnter={() => {
+              setHover(rating);
+            }}
           >
             <input
               type="radio"
@@ -197,7 +201,9 @@ export function Slider({
           max={max}
           step={step}
           value={current}
-          onChange={(event) => onChange(Number(event.target.value))}
+          onChange={(event) => {
+            onChange(Number(event.target.value));
+          }}
           onPointerDown={() => {
             if (!touched) onChange(current);
           }}
@@ -280,7 +286,9 @@ export function Matrix({
                     name={`fx-${field.id}-${row.id}`}
                     className="fx-choice-input"
                     checked={checked}
-                    onChange={() => set(row.id, column.id)}
+                    onChange={() => {
+                      set(row.id, column.id);
+                    }}
                   />
                   <span className="fx-matrix-dot" aria-hidden />
                   <span className="fx-matrix-cell-label">{column.label}</span>

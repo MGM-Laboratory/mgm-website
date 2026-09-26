@@ -122,8 +122,12 @@ export class FormSceneEngine {
 
     this.camera = new THREE.PerspectiveCamera(FOV, 1, 10, 20000);
     const tier = small || window.matchMedia("(pointer: coarse)").matches ? "medium" : "high";
-    this.governor = new QualityGovernor(tier, () => this.applyPixelRatio());
-    this.hopeless = new HopelessWatch(() => this.options.onFail());
+    this.governor = new QualityGovernor(tier, () => {
+      this.applyPixelRatio();
+    });
+    this.hopeless = new HopelessWatch(() => {
+      this.options.onFail();
+    });
 
     // Light: a soft sky and one key light from the upper left, bright enough
     // that the flat faces keep the palette's colours.
@@ -232,26 +236,39 @@ export class FormSceneEngine {
     this.setColors(options.colors);
 
     this.resize();
-    const onResize = () => this.resize();
+    const onResize = () => {
+      this.resize();
+    };
     window.addEventListener("resize", onResize);
-    this.cleanup.push(() => window.removeEventListener("resize", onResize));
+    this.cleanup.push(() => {
+      window.removeEventListener("resize", onResize);
+    });
     if (options.interactive && window.matchMedia("(pointer: fine)").matches) {
       const onMove = (event: PointerEvent) => {
         this.pointer.set(event.clientX / this.width - 0.5, event.clientY / this.height - 0.5);
       };
       window.addEventListener("pointermove", onMove, { passive: true });
-      this.cleanup.push(() => window.removeEventListener("pointermove", onMove));
+      this.cleanup.push(() => {
+        window.removeEventListener("pointermove", onMove);
+      });
     }
-    const onVisibility = () => (document.hidden ? this.stop() : this.start());
+    const onVisibility = () => {
+      if (document.hidden) this.stop();
+      else this.start();
+    };
     document.addEventListener("visibilitychange", onVisibility);
-    this.cleanup.push(() => document.removeEventListener("visibilitychange", onVisibility));
+    this.cleanup.push(() => {
+      document.removeEventListener("visibilitychange", onVisibility);
+    });
     const canvas = this.renderer.domElement;
     const onLost = (event: Event) => {
       event.preventDefault();
       this.options.onFail();
     };
     canvas.addEventListener("webglcontextlost", onLost);
-    this.cleanup.push(() => canvas.removeEventListener("webglcontextlost", onLost));
+    this.cleanup.push(() => {
+      canvas.removeEventListener("webglcontextlost", onLost);
+    });
 
     // Everything starts where it rests loose, so the first frame matches the DOM scene.
     for (const body of this.bodies) {

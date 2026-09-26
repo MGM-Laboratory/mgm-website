@@ -363,7 +363,9 @@ export function FormRun({
       if (!Object.keys(kept).length) return;
       saveAutosave(slug, { answers: kept, trail: state.trail, startedAt: state.startedAt });
     }, 400);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [
     answers,
     document.fields,
@@ -451,7 +453,9 @@ export function FormRun({
     },
     [markStarted],
   );
-  const touch = useCallback((fieldId: string) => dispatch({ type: "touch", ids: [fieldId] }), []);
+  const touch = useCallback((fieldId: string) => {
+    dispatch({ type: "touch", ids: [fieldId] });
+  }, []);
   const onFieldFocus = useCallback(
     (fieldId: string) => {
       bus.emit({ type: "focus", fieldId });
@@ -696,7 +700,9 @@ export function FormRun({
             {design.motion.sound ? (
               <SoundToggle
                 on={soundOn}
-                onToggle={() => setSoundOn((value) => !value)}
+                onToggle={() => {
+                  setSoundOn((value) => !value);
+                }}
                 copy={copy}
               />
             ) : null}
@@ -719,7 +725,9 @@ export function FormRun({
             {design.layout === "conversational" ? (
               <ConversationalLayout
                 trail={state.trail}
-                setTrail={(trail) => dispatch({ type: "trail", trail })}
+                setTrail={(trail) => {
+                  dispatch({ type: "trail", trail });
+                }}
                 check={check}
                 submit={submit}
                 submitting={submitting}
@@ -735,7 +743,9 @@ export function FormRun({
             ) : (
               <ClassicLayout
                 trail={state.trail}
-                setTrail={(trail) => dispatch({ type: "trail", trail })}
+                setTrail={(trail) => {
+                  dispatch({ type: "trail", trail });
+                }}
                 check={check}
                 submit={submit}
                 submitting={submitting}

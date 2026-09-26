@@ -53,7 +53,9 @@ export function ShortText({
         value={text}
         maxLength={max ?? FORM_LIMITS.textAnswerMax}
         placeholder={field.placeholder ?? maskHint(field.pattern)}
-        onChange={(event) => onChange(event.target.value || undefined)}
+        onChange={(event) => {
+          onChange(event.target.value || undefined);
+        }}
         aria-invalid={invalid || undefined}
         aria-describedby={
           [describedBy, max ? counterId : null].filter(Boolean).join(" ") || undefined
@@ -101,7 +103,9 @@ export function LongText({
         value={text}
         maxLength={max ?? FORM_LIMITS.textAnswerMax}
         placeholder={field.placeholder}
-        onChange={(event) => onChange(event.target.value || undefined)}
+        onChange={(event) => {
+          onChange(event.target.value || undefined);
+        }}
         onKeyDown={(event) => {
           if (
             conversational &&
@@ -151,8 +155,12 @@ export function EmailField({
         spellCheck={false}
         value={text}
         placeholder={field.placeholder ?? "name@example.com"}
-        onChange={(event) => onChange(event.target.value.trim() ? event.target.value : undefined)}
-        onBlur={() => setChecked(text)}
+        onChange={(event) => {
+          onChange(event.target.value.trim() ? event.target.value : undefined);
+        }}
+        onBlur={() => {
+          setChecked(text);
+        }}
         aria-invalid={invalid || undefined}
         aria-describedby={
           [describedBy, suggestion ? suggestionId : null].filter(Boolean).join(" ") || undefined
@@ -200,7 +208,9 @@ export function UrlField({
       spellCheck={false}
       value={text}
       placeholder={field.placeholder ?? "https://"}
-      onChange={(event) => onChange(event.target.value.trim() ? event.target.value : undefined)}
+      onChange={(event) => {
+        onChange(event.target.value.trim() ? event.target.value : undefined);
+      }}
       onBlur={() => {
         // A bare domain gets its scheme, so "labmgm.org" counts as a link.
         const trimmed = text.trim();
@@ -262,7 +272,9 @@ export function NumberField({
         type="button"
         className="fx-stepper"
         aria-label={copy.decrease}
-        onClick={() => nudge(-1)}
+        onClick={() => {
+          nudge(-1);
+        }}
         disabled={typeof value === "number" && field.min !== undefined && value <= field.min}
       >
         <Minus aria-hidden strokeWidth={2.25} size={18} />
@@ -281,7 +293,9 @@ export function NumberField({
             setDraft(text);
             commit(text);
           }}
-          onBlur={() => setDraft(null)}
+          onBlur={() => {
+            setDraft(null);
+          }}
           onKeyDown={(event) => {
             if (event.key === "ArrowUp") {
               event.preventDefault();
@@ -302,7 +316,9 @@ export function NumberField({
         type="button"
         className="fx-stepper"
         aria-label={copy.increase}
-        onClick={() => nudge(1)}
+        onClick={() => {
+          nudge(1);
+        }}
         disabled={typeof value === "number" && field.max !== undefined && value >= field.max}
       >
         <Plus aria-hidden strokeWidth={2.25} size={18} />
@@ -388,7 +404,9 @@ export function PhoneField({
         autoComplete="tel-national"
         value={parts.number}
         placeholder={field.placeholder ?? "812 3456 7890"}
-        onChange={(event) => emit(code, event.target.value)}
+        onChange={(event) => {
+          emit(code, event.target.value);
+        }}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         aria-required={field.required || undefined}

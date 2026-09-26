@@ -58,7 +58,9 @@ export function WelcomeStage({
       startRefCallback.current(hasDraft);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, [hasDraft]);
 
   const meta = (
@@ -122,7 +124,9 @@ export function WelcomeStage({
       <div className="fx-welcome-actions" data-stage-item="">
         <MagneticButton
           buttonRef={startRef}
-          onClick={() => onStart(Boolean(draft))}
+          onClick={() => {
+            onStart(Boolean(draft));
+          }}
           aria-describedby="fx-start-hint"
         >
           <span>{draft ? labels.resume : welcome.buttonLabel || labels.start}</span>

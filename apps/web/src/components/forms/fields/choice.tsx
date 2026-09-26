@@ -50,7 +50,9 @@ function OtherInput({ field, active }: { field: FormField; active: boolean }) {
       maxLength={2000}
       placeholder={copy.otherPlaceholder}
       aria-label={`${field.otherLabel || copy.other}: ${copy.otherPlaceholder}`}
-      onChange={(event) => setAnswer(key, event.target.value || undefined)}
+      onChange={(event) => {
+        setAnswer(key, event.target.value || undefined);
+      }}
     />
   );
 }
@@ -122,7 +124,9 @@ function ChoiceCards({
               checked={checked}
               disabled={disabled}
               className="fx-choice-input"
-              onChange={() => onToggle(card.id)}
+              onChange={() => {
+                onToggle(card.id);
+              }}
               onClick={(event) => {
                 // A second click on the chosen radio clears it.
                 if (!multiple && checked && event.detail > 0) {
@@ -550,12 +554,16 @@ export function Ranking({ field, value, onChange, describedBy, invalid }: FieldP
             aria-roledescription="sortable item"
             aria-describedby={`fx-${field.id}-rank-hint`}
             aria-label={`${labelOf(id)}, ${index + 1} / ${order.length}`}
-            onKeyDown={(event) => onKeyDown(event, id)}
+            onKeyDown={(event) => {
+              onKeyDown(event, id);
+            }}
           >
             <span
               className="fx-rank-grip"
               aria-hidden
-              onPointerDown={(event) => onPointerDown(event, id)}
+              onPointerDown={(event) => {
+                onPointerDown(event, id);
+              }}
             >
               <GripVertical strokeWidth={2.25} size={18} />
             </span>
@@ -596,7 +604,9 @@ export function Ranking({ field, value, onChange, describedBy, invalid }: FieldP
         <button
           type="button"
           className="fx-link-button fx-rank-keep"
-          onClick={() => onChange(order)}
+          onClick={() => {
+            onChange(order);
+          }}
         >
           <Check aria-hidden strokeWidth={2.25} size={16} /> {copy.keepOrder}
         </button>

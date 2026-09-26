@@ -86,7 +86,9 @@ export function FieldBlock({
     </>
   );
 
-  const onFocus = () => controller.onFieldFocus(field.id);
+  const onFocus = () => {
+    controller.onFieldFocus(field.id);
+  };
   const onBlur = (event: FocusEvent<HTMLElement>) => {
     const next = event.relatedTarget as Node | null;
     if (next && event.currentTarget.contains(next)) return;
@@ -98,7 +100,9 @@ export function FieldBlock({
       <Control
         field={field}
         value={answers[field.id] as never}
-        onChange={(value: FormAnswerValue | undefined) => setAnswer(field.id, value)}
+        onChange={(value: FormAnswerValue | undefined) => {
+          setAnswer(field.id, value);
+        }}
         inputId={inputId}
         describedBy={describedBy}
         invalid={Boolean(error)}

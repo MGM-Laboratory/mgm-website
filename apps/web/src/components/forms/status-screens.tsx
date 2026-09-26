@@ -170,7 +170,9 @@ export function LockedGate({
             autoComplete="off"
             autoFocus
             value={value}
-            onChange={(event) => setValue(event.target.value)}
+            onChange={(event) => {
+              setValue(event.target.value);
+            }}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? "fx-passphrase-error" : undefined}
           />
@@ -202,7 +204,9 @@ function useCountdown(target: string | undefined) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     if (!target) return;
-    const tick = () => setNow(Date.now());
+    const tick = () => {
+      setNow(Date.now());
+    };
     const first = window.setTimeout(tick, 0);
     const timer = window.setInterval(tick, 1000);
     return () => {

@@ -196,7 +196,14 @@ export function UploadField({
     if (!item.file) return;
     const abort = new AbortController();
     patch(item.id, { status: "uploading", progress: 0, message: undefined, abort });
-    uploadOne(item.file, item.name, (progress) => patch(item.id, { progress }), abort.signal)
+    uploadOne(
+      item.file,
+      item.name,
+      (progress) => {
+        patch(item.id, { progress });
+      },
+      abort.signal,
+    )
       .then((answer) => {
         patch(item.id, { status: "done", progress: 1, answer, abort: undefined });
         setAnnounce(`${item.name}: ${formatBytes(item.size)}`);
@@ -262,7 +269,9 @@ export function UploadField({
           event.preventDefault();
           if (!full) setDragging(true);
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragLeave={() => {
+          setDragging(false);
+        }}
         onDrop={(event) => {
           event.preventDefault();
           setDragging(false);
@@ -340,7 +349,9 @@ export function UploadField({
                 <button
                   type="button"
                   className="fx-icon-button"
-                  onClick={() => start(item)}
+                  onClick={() => {
+                    start(item);
+                  }}
                   aria-label={`${copy.retryUpload}: ${item.name}`}
                 >
                   <RotateCcw aria-hidden strokeWidth={2.25} size={16} />
@@ -349,7 +360,9 @@ export function UploadField({
               <button
                 type="button"
                 className="fx-icon-button"
-                onClick={() => remove(item)}
+                onClick={() => {
+                  remove(item);
+                }}
                 aria-label={copy.removeFile(item.name)}
               >
                 <X aria-hidden strokeWidth={2.25} size={16} />

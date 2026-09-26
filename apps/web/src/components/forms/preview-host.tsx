@@ -71,7 +71,9 @@ export function FormPreviewHost() {
     };
     window.addEventListener("message", onMessage);
     window.parent?.postMessage({ type: READY }, window.location.origin);
-    return () => window.removeEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+    };
   }, []);
 
   const onStage = useCallback((stage: PreviewStage, fieldId?: string) => {
