@@ -1120,6 +1120,11 @@ export function createMagnetBoard(section: HTMLElement) {
 
   cleanups.push(startMagnetEntrance(board, rows));
   cleanups.push(startMagnetIdle(board));
+  // For tests and anything else that needs to know the board is live.
+  section.dataset.magnetBoard = "ready";
+  cleanups.push(() => {
+    section.dataset.magnetBoard = "";
+  });
 
   return () => {
     endPress();
