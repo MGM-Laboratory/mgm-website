@@ -24,12 +24,18 @@ export function parseVideoLink(value: string): VideoLink | undefined {
   return undefined;
 }
 
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{6,20}$/;
+const VIMEO_ID = /^\d{1,15}$/;
+
+/** A video's thumbnail; the id comes from pasted text, so only a well-formed id gets a URL. */
 export function youtubeThumb(id: string) {
-  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  return YOUTUBE_ID.test(id)
+    ? `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`
+    : undefined;
 }
 
 export function vimeoThumb(id: string) {
-  return `https://vumbnail.com/${id}.jpg`;
+  return VIMEO_ID.test(id) ? `https://vumbnail.com/${encodeURIComponent(id)}.jpg` : undefined;
 }
 
 /** Data URLs of images uploaded in this session, by storage key. */
