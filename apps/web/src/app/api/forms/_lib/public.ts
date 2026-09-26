@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { cmsApi } from "@/lib/cms-api";
 import { formTokenCookieName, isFormSlug } from "@/lib/forms/public-server";
+import { visitorAddress } from "@/lib/forms/visitor-ip";
 
 /**
  * Shared plumbing of the public form routes (`/api/forms/**`): no session,
@@ -15,8 +16,7 @@ export type SlugContext = { params: Promise<{ slug: string }> };
 
 export function visitorHeaders(request: Request): Record<string, string> {
   const headers: Record<string, string> = {};
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = request.headers.get("cf-connecting-ip") ?? forwardedFor;
+  const ip = visitorAddress(request);
   if (ip) headers["x-visitor-ip"] = ip;
   const userAgent = request.headers.get("user-agent");
   if (userAgent) headers["x-visitor-user-agent"] = userAgent;
@@ -64,6 +64,46 @@ async function relay(response: Response): Promise<NextResponse> {
   return relayText(await response.text(), response.status);
 }
 
+const SMALL_BODY_BYTES = 64 * 1024;
+/** The API's own JSON limit: a submission carries every answer at once. */
+const RESPONSE_BODY_BYTES = 8 * 1024 * 1024;
+const BODY_LIMITS = new Map<string, number>([
+  ["unlock", SMALL_BODY_BYTES],
+  ["events", SMALL_BODY_BYTES],
+  ["responses", RESPONSE_BODY_BYTES],
+]);
+
+/**
+ * The request body as text, read chunk by chunk and abandoned as soon as it
+ * passes `limit` bytes (null then), so an oversized or endless body can't
+ * fill the web server's memory before the API gets to refuse it.
+ */
+async function readLimitedText(request: Request, limit: number): Promise<string | null> {
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > limit) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 /** Resolves and checks the slug, then forwards a JSON POST with the visitor headers. */
 export async function forwardPublicJson(
   request: Request,
@@ -72,9 +112,16 @@ export async function forwardPublicJson(
 ): Promise<{ slug: string; response: NextResponse }> {
   const { slug } = await context.params;
   if (!isFormSlug(slug)) return { slug, response: notFound() };
+  const text = await readLimitedText(request, BODY_LIMITS.get(action) ?? SMALL_BODY_BYTES);
+  if (text === null) {
+    return {
+      slug,
+      response: NextResponse.json({ message: "The request is too large." }, { status: 413 }),
+    };
+  }
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(text);
   } catch {
     return {
       slug,
