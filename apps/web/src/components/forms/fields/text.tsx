@@ -8,6 +8,7 @@ import { countries } from "@/lib/forms/public-countries";
 import { emailSuggestion } from "@/lib/forms/public-email";
 
 import { useFormController, type FieldProps } from "../form-context";
+import { useHydrated } from "../use-hydrated";
 
 /**
  * The text family: short and long text, email (with a nudge for a mistyped
@@ -337,6 +338,7 @@ export function PhoneField({
   invalid,
 }: FieldProps<string>) {
   const { copy, language } = useFormController();
+  const hydrated = useHydrated();
   const list = useMemo(() => countries(language), [language]);
   const fallback = (field.defaultCountry ?? "ID").toUpperCase();
   const current = typeof value === "string" ? value : "";
@@ -366,7 +368,9 @@ export function PhoneField({
           }}
           autoComplete="tel-country-code"
         >
-          {list.map((country) => (
+          {/* Country names come from the engine's Intl data, which differs
+              between Node and each browser: the full list waits for hydration. */}
+          {(hydrated ? list : list.filter((country) => country.code === code)).map((country) => (
             <option key={country.code} value={country.code}>
               {country.name} ({country.dial})
             </option>

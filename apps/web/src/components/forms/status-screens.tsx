@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, LoaderCircle, LockKeyhole, RotateCcw } from "lucide-react";
+import { ArrowRight, LoaderCircle, LockKeyhole } from "lucide-react";
 import type { FormLanguage, FormUnavailableReason, PublicFormPayload } from "@repo/shared";
 
 import { unlockForm } from "@/lib/forms/public-client";
@@ -295,14 +295,5 @@ export function UnavailableScreen({
     <StatusCard glyph="closed" eyebrow={title} title={closedTitle || closedLabel}>
       <p className="fx-status-body">{closedMessage || copy.closedBody}</p>
     </StatusCard>
-  );
-}
-
-export function RetryButton({ label, onRetry }: { label: string; onRetry: () => void }) {
-  return (
-    <button type="button" className="fx-button" data-variant="primary" onClick={onRetry}>
-      <RotateCcw aria-hidden strokeWidth={2.25} size={18} />
-      {label}
-    </button>
   );
 }

@@ -138,7 +138,13 @@ function reducer(state: State, action: Action): State {
       else answers[action.fieldId] = action.value;
       const serverErrors = { ...state.serverErrors };
       delete serverErrors[action.fieldId];
-      return { ...state, answers, serverErrors };
+      // Without a welcome screen the first answer is the start.
+      return {
+        ...state,
+        answers,
+        serverErrors,
+        startedAt: state.startedAt ?? new Date().toISOString(),
+      };
     }
     case "touch": {
       const touched = { ...state.touched };
@@ -381,9 +387,23 @@ export function FormRun({
     [document.fields, answers],
   );
 
+  // Sounds wait for the respondent's first gesture (a prefill or a restored
+  // draft landing pieces at load must stay silent, and audio needs one).
+  const gestured = useRef(false);
+  useEffect(() => {
+    const mark = () => {
+      gestured.current = true;
+    };
+    window.addEventListener("pointerdown", mark, { once: true, capture: true });
+    window.addEventListener("keydown", mark, { once: true, capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", mark, { capture: true });
+      window.removeEventListener("keydown", mark, { capture: true });
+    };
+  }, []);
   const sound = useCallback(
     (kind: SoundKind) => {
-      if (soundAllowed) playSound(kind);
+      if (soundAllowed && gestured.current) playSound(kind);
     },
     [soundAllowed],
   );
@@ -544,7 +564,7 @@ export function FormRun({
       dispatch({ type: "conflict", reason: outcome.reason });
       return;
     }
-    setSubmitError(copy.submitFailed);
+    setSubmitError(outcome.message ? `${outcome.message} ${copy.retry}.` : copy.submitFailed);
   }, [
     bus,
     copy,

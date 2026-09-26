@@ -35,8 +35,6 @@ type Copy = {
   fullBody: string;
   alreadyTitle: string;
   alreadyBody: string;
-  errorTitle: string;
-  errorBody: string;
   retry: string;
   submitting: string;
   submitFailed: string;
@@ -128,8 +126,6 @@ const en: Copy = {
   fullBody: "This form has all the responses it can take.",
   alreadyTitle: "You've already responded",
   alreadyBody: "This form takes one response per device, and yours is in. Thank you.",
-  errorTitle: "The form didn't load",
-  errorBody: "The connection dropped on the way. Try again in a moment.",
   retry: "Try again",
   submitting: "Sending",
   submitFailed: "Your answers weren't sent. Check your connection and try again.",
@@ -230,8 +226,6 @@ const id: Copy = {
   fullBody: "Formulir ini sudah menerima semua jawaban yang bisa ditampung.",
   alreadyTitle: "Anda sudah menjawab",
   alreadyBody: "Formulir ini menerima satu jawaban per perangkat, dan jawaban Anda sudah masuk.",
-  errorTitle: "Formulir gagal dimuat",
-  errorBody: "Koneksi terputus. Coba lagi sebentar lagi.",
   retry: "Coba lagi",
   submitting: "Mengirim",
   submitFailed: "Jawaban Anda belum terkirim. Periksa koneksi lalu coba lagi.",

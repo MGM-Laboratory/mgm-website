@@ -198,6 +198,7 @@ function CountryPicker({
       describedBy={describedBy}
       invalid={invalid}
       required={required}
+      alwaysCustom
       filter={(option, query) => {
         const country = byCode.get(option.id);
         return country ? matchCountry(country, query) : false;
