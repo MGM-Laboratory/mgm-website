@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { PatternTile, toneColor, type PatternKind, type PatternTone } from "./pattern-tile";
-import { MosaicMarquee } from "./mosaic-marquee";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -158,13 +157,6 @@ export function ProcessSection() {
             ))}
           </div>
         ))}
-      </div>
-
-      {/* Negative margins cancel this section's own side padding so the
-          marquee bleeds edge-to-edge with the viewport instead of stopping
-          at the section's text margin. */}
-      <div className="-mx-6 mt-16 sm:-mx-10 sm:mt-24 lg:-mx-16">
-        <MosaicMarquee />
       </div>
     </section>
   );

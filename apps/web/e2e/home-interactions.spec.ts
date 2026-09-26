@@ -82,21 +82,6 @@ test("desktop idle motion and headline parallax survive returning home", async (
     .not.toBe(returned);
 });
 
-test("divider has a connected spine through its repeat seam", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  const columns = await page
-    .locator(".mosaic-strip > div > div")
-    .first()
-    .evaluate((copy) => {
-      const tiles = Array.from(copy.children) as HTMLElement[];
-      return Array.from({ length: 18 }, (_, column) =>
-        tiles.some((tile) => tile.style.left === `${column * 76}px` && tile.style.top === "76px"),
-      );
-    });
-  expect(columns.every(Boolean)).toBe(true);
-});
-
 test("background wake fades and reduced motion disables it", async ({ page, isMobile }) => {
   test.skip(isMobile, "Touch devices do not create cursor wakes");
   await page.goto("/");
