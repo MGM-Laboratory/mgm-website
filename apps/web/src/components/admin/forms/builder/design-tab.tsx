@@ -17,7 +17,15 @@ import { projectThemeId } from "@/lib/project-cms";
 import { MediaPicker } from "./media-picker";
 import { PreviewFrame, PreviewToolbar } from "./preview-frame";
 import type { PreviewDevice, PreviewStage, TabProps } from "./types";
-import { Section, Segmented, Switch, cardClass, eyebrowClass, secondaryButtonClass } from "./ui";
+import {
+  Section,
+  Segmented,
+  Switch,
+  cardClass,
+  eyebrowClass,
+  secondaryButtonClass,
+  type ButtonRefs,
+} from "./ui";
 
 type Tile<T extends string> = { value: T; label: string; hint?: string; visual?: React.ReactNode };
 
@@ -37,7 +45,7 @@ function TileGroup<T extends string>({
   tiles: Tile<T>[];
   value: T;
 }) {
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const refs = useRef<ButtonRefs>(new Map());
   const labelId = useId();
   const index = Math.max(
     0,
@@ -45,8 +53,10 @@ function TileGroup<T extends string>({
   );
   const move = (next: number) => {
     const target = (next + tiles.length) % tiles.length;
-    onChange(tiles[target].value);
-    refs.current[target]?.focus();
+    const tile = tiles.at(target);
+    if (!tile) return;
+    onChange(tile.value);
+    refs.current.get(target)?.focus();
   };
   return (
     <div>
@@ -80,7 +90,7 @@ function TileGroup<T extends string>({
                 onChange(tile.value);
               }}
               ref={(element) => {
-                refs.current[position] = element;
+                refs.current.set(position, element);
               }}
               role="radio"
               tabIndex={selected ? 0 : -1}
@@ -356,15 +366,24 @@ function ButtonShapeVisual({ shape }: { shape: FormDesign["buttonShape"] }) {
   );
 }
 
+function entranceHoverClass(entrance: FormDesign["motion"]["entrance"]) {
+  switch (entrance) {
+    case "rise":
+      return "motion-safe:group-hover:animate-[builder-rise-in_700ms_ease-out_infinite]";
+    case "pop":
+      return "motion-safe:group-hover:animate-[builder-pop-in_600ms_ease-out_infinite]";
+    case "slide":
+      return "motion-safe:group-hover:animate-[builder-dialog-in_700ms_ease-out_infinite]";
+    case "blur":
+      return "motion-safe:group-hover:animate-[builder-fade-in_700ms_ease-out_infinite]";
+    case "type":
+      return "motion-safe:group-hover:animate-[builder-fade-in_500ms_steps(4)_infinite]";
+  }
+}
+
 function EntranceVisual({ entrance }: { entrance: FormDesign["motion"]["entrance"] }) {
   // A dot that plays the entrance on hover, only when motion is allowed.
-  const hover = {
-    rise: "motion-safe:group-hover:animate-[builder-rise-in_700ms_ease-out_infinite]",
-    pop: "motion-safe:group-hover:animate-[builder-pop-in_600ms_ease-out_infinite]",
-    slide: "motion-safe:group-hover:animate-[builder-dialog-in_700ms_ease-out_infinite]",
-    blur: "motion-safe:group-hover:animate-[builder-fade-in_700ms_ease-out_infinite]",
-    type: "motion-safe:group-hover:animate-[builder-fade-in_500ms_steps(4)_infinite]",
-  }[entrance];
+  const hover = entranceHoverClass(entrance);
   return (
     <span className="flex h-12 items-center justify-center">
       <span className={`block h-3 w-14 rounded-full bg-brand-blue/70 ${hover}`} />
@@ -442,7 +461,7 @@ export function DesignTab({
   const [showPreview, setShowPreview] = useState(false);
 
   const set = <K extends keyof FormDesign>(key: K, value: FormDesign[K]) => {
-    change((doc) => ({ ...doc, design: { ...doc.design, [key]: value } }), `design.${key}`);
+    change((doc) => ({ ...doc, design: { ...doc.design, [key]: value } }), `design.${String(key)}`);
   };
   const setCover = (patch: Partial<FormDesign["cover"]>, key: string) => {
     change(
@@ -547,13 +566,18 @@ export function DesignTab({
               onChange={(value) => {
                 set("font", value);
               }}
-              tiles={(Object.keys(fontFaces) as FormDesign["font"][]).map((font) => ({
+              tiles={(
+                Object.entries(fontFaces) as [
+                  FormDesign["font"],
+                  (typeof fontFaces)[FormDesign["font"]],
+                ][]
+              ).map(([font, face]) => ({
                 value: font,
-                label: fontFaces[font].name,
+                label: face.name,
                 visual: (
                   <span
-                    className={`flex h-12 items-center justify-center text-2xl font-semibold tracking-[-0.03em] text-[#171b25] dark:text-white ${fontFaces[font].className}`}
-                    style={fontFaces[font].style}
+                    className={`flex h-12 items-center justify-center text-2xl font-semibold tracking-[-0.03em] text-[#171b25] dark:text-white ${face.className}`}
+                    style={face.style}
                   >
                     Aa
                   </span>
@@ -679,10 +703,12 @@ export function DesignTab({
               onChange={(value) => {
                 setCover({ style: value }, "style");
               }}
-              tiles={(["none", "banner", "hero", "split"] as const).map((style) => ({
+              tiles={(
+                Object.entries(coverVisuals) as [FormDesign["cover"]["style"], React.ReactNode][]
+              ).map(([style, visual]) => ({
                 value: style,
                 label: titleCase(style),
-                visual: coverVisuals[style],
+                visual,
               }))}
               value={design.cover.style}
             />
@@ -718,9 +744,12 @@ export function DesignTab({
               onChange={(value) => {
                 setBackground({ scene: value }, "scene");
               }}
-              tiles={(["orbit", "constellation", "paper", "blocks", "none"] as const).map(
-                (scene) => ({ value: scene, label: titleCase(scene), visual: sceneVisuals[scene] }),
-              )}
+              tiles={(
+                Object.entries(sceneVisuals) as [
+                  FormDesign["background"]["scene"],
+                  React.ReactNode,
+                ][]
+              ).map(([scene, visual]) => ({ value: scene, label: titleCase(scene), visual }))}
               value={design.background.scene}
             />
             <div>
