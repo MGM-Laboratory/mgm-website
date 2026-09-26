@@ -16,6 +16,7 @@ import {
 import { mintId } from "@/lib/forms/builder-fields";
 
 import { MediaPicker } from "../media-picker";
+import { AdminDatePicker } from "../admin-pickers";
 import { RichTextEditor } from "../rich-text-editor";
 import { NumberInput, Section, Segmented, Switch, smallInputClass } from "../ui";
 
@@ -585,23 +586,25 @@ export function TypeSettings({
         <Section title="Allowed dates">
           <Pair>
             <Labeled label="Earliest">
-              <input
-                className={smallInputClass}
-                onChange={(event) => {
-                  update({ minDate: event.target.value || undefined });
+              <AdminDatePicker
+                ariaLabel="Earliest date"
+                kind="date"
+                max={field.maxDate}
+                onChange={(next) => {
+                  update({ minDate: next });
                 }}
-                type="date"
-                value={field.minDate ?? ""}
+                value={field.minDate}
               />
             </Labeled>
             <Labeled label="Latest">
-              <input
-                className={smallInputClass}
-                onChange={(event) => {
-                  update({ maxDate: event.target.value || undefined });
+              <AdminDatePicker
+                ariaLabel="Latest date"
+                kind="date"
+                min={field.minDate}
+                onChange={(next) => {
+                  update({ maxDate: next });
                 }}
-                type="date"
-                value={field.maxDate ?? ""}
+                value={field.maxDate}
               />
             </Labeled>
           </Pair>

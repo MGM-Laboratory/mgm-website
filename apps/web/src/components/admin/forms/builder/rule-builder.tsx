@@ -19,6 +19,8 @@ import {
 
 import { isQuestion } from "@/lib/forms/builder-fields";
 
+import { AdminDatePicker } from "./admin-pickers";
+
 import { Segmented, eyebrowClass, iconButtonClass, smallInputClass } from "./ui";
 
 export const OPERATOR_LABELS: Record<FormOperator, string> = {
@@ -285,15 +287,15 @@ function ValueEditor({
   }
   if (field.type === "date" || field.type === "datetime") {
     return (
-      <input
-        aria-label="Date"
-        className={`${smallInputClass} sm:w-52`}
+      <AdminDatePicker
+        ariaLabel="Date"
+        className="w-full sm:w-56"
         disabled={readOnly}
-        onChange={(event) => {
-          onChange(event.target.value);
+        kind={field.type}
+        onChange={(next) => {
+          onChange(next ?? "");
         }}
-        type={field.type === "date" ? "date" : "datetime-local"}
-        value={typeof rule.value === "string" ? rule.value : ""}
+        value={typeof rule.value === "string" ? rule.value : undefined}
       />
     );
   }

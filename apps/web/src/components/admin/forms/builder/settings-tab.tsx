@@ -27,6 +27,7 @@ import { formsAdminApi } from "@/lib/forms/admin-api";
 import { isoToLocalInput, localInputToIso } from "@/lib/forms/builder-document";
 
 import { MediaPicker } from "./media-picker";
+import { AdminDatePicker } from "./admin-pickers";
 import type { TabProps } from "./types";
 import {
   ConfirmDialog,
@@ -614,41 +615,23 @@ export function SettingsTab({
                   ["closesAt", "Closes", closesLocal],
                 ] as const
               ).map(([key, label, local]) => (
-                <label className="block" key={key}>
+                <div className="block" key={key}>
                   <span className={labelText}>{label}</span>
-                  <div className="flex gap-1">
-                    <input
-                      aria-describedby={
-                        key === "closesAt" && scheduleError ? "schedule-error" : undefined
-                      }
-                      aria-invalid={(key === "closesAt" && Boolean(scheduleError)) || undefined}
-                      className={smallInputClass}
-                      onChange={(event) => {
-                        update(
-                          key === "opensAt"
-                            ? { opensAt: localInputToIso(event.target.value) }
-                            : { closesAt: localInputToIso(event.target.value) },
-                        );
-                      }}
-                      type="datetime-local"
-                      value={local}
-                    />
-                    {local ? (
-                      <button
-                        aria-label={`Clear ${label.toLowerCase()} time`}
-                        className="grid size-9 shrink-0 place-items-center rounded-lg text-[#8490a5] hover:bg-[#eef1f7] hover:text-brand-red dark:hover:bg-white/10"
-                        onClick={() => {
-                          update(
-                            key === "opensAt" ? { opensAt: undefined } : { closesAt: undefined },
-                          );
-                        }}
-                        type="button"
-                      >
-                        <X size={14} weight="bold" />
-                      </button>
-                    ) : null}
-                  </div>
-                </label>
+                  <AdminDatePicker
+                    ariaLabel={`${label} at`}
+                    describedBy={key === "closesAt" && scheduleError ? "schedule-error" : undefined}
+                    invalid={key === "closesAt" && Boolean(scheduleError)}
+                    kind="datetime"
+                    onChange={(next) => {
+                      update(
+                        key === "opensAt"
+                          ? { opensAt: localInputToIso(next ?? "") }
+                          : { closesAt: localInputToIso(next ?? "") },
+                      );
+                    }}
+                    value={local}
+                  />
+                </div>
               ))}
             </div>
             {scheduleError ? (

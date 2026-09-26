@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Reorder, useDragControls } from "framer-motion";
 import { ArrowDown, ArrowUp, DotsSixVertical, EyeSlash, PushPin, X } from "@phosphor-icons/react";
 
+import { AdminDatePicker } from "../builder/admin-pickers";
 import { cellIds, countryLabel, type DataColumn, type WorkingRow } from "@/lib/forms/data/columns";
 import {
   FILTER_OP_LABELS,
@@ -53,10 +54,13 @@ export function Popover({
   }, [anchor, width]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !event.defaultPrevented) onClose();
     };
     const onDown = (event: PointerEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) onClose();
+      const target = event.target as Node;
+      // A date picker's panel is portaled out of the menu but belongs to it.
+      if (target instanceof Element && target.closest("[data-popover-for]")) return;
+      if (ref.current && !ref.current.contains(target)) onClose();
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onDown, true);
@@ -189,23 +193,23 @@ export function FilterEditor({
       ) : null}
       {current.op === "dateRange" ? (
         <div className="grid grid-cols-2 gap-2">
-          <input
-            aria-label="From"
-            className={inputClass}
-            onChange={(event) => {
-              set({ from: event.target.value });
+          <AdminDatePicker
+            ariaLabel="From"
+            kind="date"
+            max={current.to || undefined}
+            onChange={(next) => {
+              set({ from: next ?? "" });
             }}
-            type="date"
-            value={current.from ?? ""}
+            value={current.from}
           />
-          <input
-            aria-label="To"
-            className={inputClass}
-            onChange={(event) => {
-              set({ to: event.target.value });
+          <AdminDatePicker
+            ariaLabel="To"
+            kind="date"
+            min={current.from || undefined}
+            onChange={(next) => {
+              set({ to: next ?? "" });
             }}
-            type="date"
-            value={current.to ?? ""}
+            value={current.to}
           />
         </div>
       ) : null}

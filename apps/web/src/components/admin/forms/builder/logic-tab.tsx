@@ -39,6 +39,7 @@ import {
 import { documentIds, isQuestion, mintId } from "@/lib/forms/builder-fields";
 import { patchEnding, patchField } from "@/lib/forms/builder-ops";
 
+import { AdminDatePicker } from "./admin-pickers";
 import { FieldIcon } from "./field-icons";
 import { FlowMap } from "./flow-map";
 import { RuleBuilder, describeGroup } from "./rule-builder";
@@ -779,14 +780,13 @@ const TestInput = memo(function TestInput({
   }
   if (field.type === "date" || field.type === "datetime") {
     return (
-      <input
-        className={smallInputClass}
+      <AdminDatePicker
         id={id}
-        onChange={(event) => {
-          onChange(field.id, event.target.value || undefined);
+        kind={field.type}
+        onChange={(next) => {
+          onChange(field.id, next);
         }}
-        type={field.type === "date" ? "date" : "datetime-local"}
-        value={typeof value === "string" ? value : ""}
+        value={typeof value === "string" ? value : undefined}
       />
     );
   }
