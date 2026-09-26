@@ -10,6 +10,9 @@ import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module.js";
 import type { Env } from "./config/env.validation.js";
 
+/** Respondent upload bodies buffered at the same time, at most. */
+const FORMS_UPLOADS_AT_ONCE = 6;
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true, bodyParser: false });
   const configService = app.get(ConfigService<Env, true>);
@@ -21,10 +24,42 @@ async function bootstrap() {
   // per-field limit is enforced in the handler; an oversized body gets a
   // JSON 413 instead of Express's HTML error page.
   const formUploadsPath = "/api/forms/public/:slug/uploads";
-  app.use(
-    formUploadsPath,
-    raw({ type: () => true, limit: configService.getOrThrow<number>("FORMS_MAX_UPLOAD_BYTES") }),
-  );
+  const uploadLimit = configService.getOrThrow<number>("FORMS_MAX_UPLOAD_BYTES");
+  // Before any body is buffered: a declared size is required and must fit,
+  // and only a few upload bodies are held in memory at once, so parallel
+  // uploads can't pile up hundreds of megabytes ahead of the handler's
+  // form, field and per-visitor checks. The raw parser still counts the
+  // bytes it actually receives against the same limit.
+  let uploadsInFlight = 0;
+  app.use(formUploadsPath, (req: Request, res: Response, next: NextFunction) => {
+    const declared = Number(req.headers["content-length"]);
+    if (!Number.isFinite(declared) || declared <= 0) {
+      res.status(411).json({ statusCode: 411, message: "The upload must declare its size." });
+      return;
+    }
+    if (declared > uploadLimit) {
+      res.status(413).json({ statusCode: 413, message: "The file is too large." });
+      return;
+    }
+    if (uploadsInFlight >= FORMS_UPLOADS_AT_ONCE) {
+      res.setHeader("retry-after", "5");
+      res
+        .status(503)
+        .json({ statusCode: 503, message: "Uploads are busy. Try again in a moment." });
+      return;
+    }
+    uploadsInFlight += 1;
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      uploadsInFlight -= 1;
+    };
+    res.on("finish", release);
+    res.on("close", release);
+    next();
+  });
+  app.use(formUploadsPath, raw({ type: () => true, limit: uploadLimit }));
   app.use(formUploadsPath, (error: unknown, _req: Request, res: Response, next: NextFunction) => {
     const status = (error as { status?: unknown } | null)?.status;
     if (status === 413) {
