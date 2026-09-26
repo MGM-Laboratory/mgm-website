@@ -1,49 +1,64 @@
 /**
  * Tilt and shake for the toy box. Gravity follows the phone's tilt and a
- * shake throws everything up. iOS asks for permission first, and only from a
- * user gesture, so `requestMotionAccess()` is called straight from the first
- * tap on a shape (inside the touch handler, never after an await). The answer
- * never blocks anything: without it the box keeps its ordinary gravity.
+ * shake throws everything up. Browsers that gate these sensors behind a
+ * permission get asked twice at most: once quietly when the box starts
+ * (Chrome answers without a prompt, and iOS remembers an earlier yes), and
+ * once from the first tap on a shape, since iOS only asks from a user
+ * gesture (so that call is made straight from the touch handler, never after
+ * an await). The answer never blocks anything: without it the box keeps its
+ * ordinary gravity.
  */
 
-type PermissionRequest = () => Promise<"granted" | "denied">;
-
-type WithPermission = { requestPermission?: PermissionRequest };
+type PermissionAnswer = "granted" | "denied" | "default";
+type WithPermission = { requestPermission?: () => Promise<PermissionAnswer> };
 
 let asked = false;
+let probed = false;
 let granted = false;
 const onGrant = new Set<() => void>();
 
-function needsPermission() {
-  if (typeof DeviceOrientationEvent === "undefined") return false;
-  return (
-    typeof (DeviceOrientationEvent as unknown as WithPermission).requestPermission === "function"
-  );
+function gate() {
+  if (typeof DeviceOrientationEvent === "undefined") return null;
+  const request = (DeviceOrientationEvent as unknown as WithPermission).requestPermission;
+  return typeof request === "function" ? request : null;
 }
 
-/** Whether tilt events can arrive without asking first (Android, most browsers). */
-function openByDefault() {
-  return typeof DeviceOrientationEvent !== "undefined" && !needsPermission();
-}
-
-/** Call from inside a tap handler. Asks once per page load, silently. */
-export function requestMotionAccess() {
-  if (asked || !needsPermission()) return;
-  asked = true;
-  const orientation = (DeviceOrientationEvent as unknown as WithPermission).requestPermission!;
+function ask() {
+  const orientation = gate();
+  if (!orientation) return Promise.resolve<PermissionAnswer>("granted");
   const motion =
     typeof DeviceMotionEvent !== "undefined"
       ? (DeviceMotionEvent as unknown as WithPermission).requestPermission
       : undefined;
-  // Both calls start inside the gesture; iOS shows one prompt for the two.
+  // Both calls start in the same turn; iOS shows one prompt for the two.
   const answers = [orientation.call(DeviceOrientationEvent)];
-  if (motion) answers.push(motion.call(DeviceMotionEvent));
-  Promise.all(answers)
-    .then(([answer]) => {
-      if (answer !== "granted") return;
-      granted = true;
-      for (const listener of [...onGrant]) listener();
-    })
+  if (typeof motion === "function") answers.push(motion.call(DeviceMotionEvent));
+  return Promise.all(answers).then(([answer]) => answer);
+}
+
+function answered(answer: PermissionAnswer) {
+  if (answer !== "granted" || granted) return;
+  granted = true;
+  for (const listener of [...onGrant]) listener();
+}
+
+/** Asks without a gesture; a browser that needs one simply refuses. */
+function probe() {
+  if (probed || granted) return;
+  probed = true;
+  ask()
+    .then(answered)
+    .catch(() => {
+      // Needs a gesture (iOS): the first tap on a shape asks instead.
+    });
+}
+
+/** Call from inside a tap handler. Asks once per page load, silently. */
+export function requestMotionAccess() {
+  if (asked || granted || !gate()) return;
+  asked = true;
+  ask()
+    .then(answered)
     .catch(() => {
       // Refused or unsupported: the box simply keeps its usual gravity.
     });
@@ -98,7 +113,9 @@ export function watchMotion({ onGravity, onShake }: SensorHandlers) {
     const weight = Math.min(1, inPlane / 0.35);
     let target = inPlane > 0.001 ? Math.atan2(sx, down) * weight : 0;
     if (Math.abs(target) < DEAD_ZONE) target = 0;
-    else target -= Math.sign(target) * DEAD_ZONE;
+    // Past the dead zone the lean is a little exaggerated: a toy box that
+    // answers a small tilt feels alive.
+    else target = (target - Math.sign(target) * DEAD_ZONE) * 1.5;
     target = Math.max(-MAX_LEAN, Math.min(MAX_LEAN, target));
     lean += (target - lean) * 0.25;
     if (Math.abs(lean - applied) < 1.5 * RAD) return;
@@ -124,8 +141,11 @@ export function watchMotion({ onGravity, onShake }: SensorHandlers) {
     window.addEventListener("devicemotion", onMotion);
   }
 
-  if (granted || openByDefault()) listen();
-  else onGrant.add(listen);
+  if (granted || (typeof DeviceOrientationEvent !== "undefined" && !gate())) listen();
+  else {
+    onGrant.add(listen);
+    probe();
+  }
 
   return () => {
     onGrant.delete(listen);
