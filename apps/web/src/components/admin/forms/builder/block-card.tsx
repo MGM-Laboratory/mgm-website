@@ -117,7 +117,7 @@ export const BlockCard = memo(function BlockCard({
 
   const toolbar = readOnly ? null : (
     <div
-      className={`absolute -top-3.5 right-3 z-10 flex items-center gap-0.5 rounded-xl border border-[#dfe4ee] bg-white p-0.5 shadow-[0_10px_24px_-16px_rgba(20,32,58,0.55)] transition dark:border-white/10 dark:bg-[#1a1f2b] ${selected ? "opacity-100" : "pointer-events-none opacity-0 group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-hover/card:opacity-100"}`}
+      className={`absolute -top-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-xl border border-[#dfe4ee] bg-white p-0.5 shadow-[0_10px_24px_-16px_rgba(20,32,58,0.55)] transition dark:border-white/10 dark:bg-[#1a1f2b] ${selected ? "opacity-100" : "pointer-events-none opacity-0 group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-hover/card:opacity-100"}`}
     >
       <button
         aria-label="Move up"

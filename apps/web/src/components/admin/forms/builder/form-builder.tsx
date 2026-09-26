@@ -393,7 +393,7 @@ export function FormBuilder({
               </>
             ) : null}
             <button
-              className={`${ghostButtonClass} hidden sm:inline-flex`}
+              className={`${ghostButtonClass} max-sm:hidden`}
               onClick={() => setPreviewing(true)}
               type="button"
             >
@@ -411,7 +411,7 @@ export function FormBuilder({
             {record.status !== "draft" ? (
               <a
                 aria-label="View live form in a new tab"
-                className={`${ghostButtonClass} hidden md:inline-flex`}
+                className={`${ghostButtonClass} max-md:hidden`}
                 href={publicUrl}
                 rel="noreferrer"
                 target="_blank"
@@ -462,7 +462,7 @@ export function FormBuilder({
                 type="button"
               >
                 <RocketLaunch size={16} weight="fill" />
-                {record.status === "draft" ? "Publish" : "Publishing"}
+                {record.status === "draft" ? "Publish" : "Link & status"}
               </button>
             ) : null}
           </div>

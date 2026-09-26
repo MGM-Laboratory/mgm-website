@@ -186,13 +186,13 @@ export function OptionsEditor({
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
+                        const list = event.currentTarget.closest("ol");
                         const added = addLabels([`Option ${options.length + 1}`], index);
                         if (added) {
                           window.requestAnimationFrame(() => {
-                            const inputs = (
-                              event.currentTarget.closest("ol") as HTMLElement | null
-                            )?.querySelectorAll<HTMLInputElement>("input[aria-label^='Option']");
-                            inputs?.[index + 1]?.select();
+                            list
+                              ?.querySelectorAll<HTMLInputElement>("input[aria-label^='Option']")
+                              [index + 1]?.select();
                           });
                         }
                       }

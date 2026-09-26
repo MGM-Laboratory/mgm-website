@@ -163,7 +163,7 @@ function JumpEditor({
             </label>
             <span className="text-xs text-[#69748a] dark:text-white/50">go to</span>
             <select
-              className={`${smallInputClass} w-auto max-w-full min-w-0 flex-1 sm:max-w-xs`}
+              className={`${smallInputClass} w-auto max-w-full min-w-40 flex-1 basis-40 sm:max-w-xs`}
               disabled={readOnly}
               id={`${jump.id}-to`}
               onChange={(event) =>

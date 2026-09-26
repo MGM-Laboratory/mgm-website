@@ -428,23 +428,25 @@ export function FormsList({
                 <option value="responses">Most responses</option>
                 <option value="title">Title A–Z</option>
               </select>
-              <Segmented<"grid" | "list">
-                label="Layout"
-                onChange={chooseView}
-                options={[
-                  {
-                    value: "grid",
-                    label: <SquaresFour aria-label="Grid" size={16} />,
-                    title: "Grid",
-                  },
-                  {
-                    value: "list",
-                    label: <ListBullets aria-label="List" size={16} />,
-                    title: "List",
-                  },
-                ]}
-                value={view}
-              />
+              <div className="shrink-0">
+                <Segmented<"grid" | "list">
+                  label="Layout"
+                  onChange={chooseView}
+                  options={[
+                    {
+                      value: "grid",
+                      label: <SquaresFour aria-label="Grid" size={16} />,
+                      title: "Grid",
+                    },
+                    {
+                      value: "list",
+                      label: <ListBullets aria-label="List" size={16} />,
+                      title: "List",
+                    },
+                  ]}
+                  value={view}
+                />
+              </div>
             </div>
           </div>
 
