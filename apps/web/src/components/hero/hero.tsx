@@ -17,7 +17,6 @@ import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
-import { startHeroInteractions } from "@/components/hero/interactions";
 
 import {
   ArrowConnector,
@@ -58,6 +57,11 @@ const shapeBoxClass = "w-[clamp(4rem,8vw,6.5rem)]";
 const shapeHeightClass = "h-[clamp(4rem,8vw,6.5rem)]";
 
 const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
+
+// The desktop hero's play (interactions/*), loaded on demand: the desktop
+// branch starts the download as its entrance begins, so it is ready when
+// the entrance ends, and the compact hero never fetches it.
+const loadInteractions = () => import("@/components/hero/interactions");
 
 /**
  * One shape in the composition, three layers with one owner each: the
@@ -705,6 +709,11 @@ export function Hero() {
                   };
                 }
 
+                if (!reduced) {
+                  loadInteractions().catch(() => {
+                    // startIdle reports a failed load; nothing to do here.
+                  });
+                }
                 const idleContext = gsap.context(() => {}, root);
                 let idleLoops: gsap.core.Animation[] = [];
                 let removeParallax = () => {};
@@ -726,18 +735,28 @@ export function Hero() {
                     document.addEventListener("visibilitychange", pauseWhenHidden);
                   });
                   // The play (hover, press, proximity, doze) is motion by
-                  // definition: never under reduced motion.
+                  // definition: never under reduced motion. Loaded on first
+                  // use, so the compact hero never downloads it.
                   if (reduced) return;
-                  stopInteractions = startHeroInteractions(root, {
-                    words: [
-                      mediaSplit!.chars as HTMLElement[],
-                      gameSplit!.chars as HTMLElement[],
-                      ...(mobileSplit!.words as HTMLElement[]).map((word) =>
-                        Array.from(word.querySelectorAll<HTMLElement>(".mobile-char")),
-                      ),
-                    ],
-                    flipper: (mediaSplit!.chars[MEDIA_I_INDEX] as HTMLElement) ?? null,
-                  });
+                  let stopped = false;
+                  stopInteractions = () => {
+                    stopped = true;
+                  };
+                  loadInteractions()
+                    .then(({ startHeroInteractions }) => {
+                      if (stopped) return;
+                      stopInteractions = startHeroInteractions(root, {
+                        words: [
+                          mediaSplit!.chars as HTMLElement[],
+                          gameSplit!.chars as HTMLElement[],
+                          ...(mobileSplit!.words as HTMLElement[]).map((word) =>
+                            Array.from(word.querySelectorAll<HTMLElement>(".mobile-char")),
+                          ),
+                        ],
+                        flipper: (mediaSplit!.chars[MEDIA_I_INDEX] as HTMLElement) ?? null,
+                      });
+                    })
+                    .catch((err) => console.error("Hero interactions failed to load.", err));
                 };
                 const stopIdle = () => {
                   stopInteractions();

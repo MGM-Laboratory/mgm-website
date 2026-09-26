@@ -1,13 +1,17 @@
 import { createLetters } from "./letters";
+import { createPieces } from "./pieces";
 import { createStage } from "./stage";
 
 /**
  * Everything in the desktop hero that answers the visitor once the entrance
- * is over: the letters, the shapes, the arrow, the background motifs, the
- * scroll cue and the doze. Started from the hero's idle phase (after the
- * entrance completes, or right away when it is skipped) and only when
- * motion is allowed; returns the teardown, which puts every element and
- * the markup back exactly as the entrance left them.
+ * is over: the letters, and the shapes. Started from the hero's idle phase (after the
+ * entrance completes, or right away when it is skipped), only when motion
+ * is allowed, and loaded lazily so the compact hero never downloads it.
+ * Returns the teardown, which puts every element and the markup back
+ * exactly as the entrance left them.
+ *
+ * Hover and proximity need a hovering pointer; a touch tap gets each
+ * element's press reaction.
  */
 
 export type HeroInteractionsOptions = {
@@ -17,23 +21,35 @@ export type HeroInteractionsOptions = {
   flipper: HTMLElement | null;
 };
 
+/** What a press on these must never be taken for: an empty-space click. */
+const CONTROLS = "a, button, input, [role='button'], .hero-cta";
+
 export function startHeroInteractions(root: HTMLElement, options: HeroInteractionsOptions) {
   const stage = createStage(root);
   const letters = createLetters(stage, options.words, options.flipper);
+  const pieces = createPieces(stage);
   stage.add(letters);
+  stage.add(pieces);
 
   const onPointerDown = (event: PointerEvent) => {
     if (!stage.active() || event.button > 0) return;
     const target = event.target as Element | null;
-    if (!target) return;
+    if (!target || target.closest(CONTROLS)) return;
     const rect = root.getBoundingClientRect();
     const x = event.clientX - rect.left;
+    const touch = event.pointerType === "touch";
     if (letters.press(target, x)) return;
+    if (pieces.press(target, x, touch)) return;
   };
+  const onPointerUp = () => pieces.release();
   root.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerUp);
 
   return () => {
     root.removeEventListener("pointerdown", onPointerDown);
+    window.removeEventListener("pointerup", onPointerUp);
+    window.removeEventListener("pointercancel", onPointerUp);
     stage.destroy();
   };
 }
