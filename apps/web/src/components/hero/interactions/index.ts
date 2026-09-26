@@ -1,10 +1,12 @@
+import { createArrow } from "./arrow";
+import type { ArrowGeometry } from "./arrow-path";
 import { createLetters } from "./letters";
 import { createPieces } from "./pieces";
 import { createStage } from "./stage";
 
 /**
  * Everything in the desktop hero that answers the visitor once the entrance
- * is over: the letters, and the shapes. Started from the hero's idle phase (after the
+ * is over: the letters, the shapes and the arrow. Started from the hero's idle phase (after the
  * entrance completes, or right away when it is skipped), only when motion
  * is allowed, and loaded lazily so the compact hero never downloads it.
  * Returns the teardown, which puts every element and the markup back
@@ -19,6 +21,8 @@ export type HeroInteractionsOptions = {
   words: HTMLElement[][];
   /** The "i" in Media. */
   flipper: HTMLElement | null;
+  /** The arrow's current geometry, as hero.tsx last measured it. */
+  arrowGeometry: () => ArrowGeometry | null;
 };
 
 /** What a press on these must never be taken for: an empty-space click. */
@@ -28,8 +32,10 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
   const stage = createStage(root);
   const letters = createLetters(stage, options.words, options.flipper);
   const pieces = createPieces(stage);
+  const arrow = createArrow(stage, options.arrowGeometry);
   stage.add(letters);
   stage.add(pieces);
+  if (arrow) stage.add(arrow);
 
   const onPointerDown = (event: PointerEvent) => {
     if (!stage.active() || event.button > 0) return;
@@ -37,9 +43,11 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
     if (!target || target.closest(CONTROLS)) return;
     const rect = root.getBoundingClientRect();
     const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
     const touch = event.pointerType === "touch";
     if (letters.press(target, x)) return;
     if (pieces.press(target, x, touch)) return;
+    if (arrow?.press(x, y, touch)) return;
   };
   const onPointerUp = () => pieces.release();
   root.addEventListener("pointerdown", onPointerDown);

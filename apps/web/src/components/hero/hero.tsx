@@ -17,6 +17,7 @@ import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
+import { arrowPathD, type ArrowGeometry } from "@/components/hero/interactions/arrow-path";
 
 import {
   ArrowConnector,
@@ -511,6 +512,8 @@ export function Hero() {
   const arrowWrapRef = useRef<HTMLDivElement>(null);
   const shapesBGroupRef = useRef<HTMLDivElement>(null);
   const mobileTextRef = useRef<HTMLSpanElement>(null);
+  // The arrow as last measured, for the play to pluck and settle back on.
+  const arrowGeometryRef = useRef<ArrowGeometry | null>(null);
 
   // Rows 2 and 3 both match row 1's rendered width and right-align their
   // content, so GAME lines up under circle B and "& Mobile Laboratory"
@@ -569,10 +572,9 @@ export function Hero() {
       // shared left margin ("Media,"/"&"'s column), rounded at both ends.
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       const r = 26;
-      path.setAttribute(
-        "d",
-        `M${topEndX} 0H${r}A${r} ${r} 0 0 0 0 ${r}V${height - r}A${r} ${r} 0 0 0 ${r} ${height}H${bottomEndX}`,
-      );
+      const geometry = { topEndX, bottomEndX, height, radius: r };
+      arrowGeometryRef.current = geometry;
+      path.setAttribute("d", arrowPathD(geometry));
       const hs = 13;
       head.setAttribute(
         "d",
@@ -754,6 +756,7 @@ export function Hero() {
                           ),
                         ],
                         flipper: (mediaSplit!.chars[MEDIA_I_INDEX] as HTMLElement) ?? null,
+                        arrowGeometry: () => arrowGeometryRef.current,
                       });
                     })
                     .catch((err) => console.error("Hero interactions failed to load.", err));
