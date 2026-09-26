@@ -28,7 +28,6 @@ import {
   type WorkingRow,
 } from "./columns";
 import { compileExpr, evaluate, type ExprValue } from "./expr";
-import { compileUserPattern, replaceWithUserPattern } from "./user-pattern";
 
 // ---------------------------------------------------------------------------
 // Steps
@@ -48,7 +47,6 @@ export type CleanStep = { id: string; enabled: boolean } & (
       columns: ColumnScope;
       find: string;
       replace: string;
-      regex: boolean;
       caseSensitive: boolean;
       wholeCell: boolean;
     }
@@ -97,7 +95,6 @@ export function newStep(kind: CleanStepKind, id = stepId()): CleanStep {
         columns: "all",
         find: "",
         replace: "",
-        regex: false,
         caseSensitive: false,
         wholeCell: false,
       };
@@ -154,19 +151,10 @@ function plainReplacer(find: string, replace: string, caseSensitive: boolean, wh
   };
 }
 
-/** Compiles a find & replace step into a string function, or an error message. */
-export function replacer(
-  step: Extract<CleanStep, { kind: "replace" }>,
-): ((text: string) => string) | string {
+/** Compiles a find & replace step into a string function. */
+export function replacer(step: Extract<CleanStep, { kind: "replace" }>): (text: string) => string {
   if (!step.find) return (text) => text;
-  if (!step.regex)
-    return plainReplacer(step.find, step.replace, step.caseSensitive, step.wholeCell);
-  const compiled = compileUserPattern(step.find, {
-    caseSensitive: step.caseSensitive,
-    wholeCell: step.wholeCell,
-  });
-  if (typeof compiled === "string") return compiled;
-  return (text) => replaceWithUserPattern(compiled, text, step.replace);
+  return plainReplacer(step.find, step.replace, step.caseSensitive, step.wholeCell);
 }
 
 /** Lowercased, accent-free, punctuation-free, single-spaced: the key variants share. */
@@ -409,9 +397,7 @@ export function runPipeline(
         break;
       }
       case "replace": {
-        const fn = replacer(step);
-        if (typeof fn === "string") result.error = fn;
-        else if (step.find) textStep(fn, step.columns);
+        if (step.find) textStep(replacer(step), step.columns);
         break;
       }
       case "fill": {

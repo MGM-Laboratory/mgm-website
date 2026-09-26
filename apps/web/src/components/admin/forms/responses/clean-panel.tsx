@@ -637,7 +637,6 @@ function StepEditor({
           <div className="flex flex-wrap gap-3 text-xs">
             {(
               [
-                ["regex", "Regular expression"],
                 ["caseSensitive", "Match case"],
                 ["wholeCell", "Whole cell"],
               ] as const
@@ -653,11 +652,6 @@ function StepEditor({
               </label>
             ))}
           </div>
-          {step.regex ? (
-            <p className="text-[11px] text-[#8a93a6]">
-              Use $1, $2 in the replacement for captured groups.
-            </p>
-          ) : null}
           <ColumnPicker
             columns={textColumns}
             onChange={(value) => onUpdate({ columns: value })}
