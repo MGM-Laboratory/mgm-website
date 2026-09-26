@@ -24,6 +24,7 @@ import { FormsModule } from "./forms/forms.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { MailModule } from "./mail/mail.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
+import { skipThrottleForFormsAdmin } from "./forms/forms-admin.throttle.js";
 import { ShortlinksModule } from "./shortlinks/shortlinks.module.js";
 import { StorageModule } from "./storage/storage.module.js";
 
@@ -42,12 +43,15 @@ import { StorageModule } from "./storage/storage.module.js";
         autoLogging: true,
       },
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: Number(process.env.THROTTLE_TTL ?? 60000),
-        limit: Number(process.env.THROTTLE_LIMIT ?? 100),
-      },
-    ]),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: Number(process.env.THROTTLE_TTL ?? 60000),
+          limit: Number(process.env.THROTTLE_LIMIT ?? 100),
+        },
+      ],
+      skipIf: skipThrottleForFormsAdmin,
+    }),
     CacheModule,
     PrismaModule,
     CmsMembersModule,
