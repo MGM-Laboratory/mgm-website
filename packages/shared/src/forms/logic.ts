@@ -1,4 +1,10 @@
-import { OTHER_OPTION_ID, isAnswered, type FormAnswers, type FormAnswerValue } from "./answers.js";
+import {
+  OTHER_OPTION_ID,
+  isAnswered,
+  otherKey,
+  type FormAnswers,
+  type FormAnswerValue,
+} from "./answers.js";
 import {
   SCORE_SUBJECT,
   isInputType,
@@ -290,20 +296,65 @@ export type FormPath = {
   forcedEndingId?: string;
 };
 
+/** Points one answer earns from the chosen options' points. */
+function pointsFor(field: FormField, value: FormAnswerValue | undefined): number {
+  if (!field.options?.length || value === undefined) return 0;
+  const chosen = asList(value);
+  let points = 0;
+  for (const option of field.options) {
+    if (option.points && chosen.includes(option.id)) points += option.points;
+  }
+  return points;
+}
+
+type FormWalk = FormPath & {
+  /** The fields the respondent meets, in order (hidden prefill fields excluded). */
+  visible: FormField[];
+  /** Only the answers to those fields, plus hidden prefills. */
+  kept: FormAnswers;
+};
+
 /**
- * Walks the pages from the first, applying each closing break's jumps with
- * the current answers. Jumps only go forward, so a form can never loop.
+ * One pass through the form in route order. A question counts only once the
+ * respondent actually meets it: its answer joins the rules' context after
+ * its own visibility passed on a routed page, so an answer to a question
+ * that has since been hidden (the respondent changed an earlier answer)
+ * steers nothing, neither later visibility nor jumps nor the score. Rules
+ * compare earlier answers, and jumps only go forward, so the pass never
+ * loops.
  */
-export function resolvePath(document: LogicDocument, answers: FormAnswers): FormPath {
+function walkForm(document: LogicDocument, answers: FormAnswers): FormWalk {
   const pages = buildPages(document.fields);
-  const context = logicContext(document, answers);
+  const kept: FormAnswers = {};
+  const context: LogicContext = { fields: fieldMap(document.fields), answers: kept, score: 0 };
+  for (const field of document.fields) {
+    if (field.type !== "hidden") continue;
+    const value = answers[field.id];
+    if (value === undefined) continue;
+    kept[field.id] = value;
+    context.score += pointsFor(field, value);
+  }
   const route: number[] = [];
-  let index = 0;
+  const visible: FormField[] = [];
   let forcedEndingId: string | undefined;
+  let index = 0;
   while (index < pages.length) {
     route.push(index);
-    const jumps = pages.at(index)?.closer?.jumps ?? [];
-    const jump = jumps.find((candidate) => evaluateGroup(candidate.when, context));
+    const page = pages.at(index);
+    for (const field of page?.fields ?? []) {
+      if (!isFieldVisible(field, context)) continue;
+      visible.push(field);
+      const value = answers[field.id];
+      if (value !== undefined) {
+        kept[field.id] = value;
+        context.score += pointsFor(field, value);
+      }
+      const other = answers[otherKey(field.id)];
+      if (other !== undefined) kept[otherKey(field.id)] = other;
+    }
+    const jump = (page?.closer?.jumps ?? []).find((candidate) =>
+      evaluateGroup(candidate.when, context),
+    );
     if (!jump) {
       index += 1;
       continue;
@@ -313,9 +364,18 @@ export function resolvePath(document: LogicDocument, answers: FormAnswers): Form
       forcedEndingId = jump.to.slice("ending:".length);
       break;
     }
-    const target = pages.findIndex((page) => page.id === jump.to);
+    const target = pages.findIndex((candidate) => candidate.id === jump.to);
     index = target > index ? target : index + 1;
   }
+  return { pages, route, forcedEndingId, visible, kept };
+}
+
+/**
+ * Walks the pages from the first, applying each closing break's jumps with
+ * the answers met so far. Jumps only go forward, so a form can never loop.
+ */
+export function resolvePath(document: LogicDocument, answers: FormAnswers): FormPath {
+  const { pages, route, forcedEndingId } = walkForm(document, answers);
   return { pages, route, forcedEndingId };
 }
 
@@ -330,11 +390,12 @@ export function isFieldVisible(field: FormField, context: LogicContext) {
  * their own visibility rules. Hidden (prefill) fields are not included.
  */
 export function visibleFields(document: LogicDocument, answers: FormAnswers): FormField[] {
-  const path = resolvePath(document, answers);
-  const context = logicContext(document, answers);
-  return path.route.flatMap(
-    (index) => path.pages.at(index)?.fields.filter((field) => isFieldVisible(field, context)) ?? [],
-  );
+  return walkForm(document, answers).visible;
+}
+
+/** The answers that count: those to questions the respondent meets, plus hidden prefills. */
+export function effectiveAnswers(document: LogicDocument, answers: FormAnswers): FormAnswers {
+  return walkForm(document, answers).kept;
 }
 
 /** Visible questions only (content blocks dropped). */
@@ -356,7 +417,7 @@ export function pickEnding(
     const forced = endings.find((ending) => ending.id === forcedEndingId);
     if (forced) return forced;
   }
-  const context = logicContext(document, answers);
+  const context = logicContext(document, effectiveAnswers(document, answers));
   const matching = endings.find(
     (ending) => ending.when?.rules.length && evaluateGroup(ending.when, context),
   );
