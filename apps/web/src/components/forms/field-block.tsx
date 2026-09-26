@@ -91,6 +91,8 @@ export function FieldBlock({
   const onBlur = (event: FocusEvent<HTMLElement>) => {
     const next = event.relatedTarget as Node | null;
     if (next && event.currentTarget.contains(next)) return;
+    // A picker's panel is portaled out of the field but still part of it.
+    if (next instanceof Element && next.closest(`[data-popover-for="${inputId}"]`)) return;
     controller.onFieldBlur(field.id);
   };
 

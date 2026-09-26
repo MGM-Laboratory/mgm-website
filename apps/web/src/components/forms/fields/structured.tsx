@@ -1,18 +1,21 @@
 "use client";
 
 import { useMemo, type CSSProperties } from "react";
-import { CalendarDays, Check, Clock3, Pipette } from "lucide-react";
+import { Check, Pipette } from "lucide-react";
 import { ADDRESS_PARTS } from "@repo/shared";
 
 import { countries, matchCountry } from "@/lib/forms/public-countries";
 
 import { Combobox } from "../controls/combobox";
+import { DatePicker } from "../controls/date-picker";
+import { DateTimePicker } from "../controls/datetime-picker";
+import { TimePicker } from "../controls/time-picker";
 import { useFormController, type FieldProps } from "../form-context";
 import { tableMap } from "../lookup";
 import { RichText } from "../rich-text";
 
 /**
- * Dates and times (native pickers, styled), and the structured answers:
+ * Dates and times (the custom pickers in ../controls), and the structured answers:
  * name, address, country (ISO codes, searchable, never flags), colour and
  * consent.
  */
@@ -25,23 +28,20 @@ export function DateField({
   describedBy,
   invalid,
 }: FieldProps<string>) {
+  const { language } = useFormController();
   return (
-    <div className="fx-input fx-affix fx-date">
-      <CalendarDays aria-hidden strokeWidth={2.25} size={18} className="fx-affix-icon" />
-      <input
-        id={inputId}
-        type="date"
-        value={typeof value === "string" ? value : ""}
-        min={field.minDate}
-        max={field.maxDate}
-        onChange={(event) => {
-          onChange(event.target.value || undefined);
-        }}
-        aria-invalid={invalid || undefined}
-        aria-describedby={describedBy}
-        aria-required={field.required || undefined}
-      />
-    </div>
+    <DatePicker
+      inputId={inputId}
+      value={typeof value === "string" ? value : undefined}
+      onChange={onChange}
+      language={language}
+      min={field.minDate}
+      max={field.maxDate}
+      required={field.required}
+      placeholder={field.placeholder}
+      describedBy={describedBy}
+      invalid={invalid}
+    />
   );
 }
 
@@ -53,21 +53,18 @@ export function TimeField({
   describedBy,
   invalid,
 }: FieldProps<string>) {
+  const { language } = useFormController();
   return (
-    <div className="fx-input fx-affix fx-date">
-      <Clock3 aria-hidden strokeWidth={2.25} size={18} className="fx-affix-icon" />
-      <input
-        id={inputId}
-        type="time"
-        value={typeof value === "string" ? value : ""}
-        onChange={(event) => {
-          onChange(event.target.value ? event.target.value.slice(0, 5) : undefined);
-        }}
-        aria-invalid={invalid || undefined}
-        aria-describedby={describedBy}
-        aria-required={field.required || undefined}
-      />
-    </div>
+    <TimePicker
+      inputId={inputId}
+      value={typeof value === "string" ? value : undefined}
+      onChange={onChange}
+      language={language}
+      required={field.required}
+      placeholder={field.placeholder}
+      describedBy={describedBy}
+      invalid={invalid}
+    />
   );
 }
 
@@ -79,23 +76,20 @@ export function DateTimeField({
   describedBy,
   invalid,
 }: FieldProps<string>) {
+  const { language } = useFormController();
   return (
-    <div className="fx-input fx-affix fx-date">
-      <CalendarDays aria-hidden strokeWidth={2.25} size={18} className="fx-affix-icon" />
-      <input
-        id={inputId}
-        type="datetime-local"
-        value={typeof value === "string" ? value : ""}
-        min={field.minDate ? `${field.minDate}T00:00` : undefined}
-        max={field.maxDate ? `${field.maxDate}T23:59` : undefined}
-        onChange={(event) => {
-          onChange(event.target.value ? event.target.value.slice(0, 16) : undefined);
-        }}
-        aria-invalid={invalid || undefined}
-        aria-describedby={describedBy}
-        aria-required={field.required || undefined}
-      />
-    </div>
+    <DateTimePicker
+      inputId={inputId}
+      value={typeof value === "string" ? value : undefined}
+      onChange={onChange}
+      language={language}
+      min={field.minDate}
+      max={field.maxDate}
+      required={field.required}
+      placeholder={field.placeholder}
+      describedBy={describedBy}
+      invalid={invalid}
+    />
   );
 }
 
