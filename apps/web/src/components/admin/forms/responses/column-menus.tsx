@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Reorder, useDragControls } from "framer-motion";
 import { ArrowDown, ArrowUp, DotsSixVertical, EyeSlash, PushPin, X } from "@phosphor-icons/react";
 
@@ -64,7 +65,7 @@ export function Popover({
       window.removeEventListener("pointerdown", onDown, true);
     };
   }, [onClose]);
-  return (
+  return createPortal(
     <div
       aria-label={label}
       className="fixed z-[60] max-h-[min(560px,80vh)] overflow-auto rounded-2xl border border-[#e4e8f0] bg-white p-3 text-sm shadow-[0_24px_60px_-20px_rgba(14,17,22,0.3)] dark:border-white/10 dark:bg-[#1c212a]"
@@ -77,7 +78,8 @@ export function Popover({
       }}
     >
       {children}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
