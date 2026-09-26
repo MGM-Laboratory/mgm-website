@@ -40,7 +40,8 @@ import {
   updateResponses,
   useFormDataset,
 } from "@/lib/forms/data/store";
-import { formatMs } from "@/components/admin/forms/charts/viz";
+import { VIZ_ROOT, formatMs } from "@/components/admin/forms/charts/viz";
+import { PrintReport } from "@/components/admin/forms/analytics/print-report";
 
 import { answerKeyOf, withAnswer } from "./answer-editor";
 import { CardsView, GalleryView } from "./card-views";
@@ -143,6 +144,8 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
   const [searchText, setSearchText] = useState(state.view.search);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const stopPrinting = useCallback(() => setPrinting(false), []);
 
   useEffect(() => {
     void loadResponses(form.id).catch(() => undefined);
@@ -445,7 +448,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
     `inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition ${active ? "bg-[#171b25] text-white dark:bg-white dark:text-[#171b25]" : "border border-[#d9dfeb] bg-white text-[#5c6679] hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:bg-white/[0.03] dark:text-white/60"}`;
 
   return (
-    <div className="space-y-3" data-testid="responses-panel">
+    <div className={`${VIZ_ROOT} space-y-3`} data-testid="responses-panel">
       <div className="flex flex-wrap items-center gap-2">
         <label className="relative min-w-0 flex-1 basis-56">
           <span className="sr-only">Search responses</span>
@@ -983,6 +986,16 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           }}
           position={Math.max(0, openIndex)}
           row={openRow}
+        />
+      ) : null}
+
+      {printing ? (
+        <PrintReport
+          columns={columns}
+          form={form}
+          onDone={stopPrinting}
+          rows={data.filtered}
+          total={state.responses?.length ?? 0}
         />
       ) : null}
 
