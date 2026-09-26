@@ -37,7 +37,7 @@ export async function runForms<T>(work: () => Promise<T>): Promise<T> {
 export function parseDocumentInput(value: unknown): FormDocument {
   const parsed = formDocumentSchema.safeParse(value);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
+    const issue = parsed.error.issues.at(0);
     const path = issue?.path.length ? `document.${issue.path.join(".")}: ` : "document: ";
     throw new FormsError(`${path}${issue?.message ?? "Invalid form."}`, 400);
   }
@@ -63,9 +63,9 @@ export type VisitMeta = { ip: string | null; userAgent: string | null; referer: 
  * fallback, exactly like the short-link click path.
  */
 export function visitMeta(req: Request): VisitMeta {
-  const headers = req.headers;
+  const headers = new Map(Object.entries(req.headers));
   const header = (name: string) => {
-    const value = headers[name];
+    const value = headers.get(name);
     return typeof value === "string" && value ? value : undefined;
   };
   const firstForwarded = (value: string | undefined) =>
@@ -92,7 +92,8 @@ export function visitMeta(req: Request): VisitMeta {
  * the limit by inventing addresses.
  */
 export function visitorTracker(req: Record<string, unknown>): string {
-  const request = req as unknown as Request;
+  // The throttler hands over the raw request; nothing guarantees its headers.
+  const request = req as Partial<Pick<Request, "headers" | "ip">>;
   const configured = process.env.ADMIN_PASSPHRASE ?? "";
   const presented = request.headers?.["x-cms-passphrase"];
   const forwarded = request.headers?.["x-visitor-ip"];

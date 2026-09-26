@@ -45,9 +45,9 @@ describe("form emails", () => {
       adminUrl: "https://labmgm.org/admin",
       siteUrl: "https://labmgm.org",
     });
-    expect(notification).not.toContain("<script>");
-    expect(notification).not.toContain("<img src=x");
-    expect(notification).not.toContain("<b>form</b>");
+    expect(notification).not.toMatch(/<script>/);
+    expect(notification).not.toMatch(/<img src=x/);
+    expect(notification).not.toMatch(/<b>form<\/b>/);
     expect(notification).toContain("&lt;script&gt;");
     expect(notification).toContain("2026-09-26 10:00 UTC");
 
@@ -57,7 +57,7 @@ describe("form emails", () => {
       rows,
       siteUrl: "https://labmgm.org",
     });
-    expect(receipt).toContain("Thanks &lt;u&gt;a lot&lt;/u&gt;<br />see you");
-    expect(receipt).not.toContain("<script>");
+    expect(receipt).toMatch(/Thanks &lt;u&gt;a lot&lt;\/u&gt;<br \/>see you/);
+    expect(receipt).not.toMatch(/<script>/);
   });
 });

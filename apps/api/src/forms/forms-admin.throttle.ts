@@ -17,7 +17,10 @@ const FORMS_ADMIN_PATH = /^\/api\/forms\/admin(?:\/|\?|$)/;
  */
 export function skipThrottleForFormsAdmin(context: ExecutionContext): boolean {
   if (context.getType() !== "http") return false;
-  const request = context.switchToHttp().getRequest<Request>();
+  // A request built outside Express (tests, other adapters) may lack either URL.
+  const request = context
+    .switchToHttp()
+    .getRequest<Partial<Pick<Request, "originalUrl" | "url">> & Pick<Request, "headers">>();
   if (!FORMS_ADMIN_PATH.test(request.originalUrl ?? request.url ?? "")) return false;
   const configured = process.env.ADMIN_PASSPHRASE ?? "";
   const header = request.headers["x-cms-passphrase"];

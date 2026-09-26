@@ -13,12 +13,18 @@ export const ANALYTICS_RANGES = ["24h", "7d", "30d", "90d", "365d", "all"] as co
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-const RANGE_DAYS: Record<Exclude<FormAnalyticsRange, "24h" | "all">, number> = {
-  "7d": 7,
-  "30d": 30,
-  "90d": 90,
-  "365d": 365,
-};
+function rangeDays(range: Exclude<FormAnalyticsRange, "24h" | "all">): number {
+  switch (range) {
+    case "7d":
+      return 7;
+    case "30d":
+      return 30;
+    case "90d":
+      return 90;
+    case "365d":
+      return 365;
+  }
+}
 
 /** Minutes east of UTC, clamped to the real-world span (UTC-14 … UTC+14). */
 export function clampTzOffset(value: unknown): number {
@@ -59,7 +65,7 @@ export function rangeStart(
     const first = bucketIndex(formCreatedAt.getTime(), tzOffsetMinutes, DAY_MS);
     return new Date(bucketStart(Math.min(first, today), tzOffsetMinutes, DAY_MS));
   }
-  return new Date(bucketStart(today - (RANGE_DAYS[range] - 1), tzOffsetMinutes, DAY_MS));
+  return new Date(bucketStart(today - (rangeDays(range) - 1), tzOffsetMinutes, DAY_MS));
 }
 
 /** Which local bucket an instant falls in (the SQL computes the same number). */

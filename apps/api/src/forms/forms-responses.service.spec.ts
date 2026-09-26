@@ -42,9 +42,11 @@ describe("admin answer edits", () => {
 
   it("reports invalid values per field", () => {
     const { errors } = cleanAdminAnswers(document, { pick: "zzz", n: 99, src: 3 }, {}, "merge");
-    expect(errors.pick?.code).toBe("unknownOption");
-    expect(errors.n?.code).toBe("max");
-    expect(errors.src?.code).toBe("invalid");
+    expect(errors).toMatchObject({
+      pick: { code: "unknownOption" },
+      n: { code: "max" },
+      src: { code: "invalid" },
+    });
   });
 
   it("replaces answers wholesale and drops unknown keys", () => {
@@ -71,7 +73,7 @@ describe("admin answer edits", () => {
       { doc: [file] },
       "merge",
     );
-    expect(foreign.errors.doc?.code).toBe("files");
+    expect(foreign.errors).toMatchObject({ doc: { code: "files" } });
   });
 });
 

@@ -16,8 +16,8 @@ import type { FormResponse } from "../generated/prisma/client.js";
 import { MailService } from "../mail/mail.service.js";
 import { sendConfirmationEmail } from "../mail/send-confirmation-email.js";
 import type { FormAnswerRow } from "../mail/templates/form-answers-table.js";
-import { buildFormNotificationEmail } from "../mail/templates/form-notification-email.js";
-import { buildFormReceiptEmail } from "../mail/templates/form-receipt-email.js";
+import { buildFormNotificationEmail as formNotificationEmailAsHtml } from "../mail/templates/form-notification-email.js";
+import { buildFormReceiptEmail as formReceiptEmailAsHtml } from "../mail/templates/form-receipt-email.js";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -59,7 +59,7 @@ export class FormsMailer {
     const siteUrl = this.config.get("PUBLIC_WEB_URL") as string;
 
     if (settings.notifyEmails.length) {
-      const html = buildFormNotificationEmail({
+      const html = formNotificationEmailAsHtml({
         formTitle: document.title,
         submittedAt: response.createdAt,
         score: response.score,
@@ -83,7 +83,7 @@ export class FormsMailer {
         sendConfirmationEmail(this.mail, this.logger, "Form receipt email delivery failed", {
           to: address.trim(),
           subject: (receipt.subject || `Your response to ${document.title}`).slice(0, 200),
-          html: buildFormReceiptEmail({
+          html: formReceiptEmailAsHtml({
             formTitle: document.title,
             message: receipt.message,
             rows: answerRows(document, answers),

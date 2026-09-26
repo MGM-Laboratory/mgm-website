@@ -16,7 +16,7 @@ import { FORM_BULK_ACTIONS, FORM_STATUSES } from "@repo/shared";
 export function parseSafe<T>(schema: z.ZodType<T>, body: unknown): T {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
+    const issue = parsed.error.issues.at(0);
     throw new BadRequestException(
       issue
         ? `${issue.path.length ? `${issue.path.join(".")}: ` : ""}${issue.message}`

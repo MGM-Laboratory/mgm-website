@@ -457,18 +457,21 @@ export class FormsPublicService {
       input.answers as FormAnswers,
     );
     const result = validateSubmission(document, answers);
-    const errors: Record<string, FieldError> = { ...result.errors };
+    const errors = new Map<string, FieldError>(Object.entries(result.errors));
     for (const fieldId of invalid) {
-      if (fieldId in result.answers) errors[fieldId] = { code: "files" };
+      if (fieldId in result.answers) errors.set(fieldId, { code: "files" });
     }
-    if (Object.keys(errors).length) {
-      throw new FormsError("Some answers need another look.", 400, errors);
+    if (errors.size) {
+      throw new FormsError("Some answers need another look.", 400, Object.fromEntries(errors));
     }
     const kept = result.answers;
 
     const timing = submissionTiming(input, settings.minSeconds);
     const score = settings.scoring.enabled ? computeScore(document, kept) : null;
-    const ending = pickEnding(document, kept, resolvePath(document, kept).forcedEndingId);
+    // A stored document always has an ending; without one the response keeps none.
+    const ending = document.endings.length
+      ? pickEnding(document, kept, resolvePath(document, kept).forcedEndingId)
+      : null;
     const claimedKeys = document.fields
       .filter((field) => isFileType(field.type))
       .flatMap((field) => {

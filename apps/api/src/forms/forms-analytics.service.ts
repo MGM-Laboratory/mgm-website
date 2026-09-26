@@ -236,20 +236,27 @@ export class FormsAnalyticsService {
       series: zeroFillSeries(seriesRows, start, tzOffset, size, now),
       heatmap,
       funnel: orderFunnel(questionIds, funnel),
-      countries: countries.map((row) => ({ country: row.country!, count: row._count._all })),
-      cities: cities.map((row) => ({
-        city: row.city!,
-        country: row.country,
-        count: row._count._all,
-      })),
+      // The queries above skip null values; the checks below only narrow the types.
+      countries: countries.flatMap((row) =>
+        row.country === null ? [] : [{ country: row.country, count: row._count._all }],
+      ),
+      cities: cities.flatMap((row) =>
+        row.city === null ? [] : [{ city: row.city, country: row.country, count: row._count._all }],
+      ),
       referrers: referrerHosts(
         referrers.map((row) => ({ referer: row.referer, count: row._count._all })),
         TOP_LIMIT,
       ),
-      devices: devices.map((row) => ({ device: row.device!, count: row._count._all })),
-      browsers: browsers.map((row) => ({ browser: row.browser!, count: row._count._all })),
-      oss: oss.map((row) => ({ os: row.os!, count: row._count._all })),
-      languages: languages.map((row) => ({ language: row.language!, count: row._count._all })),
+      devices: devices.flatMap((row) =>
+        row.device === null ? [] : [{ device: row.device, count: row._count._all }],
+      ),
+      browsers: browsers.flatMap((row) =>
+        row.browser === null ? [] : [{ browser: row.browser, count: row._count._all }],
+      ),
+      oss: oss.flatMap((row) => (row.os === null ? [] : [{ os: row.os, count: row._count._all }])),
+      languages: languages.flatMap((row) =>
+        row.language === null ? [] : [{ language: row.language, count: row._count._all }],
+      ),
       utmSources,
       points: mergePoints(viewPoints, submitPoints, POINTS_LIMIT),
     };

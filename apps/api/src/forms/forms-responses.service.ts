@@ -58,7 +58,8 @@ export function toResponseRecord(row: FormResponse): FormResponseRecord {
       starred: row.starred,
       flagged: row.flagged,
       reviewed: row.reviewed,
-      tags: row.tags ?? [],
+      // Prisma types the list as present, but a Postgres array column can hold NULL.
+      tags: (row.tags as string[] | null) ?? [],
       note: row.note,
       editedAt: row.editedAt?.toISOString() ?? null,
     },
@@ -88,45 +89,50 @@ export function cleanAdminAnswers(
     if (field.allowOther) otherOwners.set(otherKey(field.id), field);
   }
 
-  const answers: FormAnswers = mode === "merge" ? { ...existing } : {};
-  const errors: Record<string, FieldError> = {};
+  const previous = new Map(Object.entries(existing));
+  const answers = new Map(mode === "merge" ? previous : []);
+  const errors = new Map<string, FieldError>();
   for (const [key, value] of Object.entries(incoming)) {
     if (otherOwners.has(key)) {
-      if (typeof value === "string" && value.trim()) answers[key] = value.trim().slice(0, 2000);
-      else delete answers[key];
+      if (typeof value === "string" && value.trim()) answers.set(key, value.trim().slice(0, 2000));
+      else answers.delete(key);
       continue;
     }
     const field = fields.get(key);
     if (!field) continue;
     if (!isAnswered(value)) {
-      delete answers[key];
+      answers.delete(key);
       continue;
     }
     if (field.type === "hidden") {
-      if (typeof value !== "string") errors[key] = { code: "invalid" };
-      else answers[key] = value.trim().slice(0, 2000);
+      if (typeof value !== "string") errors.set(key, { code: "invalid" });
+      else answers.set(key, value.trim().slice(0, 2000));
       continue;
     }
     if (isFileType(field.type)) {
-      const own = existing[key];
+      const own = previous.get(key);
       const ownFiles = new Map(
         (isFileAnswer(own) ? own : []).map((file: FormFileAnswer) => [file.key, file]),
       );
       if (!isFileAnswer(value) || value.some((file) => !ownFiles.has(file.key))) {
-        errors[key] = { code: "files" };
+        errors.set(key, { code: "files" });
         continue;
       }
-      answers[key] = value.map((file) => ownFiles.get(file.key)!);
+      // Every file was just found among the response's own files.
+      answers.set(
+        key,
+        value.flatMap((file) => ownFiles.get(file.key) ?? []),
+      );
       continue;
     }
     const error = validateFieldAnswer({ ...field, required: false }, value as never);
     if (error) {
-      errors[key] = error;
+      errors.set(key, error);
       continue;
     }
-    answers[key] = typeof value === "string" ? value.trim() : (value as FormAnswers[string]);
+    answers.set(key, typeof value === "string" ? value.trim() : (value as FormAnswers[string]));
   }
-  return { answers, errors };
+  return { answers: Object.fromEntries(answers), errors: Object.fromEntries(errors) };
 }
 
 /** The responses admin: list, edit, bulk actions, data cleaning and file links. */
@@ -257,7 +263,7 @@ export class FormsResponsesService {
       const { answers, errors } = cleanAdminAnswers(
         document,
         update.answers,
-        existing.get(update.id)!,
+        existing.get(update.id) ?? {}, // every id was found above
         "replace",
       );
       if (Object.keys(errors).length) {

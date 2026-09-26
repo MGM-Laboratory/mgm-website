@@ -223,7 +223,7 @@ export function imageDimensions(
     if (type === "image/jpeg") {
       let offset = 2;
       while (offset + 9 < buffer.length) {
-        if (buffer[offset] !== 0xff) {
+        if (buffer.readUInt8(offset) !== 0xff) {
           offset += 1;
           continue;
         }
