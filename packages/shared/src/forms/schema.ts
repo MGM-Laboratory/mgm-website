@@ -486,14 +486,19 @@ export type FormEntrance = (typeof FORM_ENTRANCES)[number];
 export const FORM_CELEBRATIONS = ["confetti", "fireworks", "bloom", "assemble", "none"] as const;
 export type FormCelebration = (typeof FORM_CELEBRATIONS)[number];
 
+/** Brand pattern tiles (public/patterns/<name>-<colours>.svg) quoted behind the form. */
 export const FORM_PATTERNS = [
   "none",
-  "circles",
-  "crosses",
-  "plus",
-  "triangles",
+  "arcs",
+  "circle",
+  "clover",
+  "domes",
+  "fans",
   "leaves",
-  "halves",
+  "plus",
+  "quads",
+  "square",
+  "x",
   "mixed",
 ] as const;
 export type FormPattern = (typeof FORM_PATTERNS)[number];
