@@ -517,6 +517,27 @@ h5.fx-rich-heading {
   }
 }
 
+/* Centred placement: the form keeps the middle of the page on every width,
+   and on wide screens the poster forms in the lower right corner (the
+   tablet arrangement) instead of taking a column beside the questions. */
+@media (min-width: 1180px) {
+  .fx-root[data-placement="center"] {
+    --poster-size: min(20vw, 34dvh, 300px);
+    --poster-x: calc(100vw - var(--poster-size) - max(3vw, (100vw - 1680px) / 2));
+    --poster-y: calc(100dvh - var(--poster-size) - 3vw);
+  }
+  .fx-root[data-placement="center"] .fx-welcome,
+  .fx-root[data-placement="center"] .fx-classic,
+  .fx-root[data-placement="center"] .fx-convo,
+  .fx-root[data-placement="center"] .fx-ending {
+    margin-inline: auto;
+    max-width: 720px;
+  }
+  .fx-root[data-placement="center"] .fx-welcome[data-cover="split"] {
+    max-width: 1120px;
+  }
+}
+
 /* The sheet every screen's content sits on: translucent over the scene. */
 .fx-sheet,
 .fx-page,

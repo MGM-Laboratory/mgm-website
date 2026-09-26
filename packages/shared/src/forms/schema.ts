@@ -515,6 +515,11 @@ export const formDesignSchema = z.object({
   font: z.enum(FORM_FONTS).default("hanken"),
   layout: z.enum(FORM_LAYOUTS).default("classic"),
   align: z.enum(["left", "center"]).default("left"),
+  /**
+   * Where the form sits on wide screens: centred on the page (the poster
+   * forms in a corner), or on the left with the poster beside it.
+   */
+  placement: z.enum(["center", "side"]).default("center"),
   density: z.enum(["cozy", "comfortable", "airy"]).default("comfortable"),
   fieldStyle: z.enum(["boxed", "underline", "soft"]).default("boxed"),
   buttonShape: z.enum(["pill", "rounded", "square"]).default("pill"),

@@ -71,6 +71,7 @@ export function FormRoot({
       data-field-style={design.fieldStyle}
       data-button={design.buttonShape}
       data-align={design.align}
+      data-placement={design.placement}
       data-layout={design.layout}
       data-stage={stage}
     >
