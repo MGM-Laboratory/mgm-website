@@ -74,6 +74,8 @@ export type MagnetState = {
   liftSpring: Spring;
   tiltSpring: Spring;
   written: { lift: number; tilt: number };
+  /** Where it is held, from its centre: lift and tilt pivot on this point. */
+  pivot: { x: number; y: number };
   moveTween: gsap.core.Animation | null;
   poseTween: gsap.core.Animation | null;
   squashTween: gsap.core.Animation | null;
@@ -202,6 +204,7 @@ export function createMagnetBoard(section: HTMLElement) {
       liftSpring: new Spring(3.4, 0.5, 0),
       tiltSpring: new Spring(2.4, 0.3, 0),
       written: { lift: Number.NaN, tilt: Number.NaN },
+      pivot: { x: 0, y: 0 },
       moveTween: null,
       poseTween: null,
       squashTween: null,
@@ -279,7 +282,11 @@ export function createMagnetBoard(section: HTMLElement) {
   function tiltTarget(m: MagnetState) {
     if (!(m.dragging || m.gliding) || !motionAllowed()) return 0;
     const vx = InertiaPlugin.isTracking(m.el, "x") ? InertiaPlugin.getVelocity(m.el, "x") : 0;
-    return Math.max(-13, Math.min(13, vx / 75));
+    // Held off-centre, the far end droops a little under its own weight.
+    const droop = m.dragging
+      ? Math.max(-1, Math.min(1, -m.pivot.x / Math.max(1, m.home.w / 2))) * 5
+      : 0;
+    return Math.max(-14, Math.min(14, vx / 75 + droop));
   }
 
   function write(m: MagnetState) {
@@ -288,10 +295,19 @@ export function createMagnetBoard(section: HTMLElement) {
     if (Math.abs(l - m.written.lift) < 0.0005 && Math.abs(t - m.written.tilt) < 0.005) return;
     m.written.lift = l;
     m.written.tilt = t;
+    // Rotate and scale about the held point rather than the centre, so the
+    // spot under the finger stays under it and the magnet swings from there.
+    const scale = 1 + 0.075 * l;
+    const rad = (t * Math.PI) / 180;
+    const cos = Math.cos(rad) * scale;
+    const sin = Math.sin(rad) * scale;
+    const { x: px, y: py } = m.pivot;
+    const tx = px - (cos * px - sin * py);
+    const ty = py - (sin * px + cos * py) - 6 * l;
     m.lift.style.transform =
       l === 0 && t === 0
         ? ""
-        : `translate3d(0,${(-6 * l).toFixed(2)}px,0) rotate(${t.toFixed(2)}deg) scale(${(1 + 0.075 * l).toFixed(4)})`;
+        : `translate3d(${tx.toFixed(2)}px,${ty.toFixed(2)}px,0) rotate(${t.toFixed(2)}deg) scale(${scale.toFixed(4)})`;
     const shadow = Math.max(0, l) * (m.flipped ? 0 : 1);
     m.shadow.style.opacity = shadow ? `calc(var(--magnet-shadow) * ${shadow.toFixed(3)})` : "";
     m.shadow.style.transform = shadow
@@ -312,6 +328,11 @@ export function createMagnetBoard(section: HTMLElement) {
       const restL = m.liftSpring.settle(0.001);
       const restT = m.tiltSpring.settle(0.01);
       write(m);
+      // Fully at rest the pivot no longer matters, so it can reset unseen.
+      if (restL && restT && m.liftSpring.value === 0 && m.tiltSpring.value === 0 && !m.dragging) {
+        m.pivot.x = 0;
+        m.pivot.y = 0;
+      }
       if (!restL || !restT || m.gliding || m.flying) active = true;
     }
     if (!active) {
@@ -731,6 +752,19 @@ export function createMagnetBoard(section: HTMLElement) {
       holdTimer: 0,
       grabX: 0,
       grabY: 0,
+    };
+    const board = section.getBoundingClientRect();
+    m.pivot = {
+      x:
+        event.clientX -
+        board.left -
+        (m.home.x + (Number(gsap.getProperty(m.el, "x")) || 0)) -
+        m.home.w / 2,
+      y:
+        event.clientY -
+        board.top -
+        (m.home.y + (Number(gsap.getProperty(m.el, "y")) || 0)) -
+        m.home.h / 2,
     };
     try {
       m.el.setPointerCapture(event.pointerId);
