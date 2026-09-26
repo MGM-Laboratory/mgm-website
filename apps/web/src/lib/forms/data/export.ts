@@ -63,7 +63,10 @@ export function quoteField(value: string, separator: string) {
 
 /** Spreadsheet apps run cells starting with = + - @ as formulas; a leading quote defuses them. */
 function defuse(value: string) {
-  return /^[=+\-@\t\r]/.test(value) && !/^-?\d+(\.\d+)?$/.test(value) ? `'${value}` : value;
+  if (!/^[=+\-@\t\r]/.test(value)) return value;
+  // Numbers and phone numbers ("+62 812 ...") can't carry a formula; leave them readable.
+  if (/^[+-]?[\d\s().-]+$/.test(value)) return value;
+  return `'${value}`;
 }
 
 export function toDelimited(table: ExportTable, separator: "," | "\t"): string {

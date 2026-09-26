@@ -227,9 +227,9 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
           <div className="space-y-2" role="alertdialog" aria-label="Apply cleaning permanently">
             <p className="text-xs leading-5">
               This rewrites <b>{changedCells}</b> answer cell{changedCells === 1 ? "" : "s"} in{" "}
-              <b>{changes.length}</b> response{changes.length === 1 ? "" : "s"} on the server.
-              Excluded rows are not deleted and computed or split columns stay virtual. It
-              can&apos;t be undone.
+              <b>{changes.length}</b> response{changes.length === 1 ? "" : "s"} on the server. Only
+              rows the pipeline keeps are written: excluded or duplicate rows are neither changed
+              nor deleted, and computed or split columns stay virtual. It can&apos;t be undone.
             </p>
             <div className="flex gap-2">
               <button className={ghostButton} onClick={() => setConfirming(false)} type="button">

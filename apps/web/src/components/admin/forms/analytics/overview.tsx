@@ -204,7 +204,7 @@ export function OverviewKpis({
         value={formatCount(totals.views)}
       />
       <KpiCard
-        hint="Distinct sessions that viewed the form"
+        hint="Distinct visitors (by device) that viewed the form"
         label="Unique visitors"
         value={formatCount(totals.uniqueVisitors)}
       />
