@@ -10,7 +10,7 @@ import { motionAllowed } from "@/lib/reduced-motion";
 
 import { Collapse } from "./collapse";
 import { FieldBlock } from "./field-block";
-import { useFormController } from "./form-context";
+import { focusAllowed, useFormController } from "./form-context";
 import { SPEED, SplitText, useReveal } from "./motion";
 import { RichText } from "./rich-text";
 
@@ -25,7 +25,7 @@ export type LayoutProps = {
   restored: boolean;
   onStartOver: () => void;
   focusFieldId?: string;
-  focusNonce?: number;
+  focusNonce?: string;
 };
 
 export function RestoredNote({ onStartOver }: { onStartOver: () => void }) {
@@ -113,8 +113,8 @@ export function ClassicLayout({
     const first = element?.querySelector<HTMLElement>(
       ".fx-field input:not([type=hidden]):not([tabindex='-1']), .fx-field textarea, .fx-field select, .fx-rank-row",
     );
-    (first ?? headingRef.current)?.focus({ preventScroll: true });
-  }, [page.id, design.motion.speed]);
+    if (focusAllowed(mode)) (first ?? headingRef.current)?.focus({ preventScroll: true });
+  }, [page.id, design.motion.speed, mode]);
 
   // The admin preview asks to see one field: go to its page (done by the
   // runner), then scroll it into view and focus it.
@@ -127,12 +127,13 @@ export function ClassicLayout({
       if (!block) return;
       block.closest<HTMLElement>("[data-reveal]")?.style.setProperty("opacity", "1");
       block.scrollIntoView({ block: "center", behavior: motionAllowed() ? "smooth" : "auto" });
+      if (!focusAllowed(mode)) return;
       block
         .querySelector<HTMLElement>("input, textarea, [tabindex='0']")
         ?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [focusFieldId, focusNonce]);
+  }, [focusFieldId, focusNonce, mode]);
 
   const go = (nextTrail: string[]) => {
     const element = pageRef.current;

@@ -574,12 +574,19 @@ export function FormRun({
   }, [document, live, slug]);
 
   // -------------------------------------------------------------- preview
-  const previewNonce = preview?.nonce;
   const previewStage = preview?.stage;
   const previewEnding = preview?.endingId;
   const previewFocus = preview?.focusFieldId;
+  // Jump only when the builder asks for somewhere new: every edit resends
+  // the document, and re-jumping on each would yank the respondent side
+  // (and focus) around while the admin types.
+  const jumpKey = previewStage
+    ? `${previewStage}|${previewEnding ?? ""}|${previewFocus ?? ""}`
+    : "";
+  const lastJump = useRef("");
   useEffect(() => {
-    if (previewNonce === undefined || !previewStage) return;
+    if (!previewStage || jumpKey === lastJump.current) return;
+    lastJump.current = jumpKey;
     const current = answersRef.current;
     if (previewStage === "ending") {
       const ending =
@@ -597,7 +604,7 @@ export function FormRun({
       return;
     }
     dispatch({ type: "stage", stage: previewStage });
-  }, [document, previewEnding, previewFocus, previewNonce, previewStage, settings.scoring.enabled]);
+  }, [document, jumpKey, previewEnding, previewFocus, previewStage, settings.scoring.enabled]);
 
   const onPreviewStage = preview?.onStage;
   useEffect(() => {
@@ -703,7 +710,7 @@ export function FormRun({
                   another();
                 }}
                 focusFieldId={previewFocus}
-                focusNonce={previewNonce}
+                focusNonce={jumpKey}
               />
             ) : (
               <ClassicLayout
@@ -719,7 +726,7 @@ export function FormRun({
                   another();
                 }}
                 focusFieldId={previewFocus}
-                focusNonce={previewNonce}
+                focusNonce={jumpKey}
               />
             )}
             <div className="fx-trap" aria-hidden>
@@ -738,7 +745,10 @@ export function FormRun({
         ) : null}
         {stage === "ending" && state.ending ? (
           <EndingStage
-            ending={state.ending.ending}
+            ending={
+              document.endings.find((candidate) => candidate.id === state.ending?.ending.id) ??
+              state.ending.ending
+            }
             score={state.ending.score}
             onAnother={another}
             celebration={design.motion.celebration}

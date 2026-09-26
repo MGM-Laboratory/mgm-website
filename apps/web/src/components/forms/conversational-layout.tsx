@@ -17,7 +17,7 @@ import { motionAllowed } from "@/lib/reduced-motion";
 
 import { RestoredNote, type LayoutProps } from "./classic-layout";
 import { FieldBlock } from "./field-block";
-import { useFormController } from "./form-context";
+import { focusAllowed, useFormController } from "./form-context";
 import { SPEED } from "./motion";
 import { RichText } from "./rich-text";
 
@@ -222,7 +222,7 @@ export function ConversationalLayout({
       );
       const heading = element.querySelector<HTMLElement>("h2");
       if (heading && !heading.hasAttribute("tabindex")) heading.tabIndex = -1;
-      (control ?? choice ?? heading)?.focus({ preventScroll: true });
+      if (focusAllowed(mode)) (control ?? choice ?? heading)?.focus({ preventScroll: true });
     }
     // Only when the step changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -301,14 +301,14 @@ export function ConversationalLayout({
 
   // The admin preview asks for one field: jump straight to it (the runner set the trail).
   useEffect(() => {
-    if (!focusFieldId) return;
+    if (!focusFieldId || !focusAllowed(mode)) return;
     const frame = requestAnimationFrame(() => {
       stepRef.current
         ?.querySelector<HTMLElement>("input, textarea, [tabindex='0']")
         ?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [focusFieldId, focusNonce]);
+  }, [focusFieldId, focusNonce, mode]);
 
   if (!step) return null;
   const withKeys =
