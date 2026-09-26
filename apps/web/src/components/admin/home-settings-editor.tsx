@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, FloppyDisk, VideoCamera } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { HomeContent } from "@repo/shared";
 import { homeVideoUrl } from "@/lib/home-cms";
@@ -76,19 +76,9 @@ function VideoUploadField({
   onChooseVideo: (file: File | undefined) => void;
   onRemoveVideo: () => void;
 }>) {
-  // A chosen file previews from memory before it is uploaded; a saved one
-  // plays through the same cached route the homepage uses.
-  const localPreview = useMemo(
-    () => (videoFile ? URL.createObjectURL(videoFile) : undefined),
-    [videoFile],
-  );
-  useEffect(
-    () => () => {
-      if (localPreview) URL.revokeObjectURL(localPreview);
-    },
-    [localPreview],
-  );
-  const previewSrc = localPreview ?? homeVideoUrl(form.videoKey);
+  // The saved video previews through the same cached route the homepage
+  // uses. A newly chosen file shows its name and size until it is saved.
+  const previewSrc = videoFile ? undefined : homeVideoUrl(form.videoKey);
 
   return (
     <div className="rounded-2xl border border-[#dfe4ee] bg-white p-4 dark:border-white/10 dark:bg-white/[0.035]">
