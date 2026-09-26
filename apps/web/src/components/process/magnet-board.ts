@@ -244,15 +244,20 @@ export function createMagnetBoard(section: HTMLElement) {
     for (const m of magnets) {
       if (m.dragging || m.flying) continue;
       const clamped = clampOffset(m.home, bounds, m);
+      if (!m.ready) {
+        // Not thrown in yet: the entrance reads the offset when it plays.
+        m.x = clamped.x;
+        m.y = clamped.y;
+        continue;
+      }
       if (m.gliding) {
         m.moveTween?.kill();
         m.gliding = false;
         m.x = Number(gsap.getProperty(m.el, "x"));
         m.y = Number(gsap.getProperty(m.el, "y"));
         const inside = clampOffset(m.home, bounds, m);
-        m.x = inside.x;
-        m.y = inside.y;
-        setOffset(m, m.x, m.y);
+        setOffset(m, inside.x, inside.y);
+        land(m);
         continue;
       }
       if (Math.abs(clamped.x - m.x) > 0.5 || Math.abs(clamped.y - m.y) > 0.5) {
@@ -473,8 +478,10 @@ export function createMagnetBoard(section: HTMLElement) {
     m.x = x;
     m.y = y;
     m.moveTween?.kill();
-    m.el.style.zIndex = "5";
-    lower(m, 0.7);
+    if (!m.flipped) {
+      m.el.style.zIndex = "5";
+      lower(m, 0.7);
+    }
     if (!motionAllowed()) {
       setOffset(m, x, y);
       return;
@@ -785,7 +792,8 @@ export function createMagnetBoard(section: HTMLElement) {
       current.holdTimer = window.setTimeout(() => {
         if (press !== current) return;
         current.held = true;
-        navigator.vibrate?.(8);
+        // Before any tap the browser refuses (and reports) a vibration.
+        if (navigator.userActivation?.hasBeenActive !== false) navigator.vibrate?.(8);
         pressSquash(m);
         ensureTicking();
       }, HOLD_MS);
@@ -1008,7 +1016,6 @@ export function createMagnetBoard(section: HTMLElement) {
         },
       });
     });
-    moves++;
   }
 
   // ---- Wiring --------------------------------------------------------------
@@ -1072,6 +1079,15 @@ export function createMagnetBoard(section: HTMLElement) {
     }
   }
   showReset(magnets.some(isMoved));
+
+  // A release the magnet itself never hears (a capture that failed) must
+  // still end the press, or no magnet could be picked up again.
+  listen(window, "pointerup", (e: PointerEvent) => {
+    if (press && e.pointerId === press.id) onPointerUp(press.m, e);
+  });
+  listen(window, "pointercancel", (e: PointerEvent) => {
+    if (press && e.pointerId === press.id) onPointerCancel(press.m, e);
+  });
 
   listen(resetButton, "click", putBack);
   cleanups.push(attachMagnetic(resetWrap, { radius: 60, strength: 0.3, max: 10 }));
