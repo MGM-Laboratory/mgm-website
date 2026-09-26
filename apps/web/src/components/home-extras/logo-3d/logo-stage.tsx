@@ -1,6 +1,7 @@
 "use client";
 
 import { useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
+import gsap from "gsap";
 
 import { LogoMark } from "@/components/hero/shapes";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
@@ -9,7 +10,7 @@ import type { LogoEngine } from "./logo-engine";
 import { hardwareWebGL2 } from "./webgl-probe";
 
 export type LogoStageHandle = {
-  /** The end-of-page moment: a big spin. */
+  /** The end-of-page moment: a big spin (3D) or a shard burst (flat mark). */
   celebrate: () => void;
   /** The stage's box on screen, where the confetti bursts from. */
   rect: () => DOMRect | null;
@@ -35,7 +36,35 @@ export function LogoStage({ ref, className }: { ref?: Ref<LogoStageHandle>; clas
 
   useImperativeHandle(ref, () => ({
     celebrate() {
-      engineRef.current?.celebrate();
+      if (engineRef.current) {
+        engineRef.current.celebrate();
+        return;
+      }
+      const svg = flatRef.current?.querySelector("svg");
+      if (!svg || !motionAllowed()) return;
+      // The flat mark's version: the shards burst apart and snap back.
+      const shards = [...svg.querySelectorAll<SVGGElement>("g[data-part]")];
+      const offsets = [
+        { x: 0, y: -60 },
+        { x: -60, y: 40 },
+        { x: 60, y: 40 },
+      ];
+      gsap
+        .timeline()
+        .to(svg, { rotation: 360, duration: 1, ease: "power3.inOut" }, 0)
+        .fromTo(
+          shards,
+          { x: 0, y: 0 },
+          {
+            x: (i: number) => offsets[i]?.x ?? 0,
+            y: (i: number) => offsets[i]?.y ?? 0,
+            duration: 0.35,
+            ease: "power3.out",
+          },
+          0,
+        )
+        .to(shards, { x: 0, y: 0, duration: 0.7, ease: "elastic.out(1, 0.45)" }, 0.4)
+        .set(svg, { rotation: 0 });
     },
     rect: () => boxRef.current?.getBoundingClientRect() ?? null,
   }));

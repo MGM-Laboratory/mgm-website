@@ -1,30 +1,89 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+import { labNote } from "@/lib/lab-notes";
+import { motionAllowed } from "@/lib/reduced-motion";
+import { isRouteCoverActive } from "@/lib/route-reveal";
+import { isScrollLocked } from "@/lib/scroll-lock";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { HOME_CHAPTERS } from "./chapters";
+import { ConfettiBurst, type Burst } from "./confetti-burst";
 import { KineticHeading } from "./kinetic-heading";
-import { LogoStage } from "./logo-3d/logo-stage";
+import { LogoStage, type LogoStageHandle } from "./logo-3d/logo-stage";
 import { Magnetic } from "./magnetic";
 
 /**
  * The homepage's last chapter ("Your turn"), rendered at the top of the
  * footer through `CtaFooter`'s `lead` slot: an invitation to get in touch,
- * with the lab's mark beside it.
+ * with the lab's mark floating beside it (3D where the device can, flat
+ * otherwise).
  *
- * It only exists on the homepage.
+ * The first time a visitor reaches it in a session, the footer celebrates:
+ * the mark spins, a burst of Bauhaus confetti pops out of it, the heading's
+ * letters hop, and a lab note says hello. That moment is decorative, so it
+ * is skipped under reduced motion.
  */
 export function HomeFinale() {
   const rootRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<LogoStageHandle>(null);
+  const [burst, setBurst] = useState<Burst | null>(null);
 
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     const tween = fadeUpOnScroll(root, ".finale-reveal", { stagger: 0.12 });
     return () => tween?.scrollTrigger?.kill();
+  }, []);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let timer = 0;
+    let armed = true;
+
+    const celebrate = () => {
+      const said = labNote({
+        id: "reached-end",
+        text: "You made it to the end. That deserves a proper hello. Say hi any time.",
+        shape: "star",
+        tone: "yellow",
+      });
+      // Once a session: the note is said once, and the party follows it.
+      if (!said) return;
+      const rect = stageRef.current?.rect();
+      if (rect) {
+        setBurst({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+          id: performance.now(),
+        });
+      }
+      stageRef.current?.celebrate();
+      root.querySelector(".kinetic-heading")?.dispatchEvent(new CustomEvent("kinetic:hop"));
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!armed || !entry.isIntersecting) return;
+        const seen =
+          entry.intersectionRatio >= 0.45 ||
+          entry.intersectionRect.height >= window.innerHeight * 0.5;
+        if (!seen || !motionAllowed() || isScrollLocked() || isRouteCoverActive()) return;
+        armed = false;
+        observer.disconnect();
+        // A beat after arriving, so the heading's own entrance reads first.
+        timer = window.setTimeout(celebrate, 450);
+      },
+      { threshold: [0, 0.2, 0.45, 0.7] },
+    );
+    observer.observe(root);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
   }, []);
 
   return (
@@ -92,8 +151,12 @@ export function HomeFinale() {
             </Magnetic>
           </div>
         </div>
-        <LogoStage className="finale-reveal mx-auto w-[clamp(11rem,46vw,15rem)] md:w-[clamp(14rem,24vw,19rem)]" />
+        <LogoStage
+          ref={stageRef}
+          className="finale-reveal mx-auto w-[clamp(11rem,46vw,15rem)] md:w-[clamp(14rem,24vw,19rem)]"
+        />
       </div>
+      {burst ? <ConfettiBurst key={burst.id} burst={burst} onDone={() => setBurst(null)} /> : null}
     </section>
   );
 }
