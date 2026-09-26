@@ -40,6 +40,50 @@ type Scope = "all" | "filtered" | "selected";
  * rather than fetch: the URL is an admin route built from the form id and
  * the stored key, and the call must be abortable for Cancel.
  */
+class DownloadError extends Error {
+  readonly status: number;
+  readonly retryAfter: number | null;
+  constructor(status: number, retryAfter: number | null) {
+    super(`HTTP ${status}`);
+    this.status = status;
+    this.retryAfter = retryAfter;
+  }
+}
+
+const wait = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const timer = window.setTimeout(resolve, ms);
+    signal.addEventListener(
+      "abort",
+      () => {
+        window.clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
+
+/**
+ * One file, retried while the API's rate limit (about 100 requests a
+ * minute) says to slow down, so big archives finish instead of skipping.
+ */
+async function downloadWithRetry(
+  url: string,
+  signal: AbortSignal,
+  onWait: (seconds: number) => void,
+) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await downloadFileBytes(url, signal);
+    } catch (error) {
+      if (!(error instanceof DownloadError) || error.status !== 429 || attempt >= 30) throw error;
+      const seconds = Math.max(2, Math.min(60, error.retryAfter ?? 10));
+      onWait(seconds);
+      await wait(seconds * 1000, signal);
+    }
+  }
+}
+
 function downloadFileBytes(url: string, signal: AbortSignal): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
@@ -48,7 +92,12 @@ function downloadFileBytes(url: string, signal: AbortSignal): Promise<Uint8Array
     request.onload = () => {
       if (request.status >= 200 && request.status < 300)
         resolve(new Uint8Array(request.response as ArrayBuffer));
-      else reject(new Error(`HTTP ${request.status}`));
+      else {
+        const header = Number(request.getResponseHeader("retry-after"));
+        reject(
+          new DownloadError(request.status, Number.isFinite(header) && header > 0 ? header : null),
+        );
+      }
     };
     request.onerror = () => reject(new Error("Network error"));
     request.onabort = () => reject(new DOMException("Aborted", "AbortError"));
@@ -93,9 +142,12 @@ export function ExportMenu({
   const [meta, setMeta] = useState(true);
   const [clean, setClean] = useState(true);
   const [onlyVisible, setOnlyVisible] = useState(false);
-  const [zipping, setZipping] = useState<{ done: number; total: number; bytes: number } | null>(
-    null,
-  );
+  const [zipping, setZipping] = useState<{
+    done: number;
+    total: number;
+    bytes: number;
+    waiting: number;
+  } | null>(null);
   const abort = useRef<AbortController | null>(null);
 
   const rowsFor = (): WorkingRow[] => {
@@ -204,23 +256,25 @@ export function ExportMenu({
     const controller = new AbortController();
     abort.current = controller;
     const zip = new ZipWriter();
-    setZipping({ done: 0, total: jobs.length, bytes: 0 });
+    setZipping({ done: 0, total: jobs.length, bytes: 0, waiting: 0 });
     let failed = 0;
     try {
       for (let index = 0; index < jobs.length; index += 1) {
         if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
         const job = jobs[index];
         try {
-          const data = await downloadFileBytes(
+          const data = await downloadWithRetry(
             formFileUrl(form.id, job.key, "download"),
             controller.signal,
+            (seconds) =>
+              setZipping((current) => (current ? { ...current, waiting: seconds } : current)),
           );
           zip.add({ name: job.path, data });
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") throw error;
           failed += 1;
         }
-        setZipping({ done: index + 1, total: jobs.length, bytes: zip.size });
+        setZipping({ done: index + 1, total: jobs.length, bytes: zip.size, waiting: 0 });
       }
       downloadBlob(
         zip.finish() as BlobPart[],
@@ -344,6 +398,9 @@ export function ExportMenu({
                 <span>
                   Downloading {zipping.done} / {zipping.total} files ·{" "}
                   {(zipping.bytes / 1024 / 1024).toFixed(1)} MB
+                  {zipping.waiting
+                    ? ` · the server asked to slow down, retrying in ${zipping.waiting}s`
+                    : ""}
                 </span>
                 <button
                   className="inline-flex items-center gap-1 font-semibold text-brand-red"
