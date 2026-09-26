@@ -1,5 +1,5 @@
 import compression from "compression";
-import { json, raw } from "express";
+import { json, raw, type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -12,13 +12,35 @@ import type { Env } from "./config/env.validation.js";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true, bodyParser: false });
+  const configService = app.get(ConfigService<Env, true>);
+
+  // Form respondents' uploads arrive as raw bytes of any type, on this one
+  // path only. Registered ahead of every other parser: body parsers are
+  // first-match-wins, so a PDF, video or JSON file sent to a form must not
+  // be claimed by the global parsers and their different limits. The
+  // per-field limit is enforced in the handler; an oversized body gets a
+  // JSON 413 instead of Express's HTML error page.
+  const formUploadsPath = "/api/forms/public/:slug/uploads";
+  app.use(
+    formUploadsPath,
+    raw({ type: () => true, limit: configService.getOrThrow<number>("FORMS_MAX_UPLOAD_BYTES") }),
+  );
+  app.use(formUploadsPath, (error: unknown, _req: Request, res: Response, next: NextFunction) => {
+    const status = (error as { status?: unknown } | null)?.status;
+    if (status === 413) {
+      res.status(413).json({ statusCode: 413, message: "The file is too large." });
+      return;
+    }
+    next(error);
+  });
+  // A 6 MB image is about 8.4 MB as a base64 data URL, above the global
+  // JSON ceiling, so the form design media route gets a little headroom.
+  app.use("/api/forms/admin/:id/media", json({ limit: "9mb" }));
 
   app.use(json({ limit: "8mb" }));
 
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
-
-  const configService = app.get(ConfigService<Env, true>);
 
   // Publication papers arrive as raw PDF bytes (never JSON); the size ceiling
   // comes from configuration so it can change without touching code.
