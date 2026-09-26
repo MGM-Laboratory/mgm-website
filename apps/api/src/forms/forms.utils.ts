@@ -110,17 +110,13 @@ export function verifyFormToken(
 
 // --- Storage keys ---
 
-const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
-
 /** Respondent uploads: `formfile-<formId>-<uuid>.<ext>`. */
-export const FORM_UPLOAD_KEY_PATTERN = new RegExp(
-  `^formfile-([a-z0-9]{1,40})-${UUID}\\.[a-z0-9]{1,10}$`,
-);
+export const FORM_UPLOAD_KEY_PATTERN =
+  /^formfile-([a-z0-9]{1,40})-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z0-9]{1,10}$/;
 
 /** Design media of a form: `form-<formId>-<uuid>.<ext>`. */
-export const FORM_MEDIA_KEY_PATTERN = new RegExp(
-  `^form-([a-z0-9]{1,40})-${UUID}\\.(?:png|jpg|webp|gif|mp4|webm)$`,
-);
+export const FORM_MEDIA_KEY_PATTERN =
+  /^form-([a-z0-9]{1,40})-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpg|webp|gif|mp4|webm)$/;
 
 export function formUploadKey(formId: string, extension: string) {
   return `formfile-${formId}-${randomUUID()}.${extension}`;
