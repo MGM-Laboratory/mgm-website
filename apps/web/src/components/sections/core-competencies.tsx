@@ -6,8 +6,10 @@ import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useMotionPreference } from "@/lib/reduced-motion";
 import { useFadeUpOnScroll } from "@/lib/scroll-reveal";
 import { COMPETENCIES, type CompetencyColor } from "@/data/competencies";
+import { startCardTilt } from "@/components/home-extras/card-tilt";
 import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
 import { KineticHeading } from "@/components/home-extras/kinetic-heading";
 import { CompetencyCardShape, CompetencyMotifShape } from "./competency-motif";
@@ -58,6 +60,16 @@ export function CoreCompetenciesSection() {
   const backContentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const triggerRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const hoverTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
+  const tiltRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const motion = useMotionPreference();
+
+  // The cards lean toward a nearby cursor (home-extras/card-tilt.ts). That
+  // lives on a wrapper around each card, so it never touches the card's own
+  // lift or the flip below, or their race fixes.
+  useLayoutEffect(() => {
+    const tilts = tiltRefs.current.filter((el): el is HTMLDivElement => el !== null);
+    return startCardTilt(tilts);
+  }, [motion]);
 
   // Each card gets its own paused timeline (built once) driving the flip,
   // the lift, the front motif's exit spin, and the back content's staggered
@@ -210,117 +222,125 @@ export function CoreCompetenciesSection() {
             <div
               key={c.title}
               ref={(el) => {
-                cardRefs.current[i] = el;
+                tiltRefs.current[i] = el;
               }}
-              onMouseEnter={() => play(i)}
-              onMouseLeave={() => reverse(i)}
-              onFocus={() => play(i)}
-              onBlur={(e) => {
-                // Focus moving to this same card's front trigger or one of
-                // its now-reachable back-face links must not reverse the
-                // flip out from under a keyboard user — only reverse when
-                // focus actually leaves the card.
-                if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-                reverse(i);
-              }}
-              className="reveal-card group relative aspect-[279/472] rounded-3xl opacity-0 [perspective:1400px]"
-              style={{ boxShadow: "0 0 0 0 rgba(0,0,0,0)" }}
             >
               <div
                 ref={(el) => {
-                  innerRefs.current[i] = el;
+                  cardRefs.current[i] = el;
                 }}
-                className="relative h-full w-full rounded-3xl [transform-style:preserve-3d]"
+                onMouseEnter={() => play(i)}
+                onMouseLeave={() => reverse(i)}
+                onFocus={() => play(i)}
+                onBlur={(e) => {
+                  // Focus moving to this same card's front trigger or one of
+                  // its now-reachable back-face links must not reverse the
+                  // flip out from under a keyboard user — only reverse when
+                  // focus actually leaves the card.
+                  if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                  reverse(i);
+                }}
+                className="reveal-card group relative aspect-[279/472] rounded-3xl opacity-0 [perspective:1400px]"
+                style={{ boxShadow: "0 0 0 0 rgba(0,0,0,0)" }}
               >
-                {/* Front — a real <button> (not the old wrapping <Link>) so
+                <div
+                  ref={(el) => {
+                    innerRefs.current[i] = el;
+                  }}
+                  className="relative h-full w-full rounded-3xl [transform-style:preserve-3d]"
+                >
+                  {/* Front — a real <button> (not the old wrapping <Link>) so
                     it can be tapped/focused on its own: the back face now
                     holds real links, and a link can't nest inside a link. */}
-                <button
-                  type="button"
-                  ref={(el) => {
-                    triggerRefs.current[i] = el;
-                  }}
-                  aria-expanded="false"
-                  aria-label={`${c.title}, show the details`}
-                  // Firefox bug 1201471: backface-visibility:hidden is ignored
-                  // on a child that has no transform of its own, even inside a
-                  // rotating preserve-3d parent — it only culls elements it
-                  // considers "transformed". The back face gets this for free
-                  // (its own static rotateY(180deg) counts), so the front face
-                  // needs an explicit identity transform to qualify too, or
-                  // Firefox renders both faces at once, mirrored and overlapping.
-                  className="absolute inset-0 block w-full cursor-pointer rounded-3xl text-left [backface-visibility:hidden] [transform:rotateY(0deg)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
-                >
-                  {/* Firefox renders both faces at once if `overflow-hidden`
+                  <button
+                    type="button"
+                    ref={(el) => {
+                      triggerRefs.current[i] = el;
+                    }}
+                    aria-expanded="false"
+                    aria-label={`${c.title}, show the details`}
+                    // Firefox bug 1201471: backface-visibility:hidden is ignored
+                    // on a child that has no transform of its own, even inside a
+                    // rotating preserve-3d parent — it only culls elements it
+                    // considers "transformed". The back face gets this for free
+                    // (its own static rotateY(180deg) counts), so the front face
+                    // needs an explicit identity transform to qualify too, or
+                    // Firefox renders both faces at once, mirrored and overlapping.
+                    className="absolute inset-0 block w-full cursor-pointer rounded-3xl text-left [backface-visibility:hidden] [transform:rotateY(0deg)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
+                  >
+                    {/* Firefox renders both faces at once if `overflow-hidden`
                       and `[backface-visibility:hidden]` land on the same
                       element — so the rounding/clipping/background live on
                       this inner wrapper instead of the face element itself. */}
-                  <div
-                    className={cn(
-                      "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-6",
-                      CARD_BG[c.color],
-                    )}
-                  >
-                    <h3 className={cn("relative z-10 text-lg font-semibold", CARD_TEXT[c.color])}>
-                      {c.title}
-                    </h3>
                     <div
-                      ref={(el) => {
-                        frontMotifRefs.current[i] = el;
-                      }}
-                      className="pointer-events-none absolute inset-0"
+                      className={cn(
+                        "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-6",
+                        CARD_BG[c.color],
+                      )}
                     >
-                      <CompetencyCardShape motif={c.motif} className="h-full w-full" />
-                    </div>
-                  </div>
-                </button>
-
-                {/* Back */}
-                <div
-                  ref={(el) => {
-                    backFaceRefs.current[i] = el;
-                  }}
-                  inert
-                  aria-hidden="true"
-                  className="absolute inset-0 rounded-3xl [backface-visibility:hidden] [transform:rotateY(180deg)]"
-                >
-                  <div
-                    className={cn(
-                      // Mobile cards are half a phone wide (2-col grid):
-                      // the reduced padding plus the description being
-                      // hidden below sm leaves the Explore pill room to fit
-                      // without clipping, which is the bug in issue #74
-                      // (the button was pushed out of the card by text that
-                      // was too big and too long for that width).
-                      "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-4 sm:p-6",
-                      CARD_BG[c.color],
-                    )}
-                  >
-                    <CompetencyMotifShape
-                      motif={c.motif}
-                      stroke="rgba(255,255,255,0.16)"
-                      className="-top-6 -left-6 size-28 rotate-12"
-                    />
-                    <div
-                      ref={(el) => {
-                        backContentRefs.current[i] = el;
-                      }}
-                      className="relative z-10 opacity-0"
-                    >
-                      <h3 className={cn("text-lg font-semibold", CARD_TEXT[c.color])}>{c.title}</h3>
-                      <p className={cn("mt-2 hidden text-sm sm:block", CARD_TEXT_MUTED[c.color])}>
-                        {c.description}
-                      </p>
-                      <Link
-                        href={c.href}
-                        className={cn(
-                          "mt-4 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium backdrop-blur-sm transition-colors",
-                          CARD_PILL[c.color],
-                        )}
+                      <h3 className={cn("relative z-10 text-lg font-semibold", CARD_TEXT[c.color])}>
+                        {c.title}
+                      </h3>
+                      <div
+                        ref={(el) => {
+                          frontMotifRefs.current[i] = el;
+                        }}
+                        className="pointer-events-none absolute inset-0"
                       >
-                        Explore
-                        <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                      </Link>
+                        <CompetencyCardShape motif={c.motif} className="h-full w-full" />
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Back */}
+                  <div
+                    ref={(el) => {
+                      backFaceRefs.current[i] = el;
+                    }}
+                    inert
+                    aria-hidden="true"
+                    className="absolute inset-0 rounded-3xl [backface-visibility:hidden] [transform:rotateY(180deg)]"
+                  >
+                    <div
+                      className={cn(
+                        // Mobile cards are half a phone wide (2-col grid):
+                        // the reduced padding plus the description being
+                        // hidden below sm leaves the Explore pill room to fit
+                        // without clipping, which is the bug in issue #74
+                        // (the button was pushed out of the card by text that
+                        // was too big and too long for that width).
+                        "relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-4 sm:p-6",
+                        CARD_BG[c.color],
+                      )}
+                    >
+                      <CompetencyMotifShape
+                        motif={c.motif}
+                        stroke="rgba(255,255,255,0.16)"
+                        className="-top-6 -left-6 size-28 rotate-12"
+                      />
+                      <div
+                        ref={(el) => {
+                          backContentRefs.current[i] = el;
+                        }}
+                        className="relative z-10 opacity-0"
+                      >
+                        <h3 className={cn("text-lg font-semibold", CARD_TEXT[c.color])}>
+                          {c.title}
+                        </h3>
+                        <p className={cn("mt-2 hidden text-sm sm:block", CARD_TEXT_MUTED[c.color])}>
+                          {c.description}
+                        </p>
+                        <Link
+                          href={c.href}
+                          className={cn(
+                            "mt-4 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium backdrop-blur-sm transition-colors",
+                            CARD_PILL[c.color],
+                          )}
+                        >
+                          Explore
+                          <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
