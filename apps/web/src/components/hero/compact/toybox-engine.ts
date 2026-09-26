@@ -302,7 +302,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
     const common = {
       restitution: toy.restitution,
       friction: toy.friction,
-      frictionStatic: 0.7,
+      frictionStatic: 0.5,
       frictionAir: 0.014,
       density: 0.0015,
       sleepThreshold: 45,
