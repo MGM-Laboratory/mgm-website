@@ -119,6 +119,23 @@ function layoutBox(el: HTMLElement, stage: HTMLElement): Box | null {
   return { x, y, width: el.offsetWidth, height: el.offsetHeight };
 }
 
+function centre(box: Box | null) {
+  return box ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : null;
+}
+
+/** The centre of a button's small glyph (`[data-dock]`), on the stage. */
+function glyphCentre(button: HTMLElement, box: Box | null) {
+  const glyph = button.querySelector("[data-dock]");
+  if (!box || !glyph) return centre(box);
+  // Both rects share the controls' transform, so their offset is layout only.
+  const outer = button.getBoundingClientRect();
+  const inner = glyph.getBoundingClientRect();
+  return {
+    x: box.x + inner.left - outer.left + inner.width / 2,
+    y: box.y + inner.top - outer.top + inner.height / 2,
+  };
+}
+
 /**
  * Everything the full-screen reel player does frame by frame: the video and
  * its controls, the cursor that says what a click will do, the iris in and
@@ -164,6 +181,13 @@ export class PlayerEngine {
     touch: boolean;
   } | null = null;
   private zone: Zone = "close";
+  /** Where the cursor docks over each button: onto the button's own glyph. */
+  private docks: Record<"close" | "play" | "sound" | "big", { x: number; y: number } | null> = {
+    close: null,
+    play: null,
+    sound: null,
+    big: null,
+  };
   /** The control under the pointer, if any: the cursor docks smaller over buttons. */
   private control: "close" | "play" | "sound" | "big" | null = null;
   private idle = 0;
@@ -813,6 +837,11 @@ export class PlayerEngine {
     this.boxes.sound = layoutBox(el.soundButton, el.stage);
     this.boxes.big = layoutBox(el.bigPlay, el.stage);
     this.boxes.track = layoutBox(el.track, el.stage);
+    this.docks.close = centre(this.boxes.close);
+    this.docks.play = glyphCentre(el.playButton, this.boxes.play);
+    this.docks.sound = glyphCentre(el.soundButton, this.boxes.sound);
+    const big = centre(this.boxes.big);
+    this.docks.big = big && { x: big.x + 4, y: big.y };
 
     // The picture's box inside the stage (object-fit: contain).
     const vw = this.video.videoWidth || 16;
@@ -928,7 +957,7 @@ export class PlayerEngine {
       rolls: false,
       spin: 0,
       speedGrowth: 1,
-      size: docked ? 0.6 : 1,
+      size: this.control === "close" ? 0.56 : docked ? 0.58 : 1,
       plate: 0,
     };
     if (docked || this.phase === "closing") base.label = "";
@@ -941,7 +970,7 @@ export class PlayerEngine {
           label: base.label && (this.ui.playing ? "Pause" : "Play"),
           cross: false,
           speedGrowth: 0.35,
-          plate: docked ? 0 : 31,
+          plate: docked || this.control === "big" ? 0 : 31,
         };
       case "seek": {
         const duration = this.duration();
@@ -1113,11 +1142,14 @@ export class PlayerEngine {
         this.phase !== "closing" &&
         !(resting && this.phase === "open"));
     const seekPin = inSeek && track;
+    // Over a button the cursor springs onto the button's own glyph, as if
+    // magnetised, and leaves the button's word readable.
+    const dock = this.cursorActive() && this.control ? this.docks[this.control] : null;
     this.cursor.update(
       dt,
       {
-        x: seekPin ? clamp(this.px, track.x, track.x + track.width) : this.px,
-        y: seekPin ? track.y + track.height / 2 : this.py,
+        x: dock ? dock.x : seekPin ? clamp(this.px, track.x, track.x + track.width) : this.px,
+        y: dock ? dock.y : seekPin ? track.y + track.height / 2 : this.py,
         pointerX: this.px,
         pointerY: this.py,
         down: this.down,

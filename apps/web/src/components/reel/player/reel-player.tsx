@@ -57,9 +57,17 @@ function Rolling({ text }: { text: string }) {
   );
 }
 
-function PlayGlyph({ playing, className }: { playing: boolean; className?: string }) {
+function PlayGlyph({
+  playing,
+  className,
+  dock,
+}: {
+  playing: boolean;
+  className?: string;
+  dock?: boolean;
+}) {
   return (
-    <svg aria-hidden className={className} viewBox="0 0 12 12">
+    <svg aria-hidden className={className} data-dock={dock ? "" : undefined} viewBox="0 0 12 12">
       {playing ? (
         <path d="M2 1.5H4.8V10.5H2ZM7.2 1.5H10V10.5H7.2Z" fill="var(--brand-blue)" />
       ) : (
@@ -71,7 +79,7 @@ function PlayGlyph({ playing, className }: { playing: boolean; className?: strin
 
 function SoundGlyph({ muted, className }: { muted: boolean; className?: string }) {
   return (
-    <svg aria-hidden className={className} viewBox="0 0 12 12">
+    <svg aria-hidden className={className} data-dock="" viewBox="0 0 12 12">
       <path
         d="M3.5 1.5A4.5 4.5 0 0 1 3.5 10.5Z"
         fill={muted ? "none" : "var(--brand-yellow)"}
