@@ -4,7 +4,7 @@ import { useEffect, useRef, type FocusEvent } from "react";
 import { isInputType, type FormAnswerValue, type FormField } from "@repo/shared";
 
 import { useFormController } from "./form-context";
-import { CONTENT_BLOCKS, FIELD_REGISTRY } from "./fields/registry";
+import { ContentBlock, FIELD_REGISTRY } from "./fields/registry";
 import { FormMediaView } from "./media";
 import { RichText } from "./rich-text";
 
@@ -28,7 +28,7 @@ export function FieldBlock({
   const controller = useFormController();
   const { answers, setAnswer, errorText, numbers, pipe, labels, shakes } = controller;
   const shakeRef = useRef<HTMLDivElement>(null);
-  const shake = shakes[field.id] ?? 0;
+  const shake = shakes.get(field.id) ?? 0;
 
   useEffect(() => {
     if (!shake || !shakeRef.current || controller.reducedMotion) return;
@@ -46,8 +46,7 @@ export function FieldBlock({
   }, [shake, controller.reducedMotion]);
 
   if (!isInputType(field.type)) {
-    const Content = CONTENT_BLOCKS[field.type as keyof typeof CONTENT_BLOCKS];
-    return Content ? <Content field={field} conversational={conversational} /> : null;
+    return <ContentBlock field={field} conversational={conversational} />;
   }
   if (field.type === "hidden") return null;
 

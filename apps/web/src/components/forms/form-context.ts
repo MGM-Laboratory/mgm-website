@@ -40,7 +40,7 @@ export type FormController = {
   onFieldFocus: (fieldId: string) => void;
   onFieldBlur: (fieldId: string) => void;
   /** Bumped per field when it should shake (a failed Next). */
-  shakes: Record<string, number>;
+  shakes: ReadonlyMap<string, number>;
   upload: { sessionId: string; token?: string };
   bus: SceneBus;
   reducedMotion: boolean;

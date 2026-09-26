@@ -258,7 +258,7 @@ export function NumberField({
       typeof value === "number" ? value : (field.min ?? 0) - (direction > 0 ? step : -step);
     let next = roundTo(
       base + direction * step,
-      field.decimals ?? String(step).split(".")[1]?.length ?? 0,
+      field.decimals ?? String(step).split(".").at(1)?.length ?? 0,
     );
     if (field.min !== undefined) next = Math.max(field.min, next);
     if (field.max !== undefined) next = Math.min(field.max, next);

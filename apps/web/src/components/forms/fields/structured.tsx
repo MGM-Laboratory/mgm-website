@@ -8,6 +8,7 @@ import { countries, matchCountry } from "@/lib/forms/public-countries";
 
 import { Combobox } from "../controls/combobox";
 import { useFormController, type FieldProps } from "../form-context";
+import { tableMap } from "../lookup";
 import { RichText } from "../rich-text";
 
 /**
@@ -100,15 +101,20 @@ export function DateTimeField({
 
 type Parts = Record<string, string>;
 
-function partsOf(value: unknown): Parts {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Parts) : {};
+/** The answer's parts by key. */
+function partsOf(value: unknown): ReadonlyMap<string, string> {
+  return new Map(
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.entries(value as Parts)
+      : [],
+  );
 }
 
-function withPart(parts: Parts, key: string, text: string) {
-  const next = { ...parts };
-  if (text) next[key] = text;
-  else delete next[key];
-  return Object.values(next).some((part) => part.trim()) ? next : undefined;
+function withPart(parts: ReadonlyMap<string, string>, key: string, text: string) {
+  const next = new Map(parts);
+  if (text) next.set(key, text);
+  else next.delete(key);
+  return [...next.values()].some((part) => part.trim()) ? Object.fromEntries(next) : undefined;
 }
 
 export function NameField({
@@ -135,7 +141,7 @@ export function NameField({
             id={part === "first" ? inputId : `${inputId}-${part}`}
             className="fx-input"
             type="text"
-            value={parts[part] ?? ""}
+            value={parts.get(part) ?? ""}
             maxLength={200}
             autoComplete={part === "first" ? "given-name" : "family-name"}
             onChange={(event) => {
@@ -151,14 +157,14 @@ export function NameField({
   );
 }
 
-const ADDRESS_AUTOCOMPLETE: Record<(typeof ADDRESS_PARTS)[number], string> = {
+const ADDRESS_AUTOCOMPLETE = tableMap<(typeof ADDRESS_PARTS)[number], string>({
   line1: "address-line1",
   line2: "address-line2",
   city: "address-level2",
   region: "address-level1",
   postal: "postal-code",
   country: "country",
-};
+});
 
 function CountryPicker({
   inputId,
@@ -221,6 +227,7 @@ export function AddressField({
 }: FieldProps<Parts>) {
   const { copy } = useFormController();
   const parts = partsOf(value);
+  const partLabels = tableMap(copy.addressParts);
   return (
     <div className="fx-address">
       {ADDRESS_PARTS.map((part) => {
@@ -228,12 +235,12 @@ export function AddressField({
         return (
           <div key={part} className="fx-subfield" data-part={part}>
             <label htmlFor={id} className="fx-sublabel">
-              {copy.addressParts[part]}
+              {partLabels.get(part)}
             </label>
             {part === "country" ? (
               <CountryPicker
                 inputId={id}
-                value={parts.country}
+                value={parts.get("country")}
                 onChange={(code) => {
                   onChange(withPart(parts, "country", code ?? ""));
                 }}
@@ -244,9 +251,9 @@ export function AddressField({
                 id={id}
                 className="fx-input"
                 type="text"
-                value={parts[part] ?? ""}
+                value={parts.get(part) ?? ""}
                 maxLength={300}
-                autoComplete={ADDRESS_AUTOCOMPLETE[part]}
+                autoComplete={ADDRESS_AUTOCOMPLETE.get(part)}
                 onChange={(event) => {
                   onChange(withPart(parts, part, event.target.value));
                 }}

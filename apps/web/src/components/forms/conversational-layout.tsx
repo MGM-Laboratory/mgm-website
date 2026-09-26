@@ -18,22 +18,22 @@ import { motionAllowed } from "@/lib/reduced-motion";
 import { RestoredNote, type LayoutProps } from "./classic-layout";
 import { FieldBlock } from "./field-block";
 import { focusAllowed, useFormController } from "./form-context";
-import { SPEED } from "./motion";
+import { speedFactor } from "./motion";
 import { RichText } from "./rich-text";
 
 /** How long a single-choice pick waits before moving on (any input cancels it). */
 const AUTO_ADVANCE_MS = 700;
 
 function isTyping(target: EventTarget | null) {
-  const element = target as HTMLElement | null;
-  if (!element) return false;
-  if (element.isContentEditable) return true;
-  if (element.tagName === "TEXTAREA" || element.tagName === "SELECT") return true;
-  if (element.tagName === "INPUT") {
-    const type = (element as HTMLInputElement).type;
-    return !["radio", "checkbox", "range", "button", "submit", "color", "file"].includes(type);
+  if (!(target instanceof Element)) return false;
+  if (target instanceof HTMLElement && target.isContentEditable) return true;
+  if (target.tagName === "TEXTAREA" || target.tagName === "SELECT") return true;
+  if (target instanceof HTMLInputElement) {
+    return !["radio", "checkbox", "range", "button", "submit", "color", "file"].includes(
+      target.type,
+    );
   }
-  return element.getAttribute("role") === "combobox";
+  return target.getAttribute("role") === "combobox";
 }
 
 function Statement({ step }: { step: FormStep }) {
@@ -77,10 +77,11 @@ export function ConversationalLayout({
   // The current step: the last one visited that still exists on the route.
   let index = -1;
   for (let at = trail.length - 1; at >= 0 && index < 0; at -= 1) {
-    index = steps.findIndex((step) => step.id === trail[at]);
+    const id = trail.at(at);
+    index = steps.findIndex((step) => step.id === id);
   }
   if (index < 0) index = 0;
-  const step = steps[index];
+  const step = steps.at(index);
   const isLast = index >= steps.length - 1;
   const questionSteps = steps.filter((candidate) => candidate.kind === "question");
   const questionIndex =
@@ -102,8 +103,8 @@ export function ConversationalLayout({
   }, []);
 
   const go = (target: number, dir: 1 | -1) => {
-    const nextStep = steps[target];
-    if (!nextStep) return;
+    const nextStep = target >= 0 ? steps.at(target) : undefined;
+    if (!nextStep || !step) return;
     const base = trail.length ? trail : [step.id];
     let nextTrail: string[];
     if (dir > 0) {
@@ -123,7 +124,7 @@ export function ConversationalLayout({
     gsap.to(element, {
       opacity: 0,
       y: -56 * dir,
-      duration: 0.3 * SPEED[design.motion.speed],
+      duration: 0.3 * speedFactor(design.motion.speed),
       ease: "power2.in",
       onComplete: () => {
         busy.current = false;
@@ -144,7 +145,7 @@ export function ConversationalLayout({
     // The route may have changed with this answer.
     const fresh = conversationalSteps(document, answers);
     const at = fresh.findIndex((candidate) => candidate.id === step.id);
-    const following = fresh[at + 1];
+    const following = fresh.at(at + 1);
     if (!following) {
       void submit();
       return;
@@ -190,7 +191,7 @@ export function ConversationalLayout({
         {
           opacity: 1,
           y: 0,
-          duration: 0.75 * SPEED[design.motion.speed],
+          duration: 0.75 * speedFactor(design.motion.speed),
           ease: "expo.out",
           immediateRender: true,
           delay: first ? 0.1 : 0,
@@ -262,7 +263,7 @@ export function ConversationalLayout({
         return;
       const root = stepRef.current;
       if (!root) return;
-      const target = event.target as HTMLElement | null;
+      const target = event.target instanceof Element ? event.target : null;
       const typing = isTyping(target);
       if (event.key === "Enter") {
         if (target?.closest("button, a, [role=option]")) return;

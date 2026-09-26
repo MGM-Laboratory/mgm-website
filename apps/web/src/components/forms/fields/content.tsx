@@ -1,8 +1,7 @@
 "use client";
 
-import type { ComponentType } from "react";
-import { CircleCheck, Info, NotebookPen, TriangleAlert, type LucideIcon } from "lucide-react";
-import type { CalloutTone, FormContentType, FormField } from "@repo/shared";
+import { CircleCheck, Info, NotebookPen, TriangleAlert } from "lucide-react";
+import type { CalloutTone, FormField } from "@repo/shared";
 
 import { useFormController } from "../form-context";
 import { FormMediaView } from "../media";
@@ -63,20 +62,26 @@ function VideoBlock({ field }: ContentProps) {
   );
 }
 
-const TONES: Record<CalloutTone, LucideIcon> = {
-  info: Info,
-  success: CircleCheck,
-  warning: TriangleAlert,
-  note: NotebookPen,
-};
+function CalloutIcon({ tone }: { tone: CalloutTone }) {
+  const props = { "aria-hidden": true, strokeWidth: 2.25, size: 20, className: "fx-callout-icon" };
+  switch (tone) {
+    case "info":
+      return <Info {...props} />;
+    case "success":
+      return <CircleCheck {...props} />;
+    case "warning":
+      return <TriangleAlert {...props} />;
+    case "note":
+      return <NotebookPen {...props} />;
+  }
+}
 
 function Callout({ field }: ContentProps) {
   const { pipe } = useFormController();
   const tone = field.calloutTone ?? "info";
-  const Icon = TONES[tone];
   return (
     <aside className="fx-content fx-callout" data-tone={tone}>
-      <Icon aria-hidden strokeWidth={2.25} size={20} className="fx-callout-icon" />
+      <CalloutIcon tone={tone} />
       <div>
         {field.label ? <p className="fx-callout-title">{pipe(field.label)}</p> : null}
         <RichText doc={field.content} transform={pipe} />
@@ -121,14 +126,28 @@ function PageBreak() {
   return null;
 }
 
-export const CONTENT_BLOCKS: Record<FormContentType, ComponentType<ContentProps>> = {
-  heading: Heading,
-  paragraph: Paragraph,
-  image: ImageBlock,
-  video: VideoBlock,
-  divider: Divider,
-  callout: Callout,
-  quote: Quote,
-  spacer: Spacer,
-  page_break: PageBreak,
-};
+/** The block for a content field; null for any other type. */
+export function ContentBlock({ field, conversational }: ContentProps) {
+  switch (field.type) {
+    case "heading":
+      return <Heading field={field} conversational={conversational} />;
+    case "paragraph":
+      return <Paragraph field={field} />;
+    case "image":
+      return <ImageBlock field={field} />;
+    case "video":
+      return <VideoBlock field={field} />;
+    case "divider":
+      return <Divider />;
+    case "callout":
+      return <Callout field={field} />;
+    case "quote":
+      return <Quote field={field} />;
+    case "spacer":
+      return <Spacer field={field} />;
+    case "page_break":
+      return <PageBreak />;
+    default:
+      return null;
+  }
+}

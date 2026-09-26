@@ -88,6 +88,8 @@ export function Combobox(props: Props) {
     () => (query.trim() ? options.filter((option) => filter(option, query)) : options),
     [filter, options, query],
   );
+  // `active` is -1 when End runs on an empty list.
+  const activeOption = active >= 0 ? matches.at(active) : undefined;
   const labelOf = (id: string) => options.find((option) => option.id === id)?.label ?? id;
   const full =
     props.multiple && props.maxSelections !== undefined && selected.length >= props.maxSelections;
@@ -172,10 +174,10 @@ export function Combobox(props: Props) {
         }
         break;
       case "Enter":
-        if (open && matches[active]) {
+        if (open && activeOption) {
           event.preventDefault();
           event.stopPropagation();
-          choose(matches[active]);
+          choose(activeOption);
         }
         break;
       case "Escape":
@@ -197,7 +199,7 @@ export function Combobox(props: Props) {
   };
 
   const shownValue = open || props.multiple ? query : props.value ? labelOf(props.value) : "";
-  const activeId = open && matches[active] ? `${listId}-${matches[active].id}` : undefined;
+  const activeId = open && activeOption ? `${listId}-${activeOption.id}` : undefined;
 
   return (
     <div
@@ -305,6 +307,13 @@ export function Combobox(props: Props) {
                   setActive(index);
                 }}
                 onClick={() => {
+                  choose(option);
+                }}
+                // Focus stays on the input (aria-activedescendant), which
+                // handles the keys; this covers an option focused directly.
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
                   choose(option);
                 }}
               >

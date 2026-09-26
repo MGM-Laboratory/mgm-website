@@ -78,8 +78,8 @@ type State = {
   sessionId: string;
   stage: Stage;
   answers: FormAnswers;
-  touched: Record<string, true>;
-  serverErrors: Record<string, FieldError>;
+  touched: ReadonlySet<string>;
+  serverErrors: ReadonlyMap<string, FieldError>;
   /** Classic: page ids visited; conversational: step ids visited. */
   trail: string[];
   startedAt?: string;
@@ -87,7 +87,7 @@ type State = {
   conflict?: "closed" | "limit_reached" | "already" | "not_open_yet";
   draft?: FormAutosave;
   restored: boolean;
-  shakes: Record<string, number>;
+  shakes: ReadonlyMap<string, number>;
 };
 
 type Action =
@@ -120,40 +120,38 @@ function reducer(state: State, action: Action): State {
       if (action.already) {
         return { ...state, booted: true, sessionId: action.sessionId, stage: "already" };
       }
-      const restore = action.restore && action.draft;
+      const restore = action.restore ? action.draft : undefined;
       return {
         ...state,
         booted: true,
         sessionId: action.sessionId,
-        answers: restore ? { ...action.answers, ...action.draft!.answers } : action.answers,
-        trail: restore && action.draft!.trail.length ? action.draft!.trail : state.trail,
-        startedAt: restore ? action.draft!.startedAt : state.startedAt,
+        answers: restore ? { ...action.answers, ...restore.answers } : action.answers,
+        trail: restore?.trail.length ? restore.trail : state.trail,
+        startedAt: restore ? restore.startedAt : state.startedAt,
         draft: restore ? undefined : action.draft,
         restored: Boolean(restore),
       };
     }
     case "answer": {
-      const answers = { ...state.answers };
-      if (action.value === undefined) delete answers[action.fieldId];
-      else answers[action.fieldId] = action.value;
-      const serverErrors = { ...state.serverErrors };
-      delete serverErrors[action.fieldId];
+      const answers = new Map(Object.entries(state.answers));
+      if (action.value === undefined) answers.delete(action.fieldId);
+      else answers.set(action.fieldId, action.value);
+      const serverErrors = new Map(state.serverErrors);
+      serverErrors.delete(action.fieldId);
       // Without a welcome screen the first answer is the start.
       return {
         ...state,
-        answers,
+        answers: Object.fromEntries(answers),
         serverErrors,
         startedAt: state.startedAt ?? new Date().toISOString(),
       };
     }
     case "touch": {
-      const touched = { ...state.touched };
-      for (const id of action.ids) touched[id] = true;
-      return { ...state, touched };
+      return { ...state, touched: new Set([...state.touched, ...action.ids]) };
     }
     case "shake": {
-      const shakes = { ...state.shakes };
-      for (const id of action.ids) shakes[id] = (shakes[id] ?? 0) + 1;
+      const shakes = new Map(state.shakes);
+      for (const id of action.ids) shakes.set(id, (shakes.get(id) ?? 0) + 1);
       return { ...state, shakes };
     }
     case "start": {
@@ -173,12 +171,10 @@ function reducer(state: State, action: Action): State {
     case "trail":
       return { ...state, trail: action.trail };
     case "serverErrors": {
-      const touched = { ...state.touched };
-      for (const id of Object.keys(action.errors)) touched[id] = true;
       return {
         ...state,
-        serverErrors: action.errors,
-        touched,
+        serverErrors: new Map(Object.entries(action.errors)),
+        touched: new Set([...state.touched, ...Object.keys(action.errors)]),
         stage: "form",
         trail: action.trail ?? state.trail,
       };
@@ -194,8 +190,8 @@ function reducer(state: State, action: Action): State {
         ...state,
         stage: "form",
         answers: action.answers,
-        touched: {},
-        serverErrors: {},
+        touched: new Set(),
+        serverErrors: new Map(),
         trail: [],
         ending: undefined,
         startedAt: new Date().toISOString(),
@@ -247,11 +243,11 @@ export function FormRun({
     sessionId: "",
     stage: preview?.stage ?? (welcome.enabled ? "welcome" : "form"),
     answers: initialAnswers(document, null),
-    touched: {},
-    serverErrors: {},
+    touched: new Set<string>(),
+    serverErrors: new Map<string, FieldError>(),
     trail: [],
     restored: false,
-    shakes: {},
+    shakes: new Map<string, number>(),
   }));
   const { answers } = state;
   const answersRef = useRef(answers);
@@ -354,10 +350,12 @@ export function FormRun({
     if (!live || !settings.autosave || !state.booted || state.stage !== "form") return;
     const timer = window.setTimeout(() => {
       const kept: FormAnswers = {};
+      const given = new Map(Object.entries(answers));
       for (const field of document.fields) {
         if (field.type === "hidden") continue;
-        if (answers[field.id] !== undefined) kept[field.id] = answers[field.id];
-        const other = answers[otherKey(field.id)];
+        const answer = given.get(field.id);
+        if (answer !== undefined) kept[field.id] = answer;
+        const other = given.get(otherKey(field.id));
         if (other !== undefined) kept[otherKey(field.id)] = other;
       }
       if (!Object.keys(kept).length) return;
@@ -427,11 +425,11 @@ export function FormRun({
 
   const errorFor = useCallback(
     (fieldId: string): FieldError | null => {
-      const server = state.serverErrors[fieldId];
+      const server = state.serverErrors.get(fieldId);
       if (server) return server;
-      if (!state.touched[fieldId]) return null;
+      if (!state.touched.has(fieldId)) return null;
       const field = fieldById.get(fieldId);
-      return field ? validateFieldAnswer(field, answers[fieldId], answers) : null;
+      return field ? validateFieldAnswer(field, answers[field.id], answers) : null;
     },
     [answers, fieldById, state.serverErrors, state.touched],
   );
@@ -469,7 +467,7 @@ export function FormRun({
       const field = fieldById.get(fieldId);
       // Only complain on blur once something was typed; empty required
       // questions speak up on Next.
-      if (field && isAnswered(answersRef.current[fieldId])) touch(fieldId);
+      if (field && isAnswered(answersRef.current[field.id])) touch(fieldId);
     },
     [bus, fieldById, touch],
   );
@@ -480,7 +478,7 @@ export function FormRun({
       const failing = ids.filter((id) => {
         const field = fieldById.get(id);
         return field && isInputType(field.type)
-          ? Boolean(validateFieldAnswer(field, answersRef.current[id], answersRef.current))
+          ? Boolean(validateFieldAnswer(field, answersRef.current[field.id], answersRef.current))
           : false;
       });
       dispatch({ type: "touch", ids });

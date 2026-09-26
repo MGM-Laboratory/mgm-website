@@ -52,7 +52,7 @@ export function WelcomeStage({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Enter" || event.defaultPrevented || event.isComposing) return;
-      const target = event.target as HTMLElement | null;
+      const target = event.target instanceof Element ? event.target : null;
       if (target && target.closest("button, a, input, textarea, select")) return;
       event.preventDefault();
       startRefCallback.current(hasDraft);

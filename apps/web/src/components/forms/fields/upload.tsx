@@ -24,6 +24,7 @@ import { FormUploadError, uploadFormFile } from "@/lib/forms/public-client";
 import { formatBytes } from "@/lib/forms/public-copy";
 
 import { useFormController, type FieldProps } from "../form-context";
+import { tableMap } from "../lookup";
 
 /**
  * File and image uploads: a drop zone (or the file picker), checks against
@@ -65,6 +66,8 @@ function accepts(field: FormField, file: { name: string; type: string }) {
   return PICTURE_MIMES.includes(file.type) || PICTURE_EXTENSIONS.includes(extension);
 }
 
+const FILE_CATEGORY_TYPES = tableMap(FORM_FILE_CATEGORY_TYPES);
+
 function acceptAttribute(field: FormField) {
   if (isPictureField(field)) {
     return [...PICTURE_MIMES, ...PICTURE_EXTENSIONS.map((extension) => `.${extension}`)].join(",");
@@ -77,10 +80,10 @@ function acceptAttribute(field: FormField) {
         : null;
   if (!categories) return undefined;
   return categories
-    .flatMap((category) => [
-      ...FORM_FILE_CATEGORY_TYPES[category].mimes,
-      ...FORM_FILE_CATEGORY_TYPES[category].extensions.map((extension) => `.${extension}`),
-    ])
+    .flatMap((category) => {
+      const types = FILE_CATEGORY_TYPES.get(category);
+      return types ? [...types.mimes, ...types.extensions.map((extension) => `.${extension}`)] : [];
+    })
     .join(",");
 }
 
@@ -173,9 +176,9 @@ export function UploadField({
   const commit = (next: Item[]) => {
     itemsRef.current = next;
     setItems(next);
-    const done = next
-      .filter((item) => item.status === "done" && item.answer)
-      .map((item) => item.answer!);
+    const done = next.flatMap((item) =>
+      item.status === "done" && item.answer ? [item.answer] : [],
+    );
     onChange(done.length ? done : undefined);
   };
   const patch = (id: string, change: Partial<Item>) => {

@@ -43,6 +43,11 @@ function isRender(data: unknown): data is RenderMessage {
   return typeof data === "object" && data !== null && (data as { type?: unknown }).type === RENDER;
 }
 
+/** The embedding editor; null once this frame's browsing context is gone. */
+function parentWindow(): Window | null {
+  return window.parent;
+}
+
 export function FormPreviewHost() {
   const [shown, setShown] = useState<Shown | null>(null);
   const [invalid, setInvalid] = useState(false);
@@ -70,14 +75,14 @@ export function FormPreviewHost() {
       });
     };
     window.addEventListener("message", onMessage);
-    window.parent?.postMessage({ type: READY }, window.location.origin);
+    parentWindow()?.postMessage({ type: READY }, window.location.origin);
     return () => {
       window.removeEventListener("message", onMessage);
     };
   }, []);
 
   const onStage = useCallback((stage: PreviewStage, fieldId?: string) => {
-    window.parent?.postMessage({ type: STAGE, stage, fieldId }, window.location.origin);
+    parentWindow()?.postMessage({ type: STAGE, stage, fieldId }, window.location.origin);
   }, []);
 
   const preview = useMemo(

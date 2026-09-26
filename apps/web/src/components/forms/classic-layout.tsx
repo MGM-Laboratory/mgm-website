@@ -11,7 +11,7 @@ import { motionAllowed } from "@/lib/reduced-motion";
 import { Collapse } from "./collapse";
 import { FieldBlock } from "./field-block";
 import { focusAllowed, useFormController } from "./form-context";
-import { SPEED, SplitText, useReveal } from "./motion";
+import { SplitText, speedFactor, useReveal } from "./motion";
 import { RichText } from "./rich-text";
 
 export type LayoutProps = {
@@ -64,8 +64,9 @@ export function ClassicLayout({
   const { design } = document;
   const allPages = useMemo(() => buildPages(document.fields), [document.fields]);
   const route = routePages(document, answers);
-  const currentId = trail[trail.length - 1] ?? route[0]?.id ?? "start";
-  const page = allPages.find((candidate) => candidate.id === currentId) ?? route[0] ?? allPages[0];
+  const currentId = trail.at(-1) ?? route.at(0)?.id ?? "start";
+  const page =
+    allPages.find((candidate) => candidate.id === currentId) ?? route.at(0) ?? allPages[0];
   const index = Math.max(
     0,
     route.findIndex((candidate) => candidate.id === page.id),
@@ -104,7 +105,7 @@ export function ClassicLayout({
         {
           opacity: 1,
           y: 0,
-          duration: 0.7 * SPEED[design.motion.speed],
+          duration: 0.7 * speedFactor(design.motion.speed),
           ease: "expo.out",
           immediateRender: true,
         },
@@ -147,7 +148,7 @@ export function ClassicLayout({
     gsap.to(element, {
       opacity: 0,
       y: -32,
-      duration: 0.32 * SPEED[design.motion.speed],
+      duration: 0.32 * speedFactor(design.motion.speed),
       ease: "power2.in",
       onComplete: () => {
         leaving.current = false;
@@ -175,7 +176,7 @@ export function ClassicLayout({
     // Recompute the route with the answers as they are now.
     const nextRoute = routePages(document, answers);
     const at = nextRoute.findIndex((candidate) => candidate.id === page.id);
-    const following = nextRoute[at + 1];
+    const following = nextRoute.at(at + 1);
     if (!following) {
       void submit();
       return;

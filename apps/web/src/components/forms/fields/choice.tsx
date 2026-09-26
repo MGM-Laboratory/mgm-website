@@ -10,6 +10,7 @@ import { Combobox } from "../controls/combobox";
 import { useFormController, type FieldProps } from "../form-context";
 import { ShapeSvg } from "../scene/scene-dom";
 import { SHAPE_KINDS, hashSeed, seeded } from "../scene/vocabulary";
+import { shuffleInPlace } from "../shuffle";
 import { useHydrated } from "../use-hydrated";
 
 /**
@@ -27,19 +28,15 @@ function useOptions(field: FormField) {
   return useMemo(() => {
     const options = [...(field.options ?? [])];
     if (!field.randomize || !hydrated) return options;
-    const random = seeded(hashSeed(`${upload.sessionId}:${field.id}`));
-    for (let index = options.length - 1; index > 0; index -= 1) {
-      const swap = Math.floor(random() * (index + 1));
-      [options[index], options[swap]] = [options[swap], options[index]];
-    }
-    return options;
+    return shuffleInPlace(options, seeded(hashSeed(`${upload.sessionId}:${field.id}`)));
   }, [field.id, field.options, field.randomize, hydrated, upload.sessionId]);
 }
 
 function OtherInput({ field, active }: { field: FormField; active: boolean }) {
   const { answers, setAnswer, copy } = useFormController();
   const key = otherKey(field.id);
-  const value = typeof answers[key] === "string" ? (answers[key] as string) : "";
+  const other = answers[otherKey(field.id)];
+  const value = typeof other === "string" ? other : "";
   if (!active) return null;
   return (
     <input
@@ -105,7 +102,7 @@ function ChoiceCards({
     >
       {cards.map((card, index) => {
         const checked = selected.includes(card.id);
-        const letter = LETTERS[index] ?? "";
+        const letter = LETTERS.charAt(index);
         const imageSrc = formMediaSrc(card.image);
         const disabled = disabledIds?.has(card.id);
         return (
@@ -483,7 +480,7 @@ export function Ranking({ field, value, onChange, describedBy, invalid }: FieldP
           focusRow(id);
         }
       } else {
-        const neighbour = order[target];
+        const neighbour = target >= 0 ? order.at(target) : undefined;
         if (neighbour) focusRow(neighbour);
       }
     }

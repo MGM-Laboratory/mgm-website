@@ -5,11 +5,13 @@
  * and only when the form turns sound on and the respondent hasn't muted it.
  */
 
+import { tableMap } from "./lookup";
+
 export type SoundKind = "tick" | "select" | "error" | "page" | "success";
 
 type Note = { frequency: number; at: number; length: number; type?: OscillatorType; gain?: number };
 
-const SOUNDS: Record<SoundKind, Note[]> = {
+const SOUNDS = tableMap<SoundKind, Note[]>({
   tick: [{ frequency: 1320, at: 0, length: 0.07, gain: 0.05 }],
   select: [
     { frequency: 660, at: 0, length: 0.08, gain: 0.05 },
@@ -26,16 +28,17 @@ const SOUNDS: Record<SoundKind, Note[]> = {
     { frequency: 783.99, at: 0.22, length: 0.26, gain: 0.05 },
     { frequency: 1046.5, at: 0.36, length: 0.5, gain: 0.045 },
   ],
-};
+});
 
 let context: AudioContext | null = null;
 
 function audio() {
   if (context) return context;
   try {
-    const Constructor =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    // Older Safari only has the prefixed constructor.
+    const scope: { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext } =
+      window;
+    const Constructor = scope.AudioContext ?? scope.webkitAudioContext;
     context = Constructor ? new Constructor() : null;
   } catch {
     context = null;
@@ -48,7 +51,7 @@ export function playSound(kind: SoundKind) {
   if (!ctx) return;
   if (ctx.state === "suspended") void ctx.resume().catch(() => undefined);
   const now = ctx.currentTime + 0.01;
-  for (const note of SOUNDS[kind]) {
+  for (const note of SOUNDS.get(kind) ?? []) {
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     oscillator.type = note.type ?? "sine";

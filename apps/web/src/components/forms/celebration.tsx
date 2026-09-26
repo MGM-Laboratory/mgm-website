@@ -6,7 +6,7 @@ import type { FormCelebration } from "@repo/shared";
 import { random } from "@/lib/random";
 import { motionAllowed } from "@/lib/reduced-motion";
 
-import { SHAPE_PATHS, SHAPE_KINDS, type ShapeKind } from "./scene/vocabulary";
+import { SHAPE_KINDS, shapePath, type ShapeKind } from "./scene/vocabulary";
 
 /**
  * The ending's celebration, drawn on a 2D canvas over everything (so it
@@ -43,7 +43,7 @@ function pathFor(kind: ShapeKind) {
     path = new Path2D("M14 26L26 14L50 38L74 14L86 26L62 50L86 74L74 86L50 62L26 86L14 74L38 50Z");
   else if (kind === "ring")
     path = new Path2D("M50 6a44 44 0 1 0 0.001 0ZM50 28a22 22 0 1 1 -0.001 0Z");
-  else path = new Path2D(SHAPE_PATHS[kind]);
+  else path = new Path2D(shapePath(kind));
   paths.set(kind, path);
   return path;
 }

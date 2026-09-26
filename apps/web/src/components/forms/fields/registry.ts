@@ -26,7 +26,7 @@ import {
 import { EmailField, LongText, NumberField, PhoneField, ShortText, UrlField } from "./text";
 import { UploadField } from "./upload";
 
-export { CONTENT_BLOCKS } from "./content";
+export { ContentBlock } from "./content";
 
 type Entry = {
   // Each control narrows its own answer shape; the block passes the stored value through.

@@ -235,19 +235,20 @@ export function Matrix({
   const cells = value && typeof value === "object" && !Array.isArray(value) ? value : {};
 
   const set = (rowId: string, columnId: string) => {
-    const next = { ...cells };
+    const next = new Map(Object.entries(cells));
     if (multiple) {
-      const picked = Array.isArray(next[rowId]) ? [...(next[rowId] as string[])] : [];
+      const current = next.get(rowId);
+      const picked = Array.isArray(current) ? [...current] : [];
       const index = picked.indexOf(columnId);
       if (index >= 0) picked.splice(index, 1);
       else picked.push(columnId);
-      if (picked.length) next[rowId] = picked;
-      else delete next[rowId];
+      if (picked.length) next.set(rowId, picked);
+      else next.delete(rowId);
     } else {
-      next[rowId] = columnId;
+      next.set(rowId, columnId);
     }
     sound("select");
-    onChange(Object.keys(next).length ? next : undefined);
+    onChange(next.size ? Object.fromEntries(next) : undefined);
   };
 
   return (

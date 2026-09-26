@@ -8,6 +8,7 @@ import type { FormLanguage, FormUnavailableReason, PublicFormPayload } from "@re
 import { unlockForm } from "@/lib/forms/public-client";
 import { formCopy } from "@/lib/forms/public-copy";
 
+import { tableMap } from "./lookup";
 import { ShapeSvg } from "./scene/scene-dom";
 import type { ShapeKind } from "./scene/vocabulary";
 
@@ -20,7 +21,7 @@ import type { ShapeKind } from "./scene/vocabulary";
 
 export type StatusGlyph = "lock" | "soon" | "closed" | "full" | "done" | "broken" | "missing";
 
-const GLYPHS: Record<StatusGlyph, { kind: ShapeKind; color: number; turn?: number }[]> = {
+const GLYPHS = tableMap<StatusGlyph, { kind: ShapeKind; color: number; turn?: number }[]>({
   // A keyhole: a circle over a triangle, with a ring beside.
   lock: [
     { kind: "ring", color: 0 },
@@ -65,12 +66,12 @@ const GLYPHS: Record<StatusGlyph, { kind: ShapeKind; color: number; turn?: numbe
     { kind: "ring", color: 3 },
     { kind: "plus", color: 1 },
   ],
-};
+});
 
 export function StatusComposition({ glyph }: { glyph: StatusGlyph }) {
   return (
     <div className="fx-status-glyph" data-glyph={glyph} aria-hidden>
-      {GLYPHS[glyph].map((piece, index) => (
+      {(GLYPHS.get(glyph) ?? []).map((piece, index) => (
         <span
           key={index}
           style={{
@@ -156,7 +157,13 @@ export function LockedGate({
   return (
     <StatusCard glyph="lock" eyebrow={copy.lockedEyebrow} title={title}>
       <p className="fx-status-body">{copy.lockedBody}</p>
-      <form className="fx-gate" onSubmit={submit} noValidate>
+      <form
+        className="fx-gate"
+        onSubmit={(event) => {
+          void submit(event);
+        }}
+        noValidate
+      >
         <label htmlFor="fx-passphrase" className="fx-gate-label">
           <LockKeyhole aria-hidden strokeWidth={2.25} size={16} />
           {copy.passphrase}
@@ -226,16 +233,29 @@ function Countdown({ opensAt, language }: { opensAt: string; language: FormLangu
   useEffect(() => {
     if (opened) router.refresh();
   }, [opened, router]);
-  const parts =
-    remaining === null
-      ? null
-      : {
-          d: Math.floor(remaining / 86_400_000),
-          h: Math.floor(remaining / 3_600_000) % 24,
-          m: Math.floor(remaining / 60_000) % 60,
-          s: Math.floor(remaining / 1000) % 60,
-        };
-  const units = language === "id" ? ["hari", "jam", "mnt", "dtk"] : ["days", "hrs", "min", "sec"];
+  const indonesian = language === "id";
+  const cells = [
+    {
+      key: "d",
+      unit: indonesian ? "hari" : "days",
+      value: remaining === null ? null : Math.floor(remaining / 86_400_000),
+    },
+    {
+      key: "h",
+      unit: indonesian ? "jam" : "hrs",
+      value: remaining === null ? null : Math.floor(remaining / 3_600_000) % 24,
+    },
+    {
+      key: "m",
+      unit: indonesian ? "mnt" : "min",
+      value: remaining === null ? null : Math.floor(remaining / 60_000) % 60,
+    },
+    {
+      key: "s",
+      unit: indonesian ? "dtk" : "sec",
+      value: remaining === null ? null : Math.floor(remaining / 1000) % 60,
+    },
+  ];
   const when = new Intl.DateTimeFormat(language === "id" ? "id-ID" : "en-GB", {
     dateStyle: "long",
     timeStyle: "short",
@@ -244,12 +264,12 @@ function Countdown({ opensAt, language }: { opensAt: string; language: FormLangu
     <div className="fx-countdown">
       <p className="fx-eyebrow">{copy.opensIn}</p>
       <div className="fx-countdown-row" role="timer" aria-live="off">
-        {(["d", "h", "m", "s"] as const).map((unit, index) => (
-          <div key={unit} className="fx-countdown-cell">
+        {cells.map((cell) => (
+          <div key={cell.key} className="fx-countdown-cell">
             <span className="fx-countdown-value">
-              {parts ? String(parts[unit]).padStart(2, "0") : "--"}
+              {cell.value === null ? "--" : String(cell.value).padStart(2, "0")}
             </span>
-            <span className="fx-countdown-unit">{units[index]}</span>
+            <span className="fx-countdown-unit">{cell.unit}</span>
           </div>
         ))}
       </div>

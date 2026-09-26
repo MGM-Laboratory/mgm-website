@@ -104,7 +104,9 @@ function ShareRow() {
           type="button"
           className="fx-chip"
           onClick={() => {
-            void navigator.clipboard
+            // Missing outside secure contexts (plain http).
+            const clipboard = navigator.clipboard as Clipboard | undefined;
+            void clipboard
               ?.writeText(url)
               .then(() => {
                 setCopied(true);

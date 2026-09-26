@@ -15,11 +15,17 @@ import { motionAllowed } from "@/lib/reduced-motion";
  * <noscript> override in the layouts), and GSAP owns every transform.
  */
 
-export const SPEED: Record<FormDesign["motion"]["speed"], number> = {
-  slow: 1.45,
-  normal: 1,
-  fast: 0.62,
-};
+/** Multiplies every duration and stagger for the form's motion speed. */
+export function speedFactor(speed: FormDesign["motion"]["speed"]) {
+  switch (speed) {
+    case "slow":
+      return 1.45;
+    case "normal":
+      return 1;
+    case "fast":
+      return 0.62;
+  }
+}
 
 function canAnimate() {
   return typeof window !== "undefined" && motionAllowed();
@@ -56,7 +62,7 @@ export function SplitText({
       gsap.set(chars, { opacity: 1, clearProps: "transform" });
       return;
     }
-    const factor = SPEED[speed];
+    const factor = speedFactor(speed);
     const tween = gsap.fromTo(
       chars,
       { opacity: 0, yPercent: 105, rotate: 7, transformOrigin: "0% 100%" },
@@ -135,7 +141,7 @@ function entranceTo(entrance: Entrance, factor: number): gsap.TweenVars {
 function typeLabel(block: HTMLElement, factor: number) {
   const label = block.querySelector<HTMLElement>("[data-type-target]");
   if (!label) return null;
-  const length = Math.max(8, (label.textContent ?? "").length);
+  const length = Math.max(8, label.textContent.length);
   return gsap.fromTo(
     label,
     { clipPath: "inset(0 100% 0 0)" },
@@ -172,7 +178,7 @@ export function useReveal(
       }
       return;
     }
-    const factor = SPEED[speed];
+    const factor = speedFactor(speed);
     const tweens: gsap.core.Animation[] = [];
     let batch = 0;
     let batchTimer = 0;
@@ -200,7 +206,8 @@ export function useReveal(
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          const block = entry.target as HTMLElement;
+          const block = entry.target;
+          if (!(block instanceof HTMLElement)) continue;
           // Entered, or already scrolled past (a reload mid-page): show it.
           if (entry.isIntersecting || entry.boundingClientRect.bottom < 0) {
             observer.unobserve(block);
@@ -241,7 +248,7 @@ export function useStageEntrance(
       gsap.set(items, { opacity: 1 });
       return;
     }
-    const factor = SPEED[speed];
+    const factor = speedFactor(speed);
     const tween = gsap.fromTo(
       items,
       { opacity: 0, y: 26 },

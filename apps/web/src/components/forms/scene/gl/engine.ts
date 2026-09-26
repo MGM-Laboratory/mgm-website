@@ -290,7 +290,7 @@ export class FormSceneEngine {
 
   setColors(colors: SceneColors) {
     colors.pieces.forEach((color, index) => {
-      const material = this.materials[index];
+      const material = this.materials.at(index);
       if (!material) return;
       material.color.set(color);
       material.emissive.set(color).multiplyScalar(0.18);
@@ -585,11 +585,11 @@ export class FormSceneEngine {
 
       const k = body.placed ? (mode === "blocks" ? 55 : 70) : 18;
       const c = body.placed ? (mode === "blocks" ? 7 : 11) : 8;
-      for (const axis of ["x", "y", "z"] as const) {
-        const [value, velocity] = spring(body.pos[axis], body.vel[axis], target[axis], k, c, dt);
-        body.pos[axis] = value;
-        body.vel[axis] = velocity;
-      }
+      const [x, vx] = spring(body.pos.x, body.vel.x, target.x, k, c, dt);
+      const [y, vy] = spring(body.pos.y, body.vel.y, target.y, k, c, dt);
+      const [z, vz] = spring(body.pos.z, body.vel.z, target.z, k, c, dt);
+      body.pos.set(x, y, z);
+      body.vel.set(vx, vy, vz);
       const [scale, scaleVel] = spring(body.scale, body.scaleVel, scaleTarget, 160, 13, dt);
       body.scale = Math.max(0, scale);
       body.scaleVel = scaleVel;

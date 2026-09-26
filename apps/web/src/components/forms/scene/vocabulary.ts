@@ -1,5 +1,8 @@
 import type { FormDesign, FormScene } from "@repo/shared";
 
+import { tableMap } from "../lookup";
+import { shuffleInPlace } from "../shuffle";
+
 /**
  * The scene's pieces: the brand's Bauhaus vocabulary (DESIGN_SYSTEM §1,
  * hero/shapes.tsx) as a deterministic list per form. Both renderers, the
@@ -62,21 +65,19 @@ export function seeded(seed: number) {
 
 export const GRID = { cols: 4, rows: 4 } as const;
 
-const COUNTS: Record<FormDesign["background"]["intensity"], number> = {
-  calm: 12,
-  lively: 16,
-  wild: 16,
-};
-
-/** Loose pieces that never join the poster (they keep drifting around it). */
-const EXTRAS: Record<FormDesign["background"]["intensity"], number> = {
-  calm: 4,
-  lively: 10,
-  wild: 22,
-};
-
+/**
+ * Pieces on the poster, and loose extras that never join it (they keep
+ * drifting around it).
+ */
 export function pieceCount(intensity: FormDesign["background"]["intensity"]) {
-  return { poster: COUNTS[intensity], extras: EXTRAS[intensity] };
+  switch (intensity) {
+    case "calm":
+      return { poster: 12, extras: 4 };
+    case "lively":
+      return { poster: 16, extras: 10 };
+    case "wild":
+      return { poster: 16, extras: 22 };
+  }
 }
 
 /**
@@ -97,10 +98,7 @@ export function buildPieces(
     for (let col = 0; col < GRID.cols; col += 1) cells.push([col, row]);
   }
   // Shuffle the cells so answers fill the poster in a scattered order.
-  for (let index = cells.length - 1; index > 0; index -= 1) {
-    const swap = Math.floor(random() * (index + 1));
-    [cells[index], cells[swap]] = [cells[swap], cells[index]];
-  }
+  shuffleInPlace(cells, random);
   const kinds = [...SHAPE_KINDS];
   const make = (index: number, cell: [number, number], threshold: number): Piece => {
     // Neighbouring pieces avoid repeating a shape or a colour.
@@ -151,7 +149,7 @@ function edgeBiased(random: () => number) {
 }
 
 /** SVG path data per kind, drawn in a 100 x 100 box. */
-export const SHAPE_PATHS: Record<Exclude<ShapeKind, "x" | "ring">, string> = {
+const SHAPE_PATHS = tableMap<Exclude<ShapeKind, "x" | "ring">, string>({
   circle: "M50 2a48 48 0 1 0 0.001 0Z",
   half: "M2 74A48 48 0 0 1 98 74Z",
   quarter: "M4 96V4A92 92 0 0 1 96 96Z",
@@ -162,4 +160,8 @@ export const SHAPE_PATHS: Record<Exclude<ShapeKind, "x" | "ring">, string> = {
   domes:
     "M96 4C96 29.4 75.4 50 50 50C24.6 50 4 29.4 4 4ZM96 96C96 70.6 75.4 50 50 50C24.6 50 4 70.6 4 96Z",
   fan: "M50 2A48 48 0 0 0 98 50A48 48 0 0 0 50 98A48 48 0 0 0 2 50A48 48 0 0 0 50 2Z",
-};
+});
+
+export function shapePath(kind: Exclude<ShapeKind, "x" | "ring">) {
+  return SHAPE_PATHS.get(kind) ?? "";
+}

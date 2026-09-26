@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type CSSProperties } from "react";
 
-import { GRID, SHAPE_PATHS, type Piece, type ShapeKind } from "./vocabulary";
+import { GRID, shapePath, type Piece, type ShapeKind } from "./vocabulary";
 
 /**
  * The scene without WebGL: the same pieces as SVG, laid out by CSS. Loose
@@ -38,7 +38,7 @@ export function ShapeSvg({ kind, className }: { kind: ShapeKind; className?: str
   }
   return (
     <svg viewBox="0 0 100 100" className={className} aria-hidden focusable="false">
-      <path d={SHAPE_PATHS[kind]} fill="currentColor" />
+      <path d={shapePath(kind)} fill="currentColor" />
     </svg>
   );
 }

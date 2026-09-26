@@ -11,7 +11,8 @@ import { SHAPE_KINDS } from "./scene/vocabulary";
 
 /**
  * The respondent's progress along the visible route only (skipped pages and
- * hidden questions never count): a bar with a travelling disc, a row of
+ * hidden questions never count): a thin line along the bottom edge of the
+ * top bar (never a knob, which read as a volume slider), a row of
  * shapes that fill as questions are answered, or a plain fraction.
  */
 export function FormProgressBar({
@@ -61,7 +62,6 @@ export function FormProgressBar({
       style={{ ["--fx-progress" as string]: fraction } as CSSProperties}
     >
       <span className="fx-progress-fill" />
-      <span className="fx-progress-knob" />
     </div>
   );
 }
