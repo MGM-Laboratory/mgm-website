@@ -36,8 +36,9 @@ const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/;
 const COUNTRY_PATTERN = /^[A-Z]{2}$/;
 
 // The shared package targets plain ES2022 (no DOM or Node types), so links
-// are checked by shape: an http(s) scheme, a dotted host, no whitespace.
-const URL_PATTERN = /^https?:\/\/[^\s/?#@]+\.[^\s/?#@]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i;
+// are checked by shape: an http(s) scheme, a dotted host (a port is part of
+// the host run), then nothing, or a path, query or hash with no whitespace.
+const URL_PATTERN = /^https?:\/\/[^\s/?#@]+\.[^\s/?#@]{2,}(?:$|[/?#]\S*$)/i;
 
 function isValidUrl(value: string) {
   return URL_PATTERN.test(value);
@@ -54,33 +55,55 @@ function fileExtension(name: string) {
   return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
 }
 
-function maskCharMatches(token: string, char: string) {
-  switch (token) {
+type MaskSlot = { symbol: string; literal: boolean };
+
+function isDigit(char: string) {
+  return char >= "0" && char <= "9";
+}
+
+function isLetter(char: string) {
+  return char.toLowerCase() !== char.toUpperCase();
+}
+
+/** Letters compare case-insensitively, anything else exactly. */
+function sameCharacter(a: string, b: string) {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
+/** Whether one character of the value fits one slot of the mask. */
+function maskSlotMatches({ symbol, literal }: MaskSlot, char: string) {
+  if (literal) return sameCharacter(symbol, char);
+  switch (symbol) {
     case "#":
-      return char >= "0" && char <= "9";
+      return isDigit(char);
     case "A":
-      return char.toLowerCase() !== char.toUpperCase();
+      return isLetter(char);
     case "*":
-      return (char >= "0" && char <= "9") || char.toLowerCase() !== char.toUpperCase();
+      return isDigit(char) || isLetter(char);
     case "?":
       return true;
     default:
-      return token === char;
+      return sameCharacter(symbol, char);
   }
 }
 
-/** Splits one mask alternative into tokens, `\\x` becoming the literal `x`. */
-function maskTokens(mask: string): { token: string; literal: boolean }[] {
-  const tokens: { token: string; literal: boolean }[] = [];
-  for (let index = 0; index < mask.length; index += 1) {
-    if (mask[index] === "\\" && index + 1 < mask.length) {
-      tokens.push({ token: mask[index + 1], literal: true });
-      index += 1;
+/** Splits one mask alternative into slots, `\\x` becoming the literal `x`. */
+function maskSlots(mask: string): MaskSlot[] {
+  const slots: MaskSlot[] = [];
+  let escaping = false;
+  for (const char of mask.split("")) {
+    if (escaping) {
+      slots.push({ symbol: char, literal: true });
+      escaping = false;
+    } else if (char === "\\") {
+      escaping = true;
     } else {
-      tokens.push({ token: mask[index], literal: false });
+      slots.push({ symbol: char, literal: false });
     }
   }
-  return tokens;
+  // A trailing backslash escapes nothing and stands for itself.
+  if (escaping) slots.push({ symbol: "\\", literal: false });
+  return slots;
 }
 
 /**
@@ -96,14 +119,9 @@ export function matchesFormatMask(value: string, mask: string): boolean {
   if (!alternatives.length) return true;
   const chars = [...value];
   return alternatives.some((alternative) => {
-    const tokens = maskTokens(alternative);
-    if (tokens.length !== chars.length) return false;
-    return tokens.every(({ token, literal }, index) =>
-      literal
-        ? token.toLowerCase() === chars[index].toLowerCase()
-        : maskCharMatches(token, chars[index]) ||
-          (!"#A*?".includes(token) && token.toLowerCase() === chars[index].toLowerCase()),
-    );
+    const slots = maskSlots(alternative);
+    if (slots.length !== chars.length) return false;
+    return slots.every((slot, index) => maskSlotMatches(slot, chars.at(index) ?? ""));
   });
 }
 

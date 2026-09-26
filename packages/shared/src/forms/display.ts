@@ -91,9 +91,10 @@ const PIPE_PATTERN = /\{\{\s*([A-Za-z0-9_-]{1,64})\s*\}\}/g;
 
 // Marks where an unanswered pipe was, so the separator in front of it can go
 // too ("Your email, {{name}}?" reads "Your email?" before a name is given).
-const EMPTY_PIPE = "\u0000";
-const EMPTY_PIPE_WITH_SEPARATOR = /[ \t]*(?:[,;:][ \t]*)?\u0000[ \t]*(?=[?!.,;:)]|$)/g;
-const EMPTY_PIPE_ALONE = /[ \t]*\u0000/g;
+// A private-use character: printable, and never typed into a form.
+const EMPTY_PIPE = "\uE000";
+const EMPTY_PIPE_WITH_SEPARATOR = /[ \t]*[,;:]?[ \t]*\uE000[ \t]*(?=[?!.,;:)]|$)/g;
+const EMPTY_PIPE_ALONE = /[ \t]*\uE000/g;
 const LEADING_SEPARATOR = /^[ \t]*[,;:][ \t]*/;
 
 /**

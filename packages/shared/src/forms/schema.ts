@@ -726,7 +726,9 @@ export function toPublicFormDocument(document: FormDocument): PublicFormDocument
 // Slugs
 // ---------------------------------------------------------------------------
 
-export const FORM_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// Lowercase letters and digits in hyphen-separated runs: no leading,
+// trailing or doubled hyphen.
+export const FORM_SLUG_PATTERN = /^(?!-)(?!.*--)[a-z0-9-]*[a-z0-9]$/;
 export const FORM_SLUG_MAX = 80;
 /** Paths under /forms that a form can never claim. */
 export const RESERVED_FORM_SLUGS = new Set(["admin", "api", "media", "preview", "new", "public"]);
