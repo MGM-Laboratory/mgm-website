@@ -502,7 +502,7 @@ export function Menu({
               <button
                 className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium transition disabled:opacity-40 ${item.danger ? "text-brand-red hover:bg-brand-red-50 focus:bg-brand-red-50 dark:hover:bg-brand-red/15 dark:focus:bg-brand-red/15" : "text-[#3c4659] hover:bg-[#f2f5fa] focus:bg-[#f2f5fa] dark:text-white/75 dark:hover:bg-white/[0.07] dark:focus:bg-white/[0.07]"} outline-none`}
                 disabled={item.disabled}
-                key={item.label}
+                key={`${index}-${item.label}`}
                 onClick={() => {
                   close();
                   item.onSelect();

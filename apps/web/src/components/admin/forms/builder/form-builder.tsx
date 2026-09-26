@@ -319,6 +319,23 @@ export function FormBuilder({
 
   const tabProps = { change, document, record, readOnly, selection, select };
   const saveError = status.kind === "error" ? status : undefined;
+  // A save the API refused for a named field shows on that field too.
+  const problems = useMemo<Problem[]>(
+    () =>
+      saveError?.path
+        ? [
+            {
+              key: `api:${saveError.path}`,
+              message: `Not saved: ${saveError.message}`,
+              severity: "error",
+              target: targetFromPath(document, saveError.path),
+              path: saveError.path,
+            },
+            ...check.problems,
+          ]
+        : check.problems,
+    [check.problems, document, saveError?.message, saveError?.path],
+  );
 
   return (
     <div
@@ -367,7 +384,7 @@ export function FormBuilder({
           </div>
           <div className="flex flex-wrap items-center gap-1">
             <SaveIndicator onRetry={() => void saveNow()} status={status} />
-            <ProblemsButton onPick={pickProblem} problems={check.problems} />
+            <ProblemsButton onPick={pickProblem} problems={problems} />
             {!readOnly ? (
               <>
                 <button
@@ -557,7 +574,7 @@ export function FormBuilder({
             {...tabProps}
             multi={multi}
             origin={origin}
-            problems={check.problems}
+            problems={problems}
             setMulti={setMulti}
             undo={undo}
           />
