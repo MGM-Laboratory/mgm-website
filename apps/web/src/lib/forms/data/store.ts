@@ -77,7 +77,9 @@ function setState(formId: string, update: (state: FormDataState) => FormDataStat
   if (next === previous) return;
   states.set(formId, next);
   if (next.pipeline !== previous.pipeline) writePipeline(formId, next.pipeline);
-  listeners.get(formId)?.forEach((listener) => listener());
+  listeners.get(formId)?.forEach((listener) => {
+    listener();
+  });
 }
 
 function subscribe(formId: string, listener: () => void) {

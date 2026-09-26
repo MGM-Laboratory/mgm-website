@@ -145,8 +145,12 @@ function postJson(
       }
       resolve({ status: request.status, body: parsed });
     };
-    request.onerror = () => resolve({ status: 0, body: {} });
-    request.onabort = () => resolve({ status: 0, body: {} });
+    request.onerror = () => {
+      resolve({ status: 0, body: {} });
+    };
+    request.onabort = () => {
+      resolve({ status: 0, body: {} });
+    };
     request.send(JSON.stringify(body));
   });
 }
@@ -217,9 +221,19 @@ export function uploadFormFile(options: {
       const message = typeof body?.message === "string" ? body.message : "Upload failed";
       reject(new FormUploadError(message, request.status));
     };
-    request.onerror = () => reject(new FormUploadError("Network error", 0));
-    request.onabort = () => reject(new FormUploadError("Aborted", 0));
-    signal?.addEventListener("abort", () => request.abort(), { once: true });
+    request.onerror = () => {
+      reject(new FormUploadError("Network error", 0));
+    };
+    request.onabort = () => {
+      reject(new FormUploadError("Aborted", 0));
+    };
+    signal?.addEventListener(
+      "abort",
+      () => {
+        request.abort();
+      },
+      { once: true },
+    );
     request.send(file);
   });
 }

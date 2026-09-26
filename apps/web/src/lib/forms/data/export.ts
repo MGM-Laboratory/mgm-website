@@ -218,5 +218,7 @@ export function downloadBlob(parts: BlobPart[] | Blob, name: string, type: strin
   document.body.appendChild(link);
   link.click();
   link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 30_000);
 }

@@ -66,7 +66,9 @@ function request<T>(path: string, init: RequestOptions = {}): Promise<T> {
             : `Request failed (${xhr.status}).`;
       reject(new FormsApiError(message, xhr.status));
     };
-    xhr.onerror = () => reject(new FormsApiError("The network request failed.", 0));
+    xhr.onerror = () => {
+      reject(new FormsApiError("The network request failed.", 0));
+    };
     xhr.send(init.body ?? null);
   });
 }

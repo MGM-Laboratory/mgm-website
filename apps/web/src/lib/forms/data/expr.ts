@@ -406,7 +406,9 @@ function collectColumns(node: ExprNode, into: Set<string>) {
       collectColumns(node.right, into);
       break;
     case "call":
-      node.args.forEach((arg) => collectColumns(arg, into));
+      node.args.forEach((arg) => {
+        collectColumns(arg, into);
+      });
       break;
     default:
       break;

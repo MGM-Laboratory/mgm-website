@@ -91,13 +91,18 @@ export function useDocumentHistory(initial: FormDocument) {
     future: [],
     lastAt: 0,
   }));
-  const change = useCallback<DocumentChange>(
-    (update, coalesce) => dispatch({ type: "change", update, coalesce, at: Date.now() }),
-    [],
-  );
-  const undo = useCallback(() => dispatch({ type: "undo" }), []);
-  const redo = useCallback(() => dispatch({ type: "redo" }), []);
-  const reset = useCallback((document: FormDocument) => dispatch({ type: "reset", document }), []);
+  const change = useCallback<DocumentChange>((update, coalesce) => {
+    dispatch({ type: "change", update, coalesce, at: Date.now() });
+  }, []);
+  const undo = useCallback(() => {
+    dispatch({ type: "undo" });
+  }, []);
+  const redo = useCallback(() => {
+    dispatch({ type: "redo" });
+  }, []);
+  const reset = useCallback((document: FormDocument) => {
+    dispatch({ type: "reset", document });
+  }, []);
   return useMemo(
     () => ({
       document: state.present,

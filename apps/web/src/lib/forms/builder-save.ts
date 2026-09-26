@@ -104,7 +104,9 @@ export function useAutosave({
     if (!canWrite || document === savedRaw || !parsed) return;
     if (failure && failure.raw === document) return;
     const timer = window.setTimeout(() => void send(document, parsed), DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [canWrite, document, failure, parsed, savedRaw, send]);
 
   /** Saves right away (Cmd/Ctrl+S, leaving the builder); resolves true when nothing is left unsaved. */
@@ -125,7 +127,9 @@ export function useAutosave({
       event.preventDefault();
     };
     window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
   }, [dirty]);
 
   useEffect(
