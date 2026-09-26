@@ -9,11 +9,14 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ArrowDown } from "lucide-react";
 
+import type { ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
 import { setupParallax } from "@/lib/parallax";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
+import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 
 import {
   ArrowConnector,
@@ -54,6 +57,43 @@ const shapeBoxClass = "w-[clamp(4rem,8vw,6.5rem)]";
 const shapeHeightClass = "h-[clamp(4rem,8vw,6.5rem)]";
 
 const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
+
+/**
+ * One shape in the composition, three layers with one owner each: the
+ * `.parallax-el` moves with the mouse parallax, the `.hero-piece` is the
+ * play's (hover, press, proximity; interactions/pieces.ts), and the shape
+ * div inside keeps the entrance and its idle loop.
+ */
+function Piece({
+  name,
+  depth,
+  className,
+  children,
+}: {
+  name: string;
+  depth: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="parallax-el" data-depth={depth}>
+      <div className={cn("hero-piece", className)} data-piece={name}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// The burst a click on empty hero space throws: a fixed pool of small
+// brand shapes, reused round-robin (interactions/motifs.ts). Kinds are the
+// ones that read cleanly while tumbling (see see-work-button.tsx).
+const BURST_KINDS: PatternKind[] = ["circle", "fans", "square", "x", "arcs", "plus", "domes"];
+const BURST_TONES: PatternTone[] = ["red", "blue", "yellow", "green", "blue", "red", "yellow"];
+const BURST_POOL = Array.from({ length: 24 }, (_, i) => ({
+  kind: BURST_KINDS[i % BURST_KINDS.length],
+  tone: BURST_TONES[(i * 3) % BURST_TONES.length],
+  size: 12 + ((i * 5) % 4) * 2,
+}));
 
 function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
   const q = gsap.utils.selector(root);
@@ -672,7 +712,7 @@ export function Hero() {
                 const pauseWhenHidden = () => {
                   idleLoops.forEach((loop) => loop.paused(!visible || document.hidden));
                 };
-                const startIdle = () =>
+                const startIdle = () => {
                   idleContext.add(() => {
                     idleLoops = startIdleLoops(root);
                     removeParallax = setupParallax(root);
@@ -683,6 +723,7 @@ export function Hero() {
                     observer.observe(root);
                     document.addEventListener("visibilitychange", pauseWhenHidden);
                   });
+                };
                 const stopIdle = () => {
                   observer?.disconnect();
                   document.removeEventListener("visibilitychange", pauseWhenHidden);
@@ -783,12 +824,24 @@ export function Hero() {
       ref={rootRef}
       className="hero relative flex flex-1 flex-col justify-center bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
     >
-      {/* Ambient background motifs — pure whitespace flourish, idle-floating */}
-      <Dot className="bg-motif reveal-hidden absolute top-[10%] left-[5%] hidden size-3 opacity-0 text-brand-yellow min-[880px]:block min-[880px]:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden absolute top-[16%] right-[8%] hidden size-4 opacity-0 text-brand-blue min-[880px]:block min-[880px]:size-5" />
-      <RingMotif className="bg-motif reveal-hidden absolute bottom-[22%] left-[4%] hidden size-4 opacity-0 text-brand-red min-[880px]:block min-[880px]:size-5" />
-      <Dot className="bg-motif reveal-hidden absolute top-[46%] right-[5%] hidden size-3 opacity-0 text-brand-green min-[880px]:block min-[880px]:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden absolute bottom-[10%] right-[22%] hidden size-3 opacity-0 text-brand-red min-[880px]:block min-[880px]:size-4" />
+      {/* Ambient background motifs: pure whitespace flourish, idle-floating.
+          The wrapper carries the position and the play's cursor repel; the
+          motif inside keeps the entrance and its idle drift. */}
+      <div className="hero-motif absolute top-[10%] left-[5%] hidden min-[880px]:block">
+        <Dot className="bg-motif reveal-hidden block size-4 opacity-0 text-brand-yellow" />
+      </div>
+      <div className="hero-motif absolute top-[16%] right-[8%] hidden min-[880px]:block">
+        <PlusMotif className="bg-motif reveal-hidden block size-5 opacity-0 text-brand-blue" />
+      </div>
+      <div className="hero-motif absolute bottom-[22%] left-[4%] hidden min-[880px]:block">
+        <RingMotif className="bg-motif reveal-hidden block size-5 opacity-0 text-brand-red" />
+      </div>
+      <div className="hero-motif absolute top-[46%] right-[5%] hidden min-[880px]:block">
+        <Dot className="bg-motif reveal-hidden block size-4 opacity-0 text-brand-green" />
+      </div>
+      <div className="hero-motif absolute right-[22%] bottom-[10%] hidden min-[880px]:block">
+        <PlusMotif className="bg-motif reveal-hidden block size-4 opacity-0 text-brand-red" />
+      </div>
 
       {/* Progressive enhancement: without JS the reveal timeline never runs,
           so don't leave the hero blank. */}
@@ -799,7 +852,7 @@ export function Hero() {
       <h1 className="sr-only">Media, Game &amp; Mobile Laboratory</h1>
 
       <div
-        className="mx-auto hidden w-fit max-w-full flex-col gap-3 min-[880px]:flex min-[880px]:gap-4"
+        className="hero-composition mx-auto hidden w-fit max-w-full flex-col gap-3 select-none min-[880px]:flex min-[880px]:gap-4"
         aria-hidden="true"
       >
         {/* Row 1 — Media, */}
@@ -810,38 +863,47 @@ export function Hero() {
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-            <div className="parallax-el" data-depth="0.7">
+            <Piece name="square" depth="0.7">
               <div className={`shape-square reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Square className="w-full" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.85">
+            </Piece>
+            <Piece name="toggle" depth="0.85">
               <div
                 className={`shape-toggle reveal-hidden opacity-0 aspect-[220/90] w-auto ${shapeHeightClass}`}
               >
                 <ToggleChip className="h-full w-full" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.6">
+            </Piece>
+            <Piece name="triangle" depth="0.6">
               <div className={`shape-triangle reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <TriangleShape className="w-full" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.9">
+            </Piece>
+            <Piece name="circle-yellow" depth="0.9">
               <div className={`shape-circle-yellow reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Circle className="w-full" color="var(--brand-yellow)" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="1">
+            </Piece>
+            <Piece name="x" depth="1">
               <div className="shape-x reveal-hidden opacity-0 w-[clamp(2.25rem,4.5vw,3.5rem)] text-foreground">
                 <XMark className="w-full" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.75">
+            </Piece>
+            <Piece name="circle-red" depth="0.75" className="relative">
               <div className={`shape-circle-red reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Circle className="w-full" color="var(--brand-red)" />
               </div>
-            </div>
+              {/* The four small circles it pops into when pressed. */}
+              <span className="hero-red-bits pointer-events-none absolute inset-0">
+                {[0, 1, 2, 3].map((bit) => (
+                  <span
+                    key={bit}
+                    className="absolute top-[27%] left-[27%] block size-[46%] rounded-full bg-brand-red opacity-0"
+                  />
+                ))}
+              </span>
+            </Piece>
           </div>
         </div>
 
@@ -860,21 +922,21 @@ export function Hero() {
             className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3 sm:gap-x-6"
           >
             <div ref={shapesBGroupRef} className="flex flex-wrap items-center gap-5 sm:gap-8">
-              <div className="parallax-el" data-depth="0.7">
+              <Piece name="leaves" depth="0.7">
                 <div className={`leaves-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <LeavesMotif className="w-full" />
                 </div>
-              </div>
-              <div className="parallax-el" data-depth="0.9">
+              </Piece>
+              <Piece name="fans" depth="0.9">
                 <div className={`fans-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <FansMotif className="w-full" />
                 </div>
-              </div>
-              <div className="parallax-el" data-depth="0.6">
+              </Piece>
+              <Piece name="domes" depth="0.6">
                 <div className={`domes-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <DomesMotif className="w-full" />
                 </div>
-              </div>
+              </Piece>
             </div>
             <div className="parallax-el" data-depth="0.4">
               <span className={cn("line-game inline-block", headline)}>Game,</span>
@@ -893,9 +955,9 @@ export function Hero() {
                 &amp; Mobile Laboratory
               </span>
             </div>
-            <div className="parallax-el" data-depth="0.4">
+            <Piece name="logo" depth="0.4">
               <LogoMark className={`hero-logo ${shapeBoxClass}`} />
-            </div>
+            </Piece>
           </div>
         </div>
       </div>
@@ -913,6 +975,27 @@ export function Hero() {
           Media, Game &amp; Mobile Laboratory
         </p>
         <SeeWorkButton animationClassName="compact-hero-cta" />
+      </div>
+
+      {/* The pool a click on empty hero space throws from (interactions/motifs.ts). */}
+      <div
+        className="hero-burst pointer-events-none absolute inset-0 hidden min-[880px]:block"
+        aria-hidden="true"
+      >
+        {BURST_POOL.map((particle, index) => (
+          <div
+            key={index}
+            className="absolute top-0 left-0 opacity-0"
+            style={{
+              width: particle.size,
+              height: particle.size,
+              marginLeft: -particle.size / 2,
+              marginTop: -particle.size / 2,
+            }}
+          >
+            <FlairShape kind={particle.kind} tone={particle.tone} className="h-full w-full" />
+          </div>
+        ))}
       </div>
 
       <div className="corner-pattern reveal-hidden pointer-events-none absolute right-6 -bottom-6 z-10 hidden opacity-0 min-[880px]:block">
@@ -934,8 +1017,16 @@ export function Hero() {
         }}
       >
         <span data-part="content" className="flex flex-col items-center gap-1.5">
-          <span className="text-xs font-medium tracking-wide">Scroll</span>
-          <ArrowDown className="size-4" strokeWidth={2.25} />
+          {/* Two stacked copies, so hovering can roll the word over. */}
+          <span className="scroll-cue-label block h-4 overflow-hidden text-xs leading-4 font-medium tracking-wide">
+            <span className="scroll-cue-roll block">
+              <span className="block">Scroll</span>
+              <span className="block" aria-hidden="true">
+                Scroll
+              </span>
+            </span>
+          </span>
+          <ArrowDown className="scroll-cue-arrow size-4" strokeWidth={2.25} />
         </span>
       </button>
     </div>
