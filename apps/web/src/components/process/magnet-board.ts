@@ -20,6 +20,7 @@ import {
   type Box,
 } from "./magnet-geometry";
 import { startMagnetEntrance } from "./magnet-entrance";
+import { startMagnetIdle } from "./magnet-idle";
 import { loadArrangement, saveArrangement, type Arrangement } from "./magnet-storage";
 import { playTileMove, setLeavesOpen } from "./magnet-tile-moves";
 import type { PatternKind } from "./pattern-tile";
@@ -1066,6 +1067,7 @@ export function createMagnetBoard(section: HTMLElement) {
   };
 
   cleanups.push(startMagnetEntrance(board, rows));
+  cleanups.push(startMagnetIdle(board));
 
   return () => {
     endPress();
