@@ -203,11 +203,13 @@ export function EndingStage({
           tabIndex={-1}
           headingRef={titleRef}
         />
-        {ending.body ? (
-          <div data-stage-item="">
+        <div data-stage-item="">
+          {ending.body ? (
             <RichText doc={ending.body} transform={pipe} className="fx-ending-body" />
-          </div>
-        ) : null}
+          ) : (
+            <p className="fx-ending-body">{copy.thanksBody}</p>
+          )}
+        </div>
         {showScore ? <ScoreCounter score={score} max={max} /> : null}
         {ending.media ? (
           <div data-stage-item="">
