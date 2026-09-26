@@ -71,3 +71,12 @@ export type FieldProps<T extends FormAnswerValue = FormAnswerValue> = {
   /** Conversational: the answer is complete and the form may move on. */
   onComplete?: () => void;
 };
+
+/**
+ * Whether the page may move focus by script. In the builder's preview the
+ * iframe shares the admin's window: it only moves focus while the admin is
+ * inside it, never out of the editor they are typing in.
+ */
+export function focusAllowed(mode: "live" | "preview") {
+  return mode === "live" || (typeof document !== "undefined" && document.hasFocus());
+}

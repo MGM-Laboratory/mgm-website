@@ -16,7 +16,7 @@ import { maxScore, type FormCelebration, type FormEnding } from "@repo/shared";
 import { motionAllowed } from "@/lib/reduced-motion";
 
 import { Celebration } from "./celebration";
-import { useFormController } from "./form-context";
+import { focusAllowed, useFormController } from "./form-context";
 import { FormMediaView } from "./media";
 import { SplitText, useStageEntrance } from "./motion";
 import { RichText } from "./rich-text";
@@ -173,14 +173,14 @@ export function EndingStage({
   onAnother: () => void;
   celebration: FormCelebration;
 }) {
-  const { document, pipe, copy } = useFormController();
+  const { document, pipe, copy, mode } = useFormController();
   const rootRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   useStageEntrance(rootRef, document.design.motion.speed, ending.id);
   useEffect(() => {
-    titleRef.current?.focus({ preventScroll: true });
+    if (focusAllowed(mode)) titleRef.current?.focus({ preventScroll: true });
     window.scrollTo({ top: 0 });
-  }, [ending.id]);
+  }, [ending.id, mode]);
 
   const max = document.settings.scoring.maxScore ?? maxScore(document);
   const showScore = ending.showScore && score !== null;
