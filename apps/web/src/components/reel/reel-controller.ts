@@ -1037,7 +1037,7 @@ export class ReelController {
     // as the picture grows, gone on the big video.
     const sweep = this.reduced || s.mobile ? 1 : smoothstep(0.05, 0.92, w);
     put.set(visual, "--reel-sweep", sweep.toFixed(4));
-    for (const layer of this.tints) put.set(layer, "visibility", sweep >= 1 ? "hidden" : "visible");
+    for (const layer of this.tints) put.set(layer, "display", sweep >= 1 ? "none" : "block");
     // The hover lens: a soft window of true colour and a slight zoom where
     // the pointer is (in the picture's own, untransformed px).
     const radiusPx = Math.max(1, s.hover * (0.3 * Math.min(W, H) + 60));
@@ -1069,7 +1069,9 @@ export class ReelController {
     const path = this.el.linePath;
     if (!path) return;
     const reveal = this.state.lineReveal;
-    this.styles.set(path, "visibility", reveal > 0.001 ? "visible" : "hidden");
+    // display, not visibility: an inline "visible" would show through the
+    // hidden SVG while the WebGL ribbon draws.
+    this.styles.set(path, "display", reveal > 0.001 ? "inline" : "none");
     this.styles.set(path, "stroke-dasharray", reveal >= 0.9999 ? "none" : `${reveal.toFixed(4)} 2`);
   }
 
@@ -1150,7 +1152,6 @@ export class ReelController {
           ? "none"
           : `scale(${sx.toFixed(4)},${sy.toFixed(4)})`,
       );
-      put.set(reveal, "visibility", shown > 0.001 || this.buttonFocus ? "visible" : "hidden");
     }
     if (this.el.watch) {
       const hoverOn = hovered ? "true" : "false";
@@ -1412,7 +1413,6 @@ export class ReelController {
     const reveal = this.el.watch ?? this.el.caption;
     put.set(reveal, "opacity", "1");
     put.set(reveal, "transform", "none");
-    put.set(reveal, "visibility", "visible");
     put.set(this.el.readout, "opacity", "1");
     const line = this.el.readoutLines[this.readoutFront];
     if (line) line.textContent = this.coordinates;
