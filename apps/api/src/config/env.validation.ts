@@ -88,6 +88,15 @@ const envSchema = z.object({
   SHORTLINKS_GEOLOCATE: z
     .preprocess((value: unknown) => value !== "false", z.boolean())
     .default(true),
+  // --- Forms ---
+  // Largest accepted respondent upload, in bytes (100 MB by default); a
+  // field's own "max file size" can only lower it.
+  FORMS_MAX_UPLOAD_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(1_073_741_824)
+    .default(104_857_600),
 });
 
 export type Env = z.infer<typeof envSchema>;

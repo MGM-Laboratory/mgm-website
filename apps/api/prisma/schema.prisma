@@ -211,3 +211,112 @@ model ShortLinkVisit {
 
   @@index([linkId, createdAt])
 }
+
+// --- Forms ---
+// A form built in the admin workspace: the whole design lives in `data`
+// (the shared FormDocument, validated on every write). Responses, traffic
+// events and respondent uploads hang off it and go with it on delete.
+model Form {
+  id     String @id @default(cuid())
+  slug   String @unique
+  // draft | published | closed
+  status String @default("draft")
+  data   Json
+  passphraseSalt String?
+  passphraseHash String?
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  responses      FormResponse[]
+  events         FormEvent[]
+  uploads        FormUpload[]
+}
+
+model FormResponse {
+  id        String  @id @default(cuid())
+  formId    String
+  form      Form    @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers   Json
+  score     Float?
+  endingId  String?
+  sessionId String?
+  deviceId  String?
+  // Honeypot filled or faster than the form's minSeconds.
+  spam      Boolean @default(false)
+  ip        String?
+  userAgent String?
+  referer   String?
+  country   String?
+  region    String?
+  city      String?
+  latitude  Float?
+  longitude Float?
+  timezone  String?
+  device    String?
+  browser   String?
+  os        String?
+  language  String?
+  screen    String?
+  utm       Json?
+  startedAt  DateTime?
+  durationMs Int?
+  starred   Boolean  @default(false)
+  flagged   Boolean  @default(false)
+  reviewed  Boolean  @default(false)
+  tags      String[] @default([])
+  note      String?
+  editedAt  DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([formId, createdAt])
+  @@index([formId, deviceId])
+}
+
+model FormEvent {
+  id        String  @id @default(cuid())
+  formId    String
+  form      Form    @relation(fields: [formId], references: [id], onDelete: Cascade)
+  sessionId String
+  // view | start | progress | submit
+  type      String
+  fieldId   String?
+  // sessionId:type:fieldId, so a reload never counts a session twice.
+  dedupeKey String
+  ip        String?
+  userAgent String?
+  referer   String?
+  country   String?
+  region    String?
+  city      String?
+  latitude  Float?
+  longitude Float?
+  device    String?
+  browser   String?
+  os        String?
+  language  String?
+  createdAt DateTime @default(now())
+
+  @@unique([formId, dedupeKey])
+  @@index([formId, createdAt])
+  @@index([formId, type])
+}
+
+// A respondent's file, stored before the response exists; `responseId` is
+// set when a submission claims it, unclaimed rows are swept after a day.
+model FormUpload {
+  key        String   @id
+  formId     String
+  form       Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fieldId    String
+  sessionId  String?
+  name       String
+  size       Int
+  type       String
+  width      Int?
+  height     Int?
+  responseId String?
+  createdAt  DateTime @default(now())
+
+  @@index([formId, createdAt])
+  @@index([responseId])
+}

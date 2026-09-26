@@ -1,0 +1,25 @@
+import { Module } from "@nestjs/common";
+
+import { MailModule } from "../mail/mail.module.js";
+import { PrismaModule } from "../prisma/prisma.module.js";
+import { StorageModule } from "../storage/storage.module.js";
+import { FormsAdminController } from "./forms-admin.controller.js";
+import { FormsPublicController } from "./forms-public.controller.js";
+import { FormsAnalyticsService } from "./forms-analytics.service.js";
+import { FormsResponsesService } from "./forms-responses.service.js";
+import { FormsPublicService } from "./forms-public.service.js";
+import { FormsMailer } from "./forms.mailer.js";
+import { FormsService } from "./forms.service.js";
+
+@Module({
+  imports: [PrismaModule, StorageModule, MailModule],
+  controllers: [FormsAdminController, FormsPublicController],
+  providers: [
+    FormsService,
+    FormsPublicService,
+    FormsResponsesService,
+    FormsAnalyticsService,
+    FormsMailer,
+  ],
+})
+export class FormsModule {}

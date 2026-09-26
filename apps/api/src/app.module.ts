@@ -20,6 +20,7 @@ import { CmsPublicationsModule } from "./cms/cms-publications.module.js";
 import { CmsResearchModule } from "./cms/cms-research.module.js";
 import { ContactModule } from "./contact/contact.module.js";
 import { validateEnv } from "./config/env.validation.js";
+import { FormsModule } from "./forms/forms.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { MailModule } from "./mail/mail.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
@@ -65,6 +66,7 @@ import { StorageModule } from "./storage/storage.module.js";
     StorageModule,
     MailModule,
     ShortlinksModule,
+    FormsModule,
   ],
   controllers: [AppController],
   providers: [
