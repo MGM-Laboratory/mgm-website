@@ -55,6 +55,9 @@ export function FormMediaView({
           style={style}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
+          onError={(event) => {
+            event.currentTarget.dataset.broken = "";
+          }}
         />
       </div>
     );
