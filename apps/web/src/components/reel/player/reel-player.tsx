@@ -387,18 +387,25 @@ export function ReelPlayer({ session, onDone }: PlayerUiProps) {
               ref={playButton}
               aria-keyshortcuts="k"
               aria-label={playLabel}
-              className={cn(control, "min-w-[5.6rem]")}
+              className={cn(
+                control,
+                "min-w-11 justify-center disabled:opacity-40 sm:min-w-[5.6rem] sm:justify-start",
+              )}
               data-control
+              disabled={ui.error}
               onClick={(event) => engine.current?.togglePlay(event.detail === 0 ? "key" : "button")}
               type="button"
             >
-              <PlayGlyph playing={ui.playing} className="size-3" />
-              <Rolling text={playLabel} />
+              <PlayGlyph dock playing={ui.playing} className="size-3.5 sm:size-3" />
+              <span className="hidden sm:inline-flex">
+                <Rolling text={playLabel} />
+              </span>
             </button>
 
             <div className="relative flex min-w-0 flex-1 items-center gap-6">
               <div
                 ref={track}
+                aria-disabled={ui.error || undefined}
                 aria-label="Seek"
                 aria-valuemax={Math.floor(ui.duration)}
                 aria-valuemin={0}
@@ -464,7 +471,7 @@ export function ReelPlayer({ session, onDone }: PlayerUiProps) {
               </div>
               <span
                 aria-hidden
-                className="pointer-events-none absolute -top-1.5 right-0 font-mono text-[11px] text-white/70 tabular-nums sm:static sm:text-[12px]"
+                className="pointer-events-none absolute -top-2.5 right-0 font-mono text-[11px] whitespace-nowrap text-white/70 tabular-nums sm:static sm:text-[12px]"
               >
                 <span ref={time}>{timecode(session.startTime)}</span>
                 <span className="text-white/40"> / </span>
@@ -476,13 +483,19 @@ export function ReelPlayer({ session, onDone }: PlayerUiProps) {
               ref={soundButton}
               aria-keyshortcuts="m"
               aria-label={ui.muted ? "Sound on" : "Mute"}
-              className={cn(control, "min-w-[5.6rem] justify-end")}
+              className={cn(
+                control,
+                "min-w-11 justify-center disabled:opacity-40 sm:min-w-[5.6rem] sm:justify-end",
+              )}
               data-control
+              disabled={ui.error}
               onClick={() => engine.current?.toggleMute("button")}
               type="button"
             >
-              <SoundGlyph muted={ui.muted} className="size-3" />
-              <Rolling text={soundLabel} />
+              <SoundGlyph muted={ui.muted} className="size-3.5 sm:size-3" />
+              <span className="hidden sm:inline-flex">
+                <Rolling text={soundLabel} />
+              </span>
             </button>
           </div>
         </div>

@@ -353,6 +353,8 @@ export class PlayerEngine {
 
   playFromRefused() {
     this.togglePlay("big");
+    // The big button hides once playing: hand focus to the control row's.
+    this.el.playButton.focus({ preventScroll: true });
   }
 
   /** Closes the player: a pointer close lands on the cursor, anything else on the Play button. */
@@ -439,6 +441,10 @@ export class PlayerEngine {
 
   private onError = () => {
     this.setUi({ error: true, playing: false });
+    // The play button is disabled now: keep focus on something that works.
+    if (this.el.root.contains(document.activeElement) || document.activeElement === document.body) {
+      this.el.closeButton.focus({ preventScroll: true });
+    }
   };
 
   private onSeeked = () => {
