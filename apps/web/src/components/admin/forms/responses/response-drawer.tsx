@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import {
   CaretDown,
@@ -23,6 +24,7 @@ import {
   type FormResponsePatch,
 } from "@repo/shared";
 
+import { VIZ_ROOT } from "@/components/admin/forms/charts/viz";
 import { MiniMap } from "@/components/admin/forms/charts/world-map";
 import {
   cellText,
@@ -234,8 +236,8 @@ export function ResponseDrawer({
     ["Edited", record.admin.editedAt ? formatDateTime(record.admin.editedAt) : null],
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="presentation">
+  return createPortal(
+    <div className={`${VIZ_ROOT} fixed inset-0 z-50 flex justify-end`} role="presentation">
       <button
         aria-label="Close response"
         className="absolute inset-0 bg-[#0e1116]/35 backdrop-blur-[1px]"
@@ -565,6 +567,7 @@ export function ResponseDrawer({
           ) : null}
         </footer>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }

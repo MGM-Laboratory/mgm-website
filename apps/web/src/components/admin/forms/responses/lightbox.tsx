@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -87,7 +88,7 @@ export function Lightbox({
   const buttonClass =
     "inline-flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-white disabled:opacity-30";
 
-  return (
+  return createPortal(
     <div
       aria-label={`File ${index + 1} of ${items.length}: ${item.name}`}
       aria-modal="true"
@@ -242,6 +243,7 @@ export function Lightbox({
           </>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

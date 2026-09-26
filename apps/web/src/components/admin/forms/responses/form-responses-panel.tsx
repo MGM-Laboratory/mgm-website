@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import {
   ArrowsClockwise,
@@ -814,16 +815,33 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           )}
         </div>
         {cleanOpen ? (
-          <div className="fixed inset-0 z-40 bg-[#f5f7fb] p-3 lg:static lg:z-auto lg:h-[max(420px,calc(100dvh-330px))] lg:bg-transparent lg:p-0 dark:bg-[#0f1117] lg:dark:bg-transparent">
-            <CleanPanel
-              baseColumns={[...data.answerColumns, ...data.metaColumns]}
-              canWrite={canWrite}
-              form={form}
-              onClose={() => setCleanOpen(false)}
-              result={data.pipeline}
-              steps={state.pipeline}
-            />
-          </div>
+          <>
+            <div className="hidden lg:block lg:h-[max(420px,calc(100dvh-330px))]">
+              <CleanPanel
+                baseColumns={[...data.answerColumns, ...data.metaColumns]}
+                canWrite={canWrite}
+                form={form}
+                onClose={() => setCleanOpen(false)}
+                result={data.pipeline}
+                steps={state.pipeline}
+              />
+            </div>
+            {createPortal(
+              <div
+                className={`${VIZ_ROOT} fixed inset-0 z-[55] bg-[#f5f7fb] p-3 lg:hidden dark:bg-[#0f1117]`}
+              >
+                <CleanPanel
+                  baseColumns={[...data.answerColumns, ...data.metaColumns]}
+                  canWrite={canWrite}
+                  form={form}
+                  onClose={() => setCleanOpen(false)}
+                  result={data.pipeline}
+                  steps={state.pipeline}
+                />
+              </div>,
+              document.body,
+            )}
+          </>
         ) : null}
       </div>
 
@@ -908,11 +926,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           form={form}
           metaColumns={data.metaColumns}
           onClose={() => setExportAnchor(null)}
-          onPrint={() =>
-            window.dispatchEvent(
-              new CustomEvent("mgm:forms-print-report", { detail: { formId: form.id } }),
-            )
-          }
+          onPrint={() => setPrinting(true)}
           rawAll={rawRows}
           selectedRows={selectedRows}
           visibleOrder={visibleColumns.map((column) => column.key)}
