@@ -1,33 +1,11 @@
 "use client";
 
-import { Check, FloppyDisk, VideoCamera, YoutubeLogo } from "@phosphor-icons/react";
+import { Check, FloppyDisk, VideoCamera } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { HOME_VIDEO_MODES, type HomeContent, type HomeVideoMode } from "@repo/shared";
+import type { HomeContent } from "@repo/shared";
+import { homeVideoUrl } from "@/lib/home-cms";
 import { formatVideoSize } from "@/lib/project-cms";
-
-const inputClass =
-  "h-10 w-full rounded-xl border border-[#d9dfeb] bg-white px-3 text-sm text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
-const textareaClass =
-  "w-full rounded-xl border border-[#d9dfeb] bg-white px-3 py-2.5 text-sm leading-6 text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
-
-function Field({
-  children,
-  label,
-  hint,
-}: Readonly<{ children: React.ReactNode; label: string; hint?: string }>) {
-  return (
-    <label className="block min-w-0">
-      <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-        {label}
-      </span>
-      {children}
-      {hint ? (
-        <span className="mt-1.5 block text-xs text-[#8b93a6] dark:text-white/40">{hint}</span>
-      ) : null}
-    </label>
-  );
-}
 
 async function responseError(response: Response, fallback: string) {
   try {
@@ -40,42 +18,31 @@ async function responseError(response: Response, fallback: string) {
 }
 
 type FormState = {
-  videoMode: HomeVideoMode;
   videoKey?: string;
   videoName?: string;
   videoSize?: number;
-  videoUrl: string;
-  videoTitle: string;
-  videoDescription: string;
 };
 
-const toForm = (content: HomeContent): FormState => ({
-  videoMode: content.videoMode,
-  videoKey: content.videoKey,
-  videoName: content.videoName,
-  videoSize: content.videoSize,
-  videoUrl: content.videoUrl ?? "",
-  videoTitle: content.videoTitle,
-  videoDescription: content.videoDescription,
-});
+const toForm = (content: HomeContent): FormState =>
+  content.videoMode === "upload" && content.videoKey
+    ? { videoKey: content.videoKey, videoName: content.videoName, videoSize: content.videoSize }
+    : {};
 
-const VIDEO_MODE_LABELS: Record<HomeVideoMode, string> = {
-  none: "None",
-  upload: "Upload",
-  url: "Video URL",
-  youtube: "YouTube",
-};
-
-/** Uploads the file for "upload" mode, or clears any stale upload fields otherwise. */
-async function applyVideoUpload(
-  mode: HomeVideoMode,
+/** Uploads a newly chosen file, then returns the record to save. */
+async function uploadAndBuildPayload(
+  form: FormState,
   videoFile: File | undefined,
-  payload: HomeContent,
 ): Promise<HomeContent> {
-  if (mode !== "upload") {
-    return { ...payload, videoKey: undefined, videoName: undefined, videoSize: undefined };
+  if (!videoFile) {
+    return form.videoKey
+      ? {
+          videoMode: "upload",
+          videoKey: form.videoKey,
+          videoName: form.videoName,
+          videoSize: form.videoSize,
+        }
+      : { videoMode: "none" };
   }
-  if (!videoFile) return payload;
 
   const response = await fetch("/api/admin/home-content/video", {
     body: videoFile,
@@ -85,20 +52,19 @@ async function applyVideoUpload(
   if (!response.ok) throw new Error(await responseError(response, "Video upload failed."));
   const uploaded = (await response.json()) as { key: string; size: number };
   return {
-    ...payload,
+    videoMode: "upload",
     videoKey: uploaded.key,
-    videoName: payload.videoName?.trim() || videoFile.name,
+    videoName: videoFile.name,
     videoSize: uploaded.size,
   };
 }
 
-function VideoSourceFields({
+function VideoUploadField({
   form,
   ready,
   videoFile,
   videoInput,
   videoLimitMb,
-  onUrlChange,
   onChooseVideo,
   onRemoveVideo,
 }: Readonly<{
@@ -107,14 +73,27 @@ function VideoSourceFields({
   videoFile: File | undefined;
   videoInput: React.RefObject<HTMLInputElement | null>;
   videoLimitMb: number;
-  onUrlChange: (value: string) => void;
   onChooseVideo: (file: File | undefined) => void;
   onRemoveVideo: () => void;
 }>) {
-  if (form.videoMode === "upload") {
-    return (
-      <div className="mt-3 rounded-2xl border border-[#dfe4ee] bg-white p-4 dark:border-white/10 dark:bg-white/[0.035]">
-        {videoFile || form.videoKey ? (
+  // The saved video previews through the same cached route the homepage
+  // uses. A newly chosen file shows its name and size until it is saved.
+  const previewSrc = videoFile ? undefined : homeVideoUrl(form.videoKey);
+
+  return (
+    <div className="rounded-2xl border border-[#dfe4ee] bg-white p-4 dark:border-white/10 dark:bg-white/[0.035]">
+      {videoFile || form.videoKey ? (
+        <div className="grid gap-4">
+          {previewSrc ? (
+            <video
+              className="aspect-video w-full max-w-2xl rounded-xl bg-[#0e1116] object-contain"
+              controls
+              muted
+              playsInline
+              preload="metadata"
+              src={previewSrc}
+            />
+          ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/15">
               <VideoCamera size={20} weight="duotone" />
@@ -130,95 +109,56 @@ function VideoSourceFields({
               </span>
             </span>
             <button
-              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-white hover:text-brand-blue dark:text-white/60 dark:hover:bg-white/10"
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-white hover:text-brand-blue disabled:opacity-50 dark:text-white/60 dark:hover:bg-white/10"
+              disabled={!ready}
               onClick={() => videoInput.current?.click()}
               type="button"
             >
               Replace
             </button>
             <button
-              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-brand-red-50 hover:text-brand-red dark:text-white/60 dark:hover:bg-brand-red/15"
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:bg-brand-red-50 hover:text-brand-red disabled:opacity-50 dark:text-white/60 dark:hover:bg-brand-red/15"
+              disabled={!ready}
               onClick={onRemoveVideo}
               type="button"
             >
               Remove
             </button>
           </div>
-        ) : (
-          <button
-            className="grid w-full place-items-center gap-2 rounded-xl border border-dashed border-brand-blue/40 bg-brand-blue/[0.04] px-4 py-10 text-center transition hover:border-brand-blue hover:bg-brand-blue/[0.07]"
-            onClick={() => videoInput.current?.click()}
-            type="button"
-          >
-            <VideoCamera className="text-brand-blue" size={30} weight="duotone" />
-            <span className="text-sm font-semibold text-brand-blue">Upload the video</span>
-            <span className="font-mono text-[10px] tracking-[0.12em] text-[#8490a5] uppercase">
-              MP4 or WebM · up to {videoLimitMb} MB
-            </span>
-          </button>
-        )}
-        <input
-          accept="video/mp4,video/webm"
-          className="hidden"
-          onChange={(event) => {
-            onChooseVideo(event.target.files?.[0]);
-            event.currentTarget.value = "";
-          }}
-          ref={videoInput}
-          type="file"
-        />
-      </div>
-    );
-  }
-
-  if (form.videoMode === "url") {
-    return (
-      <div className="mt-3">
-        <Field hint="A direct video file link." label="Video URL">
-          <input
-            className={inputClass}
-            disabled={!ready}
-            onChange={(event) => onUrlChange(event.target.value)}
-            placeholder="https://.../video.mp4"
-            value={form.videoUrl}
-          />
-        </Field>
-      </div>
-    );
-  }
-
-  if (form.videoMode === "youtube") {
-    return (
-      <div className="mt-3">
-        <Field label="YouTube URL">
-          <div className="flex items-center gap-1.5">
-            <YoutubeLogo className="shrink-0 text-[#8490a5]" size={16} />
-            <input
-              className={inputClass}
-              disabled={!ready}
-              onChange={(event) => onUrlChange(event.target.value)}
-              placeholder="https://www.youtube.com/watch?v=..."
-              value={form.videoUrl}
-            />
-          </div>
-        </Field>
-      </div>
-    );
-  }
-
-  return null;
+        </div>
+      ) : (
+        <button
+          className="grid w-full place-items-center gap-2 rounded-xl border border-dashed border-brand-blue/40 bg-brand-blue/[0.04] px-4 py-10 text-center transition hover:border-brand-blue hover:bg-brand-blue/[0.07] disabled:opacity-50"
+          disabled={!ready}
+          onClick={() => videoInput.current?.click()}
+          type="button"
+        >
+          <VideoCamera className="text-brand-blue" size={30} weight="duotone" />
+          <span className="text-sm font-semibold text-brand-blue">Upload the video</span>
+          <span className="font-mono text-[10px] tracking-[0.12em] text-[#8490a5] uppercase">
+            MP4 or WebM · up to {videoLimitMb} MB
+          </span>
+        </button>
+      )}
+      <input
+        accept="video/mp4,video/webm"
+        className="hidden"
+        onChange={(event) => {
+          onChooseVideo(event.target.files?.[0]);
+          event.currentTarget.value = "";
+        }}
+        ref={videoInput}
+        type="file"
+      />
+    </div>
+  );
 }
 
 export function HomeSettingsEditor({
   onDirtyChange,
 }: Readonly<{ onDirtyChange: (dirty: boolean) => void }>) {
   const [ready, setReady] = useState(false);
-  const [form, setForm] = useState<FormState>({
-    videoMode: "none",
-    videoUrl: "",
-    videoTitle: "",
-    videoDescription: "",
-  });
+  const [form, setForm] = useState<FormState>({});
   const [baseline, setBaseline] = useState("");
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const [error, setError] = useState<string>();
@@ -286,23 +226,10 @@ export function HomeSettingsEditor({
   else if (status === "saved" && !isDirty) saveLabel = "Saved";
 
   const save = async () => {
-    if ((form.videoMode === "url" || form.videoMode === "youtube") && !form.videoUrl.trim()) {
-      toast.error("Add a video URL for this mode.");
-      return;
-    }
     setStatus("saving");
     setError(undefined);
     try {
-      const basePayload: HomeContent = {
-        videoMode: form.videoMode,
-        videoKey: form.videoKey,
-        videoName: form.videoName,
-        videoSize: form.videoSize,
-        videoUrl: form.videoUrl.trim() || undefined,
-        videoTitle: form.videoTitle.trim(),
-        videoDescription: form.videoDescription.trim(),
-      };
-      const payload = await applyVideoUpload(form.videoMode, videoFile, basePayload);
+      const payload = await uploadAndBuildPayload(form, videoFile);
 
       const response = await fetch("/api/admin/home-content", {
         body: JSON.stringify(payload),
@@ -338,8 +265,8 @@ export function HomeSettingsEditor({
             Homepage video
           </h1>
           <p className="mt-2 text-sm text-[#69748a] dark:text-white/50">
-            The video block shown on the homepage below the Trusted By strip — its title, short
-            description, and source.
+            The company profile video on the homepage, right after the hero. Its title and
+            description are part of the page design, so only the video changes here.
           </p>
         </div>
       </div>
@@ -360,63 +287,27 @@ export function HomeSettingsEditor({
         </div>
       ) : null}
 
-      <div className="mt-8 grid gap-5">
-        <Field label="Video title">
-          <input
-            className={inputClass}
-            disabled={!ready}
-            onChange={(event) => update({ videoTitle: event.target.value })}
-            placeholder="See how we build"
-            value={form.videoTitle}
-          />
-        </Field>
-        <Field label="Short description">
-          <textarea
-            className={`${textareaClass} min-h-24`}
-            disabled={!ready}
-            onChange={(event) => update({ videoDescription: event.target.value })}
-            placeholder="A short line shown next to the video"
-            value={form.videoDescription}
-          />
-        </Field>
-
-        <div>
-          <span className="mb-1.5 block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-            Video source
-          </span>
-          <div className="flex h-10 items-center gap-1 rounded-xl border border-[#d9dfeb] bg-white p-1 dark:border-white/10 dark:bg-white/[0.045]">
-            {HOME_VIDEO_MODES.map((mode) => (
-              <button
-                aria-pressed={form.videoMode === mode}
-                className={`h-8 flex-1 rounded-lg text-xs font-semibold transition ${
-                  form.videoMode === mode
-                    ? "bg-[#171b25] text-white dark:bg-white/90 dark:text-[#171b25]"
-                    : "text-[#768096] hover:text-[#171b25] dark:text-white/45 dark:hover:text-white"
-                }`}
-                disabled={!ready}
-                key={mode}
-                onClick={() => update({ videoMode: mode })}
-                type="button"
-              >
-                {VIDEO_MODE_LABELS[mode]}
-              </button>
-            ))}
-          </div>
-
-          <VideoSourceFields
-            form={form}
-            onChooseVideo={chooseVideo}
-            onRemoveVideo={() => {
-              setVideoFile(undefined);
-              update({ videoKey: undefined, videoName: undefined, videoSize: undefined });
-            }}
-            onUrlChange={(value) => update({ videoUrl: value })}
-            ready={ready}
-            videoFile={videoFile}
-            videoInput={videoInput}
-            videoLimitMb={videoLimitMb}
-          />
-        </div>
+      <div className="mt-8 grid gap-3">
+        <span className="block text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
+          Company profile video
+        </span>
+        <VideoUploadField
+          form={form}
+          onChooseVideo={chooseVideo}
+          onRemoveVideo={() => {
+            setVideoFile(undefined);
+            update({ videoKey: undefined, videoName: undefined, videoSize: undefined });
+          }}
+          ready={ready}
+          videoFile={videoFile}
+          videoInput={videoInput}
+          videoLimitMb={videoLimitMb}
+        />
+        <p className="text-xs leading-5 text-[#8b93a6] dark:text-white/40">
+          It plays muted in the small frame beside the section&apos;s title, grows to fill the
+          screen as visitors scroll, and opens in the full-screen player from the Play button.
+          Browsers cache the file, so a returning visitor&apos;s video starts at once.
+        </p>
       </div>
 
       <div className="h-24" aria-hidden />
