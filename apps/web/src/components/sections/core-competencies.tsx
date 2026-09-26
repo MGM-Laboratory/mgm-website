@@ -8,6 +8,8 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFadeUpOnScroll } from "@/lib/scroll-reveal";
 import { COMPETENCIES, type CompetencyColor } from "@/data/competencies";
+import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
+import { KineticHeading } from "@/components/home-extras/kinetic-heading";
 import { CompetencyCardShape, CompetencyMotifShape } from "./competency-motif";
 
 // Blue, red, and green match the shared brand tokens exactly, but this
@@ -193,9 +195,11 @@ export function CoreCompetenciesSection() {
       </noscript>
 
       <div className="mx-auto max-w-5xl">
-        <h2 className="reveal-card font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground opacity-0">
-          Four crafts, one roof
-        </h2>
+        <KineticHeading
+          chapter={HOME_CHAPTERS.competencies}
+          text="Four crafts, one roof"
+          className="font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground"
+        />
         <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
           We research, design, and build websites, mobile apps, interfaces, and games. Each card has
           a little more on the back, so hover or tap one to turn it over.

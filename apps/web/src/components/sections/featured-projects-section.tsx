@@ -13,6 +13,8 @@ import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import gsap from "gsap";
 import Link from "next/link";
 
+import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
+import { KineticHeading } from "@/components/home-extras/kinetic-heading";
 import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import {
@@ -162,9 +164,11 @@ export function FeaturedProjectsSection({
       <div className="mx-auto max-w-5xl">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h2 className="reveal-card font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground opacity-0">
-              Made in the lab
-            </h2>
+            <KineticHeading
+              chapter={HOME_CHAPTERS.projects}
+              text="Made in the lab"
+              className="font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground"
+            />
             <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
               A few research-driven products we built end to end. Pick one and step inside.
             </p>

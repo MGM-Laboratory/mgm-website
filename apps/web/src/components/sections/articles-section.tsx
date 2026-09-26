@@ -5,6 +5,7 @@ import { ArticleCover } from "@/components/articles/article-cover";
 
 import { articleCoverUrl, type CmsArticleRecord } from "@/lib/article-cms";
 import { useArticleRecords } from "@/hooks/use-article-records";
+import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
 import { ShowcaseSection } from "./showcase-section";
 
 const HOMEPAGE_LIMIT = 10;
@@ -16,6 +17,7 @@ export function ArticlesSection({ initialRecords = [] }: { initialRecords?: CmsA
   return (
     <ShowcaseSection
       compact
+      chapter={HOME_CHAPTERS.articles}
       id="articles"
       title="Notes from the lab"
       intro="Stories and notes on research, design, and engineering, written in plain words."

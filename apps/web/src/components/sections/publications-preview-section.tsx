@@ -3,6 +3,8 @@
 import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 
+import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
+import { KineticHeading } from "@/components/home-extras/kinetic-heading";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import {
   publicationTypeLabel,
@@ -50,9 +52,11 @@ export function PublicationsPreviewSection({
       <div className="mx-auto max-w-5xl">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h2 className="reveal-card font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground opacity-0">
-              On the record
-            </h2>
+            <KineticHeading
+              chapter={HOME_CHAPTERS.publications}
+              text="On the record"
+              className="font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground"
+            />
             <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
               Peer-reviewed papers and scholarly writing from the lab. The careful, citable version
               of what we learn.

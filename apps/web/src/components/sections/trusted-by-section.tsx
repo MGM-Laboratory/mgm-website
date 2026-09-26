@@ -4,6 +4,8 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 
+import type { HomeChapter } from "@/components/home-extras/chapters";
+import { KineticHeading } from "@/components/home-extras/kinetic-heading";
 import { cn } from "@/lib/utils";
 import { fadeUpOnScroll } from "@/lib/scroll-reveal";
 import { PARTNERS, type Partner } from "@/data/partners";
@@ -191,11 +193,14 @@ const MARQUEE_SPEED_PX_PER_SEC = 100;
 
 export function TrustedBySection({
   compact = false,
+  chapter,
 }: {
   /** Tighter vertical padding for pages that stack this directly between
    * other sections — used on About, and on the homepage's own tightened row
    * stack (Core Competencies/Trusted By/Projects/Publications/Articles). */
   compact?: boolean;
+  /** The homepage's chapter mark above the heading (components/home-extras/chapters.ts). */
+  chapter?: HomeChapter;
 } = {}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -443,9 +448,11 @@ export function TrustedBySection({
       </noscript>
 
       <div className="mx-auto max-w-5xl">
-        <h2 className="reveal-card font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground opacity-0">
-          In good company
-        </h2>
+        <KineticHeading
+          chapter={chapter}
+          text="In good company"
+          className="font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground"
+        />
         <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
           Universities, labs, and companies we have researched, built, and taught alongside, past
           and present. Pick a logo to read the story behind it.
