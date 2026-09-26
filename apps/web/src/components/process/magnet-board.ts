@@ -349,8 +349,8 @@ export function createMagnetBoard(section: HTMLElement) {
     if (!motionAllowed()) return;
     gsap.fromTo(
       m.ring,
-      { scale: 1, opacity: Math.min(1, 0.55 + 0.4 * strength) },
-      { scale: 1.5 + 0.6 * strength, opacity: 0, duration: 0.65, ease: "power2.out" },
+      { scale: 1, opacity: Math.min(0.9, 0.45 + 0.45 * strength) },
+      { scale: 1.45 + 0.45 * strength, opacity: 0, duration: 0.5, ease: "power3.out" },
     );
   }
 
@@ -902,6 +902,8 @@ export function createMagnetBoard(section: HTMLElement) {
 
   function putBack() {
     lastInput = performance.now();
+    // A second finger can reach the button while the first holds a magnet.
+    if (press) return;
     const moved = magnets.filter((m) => isMoved(m) && m.ready);
     if (!moved.length) return;
     const motion = motionAllowed();

@@ -26,8 +26,24 @@ export function ProcessSection() {
     const reveal = () => {
       for (const el of root.querySelectorAll<HTMLElement>(".process-item")) el.style.opacity = "1";
     };
+    let idle = 0;
+    let requested = false;
     const load = () => {
+      if (requested) return;
+      requested = true;
       observer.disconnect();
+      // Near the viewport, but still after whatever the browser is busy
+      // with (the hero's entrance on a first load).
+      const run = () => {
+        idle = 0;
+        start();
+      };
+      idle =
+        typeof window.requestIdleCallback === "function"
+          ? window.requestIdleCallback(run, { timeout: 900 })
+          : window.setTimeout(run, 60);
+    };
+    const start = () => {
       import("./magnet-board")
         .then(({ createMagnetBoard }) => {
           if (cancelled) return;
@@ -51,6 +67,10 @@ export function ProcessSection() {
     return () => {
       cancelled = true;
       observer.disconnect();
+      if (idle) {
+        if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
+        window.clearTimeout(idle);
+      }
       dispose?.();
     };
   }, []);
