@@ -229,7 +229,8 @@ export const COMMUNITY_TEMPLATES: FormTemplate[] = [
           label: "NIM",
           required: true,
           width: "half",
-          pattern: "^[0-9]{10,15}$",
+          pattern:
+            "########## | ########### | ############ | ############# | ############## | ###############",
           patternMessage: "NIM terdiri dari 10 sampai 15 angka.",
         },
         {
