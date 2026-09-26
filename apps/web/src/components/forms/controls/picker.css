@@ -636,6 +636,34 @@
   font: 700 1.1rem var(--pk-display);
   color: var(--pk-muted);
 }
+.pk-time-side {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pk-time-title {
+  margin: 0;
+  padding: 8px 4px 0;
+  min-height: 36px;
+  font: 650 1rem var(--pk-display);
+  text-align: center;
+  font-feature-settings: "tnum";
+}
+.pk-time-title[data-empty] {
+  color: var(--pk-muted);
+  font-weight: 500;
+}
+.pk-pop[data-kind="datetime"] .pk-time-side {
+  flex: 0 1 220px;
+  padding-left: 12px;
+  border-left: 1px solid var(--pk-line);
+}
+.pk-pop[data-sheet] .pk-time-side {
+  flex: none;
+  padding: 12px 0 0;
+  border-left: 0;
+  border-top: 1px solid var(--pk-line);
+}
 .pk-pop[data-sheet] .pk-col {
   max-width: 110px;
 }
