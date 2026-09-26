@@ -105,7 +105,7 @@ const MAX_SEGMENT_PX = 360;
 /** A content jump longer than this share of the viewport (a route reset, an anchor) clears the paint. */
 const MAX_SCROLL_SHARE = 0.6;
 /** Startup benchmark: above this many ms per full pass the renderer is a CPU in disguise. */
-const SLOW_PASS_MS = 14;
+const SLOW_PASS_MS = 10;
 /** Runtime watch: a median frame above this while the pass runs hands the page back. */
 const SLOW_FRAME_MS = 45;
 
