@@ -194,11 +194,11 @@ export function CoreCompetenciesSection() {
 
       <div className="mx-auto max-w-5xl">
         <h2 className="reveal-card font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground opacity-0">
-          Core Competencies
+          Four crafts, one roof
         </h2>
         <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
-          Where MGM Laboratory concentrates its work — research, design, and engineering under one
-          roof.
+          We research, design, and build websites, mobile apps, interfaces, and games. Each card has
+          a little more on the back, so hover or tap one to turn it over.
         </p>
 
         <div className="mt-10 grid grid-cols-2 gap-7 sm:grid-cols-4">
@@ -237,7 +237,7 @@ export function CoreCompetenciesSection() {
                     triggerRefs.current[i] = el;
                   }}
                   aria-expanded="false"
-                  aria-label={`${c.title} — show details and explore link`}
+                  aria-label={`${c.title}, show the details`}
                   // Firefox bug 1201471: backface-visibility:hidden is ignored
                   // on a child that has no transform of its own, even inside a
                   // rotating preserve-3d parent — it only culls elements it

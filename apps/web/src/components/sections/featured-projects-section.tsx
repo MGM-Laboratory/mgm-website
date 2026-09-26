@@ -163,10 +163,10 @@ export function FeaturedProjectsSection({
         <div className="flex items-start justify-between gap-6">
           <div>
             <h2 className="reveal-card font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground opacity-0">
-              Projects
+              Made in the lab
             </h2>
             <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
-              A selection of research-driven products the lab has built end to end.
+              A few research-driven products we built end to end. Pick one and step inside.
             </p>
           </div>
           <Link
@@ -288,7 +288,7 @@ export function FeaturedProjectsSection({
         ) : (
           <div className="reveal-card mt-10 rounded-2xl border border-[var(--line)] px-8 py-16 text-center opacity-0">
             <p className="text-foreground/60">
-              No featured projects yet — check back once the lab spotlights one.
+              No featured projects right now. Please check back soon.
             </p>
           </div>
         )}

@@ -51,10 +51,11 @@ export function PublicationsPreviewSection({
         <div className="flex items-start justify-between gap-6">
           <div>
             <h2 className="reveal-card font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground opacity-0">
-              Publications
+              On the record
             </h2>
             <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
-              Peer-reviewed papers and scholarly writing from the lab.
+              Peer-reviewed papers and scholarly writing from the lab. The careful, citable version
+              of what we learn.
             </p>
           </div>
           <Link
@@ -104,7 +105,7 @@ export function PublicationsPreviewSection({
         ) : (
           <div className="reveal-card mt-10 rounded-2xl border border-[var(--line)] px-8 py-16 text-center opacity-0">
             <p className="text-foreground/60">
-              No publications yet — the lab&apos;s first papers are on their way.
+              No publications to show right now. Please check back soon.
             </p>
           </div>
         )}

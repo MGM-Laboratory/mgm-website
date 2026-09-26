@@ -444,11 +444,11 @@ export function TrustedBySection({
 
       <div className="mx-auto max-w-5xl">
         <h2 className="reveal-card font-display text-[clamp(1.75rem,3vw_+_1rem,2.5rem)] font-semibold tracking-tight text-foreground opacity-0">
-          Trusted By
+          In good company
         </h2>
         <p className="reveal-card mt-4 max-w-2xl text-foreground/60 opacity-0">
-          Universities, labs, and companies Lab MGM has researched, built, and taught alongside,
-          past and present.
+          Universities, labs, and companies we have researched, built, and taught alongside, past
+          and present. Pick a logo to read the story behind it.
         </p>
       </div>
 

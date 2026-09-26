@@ -17,10 +17,10 @@ export function ArticlesSection({ initialRecords = [] }: { initialRecords?: CmsA
     <ShowcaseSection
       compact
       id="articles"
-      title="Articles"
-      intro="Notes on research, design, and engineering from the lab."
+      title="Notes from the lab"
+      intro="Stories and notes on research, design, and engineering, written in plain words."
       seeMoreHref="/articles"
-      emptyMessage="No articles yet — the lab's first notes are on their way."
+      emptyMessage="No articles to show right now. New notes are on their way."
       count={shown.length}
     >
       {shown.map((record) => {
