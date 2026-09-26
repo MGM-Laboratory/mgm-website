@@ -26,9 +26,15 @@ test.beforeEach(async ({ page }) => {
   await installProbes(page);
 });
 
+/** Uncaught errors, and React's hydration complaints (console errors). */
 function collectErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error" && /hydrat|did not match/i.test(message.text())) {
+      errors.push(message.text());
+    }
+  });
   return errors;
 }
 
@@ -169,12 +175,27 @@ test.describe("conversational layout", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Cheers!" })).toBeVisible();
     await expect.poll(async () => (await submissions(page, "e2e-chat")).length).toBe(1);
     const [sent] = await submissions(page, "e2e-chat");
+    // Without a welcome, the first answer is the start.
+    expect(sent.startedAt).toBeTruthy();
     expect(sent.answers).toEqual({
       nickname: "Kopi",
       flavour: "latte",
       rating: 4,
       notes: "More foam\nplease",
     });
+    expect(errors).toEqual([]);
+  });
+});
+
+test.describe("hydration", () => {
+  test("country lists from the browser's Intl data hydrate cleanly", async ({ page }) => {
+    const errors = collectErrors(page);
+    await open(page, "/forms/e2e-intl");
+    await expect(page.getByRole("heading", { level: 1, name: "Contact details" })).toBeVisible();
+    // The phone's calling codes arrive after hydration, named in Indonesian.
+    await expect(page.locator("#fx-q-phone-country option")).not.toHaveCount(1);
+    await page.locator("#fx-q-country").fill("jep");
+    await expect(page.getByRole("listbox").getByRole("option", { name: /Jepang/ })).toBeVisible();
     expect(errors).toEqual([]);
   });
 });
