@@ -1475,6 +1475,197 @@
           }
         }
       }
+    },
+    {
+      "slug": "e2e-dates",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Book a visit",
+        "fields": [
+          {
+            "id": "visit",
+            "type": "date",
+            "label": "Visit day",
+            "required": true,
+            "width": "full",
+            "minDate": "2026-09-10",
+            "maxDate": "2026-10-20"
+          },
+          {
+            "id": "birthday",
+            "type": "date",
+            "label": "Birthday",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "arrival",
+            "type": "time",
+            "label": "Arrival time",
+            "required": true,
+            "width": "half"
+          },
+          {
+            "id": "call",
+            "type": "datetime",
+            "label": "Call time",
+            "required": false,
+            "width": "full",
+            "minDate": "2026-09-01"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Thank you",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "laboratory",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "paper",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "en",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": false,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 0,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
+      "slug": "e2e-dates-id",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Jadwal kunjungan",
+        "fields": [
+          {
+            "id": "hari",
+            "type": "date",
+            "label": "Hari kunjungan",
+            "required": true,
+            "width": "full"
+          },
+          {
+            "id": "jam",
+            "type": "time",
+            "label": "Jam datang",
+            "required": true,
+            "width": "full"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Terima kasih",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "atlas",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "conversational",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "paper",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "id",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": false,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 0,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
     }
   ]
 }

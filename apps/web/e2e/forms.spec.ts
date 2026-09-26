@@ -187,6 +187,169 @@ test.describe("conversational layout", () => {
   });
 });
 
+test.describe("date and time pickers", () => {
+  // A fixed clock and zone, so "today" and the fixture's allowed range agree.
+  test.use({ timezoneId: "Asia/Jakarta" });
+  test.beforeEach(async ({ page }) => {
+    // Time still flows (the layouts animate), from a known morning.
+    await page.clock.install({ time: new Date("2026-09-26T10:00:00+07:00") });
+    await page.clock.resume();
+  });
+
+  const dialog = (page: Page) => page.getByRole("dialog");
+  const field = (page: Page, fieldId: string) => page.locator(`#fx-q-${fieldId}`);
+
+  test("picks, types and bounds dates and times", async ({ page, isMobile }) => {
+    const errors = collectErrors(page);
+    await open(page, "/forms/e2e-dates");
+
+    // The calendar opens on today, and the keyboard picks a day.
+    await question(page, "visit").getByRole("button", { name: "Choose a date" }).click();
+    await expect(dialog(page)).toBeVisible();
+    await expect(dialog(page).locator("th").first()).toHaveText("Sun");
+    const today = dialog(page).getByRole("gridcell", {
+      name: "Today, Saturday, 26 September 2026",
+    });
+    await expect(today).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Enter");
+    await expect(dialog(page)).toBeHidden();
+    await expect(field(page, "visit")).toHaveValue("Sun, 27 September 2026");
+    await expect(field(page, "visit")).toBeFocused();
+
+    // Outside min and max, days are disabled and the keyboard stops at the edge.
+    await question(page, "visit").getByRole("button", { name: "Choose a date" }).click();
+    await expect(dialog(page).locator('[data-day="2026-09-09"]')).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await page.keyboard.press("PageDown");
+    await page.keyboard.press("PageDown");
+    await expect(
+      dialog(page).getByRole("gridcell", { name: "Tuesday, 20 October 2026" }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(
+      dialog(page).getByRole("gridcell", { name: "Tuesday, 20 October 2026" }),
+    ).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(field(page, "visit")).toHaveValue("Tue, 20 October 2026");
+
+    // A birth date by the year list and the month grid.
+    await question(page, "birthday").getByRole("button", { name: "Choose a date" }).click();
+    await dialog(page)
+      .getByRole("button", { name: /^Choose a year/ })
+      .click();
+    await dialog(page).getByRole("button", { name: "1994", exact: true }).click();
+    await dialog(page).getByRole("button", { name: "March 1994" }).click();
+    await dialog(page).getByRole("gridcell", { name: "Monday, 14 March 1994" }).click();
+    await expect(field(page, "birthday")).toHaveValue("Mon, 14 March 1994");
+
+    // A time from the columns.
+    await question(page, "arrival").getByRole("button", { name: "Choose a time" }).click();
+    await dialog(page)
+      .getByRole("listbox", { name: "Hours" })
+      .getByRole("option", { name: "2", exact: true })
+      .click();
+    await dialog(page)
+      .getByRole("listbox", { name: "Minutes" })
+      .getByRole("option", { name: "30", exact: true })
+      .click();
+    await dialog(page)
+      .getByRole("listbox", { name: "AM or PM" })
+      .getByRole("option", { name: "PM" })
+      .click();
+    await dialog(page).getByRole("button", { name: "Done" }).click();
+    await expect(field(page, "arrival")).toHaveValue("2:30 PM");
+
+    if (isMobile) {
+      // Touch screens tap into the sheet: the day, then the time.
+      await field(page, "call").click();
+      await expect(dialog(page)).toHaveAttribute("aria-modal", "true");
+      await dialog(page).getByRole("gridcell", { name: "Sunday, 27 September 2026" }).click();
+      await dialog(page)
+        .getByRole("listbox", { name: "Hours" })
+        .getByRole("option", { name: "9", exact: true })
+        .click();
+      await dialog(page)
+        .getByRole("listbox", { name: "Minutes" })
+        .getByRole("option", { name: "05", exact: true })
+        .click();
+      await dialog(page).getByRole("button", { name: "Done" }).click();
+    } else {
+      // Typed values are read leniently; one that can't be read says so.
+      await field(page, "call").fill("27/09/2026 9:05 am");
+      await field(page, "call").blur();
+      await field(page, "birthday").fill("31/02/1994");
+      await field(page, "birthday").blur();
+      await expect(question(page, "birthday").getByText("Enter a valid date.")).toBeVisible();
+      await field(page, "birthday").fill("14 Mar 1994");
+      await field(page, "birthday").blur();
+      await expect(field(page, "birthday")).toHaveValue("Mon, 14 March 1994");
+      await expect(question(page, "birthday").getByText("Enter a valid date.")).toBeHidden();
+    }
+    // Engines' Intl data abbreviate September as "Sept" or "Sep".
+    await expect(field(page, "call")).toHaveValue(/^Sun, 27 Sept? 2026, 9:05 AM$/);
+
+    await page.getByRole("button", { name: /Submit/ }).click();
+    await expect.poll(async () => (await submissions(page, "e2e-dates")).length).toBe(1);
+    const [sent] = await submissions(page, "e2e-dates");
+    expect(sent.answers).toEqual({
+      visit: "2026-10-20",
+      birthday: "1994-03-14",
+      arrival: "14:30",
+      call: "2026-09-27T09:05",
+    });
+    expect(errors).toEqual([]);
+  });
+
+  test("speaks Indonesian and keeps Enter for the picker while it is open", async ({ page }) => {
+    const errors = collectErrors(page);
+    await open(page, "/forms/e2e-dates-id");
+    const day = field(page, "hari");
+    await expect(day).toBeVisible();
+    await day.focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(dialog(page).locator("th").first()).toHaveText("Sen");
+    await expect(
+      dialog(page).getByRole("gridcell", { name: "Hari ini, Sabtu, 26 September 2026" }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowLeft");
+    // Enter picks the day and stays on the question.
+    await page.keyboard.press("Enter");
+    await expect(day).toHaveValue("Jum, 25 September 2026");
+    await expect(page.getByRole("heading", { name: /Hari kunjungan/ })).toBeVisible();
+    // Closed, Enter moves on.
+    await page.keyboard.press("Enter");
+    const time = field(page, "jam");
+    await expect(time).toBeFocused();
+
+    await page.keyboard.press("ArrowDown");
+    const hours = dialog(page).getByRole("listbox", { name: "Jam" });
+    await expect(hours).toBeFocused();
+    // Nothing picked yet: the column starts at 09.
+    await page.keyboard.press("ArrowDown");
+    for (let step = 0; step < 5; step += 1) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await page.keyboard.press("ArrowRight");
+    for (let step = 0; step < 6; step += 1) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect(time).toHaveValue("14:30");
+    await page.keyboard.press("Enter");
+    await expect(dialog(page)).toBeHidden();
+    await expect(time).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("heading", { level: 1, name: "Terima kasih" })).toBeVisible();
+    await expect.poll(async () => (await submissions(page, "e2e-dates-id")).length).toBe(1);
+    const [sent] = await submissions(page, "e2e-dates-id");
+    expect(sent.answers).toEqual({ hari: "2026-09-25", jam: "14:30" });
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe("hydration", () => {
   test("country lists from the browser's Intl data hydrate cleanly", async ({ page }) => {
     const errors = collectErrors(page);
