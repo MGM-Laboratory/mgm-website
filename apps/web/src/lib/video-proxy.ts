@@ -4,6 +4,18 @@ import { cmsApi } from "@/lib/cms-api";
 
 type KeyContext = { params: Promise<{ key: string }> };
 
+type PlaybackOptions = {
+  /**
+   * The response's cache policy. Defaults to revalidating on every play. A
+   * collection whose keys are minted once per upload (a replaced video gets a
+   * new key, the old one stops resolving) can let browsers keep the bytes.
+   */
+  cacheControl?: string;
+};
+
+/** For uuid-keyed uploads: the bytes behind a key never change. */
+export const IMMUTABLE_VIDEO_CACHE = "public, max-age=31536000, immutable";
+
 /**
  * A public, range-seekable video-playback proxy: relays Range requests to
  * storage and streams the 206 response back, so a player can seek without
@@ -12,7 +24,11 @@ type KeyContext = { params: Promise<{ key: string }> };
  * video, …) so a new route doesn't re-spell this closely enough to be
  * flagged as a clone of an existing one.
  */
-export function videoPlaybackRoute(keyPattern: RegExp, cmsPath: (key: string) => string) {
+export function videoPlaybackRoute(
+  keyPattern: RegExp,
+  cmsPath: (key: string) => string,
+  { cacheControl = "private, no-cache" }: PlaybackOptions = {},
+) {
   return {
     async GET(request: Request, { params }: KeyContext) {
       const { key } = await params;
@@ -31,7 +47,7 @@ export function videoPlaybackRoute(keyPattern: RegExp, cmsPath: (key: string) =>
 
       const headers = new Headers({
         "accept-ranges": "bytes",
-        "cache-control": "private, no-cache",
+        "cache-control": cacheControl,
         "content-type":
           source.headers.get("content-type") ??
           (key.endsWith(".webm") ? "video/webm" : "video/mp4"),
@@ -41,6 +57,10 @@ export function videoPlaybackRoute(keyPattern: RegExp, cmsPath: (key: string) =>
       const contentLength = source.headers.get("content-length");
       if (contentRange) headers.set("content-range", contentRange);
       if (contentLength) headers.set("content-length", contentLength);
+      for (const name of ["etag", "last-modified"]) {
+        const value = source.headers.get(name);
+        if (value) headers.set(name, value);
+      }
       return new NextResponse(source.body, { headers, status: range ? source.status : 200 });
     },
   };
