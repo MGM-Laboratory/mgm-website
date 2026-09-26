@@ -80,6 +80,8 @@ export const FORM_ERROR_CODES = [
   "tooManyFiles",
   "consent",
   "color",
+  "decimals",
+  "step",
 ] as const;
 export type FormErrorCode = (typeof FORM_ERROR_CODES)[number];
 
@@ -108,6 +110,8 @@ const MESSAGES: Record<FormLanguage, Record<FormErrorCode, (args: MessageArgs) =
     tooManyFiles: ({ max }) => `Attach at most ${max} files.`,
     consent: () => "Please agree to continue.",
     color: () => "Pick a color.",
+    decimals: ({ max }) => `Use at most ${max} decimal places.`,
+    step: ({ max }) => `Use a multiple of ${max}.`,
   },
   id: {
     required: () => "Pertanyaan ini wajib dijawab.",
@@ -131,6 +135,8 @@ const MESSAGES: Record<FormLanguage, Record<FormErrorCode, (args: MessageArgs) =
     tooManyFiles: ({ max }) => `Lampirkan maksimal ${max} berkas.`,
     consent: () => "Mohon setujui untuk melanjutkan.",
     color: () => "Pilih warna.",
+    decimals: ({ max }) => `Gunakan maksimal ${max} angka desimal.`,
+    step: ({ max }) => `Gunakan kelipatan ${max}.`,
   },
 };
 

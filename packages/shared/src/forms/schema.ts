@@ -641,6 +641,57 @@ export type FormSettings = z.infer<typeof formSettingsSchema>;
 // The document
 // ---------------------------------------------------------------------------
 
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function isIsoDay(value: string) {
+  if (!ISO_DAY.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+type BoundsContext = {
+  addIssue: (issue: { code: "custom"; message: string; path: (string | number)[] }) => void;
+};
+
+/** Contradictory limits would leave a question nobody can answer. */
+function checkFieldBounds(field: FormField, index: number, context: BoundsContext) {
+  const issue = (key: string, message: string) => {
+    context.addIssue({ code: "custom", message, path: ["fields", index, key] });
+  };
+  if (field.min !== undefined && field.max !== undefined && field.min > field.max) {
+    issue("max", "The maximum can't be below the minimum.");
+  }
+  if (
+    field.minLength !== undefined &&
+    field.maxLength !== undefined &&
+    field.minLength > field.maxLength
+  ) {
+    issue("maxLength", "The maximum length can't be below the minimum.");
+  }
+  if (
+    field.minSelections !== undefined &&
+    field.maxSelections !== undefined &&
+    field.minSelections > field.maxSelections
+  ) {
+    issue("maxSelections", "The most choices can't be fewer than the fewest.");
+  }
+  if (field.minDate !== undefined && !isIsoDay(field.minDate)) {
+    issue("minDate", "Use a date like 2026-09-26.");
+  }
+  if (field.maxDate !== undefined && !isIsoDay(field.maxDate)) {
+    issue("maxDate", "Use a date like 2026-09-26.");
+  }
+  if (
+    field.minDate !== undefined &&
+    field.maxDate !== undefined &&
+    isIsoDay(field.minDate) &&
+    isIsoDay(field.maxDate) &&
+    field.minDate > field.maxDate
+  ) {
+    issue("maxDate", "The last allowed date can't be before the first.");
+  }
+}
+
 export const FORM_DOCUMENT_VERSION = 1;
 
 export const formDocumentSchema = z
@@ -677,6 +728,7 @@ export const formDocumentSchema = z
   .superRefine((document, context) => {
     const ids = new Set<string>();
     document.fields.forEach((field, index) => {
+      checkFieldBounds(field, index, context);
       if (ids.has(field.id)) {
         context.addIssue({
           code: "custom",

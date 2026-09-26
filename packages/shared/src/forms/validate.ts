@@ -190,6 +190,25 @@ function numberBounds(field: FormField): { min?: number; max?: number } {
   }
 }
 
+/** The tolerance for comparing decimals that floating point can't store exactly. */
+const EPSILON = 1e-9;
+
+/** A number or slider answer must fit the field's decimals and its step from the minimum. */
+function numberPrecision(field: FormField, answer: number): FieldError | null {
+  if (field.decimals !== undefined) {
+    const scale = 10 ** field.decimals;
+    if (Math.abs(Math.round(answer * scale) - answer * scale) > EPSILON * Math.max(1, scale)) {
+      return { code: "decimals", max: field.decimals };
+    }
+  }
+  if (field.step !== undefined && (field.type === "number" || field.type === "slider")) {
+    const base = field.min ?? 0;
+    const steps = (answer - base) / field.step;
+    if (Math.abs(steps - Math.round(steps)) > 1e-6) return { code: "step", max: field.step };
+  }
+  return null;
+}
+
 /** Validates one answer against its field; `null` when it's fine. */
 export function validateFieldAnswer(
   field: FormField,
@@ -251,7 +270,7 @@ export function validateFieldAnswer(
       if (field.type !== "number" && field.type !== "slider" && !Number.isInteger(answer)) {
         return { code: "invalid" };
       }
-      return null;
+      return numberPrecision(field, answer);
     }
     case "multiple_choice":
     case "dropdown":

@@ -267,9 +267,11 @@ export function maxScore(document: LogicDocument): number {
       .map((option) => option.points ?? 0)
       .filter((points) => points > 0);
     if (!positive.length) continue;
+    // A ranking answer lists every option it ranks, and each earns its points.
     const multi =
       field.type === "checkboxes" ||
       field.type === "multiselect" ||
+      field.type === "ranking" ||
       (field.type === "picture_choice" && (field.maxSelections ?? 1) > 1);
     total += multi ? positive.reduce((sum, points) => sum + points, 0) : Math.max(...positive);
   }
