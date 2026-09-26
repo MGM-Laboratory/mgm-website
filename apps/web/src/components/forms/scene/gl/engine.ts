@@ -243,6 +243,24 @@ export class FormSceneEngine {
     this.cleanup.push(() => {
       window.removeEventListener("resize", onResize);
     });
+    // The poster box can move without a window resize (the builder's
+    // preview switching the form's placement), so follow the probe too.
+    const probe = document.querySelector<HTMLElement>("[data-fx-poster]");
+    if (probe && typeof ResizeObserver !== "undefined") {
+      let last = "";
+      const observer = new ResizeObserver(() => {
+        const rect = probe.getBoundingClientRect();
+        const key = `${Math.round(rect.left)},${Math.round(rect.top)},${Math.round(rect.width)}`;
+        if (key !== last) {
+          last = key;
+          this.resize();
+        }
+      });
+      observer.observe(probe);
+      this.cleanup.push(() => {
+        observer.disconnect();
+      });
+    }
     if (options.interactive && window.matchMedia("(pointer: fine)").matches) {
       const onMove = (event: PointerEvent) => {
         this.pointer.set(event.clientX / this.width - 0.5, event.clientY / this.height - 0.5);
