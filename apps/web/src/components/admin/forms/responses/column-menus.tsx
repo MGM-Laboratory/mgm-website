@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "re
 import { Reorder, useDragControls } from "framer-motion";
 import { ArrowDown, ArrowUp, DotsSixVertical, EyeSlash, PushPin, X } from "@phosphor-icons/react";
 
-import { cellIds, countryName, type DataColumn, type WorkingRow } from "@/lib/forms/data/columns";
+import { cellIds, countryLabel, type DataColumn, type WorkingRow } from "@/lib/forms/data/columns";
 import {
   FILTER_OP_LABELS,
   filterOpsFor,
@@ -92,7 +92,7 @@ function optionsFor(column: DataColumn, rows: WorkingRow[]) {
     .slice(0, 200)
     .map(([id, count]) => ({
       id,
-      label: `${column.key === "$country" || column.field?.type === "country" ? `${id} ${countryName(id)}` : id} (${count})`,
+      label: `${column.key === "$country" || column.field?.type === "country" ? countryLabel(id) : id} (${count})`,
     }));
 }
 

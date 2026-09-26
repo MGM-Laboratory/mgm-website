@@ -153,6 +153,17 @@ export function FileChips({
   );
 }
 
+/** An ISO code as "ID Indonesia" (code in mono), a stored country name as is. No flags. */
+export function CountryText({ value }: { value: string }) {
+  if (!/^[a-z]{2}$/i.test(value)) return <span className="truncate">{value}</span>;
+  return (
+    <span className="truncate" title={countryName(value)}>
+      <span className="font-mono text-[11px] font-semibold">{value.toUpperCase()}</span>{" "}
+      {countryName(value)}
+    </span>
+  );
+}
+
 export function RatingStars({ value, max = 5 }: { value: number; max?: number }) {
   const count = Math.max(1, Math.min(10, max));
   return (
@@ -312,12 +323,7 @@ export function CellView({
       case "$duration":
         return <span className="tabular-nums">{formatDuration(value as number)}</span>;
       case "$country":
-        return (
-          <span className="truncate" title={countryName(String(value))}>
-            <span className="font-mono text-[11px] font-semibold">{String(value)}</span>{" "}
-            {countryName(String(value))}
-          </span>
-        );
+        return <CountryText value={String(value)} />;
       case "$tags":
         return (
           <span className="flex gap-1 overflow-hidden">
@@ -473,12 +479,7 @@ export function CellView({
         </span>
       );
     case "country":
-      return (
-        <span className="truncate">
-          <span className="font-mono text-[11px] font-semibold">{String(value)}</span>{" "}
-          {countryName(String(value))}
-        </span>
-      );
+      return <CountryText value={String(value)} />;
     case "file_upload":
     case "image_upload":
     case "signature":

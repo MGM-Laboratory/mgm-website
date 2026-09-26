@@ -64,6 +64,8 @@ const COUNTRY_NAMES: Record<string, string> = {};
 /** An English country name for an ISO 3166 alpha-2 code (falls back to the code). */
 export function countryName(code: string | null | undefined): string {
   if (!code) return "";
+  // Geolocation stores country names; answers store ISO codes.
+  if (!/^[a-z]{2}$/i.test(code)) return code;
   const upper = code.toUpperCase();
   if (COUNTRY_NAMES[upper]) return COUNTRY_NAMES[upper];
   try {
@@ -73,6 +75,12 @@ export function countryName(code: string | null | undefined): string {
   } catch {
     return upper;
   }
+}
+
+/** "ID Indonesia" for a code, the name alone for a name. */
+export function countryLabel(value: string | null | undefined): string {
+  if (!value) return "";
+  return /^[a-z]{2}$/i.test(value) ? `${value.toUpperCase()} ${countryName(value)}` : value;
 }
 
 const TEXT_TYPES = new Set([
@@ -436,8 +444,7 @@ export function cellText(column: DataColumn, row: WorkingRow, options: TextOptio
       return options.isoDates ? String(value) : formatDateTime(String(value));
     if (column.key === "$duration")
       return options.isoDates ? String(value) : formatDuration(value as number);
-    if (column.key === "$country")
-      return options.raw ? String(value) : `${value} ${countryName(String(value))}`.trim();
+    if (column.key === "$country") return options.raw ? String(value) : countryLabel(String(value));
     if (column.key === "$ending") {
       const title = options.endingTitles?.get(String(value));
       return options.raw || !title ? String(value) : title;
@@ -450,7 +457,7 @@ export function cellText(column: DataColumn, row: WorkingRow, options: TextOptio
   if (options.raw) return rawAnswerText(column, row.answers);
   if (column.field?.type === "country" && column.answer.part === undefined) {
     const code = row.answers[column.key];
-    return typeof code === "string" && code ? `${code} ${countryName(code)}` : "";
+    return typeof code === "string" ? countryLabel(code) : "";
   }
   if (column.answer.part?.kind === "row") return columnText(column.answer, row.answers);
   if (column.answer.part?.kind === "other") return columnText(column.answer, row.answers);
