@@ -381,8 +381,14 @@ export const formFieldSchema = z.object({
   // Text
   minLength: z.number().int().min(0).max(FORM_LIMITS.textAnswerMax).optional(),
   maxLength: z.number().int().min(1).max(FORM_LIMITS.textAnswerMax).optional(),
-  /** A regular expression the answer must match (short text only). */
-  pattern: z.string().max(300).optional(),
+  /**
+   * A format mask the answer must match (short text only), see
+   * `matchesFormatMask`: `#` a digit, `A` a letter, `*` a letter or digit,
+   * `?` any character, `\\` escapes the next one, everything else is literal.
+   * Alternatives are separated by ` | `. Never a regular expression, so an
+   * admin can't make the API run a catastrophic pattern on respondent input.
+   */
+  pattern: z.string().max(120).optional(),
   patternMessage: z.string().trim().max(200).optional(),
   rows: z.number().int().min(2).max(20).optional(),
 
@@ -680,17 +686,6 @@ export const formDocumentSchema = z
           message: "Add at least one option.",
           path: ["fields", index, "options"],
         });
-      }
-      if (field.pattern) {
-        try {
-          new RegExp(field.pattern);
-        } catch {
-          context.addIssue({
-            code: "custom",
-            message: "That pattern is not a valid regular expression.",
-            path: ["fields", index, "pattern"],
-          });
-        }
       }
     });
     const endingIds = new Set<string>();
