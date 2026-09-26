@@ -28,6 +28,7 @@ import {
   type WorkingRow,
 } from "./columns";
 import { compileExpr, evaluate, type ExprValue } from "./expr";
+import { compileUserPattern, replaceWithUserPattern } from "./user-pattern";
 
 // ---------------------------------------------------------------------------
 // Steps
@@ -133,8 +134,21 @@ export function toSentenceCase(text: string) {
   );
 }
 
-function escapeRegex(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** Plain-text find & replace, without building a regular expression. */
+function plainReplacer(find: string, replace: string, caseSensitive: boolean, wholeCell: boolean) {
+  const needle = caseSensitive ? find : find.toLocaleLowerCase();
+  return (text: string) => {
+    const haystack = caseSensitive ? text : text.toLocaleLowerCase();
+    if (wholeCell) return haystack === needle ? replace : text;
+    if (!haystack.includes(needle)) return text;
+    let out = "";
+    let from = 0;
+    for (let at = haystack.indexOf(needle); at >= 0; at = haystack.indexOf(needle, from)) {
+      out += text.slice(from, at) + replace;
+      from = at + needle.length;
+    }
+    return out + text.slice(from);
+  };
 }
 
 /** Compiles a find & replace step into a string function, or an error message. */
@@ -142,22 +156,14 @@ export function replacer(
   step: Extract<CleanStep, { kind: "replace" }>,
 ): ((text: string) => string) | string {
   if (!step.find) return (text) => text;
-  let pattern: RegExp;
-  try {
-    const source = step.regex ? step.find : escapeRegex(step.find);
-    pattern = new RegExp(
-      step.wholeCell ? `^(?:${source})$` : source,
-      step.caseSensitive ? "gu" : "giu",
-    );
-  } catch (error) {
-    return error instanceof Error
-      ? error.message
-      : "That pattern is not a valid regular expression.";
-  }
-  return (text) => {
-    pattern.lastIndex = 0;
-    return text.replace(pattern, step.replace);
-  };
+  if (!step.regex)
+    return plainReplacer(step.find, step.replace, step.caseSensitive, step.wholeCell);
+  const compiled = compileUserPattern(step.find, {
+    caseSensitive: step.caseSensitive,
+    wholeCell: step.wholeCell,
+  });
+  if (typeof compiled === "string") return compiled;
+  return (text) => replaceWithUserPattern(compiled, text, step.replace);
 }
 
 /** Lowercased, accent-free, punctuation-free, single-spaced: the key variants share. */
