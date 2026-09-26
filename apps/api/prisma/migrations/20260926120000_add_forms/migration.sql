@@ -126,4 +126,3 @@ ALTER TABLE "FormEvent" ADD CONSTRAINT "FormEvent_formId_fkey" FOREIGN KEY ("for
 
 -- AddForeignKey
 ALTER TABLE "FormUpload" ADD CONSTRAINT "FormUpload_formId_fkey" FOREIGN KEY ("formId") REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
