@@ -52,15 +52,15 @@ class DownloadError extends Error {
 
 const wait = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
-    const timer = window.setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        window.clearTimeout(timer);
-        reject(new DOMException("Aborted", "AbortError"));
-      },
-      { once: true },
-    );
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    const timer = window.setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 
 /**
@@ -105,13 +105,15 @@ function downloadFileBytes(url: string, signal: AbortSignal): Promise<Uint8Array
     request.onabort = () => {
       reject(new DOMException("Aborted", "AbortError"));
     };
-    signal.addEventListener(
-      "abort",
-      () => {
-        request.abort();
-      },
-      { once: true },
-    );
+    const onAbort = () => {
+      request.abort();
+    };
+    // Settled either way: drop the listener, or it would keep this request
+    // (and its downloaded bytes) alive for the whole archive.
+    request.onloadend = () => {
+      signal.removeEventListener("abort", onAbort);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
     request.send();
   });
 }

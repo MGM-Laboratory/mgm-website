@@ -69,8 +69,12 @@ export function Lightbox({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-      else if (event.key === "ArrowRight") go(1);
+      if (event.key === "Escape") {
+        // The lightbox sits on top of the response drawer: Escape closes
+        // only the lightbox, never both at once.
+        event.stopPropagation();
+        onClose();
+      } else if (event.key === "ArrowRight") go(1);
       else if (event.key === "ArrowLeft") go(-1);
       else if (event.key === "+" || event.key === "=") setZoom((value) => Math.min(6, value * 1.4));
       else if (event.key === "-") setZoom((value) => Math.max(1, value / 1.4));
@@ -79,9 +83,11 @@ export function Lightbox({
         setOffset({ x: 0, y: 0 });
       }
     };
-    window.addEventListener("keydown", onKey);
+    // Capture phase: runs before the drawer's own window listener, so the
+    // lightbox's Escape can stop there.
+    window.addEventListener("keydown", onKey, true);
     return () => {
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
   }, [go, onClose]);
 

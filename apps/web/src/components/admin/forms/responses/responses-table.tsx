@@ -157,7 +157,10 @@ export function ResponsesTable(props: Props) {
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (editing) return;
+    // The grid moves by aria-activedescendant, so its own keys arrive on the
+    // grid itself; a focused header button or the select-all checkbox keeps
+    // its Enter and Space.
+    if (editing || event.target !== event.currentTarget) return;
     const maxRow = rows.length - 1;
     const maxCol = columns.length - 1;
     let { row, col } = active;

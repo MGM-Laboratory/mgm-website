@@ -5,6 +5,7 @@
  */
 
 import {
+  answerValue,
   cellIds,
   cellIsEmpty,
   cellText,
@@ -184,8 +185,11 @@ function filterTest(filter: ColumnFilter, column: DataColumn): (row: WorkingRow)
       return (row) => {
         const key = sortKey(column, row);
         if (typeof key !== "number") return false;
-        // Answer dates are wall-clock (`YYYY-MM-DD`, parsed as UTC); compare them as such.
-        const value = answerDate ? key + new Date(key).getTimezoneOffset() * 60_000 : key;
+        // `YYYY-MM-DD` parses as UTC midnight, so it moves to local midnight;
+        // `YYYY-MM-DDTHH:mm` already parses as local time and stays.
+        const raw = answerDate ? answerValue(column, row.answers) : undefined;
+        const dateOnly = typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw);
+        const value = dateOnly ? key + new Date(key).getTimezoneOffset() * 60_000 : key;
         return (from === null || value >= from) && (to === null || value <= to);
       };
     }

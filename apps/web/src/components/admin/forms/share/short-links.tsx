@@ -235,11 +235,9 @@ export function ShortLinks({
       });
       const body = await jsonOrThrow<{ link: ShortlinkLink }>(response);
       writeLastDomain(domainId);
-      setLinks((current) => {
-        const next = [body.link, ...(current ?? [])];
-        onLinksChange(next);
-        return next;
-      });
+      const next = [body.link, ...(links ?? [])];
+      setLinks(next);
+      onLinksChange(next);
       setSlug("");
       setPassphrase("");
       setPassphraseOn(false);
