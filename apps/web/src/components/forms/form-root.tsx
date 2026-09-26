@@ -19,7 +19,15 @@ import "./forms.css";
 
 type RootDesign = Pick<
   FormDesign,
-  "theme" | "colorMode" | "font" | "density" | "fieldStyle" | "buttonShape" | "align" | "layout"
+  | "theme"
+  | "colorMode"
+  | "font"
+  | "density"
+  | "fieldStyle"
+  | "buttonShape"
+  | "align"
+  | "placement"
+  | "layout"
 >;
 
 /**
