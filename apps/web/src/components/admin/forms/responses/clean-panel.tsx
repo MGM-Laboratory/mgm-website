@@ -89,12 +89,17 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
   const applyPermanently = async () => {
     setConfirming(false);
     setApplying({ done: 0, total: changes.length });
+    // Each batch is one transaction on the server. Should a later one fail,
+    // the earlier ones stay saved; applying again only finds what's left,
+    // since cleaned responses produce no further changes.
+    let saved = 0;
     try {
       for (let index = 0; index < changes.length; index += APPLY_BATCH) {
         const batch = changes.slice(index, index + APPLY_BATCH);
         await formsAdminApi.apply(form.id, {
           updates: batch.map((change) => ({ id: change.id, answers: change.answers })),
         });
+        saved += batch.length;
         setApplying({
           done: Math.min(changes.length, index + batch.length),
           total: changes.length,
@@ -115,8 +120,9 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
         description: `${changedCells} cells in ${changes.length} responses were saved.`,
       });
     } catch (error) {
+      const reason = error instanceof Error ? `${error.message} ` : "";
       toast.error("Could not apply every change", {
-        description: error instanceof Error ? error.message : undefined,
+        description: `${reason}${saved} of ${changes.length} responses were saved. Apply again to finish the rest.`,
       });
       void loadResponses(form.id, { force: true });
     } finally {
