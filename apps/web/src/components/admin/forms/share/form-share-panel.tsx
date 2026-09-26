@@ -205,7 +205,10 @@ export function FormSharePanel({
   const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2" data-testid="share-panel">
+    <div
+      className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+      data-testid="share-panel"
+    >
       <div className="xl:col-span-2">
         <Section
           actions={

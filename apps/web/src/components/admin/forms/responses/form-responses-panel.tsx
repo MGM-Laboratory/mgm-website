@@ -478,6 +478,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             ] as const
           ).map(([id, label, Icon]) => (
             <button
+              aria-label={label}
               aria-pressed={mode === id}
               className={`inline-flex h-8 items-center gap-1.5 rounded-[10px] px-2.5 text-xs font-semibold transition ${mode === id ? "bg-brand-blue text-white" : "text-[#5c6679] hover:text-brand-blue dark:text-white/60"}`}
               key={id}
@@ -491,6 +492,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
         {mode === "table" ? (
           <>
             <button
+              aria-label="Columns"
               className={ghostButton}
               onClick={(event) => setColumnsAnchor(event.currentTarget.getBoundingClientRect())}
               type="button"
@@ -520,6 +522,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           </>
         ) : null}
         <button
+          aria-label="Clean data"
           aria-pressed={cleanOpen}
           className={`${ghostButton} ${cleanOpen || state.pipeline.length ? "border-brand-green text-brand-green" : ""}`}
           onClick={() => setCleanOpen((value) => !value)}
@@ -534,6 +537,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
         </button>
         <button
           className={ghostButton}
+          aria-label="Export"
           data-testid="export-button"
           onClick={(event) => setExportAnchor(event.currentTarget.getBoundingClientRect())}
           type="button"
