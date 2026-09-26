@@ -151,5 +151,110 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     await this.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "ShortLinkVisit_linkId_createdAt_idx" ON "ShortLinkVisit" ("linkId", "createdAt")
     `);
+    await this.createFormTables();
+  }
+
+  // Form builder tables, created at boot like the ones above (see
+  // prisma/migrations/20260926120000_add_forms for the durable record, which
+  // these statements mirror column for column).
+  private async createFormTables() {
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Form" (
+        "id" TEXT PRIMARY KEY,
+        "slug" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'draft',
+        "data" JSONB NOT NULL,
+        "passphraseSalt" TEXT,
+        "passphraseHash" TEXT,
+        "publishedAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "FormResponse" (
+        "id" TEXT PRIMARY KEY,
+        "formId" TEXT NOT NULL REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        "answers" JSONB NOT NULL,
+        "score" DOUBLE PRECISION,
+        "endingId" TEXT,
+        "sessionId" TEXT,
+        "deviceId" TEXT,
+        "spam" BOOLEAN NOT NULL DEFAULT false,
+        "ip" TEXT,
+        "userAgent" TEXT,
+        "referer" TEXT,
+        "country" TEXT,
+        "region" TEXT,
+        "city" TEXT,
+        "latitude" DOUBLE PRECISION,
+        "longitude" DOUBLE PRECISION,
+        "timezone" TEXT,
+        "device" TEXT,
+        "browser" TEXT,
+        "os" TEXT,
+        "language" TEXT,
+        "screen" TEXT,
+        "utm" JSONB,
+        "startedAt" TIMESTAMP(3),
+        "durationMs" INTEGER,
+        "starred" BOOLEAN NOT NULL DEFAULT false,
+        "flagged" BOOLEAN NOT NULL DEFAULT false,
+        "reviewed" BOOLEAN NOT NULL DEFAULT false,
+        "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+        "note" TEXT,
+        "editedAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "FormEvent" (
+        "id" TEXT PRIMARY KEY,
+        "formId" TEXT NOT NULL REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        "sessionId" TEXT NOT NULL,
+        "type" TEXT NOT NULL,
+        "fieldId" TEXT,
+        "dedupeKey" TEXT NOT NULL,
+        "ip" TEXT,
+        "userAgent" TEXT,
+        "referer" TEXT,
+        "country" TEXT,
+        "region" TEXT,
+        "city" TEXT,
+        "latitude" DOUBLE PRECISION,
+        "longitude" DOUBLE PRECISION,
+        "device" TEXT,
+        "browser" TEXT,
+        "os" TEXT,
+        "language" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "FormUpload" (
+        "key" TEXT PRIMARY KEY,
+        "formId" TEXT NOT NULL REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        "fieldId" TEXT NOT NULL,
+        "sessionId" TEXT,
+        "name" TEXT NOT NULL,
+        "size" INTEGER NOT NULL,
+        "type" TEXT NOT NULL,
+        "width" INTEGER,
+        "height" INTEGER,
+        "responseId" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    const indexes = [
+      `CREATE UNIQUE INDEX IF NOT EXISTS "Form_slug_key" ON "Form" ("slug")`,
+      `CREATE INDEX IF NOT EXISTS "FormResponse_formId_createdAt_idx" ON "FormResponse" ("formId", "createdAt")`,
+      `CREATE INDEX IF NOT EXISTS "FormResponse_formId_deviceId_idx" ON "FormResponse" ("formId", "deviceId")`,
+      `CREATE INDEX IF NOT EXISTS "FormEvent_formId_createdAt_idx" ON "FormEvent" ("formId", "createdAt")`,
+      `CREATE INDEX IF NOT EXISTS "FormEvent_formId_type_idx" ON "FormEvent" ("formId", "type")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "FormEvent_formId_dedupeKey_key" ON "FormEvent" ("formId", "dedupeKey")`,
+      `CREATE INDEX IF NOT EXISTS "FormUpload_formId_createdAt_idx" ON "FormUpload" ("formId", "createdAt")`,
+      `CREATE INDEX IF NOT EXISTS "FormUpload_responseId_idx" ON "FormUpload" ("responseId")`,
+    ];
+    for (const statement of indexes) await this.$executeRawUnsafe(statement);
   }
 }
