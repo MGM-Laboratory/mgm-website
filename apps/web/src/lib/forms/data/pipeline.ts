@@ -75,10 +75,13 @@ export const STEP_LABELS: Record<CleanStepKind, string> = {
   compute: "Computed column",
 };
 
-export function newStep(
-  kind: CleanStepKind,
-  id = `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-): CleanStep {
+/** A step id: the time it was added plus a random word, e.g. `smg1k2x3a9f2kq`. */
+function stepId() {
+  const [word] = crypto.getRandomValues(new Uint32Array(1));
+  return `s${Date.now().toString(36)}${word.toString(36)}`;
+}
+
+export function newStep(kind: CleanStepKind, id = stepId()): CleanStep {
   const base = { id, enabled: true };
   switch (kind) {
     case "trim":
