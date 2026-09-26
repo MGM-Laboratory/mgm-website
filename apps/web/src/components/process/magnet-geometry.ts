@@ -77,11 +77,11 @@ export function resolveOverlaps(
   const queue = [moved];
   let guard = 0;
   while (queue.length && guard++ < 60) {
-    const ai = queue.shift()!;
-    const a = boxAt(placed[ai], 2);
-    for (let bi = 0; bi < placed.length; bi++) {
-      if (bi === ai || bi === moved || placed[bi].locked) continue;
-      const b = boxAt(placed[bi], 2);
+    const pusher = queue.shift()!;
+    const a = boxAt(placed[pusher], 2);
+    for (let other = 0; other < placed.length; other++) {
+      if (other === pusher || other === moved || placed[other].locked) continue;
+      const b = boxAt(placed[other], 2);
       const o = overlap(a, b);
       if (o.x <= 0 || o.y <= 0) continue;
       const dirX = b.x + b.w / 2 >= a.x + a.w / 2 ? 1 : -1;
@@ -93,24 +93,24 @@ export function resolveOverlaps(
         { x: -dirX * (b.w + a.w - o.x + gap), y: 0 },
         { x: 0, y: -dirY * (b.h + a.h - o.y + gap) },
       ].sort((p, q) => Math.abs(p.x) + Math.abs(p.y) - (Math.abs(q.x) + Math.abs(q.y)));
-      const current = placed[bi].offset;
+      const current = placed[other].offset;
       let best: Offset | null = null;
       for (const exit of exits) {
-        const next = clampOffset(placed[bi].home, bounds, {
+        const next = clampOffset(placed[other].home, bounds, {
           x: current.x + exit.x,
           y: current.y + exit.y,
         });
-        const left = overlap(a, boxAt({ ...placed[bi], offset: next }, 2));
+        const left = overlap(a, boxAt({ ...placed[other], offset: next }, 2));
         if (left.x <= 0 || left.y <= 0) {
           best = next;
           break;
         }
       }
       if (!best) continue; // Walled in: leave it rather than shove it offscreen.
-      placed[bi].offset = best;
-      offsets[bi] = best;
-      changed.set(bi, best);
-      queue.push(bi);
+      placed[other].offset = best;
+      offsets[other] = best;
+      changed.set(other, best);
+      queue.push(other);
     }
   }
   return changed;
