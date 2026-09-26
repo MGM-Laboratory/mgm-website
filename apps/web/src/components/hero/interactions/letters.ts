@@ -265,8 +265,42 @@ export function createLetters(
 
   let doze = 0;
   let alive = true;
+  let measured = false;
+  let relockPending = false;
+
+  /**
+   * After a resize, each char takes its natural width at the new size again
+   * (the em lock scales exactly, while the font's own advances round to the
+   * layout's 1/64 px units, so the two can part by a hair). Only at rest
+   * weight: a heavier glyph would lock a wider slot. Unlock, read and lock
+   * again in one go, so the row sees at most one real change.
+   */
+  function relock() {
+    if (glyphs.some((g) => g.lastWeight !== REST_WEIGHT)) {
+      relockPending = true;
+      return false;
+    }
+    relockPending = false;
+    for (const g of glyphs) g.char.style.width = "";
+    const natural = glyphs.map((g) => {
+      const style = getComputedStyle(g.char);
+      return { em: parseFloat(style.fontSize) || g.em, width: parseFloat(style.width) || 0 };
+    });
+    glyphs.forEach((g, i) => {
+      g.char.style.width = `${natural[i].width / natural[i].em + 1e-6}em`;
+    });
+    return true;
+  }
 
   function measure() {
+    // The first call comes right after the lock above; later ones follow a
+    // resize.
+    if (measured) relock();
+    measured = true;
+    measurePositions();
+  }
+
+  function measurePositions() {
     for (const g of glyphs) {
       const { x, y } = offsetIn(g.char, root);
       g.cx = x + g.char.offsetWidth / 2;
@@ -584,6 +618,8 @@ export function createLetters(
     step() {
       let calm = true;
       for (const g of glyphs) if (!stepGlyph(g)) calm = false;
+      // A resize while letters were heavy: lock again once they are at rest.
+      if (calm && relockPending && relock()) measurePositions();
       return calm;
     },
     write,
