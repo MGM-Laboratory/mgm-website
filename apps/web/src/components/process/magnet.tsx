@@ -40,7 +40,7 @@ export function Magnet({ step, index }: { step: ProcessMagnet; index: number }) 
       aria-describedby={backId}
       aria-label={`${step.word} ${PROCESS_COPY.instructions}`}
       aria-roledescription="magnet"
-      className="process-item reveal-hidden relative cursor-grab touch-pan-y rounded-xl opacity-0 outline-none select-none [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent] focus-visible:outline-[3px] focus-visible:outline-offset-8 focus-visible:outline-[var(--focus)]"
+      className="process-item reveal-hidden relative cursor-grab touch-pan-y rounded-xl opacity-0 select-none [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent] focus-visible:outline-3 focus-visible:outline-offset-8 focus-visible:outline-[var(--focus)]"
       data-magnet={step.word}
       data-magnet-kind={step.kind}
       role="button"
