@@ -24,17 +24,22 @@ const DOMAINS = [
 
 function distance(a: string, b: string) {
   if (Math.abs(a.length - b.length) > 2) return 3;
-  const row = Array.from({ length: b.length + 1 }, (_, index) => index);
-  for (let i = 1; i <= a.length; i += 1) {
-    let previous = row[0];
-    row[0] = i;
-    for (let j = 1; j <= b.length; j += 1) {
-      const current = row[j];
-      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1));
-      previous = current;
+  const bChars = b.split("");
+  // One row of the edit-distance table at a time: `above`, `left` and
+  // `diagonal` are the three neighbours of the cell being filled.
+  let row = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (const [i, charA] of a.split("").entries()) {
+    const next = [i + 1];
+    let diagonal = i;
+    let left = i + 1;
+    for (const [j, above] of row.slice(1).entries()) {
+      left = Math.min(above + 1, left + 1, diagonal + (charA === bChars.at(j) ? 0 : 1));
+      next.push(left);
+      diagonal = above;
     }
+    row = next;
   }
-  return row[b.length];
+  return row.at(-1) ?? 0;
 }
 
 /** The corrected address, or null when the domain looks fine. */

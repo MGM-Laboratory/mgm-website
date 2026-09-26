@@ -308,7 +308,7 @@ export const FORM_COPY: Record<FormLanguage, Copy> = { en, id };
 export type FormCopy = Copy;
 
 export function formCopy(language: FormLanguage | undefined): Copy {
-  return FORM_COPY[language ?? "en"] ?? en;
+  return language === "id" ? id : en;
 }
 
 export function unavailableTitle(

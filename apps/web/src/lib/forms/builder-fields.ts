@@ -238,8 +238,10 @@ export const FIELD_TYPE_INFO: Record<FormFieldType, FieldTypeInfo> = Object.from
   FIELD_TYPES.map((info) => [info.type, info]),
 ) as Record<FormFieldType, FieldTypeInfo>;
 
+const FIELD_TYPE_LABELS = new Map(FIELD_TYPES.map((info) => [info.type, info.label]));
+
 export function fieldTypeLabel(type: FormFieldType) {
-  return FIELD_TYPE_INFO[type]?.label ?? type;
+  return FIELD_TYPE_LABELS.get(type) ?? type;
 }
 
 // ---------------------------------------------------------------------------
@@ -284,7 +286,7 @@ export function mintId(prefix: string, taken: Set<string>) {
   }
 }
 
-const ID_PREFIX: Partial<Record<FormFieldType, string>> = {
+const ID_PREFIXES: Partial<Record<FormFieldType, string>> = {
   page_break: "page",
   heading: "blk",
   paragraph: "blk",
@@ -297,8 +299,10 @@ const ID_PREFIX: Partial<Record<FormFieldType, string>> = {
   hidden: "hid",
 };
 
+const ID_PREFIX = new Map(Object.entries(ID_PREFIXES));
+
 export function fieldIdPrefix(type: FormFieldType) {
-  return ID_PREFIX[type] ?? "q";
+  return ID_PREFIX.get(type) ?? "q";
 }
 
 // ---------------------------------------------------------------------------
@@ -309,7 +313,7 @@ function options(taken: Set<string>, labels: string[]): FormOption[] {
   return labels.map((label) => ({ id: mintId("opt", taken), label }));
 }
 
-const DEFAULT_LABELS: Partial<Record<FormFieldType, string>> = {
+const DEFAULT_LABEL_TEXT: Partial<Record<FormFieldType, string>> = {
   short_text: "What should we call this?",
   long_text: "Tell us more",
   email: "What's your email address?",
@@ -345,13 +349,15 @@ const DEFAULT_LABELS: Partial<Record<FormFieldType, string>> = {
   page_break: "",
 };
 
+const DEFAULT_LABELS = new Map(Object.entries(DEFAULT_LABEL_TEXT));
+
 /** A new block of `type` with sensible defaults and fresh ids. */
 export function createField(type: FormFieldType, taken: Set<string>): FormField {
   const id = mintId(fieldIdPrefix(type), taken);
   const base: FormField = {
     id,
     type,
-    label: DEFAULT_LABELS[type] ?? "",
+    label: DEFAULT_LABELS.get(type) ?? "",
     required: false,
     width: "full",
   };

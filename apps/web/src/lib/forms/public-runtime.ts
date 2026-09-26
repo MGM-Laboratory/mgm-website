@@ -104,29 +104,30 @@ export function initialAnswers(document: Doc, params?: URLSearchParams | null): 
 /** Keeps the answer shapes the fields understand (a stale draft may not). */
 export function sanitizeDraft(document: Doc, draft: FormAnswers): FormAnswers {
   const known = new Map(document.fields.map((field) => [field.id, field]));
-  const answers: FormAnswers = {};
+  const answers = new Map<string, FormAnswers[string]>();
   for (const [key, value] of Object.entries(draft)) {
     const fieldId = key.endsWith(":other") ? key.slice(0, -6) : key;
     const field = known.get(fieldId);
     if (!field || !isInputType(field.type) || field.type === "hidden") continue;
     if (key !== fieldId) {
-      if (typeof value === "string") answers[key] = value;
+      if (typeof value === "string") answers.set(key, value);
       continue;
     }
     if (field.type === "name" || field.type === "address") {
       if (!value || typeof value !== "object" || Array.isArray(value)) continue;
       const parts: readonly string[] = field.type === "name" ? NAME_PARTS : ADDRESS_PARTS;
-      const kept: Record<string, string> = {};
+      const given = new Map<string, unknown>(Object.entries(value));
+      const kept = new Map<string, string>();
       for (const part of parts) {
-        const partValue = (value as Record<string, unknown>)[part];
-        if (typeof partValue === "string") kept[part] = partValue;
+        const partValue = given.get(part);
+        if (typeof partValue === "string") kept.set(part, partValue);
       }
-      answers[key] = kept;
+      answers.set(key, Object.fromEntries(kept));
       continue;
     }
-    answers[key] = value;
+    answers.set(key, value);
   }
-  return answers;
+  return Object.fromEntries(answers);
 }
 
 export function isFieldShown(document: Doc, field: FormField, answers: FormAnswers) {
@@ -136,7 +137,7 @@ export function isFieldShown(document: Doc, field: FormField, answers: FormAnswe
 /** The pages on the respondent's current route, in order. */
 export function routePages(document: Doc, answers: FormAnswers): FormPage[] {
   const path = resolvePath(document, answers);
-  return path.route.map((index) => path.pages[index]);
+  return path.route.flatMap((index) => path.pages.at(index) ?? []);
 }
 
 export function forcedEnding(document: Doc, answers: FormAnswers) {

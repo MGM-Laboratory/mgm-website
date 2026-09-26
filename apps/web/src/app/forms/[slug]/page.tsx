@@ -18,6 +18,14 @@ function designOf(payload: PublicFormPayload) {
   return payload.state === "open" ? payload.document.design : payload.design;
 }
 
+function originUrl(protocol: string, host: string | undefined) {
+  try {
+    return host && /^https?$/.test(protocol) ? new URL(`${protocol}://${host}`) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function metadataBase() {
   // Open Graph needs an absolute image URL: resolve it against the host
   // this request reached (see projects/[slug]/page.tsx).
@@ -27,11 +35,7 @@ async function metadataBase() {
   const protocol =
     first("x-forwarded-proto") ??
     (host?.startsWith("localhost") || host?.startsWith("127.") ? "http" : "https");
-  try {
-    return host && /^https?$/.test(protocol) ? new URL(`${protocol}://${host}`) : undefined;
-  } catch {
-    return undefined;
-  }
+  return originUrl(protocol, host);
 }
 
 export async function generateMetadata({ params }: FormPageProps): Promise<Metadata> {

@@ -72,21 +72,30 @@ export function inkOn(fill: string, light = "#ffffff", dark = "#0e1116") {
   return contrast(fill, light) >= contrast(fill, dark) ? light : dark;
 }
 
-const BRAND: Record<Exclude<RichTextColor, "ink" | "muted">, { light: string; dark: string }> = {
-  blue: { light: "#3a6dc5", dark: "#7ea4ea" },
-  red: { light: "#d42c2c", dark: "#ff7a7a" },
-  green: { light: "#0f8657", dark: "#4fcf95" },
-  yellow: { light: "#8a6100", dark: "#f7bf33" },
-};
-const HIGHLIGHT_FILL: Record<Exclude<RichTextColor, "ink" | "muted">, string> = {
-  blue: "#3a6dc5",
-  red: "#f94141",
-  green: "#0f8657",
-  yellow: "#f7bf33",
-};
+/** The light or dark half of a pair. */
+function inScheme<T>(pair: { light: T; dark: T }, scheme: ProjectColorScheme): T {
+  return scheme === "dark" ? pair.dark : pair.light;
+}
+
+/** Rich-text colours: the brand colour per scheme, and the highlight's fill. */
+const RICH_COLORS: readonly {
+  token: Exclude<RichTextColor, "ink" | "muted">;
+  light: string;
+  dark: string;
+  fill: string;
+}[] = [
+  { token: "blue", light: "#3a6dc5", dark: "#7ea4ea", fill: "#3a6dc5" },
+  { token: "red", light: "#d42c2c", dark: "#ff7a7a", fill: "#f94141" },
+  { token: "green", light: "#0f8657", dark: "#4fcf95", fill: "#0f8657" },
+  { token: "yellow", light: "#8a6100", dark: "#f7bf33", fill: "#f7bf33" },
+];
+
+const THEMES = new Map(Object.values(PROJECT_THEMES).map((theme) => [theme.id, theme]));
 
 export function formPalette(theme: FormDesign["theme"], scheme: ProjectColorScheme) {
-  return PROJECT_THEMES[theme][scheme];
+  const preset = THEMES.get(theme);
+  if (!preset) throw new Error(`Unknown form theme "${theme}".`);
+  return inScheme(preset, scheme);
 }
 
 /** Every variable of one scheme, as `name: value` pairs. */
@@ -99,10 +108,11 @@ export function formThemeVars(
   const vars: Record<string, string> = { ...projectPaletteVars(palette) };
   const muted = mixHex(text, bg, 0.3);
 
-  for (const token of ["blue", "red", "green", "yellow"] as const) {
-    vars[`--rt-${token}`] = ensureContrast(BRAND[token][scheme], bg, 4.5, text);
+  for (const color of RICH_COLORS) {
+    const { token } = color;
+    vars[`--rt-${token}`] = ensureContrast(inScheme(color, scheme), bg, 4.5, text);
     // Highlights: a soft wash of the colour that body text still reads on.
-    let wash = mixHex(bg, HIGHLIGHT_FILL[token], scheme === "light" ? 0.3 : 0.34);
+    let wash = mixHex(bg, color.fill, scheme === "light" ? 0.3 : 0.34);
     for (let step = 0; step < 8 && contrast(text, wash) < 7; step += 1) {
       wash = mixHex(wash, bg, 0.2);
     }
@@ -186,24 +196,27 @@ export function formThemeCss(
  * scene quote the brand primaries, like the posters; every other theme
  * builds its pieces from its own palette.
  */
-const BRAND_PIECES: Partial<Record<FormDesign["theme"], { light: string[]; dark: string[] }>> = {
-  laboratory: {
-    light: ["#3a6dc5", "#f7bf33", "#f94141", "#0f8657", "#0e1116"],
-    dark: ["#7ea4ea", "#f7bf33", "#ff6b6b", "#3fbf86", "#eef3fc"],
-  },
-  sunburst: {
-    light: ["#f7bf33", "#0e1116", "#f94141", "#3a6dc5", "#8a6100"],
-    dark: ["#f7bf33", "#fff4d6", "#ff6b6b", "#7ea4ea", "#c99a1f"],
-  },
-  signal: {
-    light: ["#c4000a", "#0e1116", "#f7bf33", "#3a6dc5", "#f94141"],
-    dark: ["#ff4a4f", "#f2f2f4", "#f7bf33", "#7ea4ea", "#b3262b"],
-  },
-  grove: {
-    light: ["#0b7a22", "#0f1a12", "#f7bf33", "#3a6dc5", "#0f8657"],
-    dark: ["#2fc24f", "#d9f3de", "#f7bf33", "#7ea4ea", "#1d8a3a"],
-  },
-};
+const BRAND_PIECE_SETS: Partial<Record<FormDesign["theme"], { light: string[]; dark: string[] }>> =
+  {
+    laboratory: {
+      light: ["#3a6dc5", "#f7bf33", "#f94141", "#0f8657", "#0e1116"],
+      dark: ["#7ea4ea", "#f7bf33", "#ff6b6b", "#3fbf86", "#eef3fc"],
+    },
+    sunburst: {
+      light: ["#f7bf33", "#0e1116", "#f94141", "#3a6dc5", "#8a6100"],
+      dark: ["#f7bf33", "#fff4d6", "#ff6b6b", "#7ea4ea", "#c99a1f"],
+    },
+    signal: {
+      light: ["#c4000a", "#0e1116", "#f7bf33", "#3a6dc5", "#f94141"],
+      dark: ["#ff4a4f", "#f2f2f4", "#f7bf33", "#7ea4ea", "#b3262b"],
+    },
+    grove: {
+      light: ["#0b7a22", "#0f1a12", "#f7bf33", "#3a6dc5", "#0f8657"],
+      dark: ["#2fc24f", "#d9f3de", "#f7bf33", "#7ea4ea", "#1d8a3a"],
+    },
+  };
+
+const BRAND_PIECES = new Map(Object.entries(BRAND_PIECE_SETS));
 
 /** The five colours the scene's pieces wear. */
 function scenePieces(
@@ -211,8 +224,8 @@ function scenePieces(
   scheme: ProjectColorScheme,
   theme?: FormDesign["theme"],
 ) {
-  const brand = theme ? BRAND_PIECES[theme] : undefined;
-  if (brand) return brand[scheme];
+  const brand = theme ? BRAND_PIECES.get(theme) : undefined;
+  if (brand) return inScheme(brand, scheme);
   const { bg, text, highlight } = palette;
   const accent =
     palette.buttonBgHover.toLowerCase() === text.toLowerCase() ||

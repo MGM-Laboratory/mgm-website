@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import type { PublicFormPayload } from "@repo/shared";
+import { FORM_SLUG_PATTERN, type PublicFormPayload } from "@repo/shared";
 
 import { cmsApi } from "@/lib/cms-api";
 
@@ -12,14 +12,12 @@ import { cmsApi } from "@/lib/cms-api";
  * the slug; the page reads it here and sends it back with its fetch.
  */
 
-const SLUG_SHAPE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 /** Twelve hours, the lifetime of the API's unlock token. */
 export const FORM_TOKEN_MAX_AGE_SECONDS = 12 * 60 * 60;
 
 /** Whether a URL segment can be a form slug at all (anything else is a 404 without a fetch). */
 export function isFormSlug(slug: string) {
-  return slug.length <= 80 && SLUG_SHAPE.test(slug);
+  return slug.length <= 80 && FORM_SLUG_PATTERN.test(slug);
 }
 
 export function formTokenCookieName(slug: string) {

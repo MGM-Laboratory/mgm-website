@@ -75,7 +75,7 @@ function targetOfPath(document: FormDocument, path: PropertyKey[]): string {
     return document.fields[path[1]]?.id ?? "form";
   }
   if (path[0] === "endings" && typeof path[1] === "number") {
-    const ending = document.endings[path[1]];
+    const ending = document.endings.at(path[1]);
     return ending ? `ending:${ending.id}` : "form";
   }
   if (path[0] === "welcome") return "welcome";
@@ -86,7 +86,7 @@ function targetOfPath(document: FormDocument, path: PropertyKey[]): string {
 
 function describePath(document: FormDocument, path: PropertyKey[]) {
   if (path[0] === "fields" && typeof path[1] === "number") {
-    const field = document.fields[path[1]];
+    const field = document.fields.at(path[1]);
     const rest = path.slice(2).join(".");
     return `${field ? fieldName(field, path[1]) : `Block ${path[1] + 1}`}${rest ? ` · ${rest}` : ""}`;
   }
@@ -178,7 +178,7 @@ export function referenceProblems(document: FormDocument): Problem[] {
           return;
         }
         const target = index.get(jump.to);
-        const targetField = target === undefined ? undefined : document.fields[target];
+        const targetField = target === undefined ? undefined : document.fields.at(target);
         if (!targetField || targetField.type !== "page_break") {
           problems.push({
             key: `${field.id}:jump:${jumpIndex}`,

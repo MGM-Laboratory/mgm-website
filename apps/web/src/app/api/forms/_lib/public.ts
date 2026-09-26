@@ -42,22 +42,26 @@ export function notFound() {
   return NextResponse.json({ message: "That form does not exist." }, { status: 404 });
 }
 
-/** The API's answer relayed as JSON, whatever it sent. */
-async function relay(response: Response): Promise<NextResponse> {
-  const text = await response.text();
+/** The API's body as JSON with its status, or a readable message when it isn't JSON. */
+function relayText(text: string, status: number): NextResponse {
   try {
-    return NextResponse.json(JSON.parse(text), { status: response.status });
+    return NextResponse.json(JSON.parse(text), { status });
   } catch {
     return NextResponse.json(
       {
         message:
-          response.status === 413
+          status === 413
             ? "The file is too large."
             : "Something went wrong on our side. Please try again.",
       },
-      { status: response.status >= 400 ? response.status : 502 },
+      { status: status >= 400 ? status : 502 },
     );
   }
+}
+
+/** The API's answer relayed as JSON, whatever it sent. */
+async function relay(response: Response): Promise<NextResponse> {
+  return relayText(await response.text(), response.status);
 }
 
 /** Resolves and checks the slug, then forwards a JSON POST with the visitor headers. */

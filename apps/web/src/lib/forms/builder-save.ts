@@ -24,11 +24,20 @@ export type SaveStatus =
 
 const DEBOUNCE_MS = 1200;
 
+// A path starts `fields.3` / `endings.0`, or `welcome` / `design` / `settings`
+// followed by at least one `.part`; then it takes every `.part` that follows.
+const PATH_HEAD = /\b(?:(?:fields|endings)\.\d+(?!\w)|(?:welcome|design|settings)(?=\.\w))/g;
+const PATH_PART = /\.\w+/y;
+
 /** Pulls a document path (`fields.3.options`) out of an API message, when it names one. */
 export function pathFromMessage(message: string) {
-  return /\b((?:fields|endings)\.\d+(?:\.[A-Za-z0-9_]+)*|(?:welcome|design|settings)(?:\.[A-Za-z0-9_]+)+)\b/.exec(
-    message,
-  )?.[1];
+  PATH_HEAD.lastIndex = 0;
+  const head = PATH_HEAD.exec(message);
+  if (!head) return undefined;
+  let end = head.index + head[0].length;
+  PATH_PART.lastIndex = end;
+  while (PATH_PART.exec(message)) end = PATH_PART.lastIndex;
+  return message.slice(head.index, end);
 }
 
 export function useAutosave({

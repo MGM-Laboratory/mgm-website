@@ -104,11 +104,12 @@ export function clientContext(): FormClientContext {
     context.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     context.screen = `${window.screen.width}x${window.screen.height}`;
     const params = new URLSearchParams(window.location.search);
-    const utm: NonNullable<FormClientContext["utm"]> = {};
-    for (const key of UTM_KEYS) {
-      const value = params.get(`utm_${key}`);
-      if (value) utm[key] = value.slice(0, 200);
-    }
+    const utm: NonNullable<FormClientContext["utm"]> = Object.fromEntries(
+      UTM_KEYS.flatMap((key) => {
+        const value = params.get(`utm_${key}`);
+        return value ? [[key, value.slice(0, 200)]] : [];
+      }),
+    );
     if (Object.keys(utm).length) context.utm = utm;
     if (document.referrer) {
       const referrer = new URL(document.referrer);
@@ -160,7 +161,8 @@ export function sendFormEvent(slug: string, input: FormEventInput) {
   const path = `/api/forms/${enc(slug)}/events`;
   try {
     const blob = new Blob([JSON.stringify(input)], { type: "application/json" });
-    if (navigator.sendBeacon?.(path, blob)) return;
+    // Older browsers have no beacon API.
+    if ("sendBeacon" in navigator && navigator.sendBeacon(path, blob)) return;
   } catch {
     // Fall through to a plain post.
   }
@@ -289,8 +291,8 @@ export async function unlockForm(slug: string, passphrase: string): Promise<Unlo
   const { status, body } = await postJson(`/api/forms/${enc(slug)}/unlock`, { passphrase });
   if (status === 401 || status === 403) return { kind: "wrong" };
   if (status < 200 || status >= 300) return { kind: "failed" };
-  const payload = body as unknown as PublicFormPayload;
-  return payload && payload.state ? { kind: "ok", payload } : { kind: "failed" };
+  const payload = body as unknown as PublicFormPayload | null;
+  return payload?.state ? { kind: "ok", payload } : { kind: "failed" };
 }
 
 // ---------------------------------------------------------------------------
@@ -313,7 +315,7 @@ export function loadAutosave(slug: string): FormAutosave | null {
   const raw = readStored("local", autosaveKey(slug));
   if (!raw) return null;
   try {
-    const draft = JSON.parse(raw) as FormAutosave;
+    const draft = JSON.parse(raw) as FormAutosave | null;
     if (!draft || typeof draft.answers !== "object" || !Array.isArray(draft.trail)) return null;
     if (Date.now() - Date.parse(draft.savedAt) > AUTOSAVE_MAX_AGE) return null;
     return draft;

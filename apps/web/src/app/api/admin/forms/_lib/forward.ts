@@ -16,6 +16,15 @@ export function formPath(id: string, suffix = "") {
   return `/forms/admin/${enc(id)}${suffix}`;
 }
 
+/** The API's status and JSON body, or `fallback` as the message when the body isn't JSON. */
+function relayJson(text: string, status: number, fallback: string): NextResponse {
+  try {
+    return NextResponse.json(JSON.parse(text), { status });
+  } catch {
+    return NextResponse.json({ message: fallback }, { status });
+  }
+}
+
 /**
  * Forwards a CMS API call and relays its status and JSON body. A body that
  * isn't JSON (a gateway error page) becomes a JSON message instead of a
@@ -29,14 +38,11 @@ export async function forwardJson(path: string, init?: RequestInit): Promise<Nex
     return NextResponse.json({ message: "The forms API is not reachable." }, { status: 502 });
   }
   const text = await response.text();
-  try {
-    return NextResponse.json(JSON.parse(text), { status: response.status });
-  } catch {
-    return NextResponse.json(
-      { message: text.slice(0, 300) || `Request failed (${response.status}).` },
-      { status: response.status },
-    );
-  }
+  return relayJson(
+    text,
+    response.status,
+    text.slice(0, 300) || `Request failed (${response.status}).`,
+  );
 }
 
 /** Forwards a JSON body as-is (400 when the browser sent something unreadable). */
@@ -91,12 +97,9 @@ export async function streamUpload(
     return NextResponse.json({ message: "The upload could not reach the API." }, { status: 502 });
   }
   const text = await response.text();
-  try {
-    return NextResponse.json(JSON.parse(text), { status: response.status });
-  } catch {
-    return NextResponse.json(
-      { message: response.status === 413 ? "The file is too large." : "The upload failed." },
-      { status: response.status },
-    );
-  }
+  return relayJson(
+    text,
+    response.status,
+    response.status === 413 ? "The file is too large." : "The upload failed.",
+  );
 }

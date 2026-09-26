@@ -13,13 +13,12 @@ export function patchField(
   id: string,
   patch: Partial<FormField> | ((field: FormField) => FormField),
 ): FormDocument {
-  let changed = false;
+  if (!document.fields.some((field) => field.id === id)) return document;
   const fields = document.fields.map((field) => {
     if (field.id !== id) return field;
-    changed = true;
     return typeof patch === "function" ? patch(field) : { ...field, ...patch };
   });
-  return changed ? { ...document, fields } : document;
+  return { ...document, fields };
 }
 
 /** Inserts after the block `afterId` (at the end when it is null or missing). */
@@ -72,7 +71,7 @@ export function reorderFields(document: FormDocument, order: string[]): FormDocu
     .filter((field): field is FormField => Boolean(field));
   const listed = new Set(order);
   for (const field of document.fields) if (!listed.has(field.id)) fields.push(field);
-  const same = fields.every((field, index) => field === document.fields[index]);
+  const same = fields.every((field, index) => field === document.fields.at(index));
   return same ? document : { ...document, fields };
 }
 
