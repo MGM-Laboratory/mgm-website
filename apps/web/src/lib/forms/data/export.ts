@@ -64,15 +64,19 @@ export function quoteField(value: string, separator: string) {
 /** Spreadsheet apps run cells starting with = + - @ as formulas; a leading quote defuses them. */
 function defuse(value: string) {
   if (!/^[=+\-@\t\r]/.test(value)) return value;
-  // Numbers and phone numbers ("+62 812 ...") can't carry a formula; leave them readable.
-  if (/^[+-]?[\d\s().-]+$/.test(value)) return value;
+  // A plain signed number stays readable; anything else after + or - could
+  // be arithmetic a spreadsheet evaluates (even "+1-1"), so it's quoted too.
+  if (/^[+-]?[\d.]+$/.test(value) && Number.isFinite(Number(value))) return value;
   return `'${value}`;
 }
 
 export function toDelimited(table: ExportTable, separator: "," | "\t"): string {
   const lines: string[] = [];
   const clean = (value: string) => (separator === "\t" ? value.replace(/\t/g, " ") : value);
-  lines.push(table.header.map((title) => quoteField(clean(title), separator)).join(separator));
+  // Headers come from question labels, which an admin (or an import) writes.
+  lines.push(
+    table.header.map((title) => quoteField(clean(defuse(title)), separator)).join(separator),
+  );
   for (const row of table.rows) {
     const cells = [
       row.id,
