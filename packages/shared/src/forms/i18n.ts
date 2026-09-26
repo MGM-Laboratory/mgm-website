@@ -139,5 +139,7 @@ export function formErrorMessage(
   args: MessageArgs = {},
   language: FormLanguage = "en",
 ): string {
-  return (MESSAGES[language] ?? MESSAGES.en)[code](args);
+  const table = language === "id" ? MESSAGES.id : MESSAGES.en;
+  const message = new Map(Object.entries(table)).get(code);
+  return message ? message(args) : code;
 }
