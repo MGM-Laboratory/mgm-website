@@ -27,6 +27,7 @@ Only the superadmin can create, edit, or delete delegated administrators. Delega
 | `contact-inquiries` | Contact inbox             | read only           |
 | `events`            | Events and registrations  | read, write, delete |
 | `links`             | Short links and domains   | read, write, delete |
+| `forms`             | Forms and their responses | read, write, delete |
 | `home`              | Homepage settings         | read, write, delete |
 | `other`             | Other settings namespace  | read, write, delete |
 
@@ -34,9 +35,9 @@ Permissions are rank-expanded: granting `write` also grants `read`; granting `de
 
 ## Editorial collections
 
-The workspace is composed in `apps/web/src/components/admin/member-cms-studio.tsx`. Its main collections are Articles, Projects, Publications, Research, Member, Careers, Contact Inquiries, Events, Links, and Settings (Home and Contact Settings), plus superadmin-only Admin Management.
+The workspace is composed in `apps/web/src/components/admin/member-cms-studio.tsx`. Its main collections are Articles, Projects, Publications, Research, Member, Careers, Contact Inquiries, Events, Links, Forms, and Settings (Home and Contact Settings), plus superadmin-only Admin Management.
 
-The API stores each collection as a slug-keyed JSONB `data` record. Prisma defines the current tables in `apps/api/prisma/schema.prisma`: `CmsMember`, `CmsArticle`, `CmsPublication`, `CmsProject`, `CmsResearchInitiative`, `CmsJobPosting`, `CmsJobApplication`, `CmsEvent`, `CmsEventRegistration`, `CmsContactInquiry`, `CmsAdmin`, and the singleton `CmsHomeContent` and `CmsContactSettings` records. `PrismaService.onModuleInit()` creates these tables idempotently as an operational safety net; schema migrations remain the durable migration record.
+The API stores each collection as a slug-keyed JSONB `data` record. Prisma defines the current tables in `apps/api/prisma/schema.prisma`: `CmsMember`, `CmsArticle`, `CmsPublication`, `CmsProject`, `CmsResearchInitiative`, `CmsJobPosting`, `CmsJobApplication`, `CmsEvent`, `CmsEventRegistration`, `CmsContactInquiry`, `CmsAdmin`, and the singleton `CmsHomeContent` and `CmsContactSettings` records. The link shortener (`ShortLinkDomain`, `ShortLink`, `ShortLinkVisit`) and the form builder (`Form`, `FormResponse`, `FormEvent`, `FormUpload`) use ordinary relational tables instead; see [`shortlinks.md`](shortlinks.md) and [`forms.md`](forms.md). `PrismaService.onModuleInit()` creates these tables idempotently as an operational safety net; schema migrations remain the durable migration record.
 
 | Collection        | Public path                             | Notable admin capability                                                             |
 | ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -48,6 +49,7 @@ The API stores each collection as a slug-keyed JSONB `data` record. Prisma defin
 | Careers           | `/careers`, detail, apply               | openings, BlockNote detail, application inbox and CV files                           |
 | Events            | `/events`, `/events/[slug]`             | event media, registrations, calendar export, map-link resolution                     |
 | Links             | `/s/[slug]` and custom short domains    | domains with Cloudflare setup, links with expiry and passphrases, per-link analytics |
+| Forms             | `/forms/[slug]`                         | form builder, templates, logic, themes and 3D scenes, responses, analytics, exports  |
 | Contact inquiries | `/contact`                              | inbox state and bulk actions; the original inquiry is persisted before mail is sent  |
 | Home              | `/`                                     | homepage video/settings singleton                                                    |
 | Contact settings  | `/contact`                              | addresses, map location, and mail routing strategy                                   |
