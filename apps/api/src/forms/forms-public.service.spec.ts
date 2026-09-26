@@ -67,6 +67,7 @@ function makeService(
       updateMany: vi.fn(),
     },
     $transaction: vi.fn(),
+    $queryRaw: vi.fn().mockResolvedValue([{ locked: "" }]),
   };
   prisma.$transaction.mockImplementation((work: (tx: typeof prisma) => unknown) => work(prisma));
   const config = {
@@ -155,6 +156,27 @@ describe("FormsPublicService.submit", () => {
       400,
     );
     expect(error.errors).toEqual({ name: { code: "required" }, doc: { code: "files" } });
+    expect(prisma.formResponse.create).not.toHaveBeenCalled();
+  });
+
+  it("requires a device id when the form takes one response per device", async () => {
+    const { service, prisma } = makeService({ onePerDevice: true });
+    await expectFormsError(
+      service.submit("survey", { sessionId: "s1", answers: { name: "A" } }, meta),
+      400,
+    );
+    expect(prisma.formResponse.create).not.toHaveBeenCalled();
+  });
+
+  it("rechecks the response limit inside the locked transaction", async () => {
+    const { service, prisma } = makeService({ responseLimit: 2 });
+    // The open check still sees room; a parallel submission fills it before the insert.
+    prisma.formResponse.count.mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+    await expectFormsError(
+      service.submit("survey", { sessionId: "s1", answers: { name: "A" } }, meta),
+      409,
+    );
+    expect(prisma.$queryRaw).toHaveBeenCalled();
     expect(prisma.formResponse.create).not.toHaveBeenCalled();
   });
 

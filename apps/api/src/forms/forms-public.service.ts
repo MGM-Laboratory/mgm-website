@@ -448,12 +448,10 @@ export class FormsPublicService {
     this.requireUnlocked(row, headerToken ?? input.token);
     await this.requireOpen(form);
 
-    if (settings.onePerDevice && input.deviceId) {
-      const existing = await this.prisma.formResponse.findFirst({
-        where: { formId: row.id, deviceId: input.deviceId },
-        select: { id: true },
-      });
-      if (existing) throw new FormsError("You have already responded to this form.", 409);
+    const deviceId = clip(input.deviceId, 100);
+    if (settings.onePerDevice && !deviceId) {
+      // The page always sends one; a request without it is trying to skip the rule.
+      throw new FormsError("This form accepts one response per device.", 400);
     }
 
     const { answers, invalid } = await this.rewriteFileAnswers(
@@ -491,6 +489,23 @@ export class FormsPublicService {
       : null;
 
     const response = await this.prisma.$transaction(async (tx) => {
+      // One submission per form at a time from here to the commit, so the
+      // response limit and the one-per-device rule are checked against
+      // every response already stored, never raced past by a parallel one.
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${row.id}))::text AS "locked"`;
+      if (settings.responseLimit) {
+        const stored = await tx.formResponse.count({ where: { formId: row.id, spam: false } });
+        if (stored >= settings.responseLimit) {
+          throw new FormsError(UNAVAILABLE_MESSAGES.limit_reached, 409);
+        }
+      }
+      if (settings.onePerDevice) {
+        const existing = await tx.formResponse.findFirst({
+          where: { formId: row.id, deviceId },
+          select: { id: true },
+        });
+        if (existing) throw new FormsError("You have already responded to this form.", 409);
+      }
       const created = await tx.formResponse.create({
         data: {
           formId: row.id,
@@ -498,7 +513,7 @@ export class FormsPublicService {
           score,
           endingId: ending?.id ?? null,
           sessionId: input.sessionId,
-          deviceId: clip(input.deviceId, 100),
+          deviceId,
           spam: timing.spam,
           ...visitor,
           timezone: clip(context?.timezone, 64),
