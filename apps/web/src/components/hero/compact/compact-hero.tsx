@@ -270,7 +270,7 @@ export function CompactHero() {
           )}
         >
           <Vibrate aria-hidden className="size-4" strokeWidth={2.25} />
-          <span className="max-[379px]:sr-only">Shake the box</span>
+          <span className="max-[349px]:sr-only">Shake the box</span>
         </button>
       </div>
 
