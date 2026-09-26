@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import type { PrismaService } from "../prisma/prisma.service.js";
 import type { ConfigService } from "@nestjs/config";
@@ -283,6 +283,12 @@ describe("ShortlinksService", () => {
   });
 
   it("aggregates analytics from the stored visits", async () => {
+    // The series ends today, so pin today to the day the mocked row is on.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-25T12:00:00Z"));
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const prisma = makePrisma();
     const service = makeService(prisma);
     prisma.shortLink.findUnique.mockResolvedValue({ ...OPEN_LINK, domain: DOMAIN });
