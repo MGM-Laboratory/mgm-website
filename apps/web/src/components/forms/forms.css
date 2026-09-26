@@ -2761,7 +2761,7 @@ h5.fx-rich-heading {
   .fx-ending::before {
     content: "";
     display: block;
-    height: calc(var(--poster-size) + 1.5rem);
+    height: calc(var(--poster-size) + 2.75rem);
   }
 }
 @media (min-width: 760px) and (max-width: 1179px) {
