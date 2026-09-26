@@ -15,10 +15,11 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 9. `docs/articles-page.md`: the `/articles` library, a persistent WebGL world the list and every article live in (the paper-card river, themed article pages, the in-world transitions, and the portal in and out of the rest of the site).
 10. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
 11. `docs/shortlinks.md`: the link shortener (domains with Cloudflare setup, links with expiry and passphrases, the click path, per-link analytics).
-12. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
-13. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
-14. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
-15. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
+12. `docs/forms.md`: the form builder (the Forms workspace in `/admin`, the form document and its logic, responses, analytics, and the immersive public form at `/forms/[slug]`).
+13. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
+14. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
+15. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
+16. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
 
 ## ⚠️ Next.js 16: not the Next.js in your training data
 
@@ -73,7 +74,7 @@ docs/                deep-dive documentation (read them)
 
 ## Pages (apps/web/src/app)
 
-`/` (hero + competencies + process + showcase) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services`. `/admin` is the internal, signed-session CMS workspace and is deliberately outside the public menu. Only `/media`, `/privacy-policy`, and `/terms-of-services` are bare `PageBand` stubs; every other public route is real and CMS-driven where applicable. Full inventory: `docs/project-overview.md`; CMS detail: `docs/cms-admin.md`.
+`/` (hero + competencies + process + showcase) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services` · `/forms/[slug]` (public forms built in the admin). `/admin` is the internal, signed-session CMS workspace and is deliberately outside the public menu. Only `/media`, `/privacy-policy`, and `/terms-of-services` are bare `PageBand` stubs; every other public route is real and CMS-driven where applicable. Full inventory: `docs/project-overview.md`; CMS detail: `docs/cms-admin.md`.
 
 ## CI/CD at a glance
 

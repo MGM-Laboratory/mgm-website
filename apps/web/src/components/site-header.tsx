@@ -14,6 +14,9 @@ import { articleListHref, waitForArticleReveal } from "@/lib/article-transition"
 import { waitForProjectReveal } from "@/lib/project-transition";
 import { waitForRouteReveal } from "@/lib/route-reveal";
 
+/** Public forms (/forms/<slug>) own the whole screen, like the admin. */
+const isFormPath = (pathname: string) => pathname === "/forms" || pathname.startsWith("/forms/");
+
 /** A single project's detail page, `/projects/<slug>` (not the index). */
 const PROJECT_DETAIL_PATH = /^\/projects\/[^/]+\/?$/;
 /** A single article, `/articles/<slug>` (not the list). */
@@ -31,7 +34,7 @@ const ARTICLE_DETAIL_PATH = /^\/articles\/[^/]+\/?$/;
 // .site-header block in globals.css for why the menu needs it that way.
 export function SiteHeader() {
   const pathname = usePathname();
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || isFormPath(pathname)) return null;
   return <HeaderBar pathname={pathname} />;
 }
 

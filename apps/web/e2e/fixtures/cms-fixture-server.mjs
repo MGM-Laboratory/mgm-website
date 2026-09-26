@@ -22,6 +22,16 @@
  *   GET /api/shortlinks/hosts          { hosts: [] } (no custom domains)
  *   GET /api/shortlinks/public/:slug   redirect / gated / used / not_found
  *   POST /api/shortlinks/verify        the gate's passphrase check
+ *   GET /api/forms/public/:slug        a fixture form's PublicFormPayload (open,
+ *                                      locked or unavailable), or a 404
+ *   POST /api/forms/public/:slug/unlock   the passphrase gate (401 when wrong)
+ *   POST /api/forms/public/:slug/events   { ok: true }
+ *   POST /api/forms/public/:slug/uploads  a raw file body, kept in memory
+ *   POST /api/forms/public/:slug/responses  recorded; 400 with field errors
+ *                                      for the answer "server-error"
+ *   GET /api/forms/media/:key          302 to /files/<key> on this server
+ *   GET /__forms-fixture/submissions?sessionId=  the responses recorded for
+ *                                      one session (fixture only, for specs)
  *   GET /files/:key                    the file itself, with Range support
  *   GET /__cms-fixture                 readiness (the real API 404s it, so a
  *                                      busy port fails loudly instead of
@@ -54,6 +64,8 @@ const MEDIA_KEY_PATTERN =
   /^project-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp)$/;
 const ARTICLE_MEDIA_KEY_PATTERN =
   /^article-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp)$/;
+const FORM_MEDIA_KEY_PATTERN =
+  /^form-[a-z0-9]+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp|gif|mp4|webm)$/;
 const VIDEO_KEY_PATTERN =
   /^demo-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:mp4|webm)$/;
 // Named routes the API serves under /cms/projects and /cms/articles that are not a record.
@@ -69,6 +81,7 @@ const CONTENT_TYPES = {
 };
 
 const { records } = JSON.parse(readFileSync(path.join(ROOT, "projects.json"), "utf8"));
+const forms = JSON.parse(readFileSync(path.join(ROOT, "forms.json"), "utf8")).records;
 const published = records.filter((record) => record.project.draft !== true);
 const articles = JSON.parse(readFileSync(path.join(ROOT, "articles.json"), "utf8")).records.filter(
   (record) => record.article.draft !== true,
@@ -248,16 +261,179 @@ function shortlinksRoute(request, response, rest) {
   return false;
 }
 
+/** The token a fixture unlock hands out (the real API signs one per form). */
+const FORM_TOKEN = "fixture-form-token";
+/** Responses recorded per session id, for the specs to read back. */
+const formSubmissions = new Map();
+/** Uploaded files by key, kept in memory for the life of the process. */
+const formUploads = new Map();
+let formCounter = 0;
+
+function readBody(request, limit = 12 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new Error("too large"));
+        request.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => resolve(Buffer.concat(chunks)));
+    request.on("error", reject);
+  });
+}
+
+async function readJson(request) {
+  const body = await readBody(request);
+  return JSON.parse(body.toString("utf8") || "{}");
+}
+
+/** What `GET /forms/public/:slug` answers for a fixture record. */
+function formPayload(record, token) {
+  const { document } = record;
+  const design = document.design;
+  const language = document.settings.language;
+  if (record.state === "locked" && token !== FORM_TOKEN) {
+    return { state: "locked", slug: record.slug, title: document.title, design, language };
+  }
+  if (record.state === "unavailable") {
+    return {
+      state: "unavailable",
+      slug: record.slug,
+      reason: record.reason,
+      title: document.title,
+      closedTitle: document.settings.closedTitle,
+      closedMessage: document.settings.closedMessage,
+      opensAt: record.opensAt,
+      design,
+      language,
+    };
+  }
+  return {
+    state: "open",
+    slug: record.slug,
+    document,
+    ...(record.state === "locked" ? { token: FORM_TOKEN } : {}),
+  };
+}
+
+function endingFor(record, answers) {
+  for (const rule of record.endingRules ?? []) {
+    if (answers[rule.fieldId] === rule.equals) return rule.endingId;
+  }
+  return record.document.endings[0].id;
+}
+
+/** The public form routes, shaped like apps/api's forms controller. */
+function formsRoute(request, response, rest, search) {
+  const method = request.method;
+  if (method === "GET" && rest.length === 2 && rest[0] === "media") {
+    if (!FORM_MEDIA_KEY_PATTERN.test(rest[1])) sendError(response, 400, "Unknown media key");
+    else redirectToFile(response, rest[1]);
+    return true;
+  }
+  if (rest[0] !== "public" || rest.length < 2) return false;
+  const record = forms.find((entry) => entry.slug === rest[1]);
+  const action = rest[2];
+  if (!record) {
+    if (rest.length > 3) return false;
+    sendError(response, 404, "Form not found");
+    return true;
+  }
+  if (method === "GET" && rest.length === 2) {
+    sendJson(response, 200, formPayload(record, request.headers["x-form-token"]));
+    return true;
+  }
+  if (method !== "POST" || rest.length !== 3) return false;
+  const fail = () => sendError(response, 400, "Invalid request");
+
+  if (action === "unlock") {
+    readJson(request)
+      .then(({ passphrase }) => {
+        if (record.state !== "locked" || passphrase !== record.passphrase) {
+          sendJson(response, 401, {
+            message: "That passphrase is not right.",
+            error: "Unauthorized",
+            statusCode: 401,
+          });
+        } else {
+          sendJson(response, 200, formPayload(record, FORM_TOKEN));
+        }
+      })
+      .catch(fail);
+    return true;
+  }
+  if (action === "events") {
+    readBody(request)
+      .then(() => sendJson(response, 201, { ok: true }))
+      .catch(fail);
+    return true;
+  }
+  if (action === "uploads") {
+    readBody(request)
+      .then((body) => {
+        formCounter += 1;
+        const name = decodeURIComponent(String(request.headers["x-file-name"] ?? "file"));
+        const type = String(request.headers["content-type"] ?? "application/octet-stream");
+        const key = `formfile-${record.slug}-${formCounter}-${name.replace(/[^A-Za-z0-9.]/g, "")}`;
+        formUploads.set(key, { body, type, fieldId: search.get("fieldId") });
+        sendJson(response, 201, { file: { key, name, size: body.length, type } });
+      })
+      .catch(fail);
+    return true;
+  }
+  if (action === "responses") {
+    readJson(request)
+      .then((input) => {
+        const answers = input.answers ?? {};
+        if (Object.values(answers).includes("server-error")) {
+          const fieldId = Object.keys(answers).find((key) => answers[key] === "server-error");
+          sendJson(response, 400, {
+            message: "Some answers need another look.",
+            errors: { [fieldId]: { code: "invalid" } },
+          });
+          return;
+        }
+        const list = formSubmissions.get(input.sessionId) ?? [];
+        list.push({ slug: record.slug, ...input });
+        formSubmissions.set(input.sessionId, list);
+        formCounter += 1;
+        sendJson(response, 201, {
+          ok: true,
+          responseId: `fixture-response-${formCounter}`,
+          endingId: endingFor(record, answers),
+          score: null,
+        });
+      })
+      .catch(fail);
+    return true;
+  }
+  return false;
+}
+
 /** Handles the routes above; returns false for anything it doesn't serve. */
 function route(request, response) {
   if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "POST") {
     return false;
   }
-  const { pathname } = new URL(request.url ?? "/", ORIGIN);
+  const { pathname, searchParams } = new URL(request.url ?? "/", ORIGIN);
   const parts = pathname.split("/").filter(Boolean).map(decodeURIComponent);
 
   if (parts[0] === "api" && parts[1] === "shortlinks") {
     return shortlinksRoute(request, response, parts.slice(2));
+  }
+  if (parts[0] === "api" && parts[1] === "forms") {
+    return formsRoute(request, response, parts.slice(2), searchParams);
+  }
+  if (request.method === "GET" && pathname === "/__forms-fixture/submissions") {
+    sendJson(response, 200, {
+      submissions: formSubmissions.get(searchParams.get("sessionId") ?? "") ?? [],
+    });
+    return true;
   }
   if (request.method === "POST") return false;
 
@@ -266,6 +442,7 @@ function route(request, response) {
       fixture: "cms",
       records: published.length,
       articles: articles.length,
+      forms: forms.length,
     });
     return true;
   }

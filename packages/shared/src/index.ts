@@ -4,3 +4,4 @@ export * from "./schemas/contact.js";
 export * from "./schemas/home.js";
 export * from "./schemas/admin-permissions.js";
 export * from "./schemas/project-detail.js";
+export * from "./forms/index.js";

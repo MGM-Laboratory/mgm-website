@@ -1,0 +1,1671 @@
+{
+  "records": [
+    {
+      "slug": "e2e-classic",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Lab open day sign-up",
+        "description": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Sign up for the MGM Laboratory open day."
+                }
+              ]
+            }
+          ]
+        },
+        "fields": [
+          {
+            "id": "intro",
+            "type": "heading",
+            "label": "About you",
+            "required": false,
+            "width": "full",
+            "headingLevel": 2
+          },
+          {
+            "id": "name",
+            "type": "short_text",
+            "label": "What should we call you?",
+            "placeholder": "Your first name",
+            "required": true,
+            "width": "half"
+          },
+          {
+            "id": "email",
+            "type": "email",
+            "label": "Your email",
+            "placeholder": "name@example.com",
+            "required": true,
+            "width": "half"
+          },
+          {
+            "id": "role",
+            "type": "multiple_choice",
+            "label": "Which describes you best?",
+            "required": true,
+            "width": "full",
+            "options": [
+              {
+                "id": "student",
+                "label": "Student"
+              },
+              {
+                "id": "staff",
+                "label": "Lab staff"
+              },
+              {
+                "id": "visitor",
+                "label": "Visitor"
+              }
+            ],
+            "allowOther": true
+          },
+          {
+            "id": "why",
+            "type": "long_text",
+            "label": "What do you hope to learn, {{name}}?",
+            "required": false,
+            "width": "full",
+            "visibleIf": {
+              "match": "all",
+              "rules": [
+                {
+                  "subject": "role",
+                  "operator": "equals",
+                  "value": "student"
+                }
+              ]
+            },
+            "maxLength": 280
+          },
+          {
+            "id": "ref",
+            "type": "hidden",
+            "label": "Referral",
+            "required": false,
+            "width": "full",
+            "prefillParam": "ref"
+          },
+          {
+            "id": "p2",
+            "type": "page_break",
+            "label": "",
+            "required": false,
+            "width": "full",
+            "pageTitle": "Your visit",
+            "pageDescription": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Tell us what you would like to see."
+                    }
+                  ]
+                }
+              ]
+            },
+            "jumps": [
+              {
+                "id": "skip",
+                "when": {
+                  "match": "all",
+                  "rules": [
+                    {
+                      "subject": "role",
+                      "operator": "equals",
+                      "value": "staff"
+                    }
+                  ]
+                },
+                "to": "p3"
+              }
+            ]
+          },
+          {
+            "id": "excitement",
+            "type": "rating",
+            "label": "How excited are you?",
+            "required": false,
+            "width": "full",
+            "max": 5,
+            "ratingIcon": "star"
+          },
+          {
+            "id": "topics",
+            "type": "checkboxes",
+            "label": "Which demos interest you?",
+            "required": false,
+            "width": "full",
+            "options": [
+              {
+                "id": "games",
+                "label": "Games"
+              },
+              {
+                "id": "web",
+                "label": "Websites"
+              },
+              {
+                "id": "mobile",
+                "label": "Mobile apps"
+              },
+              {
+                "id": "ux",
+                "label": "UX research"
+              }
+            ],
+            "maxSelections": 2
+          },
+          {
+            "id": "p3",
+            "type": "page_break",
+            "label": "",
+            "required": false,
+            "width": "full",
+            "pageTitle": "Almost there"
+          },
+          {
+            "id": "photos",
+            "type": "yes_no",
+            "label": "May we photograph you on the day?",
+            "required": true,
+            "width": "full"
+          },
+          {
+            "id": "consent",
+            "type": "consent",
+            "label": "Privacy",
+            "required": true,
+            "width": "full",
+            "consentText": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "I agree that MGM Laboratory keeps my answers to plan the open day."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "welcome": {
+          "enabled": true,
+          "eyebrow": "Open day 2026",
+          "title": "Come build something with us",
+          "body": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "A few questions so we can plan your visit. Every answer adds a piece to the picture."
+                  }
+                ]
+              }
+            ]
+          },
+          "buttonLabel": "Let's begin",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Thank you, {{name}}",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Your seat is saved. We will email the details a week before the day."
+                    }
+                  ]
+                }
+              ]
+            },
+            "showScore": false,
+            "allowAnother": true,
+            "showShare": true
+          },
+          {
+            "id": "staff",
+            "when": {
+              "match": "all",
+              "rules": [
+                {
+                  "subject": "role",
+                  "operator": "equals",
+                  "value": "staff"
+                }
+              ]
+            },
+            "title": "See you backstage",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Thanks for helping out. The crew list is on its way."
+                    }
+                  ]
+                }
+              ]
+            },
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "laboratory",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "banner",
+            "media": {
+              "kind": "image",
+              "key": "form-e2eclassic01-7b8c9d0e-1f2a-4b3c-8d4e-5f6a7b8c9d77.jpg",
+              "alt": "Paper cards on a table",
+              "focalX": 50,
+              "focalY": 40
+            },
+            "overlay": 30
+          },
+          "background": {
+            "scene": "orbit",
+            "intensity": "lively",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "en",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": true,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "title": "Open day sign-up",
+            "description": "Join the MGM Laboratory open day.",
+            "noindex": true
+          },
+          "minSeconds": 3,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      },
+      "endingRules": [
+        {
+          "fieldId": "role",
+          "equals": "staff",
+          "endingId": "staff"
+        }
+      ]
+    },
+    {
+      "slug": "e2e-chat",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Coffee check-in",
+        "fields": [
+          {
+            "id": "nickname",
+            "type": "short_text",
+            "label": "First things first: your nickname?",
+            "required": true,
+            "width": "full"
+          },
+          {
+            "id": "flavour",
+            "type": "multiple_choice",
+            "label": "Pick a brew, {{nickname}}",
+            "required": true,
+            "width": "full",
+            "options": [
+              {
+                "id": "espresso",
+                "label": "Espresso"
+              },
+              {
+                "id": "latte",
+                "label": "Latte"
+              },
+              {
+                "id": "tea",
+                "label": "Tea instead"
+              }
+            ]
+          },
+          {
+            "id": "rating",
+            "type": "opinion_scale",
+            "label": "How was today's cup?",
+            "required": false,
+            "width": "full",
+            "min": 1,
+            "max": 5,
+            "minLabel": "Meh",
+            "maxLabel": "Perfect"
+          },
+          {
+            "id": "notes",
+            "type": "long_text",
+            "label": "Anything else to tell the barista?",
+            "required": false,
+            "width": "full"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Cheers!",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Your order is noted."
+                    }
+                  ]
+                }
+              ]
+            },
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "ember",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "conversational",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "constellation",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "en",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": false,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 3,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
+      "slug": "e2e-showcase",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Every field, one form",
+        "fields": [
+          {
+            "id": "s_text",
+            "type": "short_text",
+            "label": "Short text",
+            "placeholder": "Type something",
+            "help": "Up to 40 characters.",
+            "required": false,
+            "width": "full",
+            "maxLength": 40
+          },
+          {
+            "id": "s_long",
+            "type": "long_text",
+            "label": "Long text",
+            "required": false,
+            "width": "full",
+            "maxLength": 500
+          },
+          {
+            "id": "s_email",
+            "type": "email",
+            "label": "Email",
+            "required": false,
+            "width": "half"
+          },
+          {
+            "id": "s_phone",
+            "type": "phone",
+            "label": "Phone",
+            "required": false,
+            "width": "half",
+            "defaultCountry": "ID"
+          },
+          {
+            "id": "s_number",
+            "type": "number",
+            "label": "Number",
+            "required": false,
+            "width": "half",
+            "min": 0,
+            "max": 1000000,
+            "step": 1000,
+            "prefix": "Rp"
+          },
+          {
+            "id": "s_url",
+            "type": "url",
+            "label": "Website",
+            "required": false,
+            "width": "half"
+          },
+          {
+            "id": "s_mc",
+            "type": "multiple_choice",
+            "label": "Multiple choice",
+            "required": false,
+            "width": "full",
+            "options": [
+              {
+                "id": "a",
+                "label": "Circle"
+              },
+              {
+                "id": "b",
+                "label": "Triangle"
+              },
+              {
+                "id": "c",
+                "label": "Square"
+              }
+            ],
+            "allowOther": true
+          },
+          {
+            "id": "s_cb",
+            "type": "checkboxes",
+            "label": "Checkboxes",
+            "required": false,
+            "width": "full",
+            "options": [
+              {
+                "id": "a",
+                "label": "Red"
+              },
+              {
+                "id": "b",
+                "label": "Yellow"
+              },
+              {
+                "id": "c",
+                "label": "Blue"
+              },
+              {
+                "id": "d",
+                "label": "Green"
+              }
+            ],
+            "optionLayout": "grid",
+            "minSelections": 1,
+            "maxSelections": 2
+          },
+          {
+            "id": "s_dd",
+            "type": "dropdown",
+            "label": "Dropdown",
+            "required": false,
+            "width": "full",
+            "options": [
+              {
+                "id": "c0",
+                "label": "Malang"
+              },
+              {
+                "id": "c1",
+                "label": "Surabaya"
+              },
+              {
+                "id": "c2",
+                "label": "Jakarta"
+              },
+              {
+                "id": "c3",
+                "label": "Bandung"
+              },
+              {
+                "id": "c4",
+                "label": "Yogyakarta"
+              },
+              {
+                "id": "c5",
+                "label": "Denpasar"
+              }
+            ]
+          },
+          {
+            "id": "s_ms",
+            "type": "multiselect",
+            "label": "Multiselect",
+            "required": false,
+            "width": "full",
+            "options": [
+              {
+                "id": "t0",
+                "label": "Three.js"
+              },
+              {
+                "id": "t1",
+                "label": "GSAP"
+              },
+              {
+                "id": "t2",
+                "label": "React"
+              },
+              {
+                "id": "t3",
+                "label": "Next.js"
+              },
+              {
+                "id": "t4",
+                "label": "Tailwind"
+              },
+              {
+                "id": "t5",
+                "label": "NestJS"
+              },
+              {
+                "id": "t6",
+                "label": "Prisma"
+              }
+            ]
+          },
+          {
+            "id": "s_pc",
+            "type": "picture_choice",
+            "label": "Picture choice",
+            "required": false,
+            "width": "full",
+            "options": [
+              {
+                "id": "p1",
+                "label": "Paper",
+                "image": {
+                  "kind": "image",
+                  "key": "form-e2eclassic01-7b8c9d0e-1f2a-4b3c-8d4e-5f6a7b8c9d77.jpg"
+                }
+              },
+              {
+                "id": "p2",
+                "label": "Sun",
+                "image": {
+                  "kind": "image",
+                  "key": "form-e2eshowcase1-8c9d0e1f-2a3b-4c4d-9e5f-6a7b8c9d0e88.jpg"
+                }
+              }
+            ]
+          },
+          {
+            "id": "pb1",
+            "type": "page_break",
+            "label": "",
+            "required": false,
+            "width": "full",
+            "pageTitle": "Scales"
+          },
+          {
+            "id": "s_yn",
+            "type": "yes_no",
+            "label": "Yes or no",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "s_rating",
+            "type": "rating",
+            "label": "Rating",
+            "required": false,
+            "width": "full",
+            "max": 5,
+            "ratingIcon": "heart"
+          },
+          {
+            "id": "s_opinion",
+            "type": "opinion_scale",
+            "label": "Opinion scale",
+            "required": false,
+            "width": "full",
+            "min": 1,
+            "max": 7,
+            "minLabel": "Not at all",
+            "maxLabel": "Completely"
+          },
+          {
+            "id": "s_nps",
+            "type": "nps",
+            "label": "How likely are you to recommend us?",
+            "required": false,
+            "width": "full",
+            "minLabel": "Not likely",
+            "maxLabel": "Very likely"
+          },
+          {
+            "id": "s_slider",
+            "type": "slider",
+            "label": "Slider",
+            "required": false,
+            "width": "full",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "suffix": "%"
+          },
+          {
+            "id": "s_rank",
+            "type": "ranking",
+            "label": "Rank these",
+            "required": false,
+            "width": "full",
+            "options": [
+              {
+                "id": "r1",
+                "label": "Games"
+              },
+              {
+                "id": "r2",
+                "label": "Web"
+              },
+              {
+                "id": "r3",
+                "label": "Mobile"
+              },
+              {
+                "id": "r4",
+                "label": "UX"
+              }
+            ]
+          },
+          {
+            "id": "s_matrix",
+            "type": "matrix",
+            "label": "Matrix",
+            "required": false,
+            "width": "full",
+            "rowsList": [
+              {
+                "id": "m1",
+                "label": "Design"
+              },
+              {
+                "id": "m2",
+                "label": "Code"
+              },
+              {
+                "id": "m3",
+                "label": "Research"
+              }
+            ],
+            "columnsList": [
+              {
+                "id": "x1",
+                "label": "Poor"
+              },
+              {
+                "id": "x2",
+                "label": "Okay"
+              },
+              {
+                "id": "x3",
+                "label": "Good"
+              },
+              {
+                "id": "x4",
+                "label": "Great"
+              }
+            ]
+          },
+          {
+            "id": "pb2",
+            "type": "page_break",
+            "label": "",
+            "required": false,
+            "width": "full",
+            "pageTitle": "Dates and files"
+          },
+          {
+            "id": "s_date",
+            "type": "date",
+            "label": "Date",
+            "required": false,
+            "width": "half"
+          },
+          {
+            "id": "s_time",
+            "type": "time",
+            "label": "Time",
+            "required": false,
+            "width": "half"
+          },
+          {
+            "id": "s_dt",
+            "type": "datetime",
+            "label": "Date and time",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "s_file",
+            "type": "file_upload",
+            "label": "File upload",
+            "required": false,
+            "width": "full",
+            "accept": ["pdf", "image", "text"],
+            "maxFiles": 3,
+            "maxFileMb": 5
+          },
+          {
+            "id": "s_img",
+            "type": "image_upload",
+            "label": "Image upload",
+            "required": false,
+            "width": "full",
+            "maxFiles": 2
+          },
+          {
+            "id": "s_sig",
+            "type": "signature",
+            "label": "Signature",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "pb3",
+            "type": "page_break",
+            "label": "",
+            "required": false,
+            "width": "full",
+            "pageTitle": "About you"
+          },
+          {
+            "id": "s_name",
+            "type": "name",
+            "label": "Name",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "s_addr",
+            "type": "address",
+            "label": "Address",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "s_country",
+            "type": "country",
+            "label": "Country",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "s_color",
+            "type": "color",
+            "label": "Favourite colour",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "b_para",
+            "type": "paragraph",
+            "label": "",
+            "required": false,
+            "width": "full",
+            "content": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Rich text with "
+                    },
+                    {
+                      "type": "text",
+                      "text": "bold",
+                      "marks": [
+                        {
+                          "type": "bold"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": ", "
+                    },
+                    {
+                      "type": "text",
+                      "text": "a highlight",
+                      "marks": [
+                        {
+                          "type": "highlight",
+                          "attrs": {
+                            "color": "var(--rt-yellow)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " and "
+                    },
+                    {
+                      "type": "text",
+                      "text": "a link",
+                      "marks": [
+                        {
+                          "type": "link",
+                          "attrs": {
+                            "href": "https://example.com"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": "."
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "b_callout",
+            "type": "callout",
+            "label": "",
+            "required": false,
+            "width": "full",
+            "content": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "A callout for important notes."
+                    }
+                  ]
+                }
+              ]
+            },
+            "calloutTone": "info"
+          },
+          {
+            "id": "b_quote",
+            "type": "quote",
+            "label": "The lab",
+            "required": false,
+            "width": "full",
+            "content": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Make it playful, make it human."
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "b_img",
+            "type": "image",
+            "label": "",
+            "required": false,
+            "media": {
+              "kind": "image",
+              "key": "form-e2eshowcase1-8c9d0e1f-2a3b-4c4d-9e5f-6a7b8c9d0e88.jpg",
+              "alt": "A sunny cover",
+              "caption": "A picture with a caption"
+            },
+            "width": "full"
+          },
+          {
+            "id": "b_div",
+            "type": "divider",
+            "label": "",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "s_consent",
+            "type": "consent",
+            "label": "Consent",
+            "required": true,
+            "width": "full",
+            "consentText": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "I understand this is a showcase."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "welcome": {
+          "enabled": true,
+          "eyebrow": "Showcase",
+          "title": "A tour of every question",
+          "body": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Nothing here is saved anywhere real."
+                  }
+                ]
+              }
+            ]
+          },
+          "buttonLabel": "Start the tour",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "That was every field",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Thanks for the tour."
+                    }
+                  ]
+                }
+              ]
+            },
+            "showScore": false,
+            "allowAnother": true,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "sunburst",
+          "colorMode": "auto",
+          "font": "fraunces",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "blocks",
+            "intensity": "lively",
+            "pattern": "mixed",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "en",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": true,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 3,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
+      "slug": "e2e-intl",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Contact details",
+        "fields": [
+          {
+            "id": "phone",
+            "type": "phone",
+            "label": "Phone",
+            "required": false,
+            "width": "full",
+            "defaultCountry": "ID"
+          },
+          {
+            "id": "country",
+            "type": "country",
+            "label": "Country",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "address",
+            "type": "address",
+            "label": "Address",
+            "required": false,
+            "width": "full"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Thank you",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "atlas",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "paper",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "id",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": true,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 3,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
+      "slug": "e2e-locked",
+      "state": "locked",
+      "passphrase": "sesame",
+      "document": {
+        "version": 1,
+        "title": "Members' vote",
+        "fields": [
+          {
+            "id": "choice",
+            "type": "short_text",
+            "label": "Your proposal",
+            "required": true,
+            "width": "full"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Vote recorded",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "grove",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "none",
+            "intensity": "calm",
+            "pattern": "plus",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "en",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": false,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 3,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
+      "slug": "e2e-soon",
+      "state": "unavailable",
+      "reason": "not_open_yet",
+      "opensAt": "2099-01-01T09:00:00.000Z",
+      "document": {
+        "version": 1,
+        "title": "Hackathon registration",
+        "fields": [
+          {
+            "id": "q",
+            "type": "short_text",
+            "label": "Question",
+            "required": false,
+            "width": "full"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Thank you",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "sunburst",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "none",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "en",
+          "labels": {},
+          "opensAt": "2099-01-01T09:00:00.000Z",
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": true,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 3,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
+      "slug": "e2e-closed",
+      "state": "unavailable",
+      "reason": "closed",
+      "document": {
+        "version": 1,
+        "title": "Summer survey",
+        "fields": [
+          {
+            "id": "q",
+            "type": "short_text",
+            "label": "Question",
+            "required": false,
+            "width": "full"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Thank you",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "sunburst",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "none",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "en",
+          "labels": {},
+          "closedTitle": "The survey has wrapped up",
+          "closedMessage": "Thanks to everyone who answered. Results are coming soon.",
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": true,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 3,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
+      "slug": "e2e-dates",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Book a visit",
+        "fields": [
+          {
+            "id": "visit",
+            "type": "date",
+            "label": "Visit day",
+            "required": true,
+            "width": "full",
+            "minDate": "2026-09-10",
+            "maxDate": "2026-10-20"
+          },
+          {
+            "id": "birthday",
+            "type": "date",
+            "label": "Birthday",
+            "required": false,
+            "width": "full"
+          },
+          {
+            "id": "arrival",
+            "type": "time",
+            "label": "Arrival time",
+            "required": true,
+            "width": "half"
+          },
+          {
+            "id": "call",
+            "type": "datetime",
+            "label": "Call time",
+            "required": false,
+            "width": "full",
+            "minDate": "2026-09-01"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Thank you",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "laboratory",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "classic",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "paper",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "en",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": false,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 0,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    },
+    {
+      "slug": "e2e-dates-id",
+      "state": "open",
+      "document": {
+        "version": 1,
+        "title": "Jadwal kunjungan",
+        "fields": [
+          {
+            "id": "hari",
+            "type": "date",
+            "label": "Hari kunjungan",
+            "required": true,
+            "width": "full"
+          },
+          {
+            "id": "jam",
+            "type": "time",
+            "label": "Jam datang",
+            "required": true,
+            "width": "full"
+          }
+        ],
+        "welcome": {
+          "enabled": false,
+          "title": "",
+          "buttonLabel": "Start",
+          "showDuration": true,
+          "showQuestionCount": true
+        },
+        "endings": [
+          {
+            "id": "default",
+            "title": "Terima kasih",
+            "showScore": false,
+            "allowAnother": false,
+            "showShare": true
+          }
+        ],
+        "design": {
+          "theme": "atlas",
+          "colorMode": "auto",
+          "font": "hanken",
+          "layout": "conversational",
+          "align": "left",
+          "density": "comfortable",
+          "fieldStyle": "boxed",
+          "buttonShape": "pill",
+          "progress": "bar",
+          "showLogo": true,
+          "cover": {
+            "style": "none",
+            "overlay": 35
+          },
+          "background": {
+            "scene": "paper",
+            "intensity": "calm",
+            "pattern": "none",
+            "dim": 40
+          },
+          "motion": {
+            "entrance": "rise",
+            "speed": "normal",
+            "celebration": "confetti",
+            "sound": false,
+            "interactive": true
+          }
+        },
+        "settings": {
+          "language": "id",
+          "labels": {},
+          "onePerDevice": false,
+          "collectLocation": true,
+          "autosave": false,
+          "showQuestionNumbers": true,
+          "scoring": {
+            "enabled": false
+          },
+          "seo": {
+            "noindex": true
+          },
+          "minSeconds": 0,
+          "receipt": {
+            "enabled": false
+          }
+        }
+      }
+    }
+  ]
+}
