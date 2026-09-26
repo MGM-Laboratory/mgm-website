@@ -1,0 +1,503 @@
+import { choices, when } from "./helpers";
+import { rt, ul } from "./rich";
+import type { FormTemplate } from "./types";
+
+export const RECRUITMENT_TEMPLATES: FormTemplate[] = [
+  {
+    id: "job-application",
+    name: "Job application",
+    category: "recruitment",
+    description:
+      "A full application for a lab position: role, experience, CV and portfolio uploads.",
+    document: {
+      title: "Job application",
+      welcome: {
+        eyebrow: "Careers at MGM Laboratory",
+        title: "Apply to join the team",
+        body: rt(
+          "We build games, mobile apps and interactive media with students, researchers and partners.",
+          "Have your CV ready as a PDF. The application takes about ten minutes.",
+        ),
+        buttonLabel: "Start application",
+      },
+      fields: [
+        {
+          id: "q_role",
+          type: "dropdown",
+          label: "Which role are you applying for?",
+          required: true,
+          options: choices("role", [
+            ["unity", "Game developer (Unity)"],
+            ["mobile", "Mobile developer (Flutter)"],
+            ["uiux", "UI/UX designer"],
+            ["artist", "3D artist"],
+            ["researcher", "Research assistant"],
+          ]),
+        },
+        { id: "page_about", type: "page_break", label: "", pageTitle: "About you" },
+        { id: "q_name", type: "name", label: "Full name", required: true },
+        { id: "q_email", type: "email", label: "Email", required: true, width: "half" },
+        {
+          id: "q_phone",
+          type: "phone",
+          label: "Phone",
+          required: true,
+          defaultCountry: "ID",
+          width: "half",
+        },
+        { id: "q_address", type: "address", label: "Current address" },
+        {
+          id: "q_linkedin",
+          type: "url",
+          label: "LinkedIn or personal site",
+          placeholder: "https://",
+        },
+        { id: "page_experience", type: "page_break", label: "", pageTitle: "Experience" },
+        {
+          id: "q_years",
+          type: "multiple_choice",
+          label: "Years of relevant experience",
+          required: true,
+          optionLayout: "inline",
+          options: choices("yrs", [
+            ["0", "Less than 1"],
+            ["1", "1 to 2"],
+            ["3", "3 to 5"],
+            ["5", "More than 5"],
+          ]),
+        },
+        {
+          id: "q_skills",
+          type: "multiselect",
+          label: "Key skills",
+          options: choices("skill", [
+            ["csharp", "C#"],
+            ["dart", "Dart"],
+            ["ts", "TypeScript"],
+            ["figma", "Figma"],
+            ["blender", "Blender"],
+            ["research", "User research"],
+            ["shader", "Shaders"],
+          ]),
+        },
+        {
+          id: "q_motivation",
+          type: "long_text",
+          label: "Why do you want to work at MGM Laboratory?",
+          required: true,
+          rows: 5,
+          minLength: 50,
+          maxLength: 2000,
+        },
+        {
+          id: "q_cv",
+          type: "file_upload",
+          label: "Upload your CV",
+          required: true,
+          accept: ["pdf"],
+          maxFiles: 1,
+          maxFileMb: 10,
+        },
+        {
+          id: "q_portfolio",
+          type: "file_upload",
+          label: "Portfolio files (optional)",
+          help: "PDF, images or a zipped build, up to three files.",
+          accept: ["pdf", "image", "archive"],
+          maxFiles: 3,
+          maxFileMb: 50,
+          visibleIf: {
+            match: "any",
+            rules: [
+              { subject: "q_role", operator: "includes_any", value: ["role_uiux", "role_artist"] },
+            ],
+          },
+        },
+        {
+          id: "q_start",
+          type: "date",
+          label: "Earliest start date",
+        },
+        {
+          id: "q_privacy",
+          type: "consent",
+          label: "Privacy",
+          required: true,
+          consentText: rt(
+            "I agree that my application is stored for this hiring round and deleted afterwards.",
+          ),
+        },
+        { id: "hid_source", type: "hidden", label: "Source", prefillParam: "source" },
+      ],
+      endings: [
+        {
+          id: "ending_default",
+          title: "Application received",
+          body: rt(
+            "Thank you for applying. We review every application and reply within two weeks.",
+          ),
+          showShare: false,
+        },
+      ],
+      design: {
+        theme: "graphite",
+        layout: "classic",
+        progress: "steps",
+        background: { scene: "orbit", intensity: "calm", pattern: "none", dim: 40 },
+        motion: { entrance: "rise", celebration: "assemble" },
+      },
+      settings: {
+        receipt: {
+          enabled: true,
+          emailFieldId: "q_email",
+          subject: "Your application to MGM Laboratory",
+        },
+      },
+    },
+  },
+  {
+    id: "internship-application",
+    name: "Internship application",
+    category: "recruitment",
+    description:
+      "Internship intake for students: program, availability, interests and a transcript upload.",
+    document: {
+      title: "Internship application",
+      welcome: {
+        eyebrow: "Internship program",
+        title: "Intern with us",
+        body: rt(
+          "Work on real projects with the lab for one semester, with mentoring from lecturers and senior members.",
+        ),
+        buttonLabel: "Apply",
+      },
+      fields: [
+        { id: "q_name", type: "name", label: "Your name", required: true },
+        { id: "q_email", type: "email", label: "Student email", required: true, width: "half" },
+        {
+          id: "q_nim",
+          type: "short_text",
+          label: "Student number (NIM)",
+          required: true,
+          width: "half",
+          pattern: "^[0-9]{10,15}$",
+          patternMessage: "Enter the 10 to 15 digits of your NIM.",
+        },
+        {
+          id: "q_program",
+          type: "dropdown",
+          label: "Study program",
+          required: true,
+          options: choices("prog", [
+            ["if", "Informatics Engineering"],
+            ["si", "Information Systems"],
+            ["tk", "Computer Engineering"],
+            ["ti", "Information Technology"],
+            ["pti", "Information Technology Education"],
+          ]),
+        },
+        {
+          id: "q_semester",
+          type: "number",
+          label: "Current semester",
+          min: 1,
+          max: 14,
+          required: true,
+          width: "half",
+        },
+        {
+          id: "q_gpa",
+          type: "number",
+          label: "GPA",
+          min: 0,
+          max: 4,
+          step: 0.01,
+          decimals: 2,
+          width: "half",
+        },
+        {
+          id: "q_interest",
+          type: "picture_choice",
+          label: "Which area interests you most?",
+          required: true,
+          optionLayout: "grid",
+          maxSelections: 1,
+          options: [
+            { id: "int_game", label: "Games", description: "Gameplay, tools and engines" },
+            { id: "int_mobile", label: "Mobile", description: "Android and iOS apps" },
+            { id: "int_ux", label: "UX", description: "Research and interface design" },
+            { id: "int_media", label: "Multimedia", description: "Video, 3D and interactive art" },
+          ],
+        },
+        {
+          id: "q_hours",
+          type: "slider",
+          label: "Hours per week you can commit",
+          min: 4,
+          max: 40,
+          step: 2,
+          suffix: "h",
+        },
+        {
+          id: "q_project",
+          type: "long_text",
+          label: "Tell us about a project you're proud of",
+          rows: 4,
+          required: true,
+        },
+        {
+          id: "q_transcript",
+          type: "file_upload",
+          label: "Latest transcript",
+          accept: ["pdf", "image"],
+          maxFiles: 1,
+          maxFileMb: 5,
+        },
+      ],
+      endings: [
+        {
+          id: "ending_default",
+          title: "Thanks for applying",
+          body: rt("Shortlisted students are invited for a short interview."),
+        },
+      ],
+      design: {
+        theme: "laboratory",
+        layout: "classic",
+        background: { scene: "blocks", intensity: "lively", pattern: "clover", dim: 40 },
+        motion: { entrance: "pop", celebration: "confetti" },
+      },
+      settings: {
+        receipt: {
+          enabled: true,
+          emailFieldId: "q_email",
+          subject: "Internship application received",
+        },
+      },
+    },
+  },
+  {
+    id: "volunteer-signup",
+    name: "Pendaftaran relawan",
+    category: "recruitment",
+    description:
+      "Formulir berbahasa Indonesia untuk merekrut relawan acara lab: divisi, jadwal dan ukuran kaos.",
+    document: {
+      title: "Pendaftaran relawan",
+      welcome: {
+        eyebrow: "Relawan MGM Laboratory",
+        title: "Jadi bagian dari tim acara",
+        body: rt(
+          "Kami mencari relawan untuk membantu pameran karya dan kegiatan lab di Fakultas Ilmu Komputer, Universitas Brawijaya.",
+          "Pengisian formulir sekitar tiga menit.",
+        ),
+        buttonLabel: "Daftar",
+      },
+      fields: [
+        { id: "q_name", type: "name", label: "Nama lengkap", required: true },
+        { id: "q_email", type: "email", label: "Email", required: true, width: "half" },
+        {
+          id: "q_phone",
+          type: "phone",
+          label: "Nomor WhatsApp",
+          required: true,
+          defaultCountry: "ID",
+          width: "half",
+        },
+        {
+          id: "q_division",
+          type: "checkboxes",
+          label: "Divisi yang kamu minati",
+          required: true,
+          maxSelections: 2,
+          help: "Pilih maksimal dua.",
+          options: choices("div", [
+            ["acara", "Acara"],
+            ["dokumentasi", "Dokumentasi"],
+            ["publikasi", "Publikasi dan desain"],
+            ["perlengkapan", "Perlengkapan"],
+            ["konsumsi", "Konsumsi"],
+          ]),
+        },
+        {
+          id: "q_experience",
+          type: "yes_no",
+          label: "Pernah menjadi panitia sebelumnya?",
+        },
+        {
+          id: "q_experience_detail",
+          type: "long_text",
+          label: "Ceritakan pengalamanmu",
+          rows: 3,
+          visibleIf: when("q_experience", "equals", true),
+        },
+        {
+          id: "q_days",
+          type: "checkboxes",
+          label: "Hari yang bisa kamu hadiri",
+          optionLayout: "inline",
+          options: choices("hari", [
+            ["jumat", "Jumat"],
+            ["sabtu", "Sabtu"],
+            ["minggu", "Minggu"],
+          ]),
+        },
+        {
+          id: "q_shirt",
+          type: "dropdown",
+          label: "Ukuran kaos",
+          options: choices("kaos", [
+            ["s", "S"],
+            ["m", "M"],
+            ["l", "L"],
+            ["xl", "XL"],
+          ]),
+        },
+        {
+          id: "q_commit",
+          type: "consent",
+          label: "Komitmen",
+          required: true,
+          consentText: rt(
+            "Saya bersedia mengikuti briefing dan menjalankan tugas relawan dengan penuh tanggung jawab.",
+          ),
+        },
+      ],
+      endings: [
+        {
+          id: "ending_default",
+          title: "Terima kasih sudah mendaftar",
+          body: rt("Kami akan menghubungimu lewat WhatsApp untuk jadwal briefing."),
+        },
+      ],
+      design: {
+        theme: "ember",
+        layout: "conversational",
+        background: { scene: "constellation", intensity: "lively", pattern: "none", dim: 40 },
+        motion: { entrance: "pop", celebration: "confetti" },
+      },
+      settings: { language: "id" },
+    },
+  },
+  {
+    id: "mentorship-application",
+    name: "Mentorship application",
+    category: "recruitment",
+    description: "Match mentees with mentors by goals, focus area and preferred meeting rhythm.",
+    document: {
+      title: "Mentorship application",
+      welcome: {
+        eyebrow: "Mentorship program",
+        title: "Find a mentor at the lab",
+        body: rt(
+          "Senior members and alumni mentor students for one semester. Tell us what you want to grow in.",
+        ),
+        buttonLabel: "Apply",
+      },
+      fields: [
+        { id: "q_name", type: "name", label: "Your name", required: true },
+        { id: "q_email", type: "email", label: "Email", required: true },
+        {
+          id: "q_role",
+          type: "multiple_choice",
+          label: "I want to...",
+          required: true,
+          options: choices("mr", [
+            ["mentee", "Find a mentor"],
+            ["mentor", "Become a mentor"],
+          ]),
+        },
+        {
+          id: "page_focus",
+          type: "page_break",
+          label: "",
+          pageTitle: "Focus",
+          jumps: [
+            { id: "jump_mentor", when: when("q_role", "equals", "mr_mentor"), to: "page_mentor" },
+          ],
+        },
+        {
+          id: "q_goals",
+          type: "ranking",
+          label: "Rank your goals",
+          options: choices("goal", [
+            ["skills", "Technical skills"],
+            ["portfolio", "Building a portfolio"],
+            ["career", "Career advice"],
+            ["research", "Research and publishing"],
+          ]),
+        },
+        {
+          id: "q_area",
+          type: "multiselect",
+          label: "Focus areas",
+          required: true,
+          options: choices("area", [
+            ["game", "Game development"],
+            ["mobile", "Mobile development"],
+            ["ux", "UX design"],
+            ["3d", "3D and animation"],
+            ["pm", "Product management"],
+          ]),
+        },
+        {
+          id: "q_challenge",
+          type: "long_text",
+          label: "What is the biggest challenge you face right now?",
+          rows: 4,
+        },
+        { id: "page_mentor", type: "page_break", label: "", pageTitle: "Rhythm" },
+        {
+          id: "q_expertise",
+          type: "long_text",
+          label: "What can you mentor others in?",
+          rows: 3,
+          visibleIf: when("q_role", "equals", "mr_mentor"),
+        },
+        {
+          id: "q_rhythm",
+          type: "multiple_choice",
+          label: "How often would you like to meet?",
+          options: choices("rhy", [
+            ["weekly", "Weekly"],
+            ["biweekly", "Every two weeks"],
+            ["monthly", "Monthly"],
+          ]),
+        },
+        {
+          id: "q_format",
+          type: "checkboxes",
+          label: "Meeting formats that suit you",
+          optionLayout: "inline",
+          options: choices("mf", [
+            ["lab", "At the lab"],
+            ["online", "Online"],
+            ["chat", "Chat"],
+          ]),
+        },
+      ],
+      endings: [
+        {
+          id: "ending_default",
+          title: "Thanks for applying",
+          body: rt("We'll introduce you to your match at the start of the semester."),
+        },
+        {
+          id: "ending_mentor",
+          when: when("q_role", "equals", "mr_mentor"),
+          title: "Thank you for giving back",
+          body: rt(
+            "We'll get in touch with mentee profiles that match your expertise.",
+            ul("Kickoff at the start of semester", "A short mentor guide by email"),
+          ),
+        },
+      ],
+      design: {
+        theme: "rose",
+        layout: "classic",
+        background: { scene: "orbit", intensity: "lively", pattern: "none", dim: 40 },
+        motion: { entrance: "rise", celebration: "bloom" },
+      },
+    },
+  },
+];

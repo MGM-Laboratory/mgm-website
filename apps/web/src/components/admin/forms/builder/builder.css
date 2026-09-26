@@ -1,0 +1,130 @@
+/* Micro-interactions of the form builder (reduced motion turns them off). */
+@keyframes builder-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes builder-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+@keyframes builder-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+@keyframes builder-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes builder-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes builder-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  30% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-blue) 30%, transparent);
+  }
+}
+.builder-fade-in {
+  animation: builder-fade-in 180ms ease-out both;
+}
+.builder-dialog-in {
+  animation: builder-dialog-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.builder-pop-in {
+  transform-origin: top right;
+  animation: builder-pop-in 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.builder-rise-in {
+  animation: builder-rise-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.builder-flash {
+  animation: builder-flash 900ms ease-out 1;
+}
+.builder-skeleton {
+  background: linear-gradient(90deg, #e9edf4 25%, #f4f6fa 37%, #e9edf4 63%);
+  background-size: 400% 100%;
+  animation: builder-shimmer 1.4s ease infinite;
+}
+.dark .builder-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.05) 63%
+  );
+  background-size: 400% 100%;
+}
+
+/* Rich text palette: the editor shows stored colours `var(--rt-<token>)`. */
+.builder-rich-text {
+  --rt-blue: #3a6dc5;
+  --rt-red: #d92f2f;
+  --rt-green: #0f8657;
+  --rt-yellow: #f7bf33;
+  --rt-ink: #171b25;
+  --rt-muted: #69748a;
+}
+.dark .builder-rich-text {
+  --rt-blue: #7ea4ec;
+  --rt-red: #ff7a7a;
+  --rt-green: #4fcf98;
+  --rt-yellow: #f7c955;
+  --rt-ink: #f2f4f8;
+  --rt-muted: #9aa4b7;
+}
+.builder-rich-text mark {
+  border-radius: 0.2em;
+  padding: 0 0.12em;
+  color: inherit;
+  background-color: color-mix(in srgb, var(--rt-yellow) 45%, transparent);
+}
+.builder-rich-text mark[data-color] {
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .builder-fade-in,
+  .builder-dialog-in,
+  .builder-pop-in,
+  .builder-rise-in,
+  .builder-flash,
+  .builder-skeleton {
+    animation: none;
+  }
+}
+
+/* rich text editor */
+/* tiptap writes the token as an inline background; soften it so text stays readable. */
+.builder-rich-text mark[data-color="var(--rt-blue)"] {
+  background-color: color-mix(in srgb, var(--rt-blue) 24%, transparent) !important;
+}
+.builder-rich-text mark[data-color="var(--rt-red)"] {
+  background-color: color-mix(in srgb, var(--rt-red) 24%, transparent) !important;
+}
+.builder-rich-text mark[data-color="var(--rt-green)"] {
+  background-color: color-mix(in srgb, var(--rt-green) 24%, transparent) !important;
+}
+.builder-rich-text mark[data-color="var(--rt-yellow)"] {
+  background-color: color-mix(in srgb, var(--rt-yellow) 45%, transparent) !important;
+}
+.builder-rich-text mark[data-color="var(--rt-ink)"] {
+  background-color: color-mix(in srgb, var(--rt-ink) 16%, transparent) !important;
+}
+.builder-rich-text mark[data-color="var(--rt-muted)"] {
+  background-color: color-mix(in srgb, var(--rt-muted) 22%, transparent) !important;
+}
