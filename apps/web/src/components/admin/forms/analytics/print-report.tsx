@@ -26,18 +26,31 @@ export function PrintStyle() {
   return <style>{PRINT_STYLE}</style>;
 }
 
-/** Prints the element (sets the marker, prints, removes it). */
+/**
+ * Prints the element: marks it, narrows it to the printable A4 width so the
+ * ResizeObserver-sized charts redraw to fit the page, prints, then restores.
+ */
 export function printElement(element: HTMLElement | null) {
   if (!element) return;
+  const previousWidth = element.style.width;
   element.setAttribute("data-forms-print", "");
+  element.style.width = "720px";
   const done = () => {
     element.removeAttribute("data-forms-print");
+    element.style.width = previousWidth;
     window.removeEventListener("afterprint", done);
   };
   window.addEventListener("afterprint", done);
-  window.print();
-  // Browsers that don't fire afterprint (or print synchronously).
-  window.setTimeout(done, 1000);
+  // Two frames plus a beat for the observers to measure and the charts to redraw.
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() =>
+      window.setTimeout(() => {
+        window.print();
+        // Browsers that don't fire afterprint.
+        window.setTimeout(done, 1000);
+      }, 120),
+    ),
+  );
 }
 
 /** A printable summary of the shown responses and every question's chart. */
@@ -76,7 +89,7 @@ export function PrintReport({
   return createPortal(
     <div
       aria-hidden
-      className={`${VIZ_ROOT} pointer-events-none fixed top-0 left-[-10000px] w-[1000px] bg-white p-6 text-[#171b25]`}
+      className={`${VIZ_ROOT} pointer-events-none fixed top-0 left-[-10000px] w-[720px] bg-white p-0 text-[#171b25]`}
       data-forms-print=""
     >
       <PrintStyle />

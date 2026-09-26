@@ -271,7 +271,17 @@ function NumberInsight({ field, answered }: { field: FormField; answered: unknow
   const values = answered.filter((value): value is number => typeof value === "number");
   const [bins, setBins] = useState(() => suggestedBinCount(values));
   const summary = useMemo(() => summarize(values), [values]);
-  const data = useMemo(() => histogram(values, bins), [values, bins]);
+  const integers = useMemo(
+    () =>
+      values.length > 0 &&
+      values.every(Number.isInteger) &&
+      Math.max(...values) - Math.min(...values) <= 40,
+    [values],
+  );
+  const data = useMemo(
+    () => histogram(values, bins, { integer: integers }),
+    [values, bins, integers],
+  );
   if (!values.length) return <EmptyChart />;
   const digits =
     field.decimals ?? (Number.isInteger(summary.min) && Number.isInteger(summary.max) ? 0 : 1);
