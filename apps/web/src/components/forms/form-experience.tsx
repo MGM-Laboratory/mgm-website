@@ -25,7 +25,10 @@ export function FormExperience({
   forced?: ProjectColorScheme;
   preview?: PreviewControl;
 }) {
-  const [current, setCurrent] = useState(payload);
+  // The passphrase gate swaps in the unlocked payload; the preview always
+  // shows the latest document it was given.
+  const [unlocked, setUnlocked] = useState<PublicFormPayload | null>(null);
+  const current = mode === "preview" ? payload : (unlocked ?? payload);
 
   if (current.state === "open") {
     return (
@@ -49,7 +52,7 @@ export function FormExperience({
             slug={current.slug}
             title={current.title}
             language={current.language}
-            onUnlocked={setCurrent}
+            onUnlocked={setUnlocked}
           />
         ) : (
           <UnavailableScreen
