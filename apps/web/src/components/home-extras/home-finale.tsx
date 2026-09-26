@@ -14,6 +14,7 @@ import { ConfettiBurst, type Burst } from "./confetti-burst";
 import { KineticHeading } from "./kinetic-heading";
 import { LogoStage, type LogoStageHandle } from "./logo-3d/logo-stage";
 import { Magnetic } from "./magnetic";
+import { useThemeNotes } from "./theme-notes";
 
 /**
  * The homepage's last chapter ("Your turn"), rendered at the top of the
@@ -24,12 +25,14 @@ import { Magnetic } from "./magnetic";
  * The first time a visitor reaches it in a session, the footer celebrates:
  * the mark spins, a burst of Bauhaus confetti pops out of it, the heading's
  * letters hop, and a lab note says hello. That moment is decorative, so it
- * is skipped under reduced motion.
+ * is skipped under reduced motion. It also hosts the theme-switch notes,
+ * since this block only exists on the homepage.
  */
 export function HomeFinale() {
   const rootRef = useRef<HTMLElement>(null);
   const stageRef = useRef<LogoStageHandle>(null);
   const [burst, setBurst] = useState<Burst | null>(null);
+  useThemeNotes();
 
   useLayoutEffect(() => {
     const root = rootRef.current;
