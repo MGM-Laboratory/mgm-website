@@ -99,6 +99,10 @@ export class FormSceneEngine {
   private last = 0;
   private frame = 0;
   private running = false;
+
+  private stopped() {
+    return !this.running || this.disposed;
+  }
   private disposed = false;
   private ready = false;
   private readonly cleanup: (() => void)[] = [];
@@ -468,8 +472,9 @@ export class FormSceneEngine {
       this.last = now;
       this.governor.sample(ms);
       this.hopeless.sample(ms);
-      // Sampling can hand the visit to the DOM scene and dispose this engine.
-      if (!this.running) return;
+      // Sampling can hand the visit to the DOM scene and dispose this engine
+      // (read through a method: the flag changes inside the calls above).
+      if (this.stopped()) return;
       this.step(Math.min(0.05, ms / 1000));
       this.renderer.render(this.scene, this.camera);
       if (!this.ready) {
