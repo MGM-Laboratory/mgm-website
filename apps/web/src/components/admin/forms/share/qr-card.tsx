@@ -169,7 +169,9 @@ export function QrCard({
     const svg = qrSvgString(qrModel(url, options), colors, logo);
     const blobUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
     download(blobUrl, `${fileStem}.svg`);
-    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 20_000);
+    window.setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+    }, 20_000);
   };
   const downloadPng = async () => {
     if (!url) return;
@@ -180,8 +182,12 @@ export function QrCard({
       image.decoding = "async";
       const source = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
       await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error("The QR image did not render."));
+        image.onload = () => {
+          resolve();
+        };
+        image.onerror = () => {
+          reject(new Error("The QR image did not render."));
+        };
         image.src = source;
       });
       const canvas = document.createElement("canvas");
@@ -221,7 +227,9 @@ export function QrCard({
           <span className={`${labelClass} mb-1 block`}>Link</span>
           <select
             className={selectClass}
-            onChange={(event) => setTargetUrl(event.target.value)}
+            onChange={(event) => {
+              setTargetUrl(event.target.value);
+            }}
             value={url}
           >
             {targets.map((target) => (
@@ -236,12 +244,12 @@ export function QrCard({
             <span className={`${labelClass} mb-1 block`}>Colours</span>
             <select
               className={selectClass}
-              onChange={(event) =>
+              onChange={(event) => {
                 setOptions((current) => ({
                   ...current,
                   colors: event.target.value as QrOptions["colors"],
-                }))
-              }
+                }));
+              }}
               value={options.colors}
             >
               <option value="theme">Form theme</option>
@@ -252,9 +260,9 @@ export function QrCard({
             <span className={`${labelClass} mb-1 block`}>Error correction</span>
             <select
               className={selectClass}
-              onChange={(event) =>
-                setOptions((current) => ({ ...current, ecc: event.target.value as Ecc }))
-              }
+              onChange={(event) => {
+                setOptions((current) => ({ ...current, ecc: event.target.value as Ecc }));
+              }}
               value={options.ecc}
             >
               <option value="L">Low (7%)</option>
@@ -270,9 +278,9 @@ export function QrCard({
               className="mt-2 w-full accent-brand-blue"
               max={8}
               min={0}
-              onChange={(event) =>
-                setOptions((current) => ({ ...current, margin: Number(event.target.value) }))
-              }
+              onChange={(event) => {
+                setOptions((current) => ({ ...current, margin: Number(event.target.value) }));
+              }}
               type="range"
               value={options.margin}
             />
@@ -281,9 +289,9 @@ export function QrCard({
             <input
               checked={options.logo}
               className="size-4 accent-brand-blue"
-              onChange={(event) =>
-                setOptions((current) => ({ ...current, logo: event.target.checked }))
-              }
+              onChange={(event) => {
+                setOptions((current) => ({ ...current, logo: event.target.checked }));
+              }}
               type="checkbox"
             />
             Centre logo

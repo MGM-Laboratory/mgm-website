@@ -120,7 +120,7 @@ function JumpEditor({
   readOnly: boolean;
 }) {
   const jumps = breakField.jumps ?? [];
-  const setJumps = (next: FormJump[], key?: string) =>
+  const setJumps = (next: FormJump[], key?: string) => {
     change(
       (doc) =>
         patchField(doc, breakField.id, (field) => ({
@@ -129,6 +129,7 @@ function JumpEditor({
         })),
       key,
     );
+  };
 
   const add = () => {
     const id = mintId("jump", documentIds(document));
@@ -166,13 +167,13 @@ function JumpEditor({
               className={`${smallInputClass} w-auto max-w-full min-w-40 flex-1 basis-40 sm:max-w-xs`}
               disabled={readOnly}
               id={`${jump.id}-to`}
-              onChange={(event) =>
+              onChange={(event) => {
                 setJumps(
                   jumps.map((item) =>
                     item.id === jump.id ? { ...item, to: event.target.value } : item,
                   ),
-                )
-              }
+                );
+              }}
               value={jump.to}
             >
               {destinations.some((item) => item.value === jump.to) ? null : (
@@ -190,7 +191,9 @@ function JumpEditor({
                   aria-label={`Move jump ${index + 1} up`}
                   className={iconButtonClass}
                   disabled={index === 0}
-                  onClick={() => move(index, -1)}
+                  onClick={() => {
+                    move(index, -1);
+                  }}
                   type="button"
                 >
                   <ArrowUp size={14} />
@@ -199,7 +202,9 @@ function JumpEditor({
                   aria-label={`Move jump ${index + 1} down`}
                   className={iconButtonClass}
                   disabled={index === jumps.length - 1}
-                  onClick={() => move(index, 1)}
+                  onClick={() => {
+                    move(index, 1);
+                  }}
                   type="button"
                 >
                   <ArrowDown size={14} />
@@ -207,7 +212,9 @@ function JumpEditor({
                 <button
                   aria-label={`Remove jump ${index + 1}`}
                   className={`${iconButtonClass} hover:!text-brand-red`}
-                  onClick={() => setJumps(jumps.filter((item) => item.id !== jump.id))}
+                  onClick={() => {
+                    setJumps(jumps.filter((item) => item.id !== jump.id));
+                  }}
                   type="button"
                 >
                   <Trash size={14} />
@@ -221,7 +228,7 @@ function JumpEditor({
             document={document}
             emptyHint="No rules: this jump always happens, so later jumps never run."
             label="When"
-            onChange={(when) =>
+            onChange={(when) => {
               setJumps(
                 jumps.map((item) =>
                   item.id === jump.id
@@ -229,8 +236,8 @@ function JumpEditor({
                     : item,
                 ),
                 `jump:${jump.id}`,
-              )
-            }
+              );
+            }}
             readOnly={readOnly}
             value={jump.when}
           />
@@ -281,7 +288,12 @@ function PageFlowSection({
         </div>
       ) : (
         <div className="grid gap-5 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-          <FlowMap document={document} onSelectPage={(id) => setFocusPage(id)} />
+          <FlowMap
+            document={document}
+            onSelectPage={(id) => {
+              setFocusPage(id);
+            }}
+          />
           <div className="min-w-0 space-y-3">
             {breaks.map((page) => {
               const closer = page.closer as FormField;
@@ -335,7 +347,13 @@ function PageFlowSection({
               );
             })}
             {focusPage !== null ? (
-              <button className={ghostButtonClass} onClick={() => setFocusPage(null)} type="button">
+              <button
+                className={ghostButtonClass}
+                onClick={() => {
+                  setFocusPage(null);
+                }}
+                type="button"
+              >
                 Show all pages
               </button>
             ) : null}
@@ -394,7 +412,9 @@ const VisibilityRow = memo(function VisibilityRow({
         <button
           aria-expanded={expanded}
           className={ghostButtonClass}
-          onClick={() => onToggle(field.id)}
+          onClick={() => {
+            onToggle(field.id);
+          }}
           type="button"
         >
           {expanded ? <CaretDown size={13} /> : <CaretRight size={13} />}
@@ -409,12 +429,12 @@ const VisibilityRow = memo(function VisibilityRow({
             document={document}
             emptyHint="No rules: the question always shows."
             label="Show this question when"
-            onChange={(visibleIf) =>
+            onChange={(visibleIf) => {
               change(
                 (doc) => patchField(doc, field.id, (item) => ({ ...item, visibleIf })),
                 `visible:${field.id}`,
-              )
-            }
+              );
+            }}
             readOnly={readOnly}
             value={field.visibleIf}
           />
@@ -435,16 +455,14 @@ function VisibilitySection({
 }) {
   const [onlyRules, setOnlyRules] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const toggle = useCallback(
-    (id: string) =>
-      setExpanded((current) => {
-        const next = new Set(current);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      }),
-    [],
-  );
+  const toggle = useCallback((id: string) => {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const rows = useMemo(() => {
     let number = 0;
@@ -545,9 +563,9 @@ function EndingsSection({
                     : "No rules yet."
               }
               label="Show this ending when"
-              onChange={(when) =>
-                change((doc) => patchEnding(doc, ending.id, { when }), `ending-when:${ending.id}`)
-              }
+              onChange={(when) => {
+                change((doc) => patchEnding(doc, ending.id, { when }), `ending-when:${ending.id}`);
+              }}
               readOnly={readOnly}
               value={ending.when}
             />
@@ -576,7 +594,7 @@ function ScoringSection({
     (field) => isChoiceType(field.type) && field.options?.length,
   );
   const computedMax = maxScore(document);
-  const setScoring = (patch: Partial<typeof scoring>, key?: string) =>
+  const setScoring = (patch: Partial<typeof scoring>, key?: string) => {
     change(
       (doc) => ({
         ...doc,
@@ -584,6 +602,7 @@ function ScoringSection({
       }),
       key,
     );
+  };
 
   return (
     <SectionCard
@@ -593,7 +612,9 @@ function ScoringSection({
             checked={scoring.enabled}
             disabled={readOnly}
             label="Scoring"
-            onChange={(enabled) => setScoring({ enabled })}
+            onChange={(enabled) => {
+              setScoring({ enabled });
+            }}
             size="sm"
           />
         </div>
@@ -635,7 +656,7 @@ function ScoringSection({
                         <NumberInput
                           ariaLabel={`Points for ${option.label}`}
                           className={`${smallInputClass} h-8 text-right`}
-                          onChange={(points) =>
+                          onChange={(points) => {
                             change(
                               (doc) =>
                                 patchField(doc, field.id, (item) => ({
@@ -647,8 +668,8 @@ function ScoringSection({
                                   ),
                                 })),
                               `points:${option.id}`,
-                            )
-                          }
+                            );
+                          }}
                           placeholder="0"
                           step="any"
                           value={option.points}
@@ -673,9 +694,9 @@ function ScoringSection({
                 className={`${smallInputClass} mt-1`}
                 id="logic-max-score"
                 min={1}
-                onChange={(value) =>
-                  setScoring({ maxScore: value && value > 0 ? value : undefined }, "scoring.max")
-                }
+                onChange={(value) => {
+                  setScoring({ maxScore: value && value > 0 ? value : undefined }, "scoring.max");
+                }}
                 placeholder={String(computedMax || "")}
                 value={scoring.maxScore}
               />
@@ -720,7 +741,9 @@ const TestInput = memo(function TestInput({
       <input
         className={smallInputClass}
         id={id}
-        onChange={(event) => onChange(field.id, event.target.value || undefined)}
+        onChange={(event) => {
+          onChange(field.id, event.target.value || undefined);
+        }}
         value={typeof value === "string" ? value : ""}
       />
     );
@@ -729,7 +752,9 @@ const TestInput = memo(function TestInput({
     return (
       <NumberInput
         id={id}
-        onChange={(next) => onChange(field.id, next)}
+        onChange={(next) => {
+          onChange(field.id, next);
+        }}
         step="any"
         value={typeof value === "number" ? value : undefined}
       />
@@ -739,7 +764,9 @@ const TestInput = memo(function TestInput({
     return (
       <Segmented<"none" | "yes" | "no">
         label={field.label || "Answer"}
-        onChange={(next) => onChange(field.id, next === "none" ? undefined : next === "yes")}
+        onChange={(next) => {
+          onChange(field.id, next === "none" ? undefined : next === "yes");
+        }}
         options={[
           { value: "none", label: "Empty" },
           { value: "yes", label: "Yes" },
@@ -755,7 +782,9 @@ const TestInput = memo(function TestInput({
       <input
         className={smallInputClass}
         id={id}
-        onChange={(event) => onChange(field.id, event.target.value || undefined)}
+        onChange={(event) => {
+          onChange(field.id, event.target.value || undefined);
+        }}
         type={field.type === "date" ? "date" : "datetime-local"}
         value={typeof value === "string" ? value : ""}
       />
@@ -796,7 +825,9 @@ const TestInput = memo(function TestInput({
       <select
         className={smallInputClass}
         id={id}
-        onChange={(event) => onChange(field.id, event.target.value || undefined)}
+        onChange={(event) => {
+          onChange(field.id, event.target.value || undefined);
+        }}
         value={typeof value === "string" ? value : ""}
       >
         <option value="">No answer</option>
@@ -857,7 +888,9 @@ function TestPanel({ document }: { document: FormDocument }) {
         <button
           className={ghostButtonClass}
           disabled={!Object.keys(answers).length}
-          onClick={() => setAnswers({})}
+          onClick={() => {
+            setAnswers({});
+          }}
           type="button"
         >
           Reset

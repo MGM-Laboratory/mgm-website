@@ -41,7 +41,9 @@ export function PipingInput({
       if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
     };
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+    };
   }, [open]);
 
   const insert = (fieldId: string) => {
@@ -127,8 +129,12 @@ export function PipingInput({
               aria-selected={index === active}
               className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${index === active ? "bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/20" : "text-[#3c4659] hover:bg-[#f2f5fa] dark:text-white/75 dark:hover:bg-white/[0.07]"}`}
               key={field.id}
-              onClick={() => insert(field.id)}
-              onMouseEnter={() => setActive(index)}
+              onClick={() => {
+                insert(field.id);
+              }}
+              onMouseEnter={() => {
+                setActive(index);
+              }}
               role="option"
               type="button"
             >

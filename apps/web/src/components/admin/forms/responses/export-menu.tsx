@@ -99,9 +99,19 @@ function downloadFileBytes(url: string, signal: AbortSignal): Promise<Uint8Array
         );
       }
     };
-    request.onerror = () => reject(new Error("Network error"));
-    request.onabort = () => reject(new DOMException("Aborted", "AbortError"));
-    signal.addEventListener("abort", () => request.abort(), { once: true });
+    request.onerror = () => {
+      reject(new Error("Network error"));
+    };
+    request.onabort = () => {
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal.addEventListener(
+      "abort",
+      () => {
+        request.abort();
+      },
+      { once: true },
+    );
     request.send();
   });
 }
@@ -266,8 +276,9 @@ export function ExportMenu({
           const data = await downloadWithRetry(
             formFileUrl(form.id, job.key, "download"),
             controller.signal,
-            (seconds) =>
-              setZipping((current) => (current ? { ...current, waiting: seconds } : current)),
+            (seconds) => {
+              setZipping((current) => (current ? { ...current, waiting: seconds } : current));
+            },
           );
           zip.add({ name: job.path, data });
         } catch (error) {
@@ -309,7 +320,9 @@ export function ExportMenu({
     <Popover
       anchor={anchor}
       label="Export"
-      onClose={() => (zipping ? undefined : onClose())}
+      onClose={() => {
+        if (!zipping) onClose();
+      }}
       width={360}
     >
       <div className="space-y-4" data-testid="export-menu">
@@ -321,7 +334,9 @@ export function ExportMenu({
                 aria-pressed={format === item.id}
                 className={`rounded-xl border px-2.5 py-2 text-left transition ${format === item.id ? "border-brand-blue bg-brand-blue-50 dark:bg-brand-blue/15" : "border-[#e4e8f0] hover:border-[#c6cfdd] dark:border-white/10"}`}
                 key={item.id}
-                onClick={() => setFormat(item.id)}
+                onClick={() => {
+                  setFormat(item.id);
+                }}
                 type="button"
               >
                 <span className="block text-xs font-bold">{item.label}</span>
@@ -340,7 +355,9 @@ export function ExportMenu({
                   className="accent-brand-blue"
                   disabled={item === "selected" && !counts.selected}
                   name="export-scope"
-                  onChange={() => setScope(item)}
+                  onChange={() => {
+                    setScope(item);
+                  }}
                   type="radio"
                 />
                 {item === "all" ? "All" : item === "filtered" ? "Filtered" : "Selected"}{" "}
@@ -354,7 +371,9 @@ export function ExportMenu({
             <input
               checked={labels}
               className="size-3.5 accent-brand-blue"
-              onChange={(event) => setLabels(event.target.checked)}
+              onChange={(event) => {
+                setLabels(event.target.checked);
+              }}
               type="checkbox"
             />{" "}
             Option labels (off: raw option ids)
@@ -363,7 +382,9 @@ export function ExportMenu({
             <input
               checked={meta}
               className="size-3.5 accent-brand-blue"
-              onChange={(event) => setMeta(event.target.checked)}
+              onChange={(event) => {
+                setMeta(event.target.checked);
+              }}
               type="checkbox"
             />{" "}
             Include metadata columns
@@ -372,7 +393,9 @@ export function ExportMenu({
             <input
               checked={onlyVisible}
               className="size-3.5 accent-brand-blue"
-              onChange={(event) => setOnlyVisible(event.target.checked)}
+              onChange={(event) => {
+                setOnlyVisible(event.target.checked);
+              }}
               type="checkbox"
             />{" "}
             Only the table&apos;s visible columns
@@ -381,7 +404,9 @@ export function ExportMenu({
             <input
               checked={clean}
               className="size-3.5 accent-brand-blue"
-              onChange={(event) => setClean(event.target.checked)}
+              onChange={(event) => {
+                setClean(event.target.checked);
+              }}
               type="checkbox"
             />{" "}
             Apply the cleaning pipeline

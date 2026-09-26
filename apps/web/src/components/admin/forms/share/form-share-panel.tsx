@@ -153,7 +153,9 @@ export function FormSharePanel({
     }
   };
 
-  const onLinksChange = useCallback((links: ShortlinkLink[]) => setShortLinks(links), []);
+  const onLinksChange = useCallback((links: ShortlinkLink[]) => {
+    setShortLinks(links);
+  }, []);
   const targets = useMemo(
     () => [
       { label: `Form link (${formUrl.replace(/^https?:\/\//, "")})`, url: formUrl },
@@ -222,7 +224,9 @@ export function FormSharePanel({
             <input
               aria-label="Public form link"
               className={`${inputClass} min-w-0 flex-1 basis-64 font-mono`}
-              onFocus={(event) => event.currentTarget.select()}
+              onFocus={(event) => {
+                event.currentTarget.select();
+              }}
               readOnly
               value={formUrl}
             />
@@ -335,9 +339,9 @@ export function FormSharePanel({
                     className="h-8 w-20 rounded-lg border border-[#d9dfeb] bg-white px-2 text-xs dark:border-white/10 dark:bg-white/5"
                     max={2000}
                     min={320}
-                    onChange={(event) =>
-                      setHeight(Math.max(320, Math.min(2000, Number(event.target.value) || 640)))
-                    }
+                    onChange={(event) => {
+                      setHeight(Math.max(320, Math.min(2000, Number(event.target.value) || 640)));
+                    }}
                     step={20}
                     type="number"
                     value={height}
@@ -354,7 +358,9 @@ export function FormSharePanel({
                   aria-label="Button label"
                   className="h-8 w-36 rounded-lg border border-[#d9dfeb] bg-white px-2 text-xs dark:border-white/10 dark:bg-white/5"
                   maxLength={40}
-                  onChange={(event) => setButtonLabel(event.target.value)}
+                  onChange={(event) => {
+                    setButtonLabel(event.target.value);
+                  }}
                   value={buttonLabel}
                 />
               </div>

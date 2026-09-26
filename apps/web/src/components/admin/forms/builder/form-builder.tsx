@@ -150,7 +150,9 @@ function ProblemsButton({
           ) : (
             <Warning className="text-brand-yellow" size={15} weight="fill" />
           ),
-        onSelect: () => onPick(problem),
+        onSelect: () => {
+          onPick(problem);
+        },
       }))}
       label={`${problems.length} problems`}
     />
@@ -212,11 +214,15 @@ export function FormBuilder({
     const header = headerRef.current;
     const root = rootRef.current;
     if (!header || !root) return;
-    const apply = () => root.style.setProperty("--builder-top", `${69 + header.offsetHeight}px`);
+    const apply = () => {
+      root.style.setProperty("--builder-top", `${69 + header.offsetHeight}px`);
+    };
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(header);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   const check = useMemo(() => checkDocument(document), [document]);
@@ -239,11 +245,15 @@ export function FormBuilder({
     errorCount,
     formId: record.id,
     initial: initialRecord.document,
-    onSaved: (saved) => updateRecord(saved),
+    onSaved: (saved) => {
+      updateRecord(saved);
+    },
     parsed: check.parsed,
   });
 
-  const select = useCallback((next: Selection) => setSelection(next), []);
+  const select = useCallback((next: Selection) => {
+    setSelection(next);
+  }, []);
 
   // Keyboard: save, undo and redo, but never while typing in a control
   // (text inputs and the rich text editor keep their own undo).
@@ -269,7 +279,9 @@ export function FormBuilder({
       else undo();
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [check.problems, redo, saveNow, undo]);
 
   const leave = async () => {
@@ -306,7 +318,9 @@ export function FormBuilder({
     link.href = url;
     link.download = `${record.slug || "form"}.json`;
     link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
   };
 
   const publicUrl = origin ? `${origin}/forms/${record.slug}` : `/forms/${record.slug}`;
@@ -413,7 +427,9 @@ export function FormBuilder({
             ) : null}
             <button
               className={`${ghostButtonClass} max-sm:hidden`}
-              onClick={() => setPreviewing(true)}
+              onClick={() => {
+                setPreviewing(true);
+              }}
               type="button"
             >
               <Play size={15} weight="fill" />
@@ -422,7 +438,9 @@ export function FormBuilder({
             <button
               aria-label="Preview"
               className={`${iconButtonClass} sm:hidden`}
-              onClick={() => setPreviewing(true)}
+              onClick={() => {
+                setPreviewing(true);
+              }}
               type="button"
             >
               <Eye size={17} />
@@ -446,7 +464,9 @@ export function FormBuilder({
                 {
                   label: "Save as template",
                   icon: <BookmarkSimple size={16} />,
-                  onSelect: () => setTemplateDialog(true),
+                  onSelect: () => {
+                    setTemplateDialog(true);
+                  },
                 },
                 ...(record.status !== "draft"
                   ? [
@@ -461,7 +481,9 @@ export function FormBuilder({
                   label: "Duplicate form",
                   icon: <Copy size={16} />,
                   disabled: readOnly,
-                  onSelect: () => onDuplicate(record),
+                  onSelect: () => {
+                    onDuplicate(record);
+                  },
                 },
                 "separator",
                 {
@@ -469,7 +491,9 @@ export function FormBuilder({
                   icon: <Trash size={16} />,
                   danger: true,
                   disabled: !canDelete,
-                  onSelect: () => onDelete(record),
+                  onSelect: () => {
+                    onDelete(record);
+                  },
                 },
               ]}
               label="Form actions"
@@ -477,7 +501,9 @@ export function FormBuilder({
             {!readOnly ? (
               <button
                 className={`${primaryButtonClass} h-9 px-3.5`}
-                onClick={() => setPublishing(true)}
+                onClick={() => {
+                  setPublishing(true);
+                }}
                 type="button"
               >
                 <RocketLaunch size={16} weight="fill" />
@@ -495,14 +521,14 @@ export function FormBuilder({
             {saveError.path ? (
               <button
                 className="ml-2 underline"
-                onClick={() =>
+                onClick={() => {
                   pickProblem({
                     key: "api",
                     message: saveError.message,
                     severity: "error",
                     target: targetFromPath(document, saveError.path ?? ""),
-                  })
-                }
+                  });
+                }}
                 type="button"
               >
                 Show me
@@ -525,7 +551,9 @@ export function FormBuilder({
                   className={`relative shrink-0 px-3 pt-1.5 pb-2.5 text-sm font-semibold whitespace-nowrap transition focus-visible:rounded-t-lg focus-visible:ring-4 focus-visible:ring-brand-blue/20 focus-visible:outline-none ${selected ? "text-[#171b25] dark:text-white" : "text-[#69748a] hover:text-[#171b25] dark:text-white/50 dark:hover:text-white"}`}
                   id={`builder-tab-${item.id}`}
                   key={item.id}
-                  onClick={() => setTab(item.id)}
+                  onClick={() => {
+                    setTab(item.id);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "ArrowRight") {
                       event.preventDefault();
@@ -588,7 +616,9 @@ export function FormBuilder({
           <SettingsTab
             {...tabProps}
             canDelete={canDelete}
-            onDeleteForm={() => onDelete(record)}
+            onDeleteForm={() => {
+              onDelete(record);
+            }}
             onRecordChange={updateRecord}
           />
         ) : (
@@ -613,7 +643,9 @@ export function FormBuilder({
 
       {publishing ? (
         <PublishDialog
-          onClose={() => setPublishing(false)}
+          onClose={() => {
+            setPublishing(false);
+          }}
           onRecordChange={updateRecord}
           origin={origin}
           problemCount={errorCount}
@@ -627,14 +659,18 @@ export function FormBuilder({
           focusFieldId={
             selection && !selection.includes(":") && selection !== "welcome" ? selection : undefined
           }
-          onClose={() => setPreviewing(false)}
+          onClose={() => {
+            setPreviewing(false);
+          }}
           slug={record.slug}
         />
       ) : null}
       {templateDialog ? (
         <SaveTemplateDialog
           document={check.parsed ?? document}
-          onClose={() => setTemplateDialog(false)}
+          onClose={() => {
+            setTemplateDialog(false);
+          }}
         />
       ) : null}
       {confirmLeave ? (
@@ -645,7 +681,9 @@ export function FormBuilder({
               : "The latest edits haven't reached the server. Leave and lose them?"
           }
           confirmLabel="Discard and leave"
-          onCancel={() => setConfirmLeave(false)}
+          onCancel={() => {
+            setConfirmLeave(false);
+          }}
           onConfirm={() => {
             setConfirmLeave(false);
             onBack();
@@ -715,7 +753,9 @@ function SaveTemplateDialog({
             className={inputClass}
             data-autofocus=""
             maxLength={120}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value);
+            }}
             value={name}
           />
         </label>
@@ -726,7 +766,9 @@ function SaveTemplateDialog({
           <textarea
             className={textareaClass}
             maxLength={300}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={(event) => {
+              setDescription(event.target.value);
+            }}
             value={description}
           />
         </label>

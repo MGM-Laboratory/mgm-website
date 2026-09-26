@@ -339,7 +339,9 @@ export function TrafficCard({ analytics }: { analytics: FormAnalytics }) {
               aria-pressed={mode === item}
               className={`h-6 rounded-md px-2 text-[11px] font-semibold capitalize ${mode === item ? "bg-[#171b25] text-white dark:bg-white dark:text-[#171b25]" : "text-[#5c6679] dark:text-white/55"}`}
               key={item}
-              onClick={() => setMode(item)}
+              onClick={() => {
+                setMode(item);
+              }}
               type="button"
             >
               {item}

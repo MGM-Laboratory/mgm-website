@@ -149,7 +149,9 @@ export function FormsStudio({
       toast.success(`Duplicated as “${form.document.title}”`, {
         action: {
           label: "Open",
-          onClick: () => setOpen({ id: form.id, tab: "build", record: form }),
+          onClick: () => {
+            setOpen({ id: form.id, tab: "build", record: form });
+          },
         },
       });
     } catch (error) {
@@ -228,7 +230,9 @@ export function FormsStudio({
       }
       busy={busy}
       confirmLabel="Delete form"
-      onCancel={() => setDeleting(null)}
+      onCancel={() => {
+        setDeleting(null);
+      }}
       onConfirm={() => void confirmDelete()}
       title="Delete this form?"
     />
@@ -250,13 +254,13 @@ export function FormsStudio({
             setOpen(null);
             void refresh();
           }}
-          onDelete={(record) =>
+          onDelete={(record) => {
             setDeleting({
               id: record.id,
               title: record.document.title,
               responses: record.stats.responses,
-            })
-          }
+            });
+          }}
           onDuplicate={(record) => void duplicate(record.id)}
           onRecordChange={upsert}
         />
@@ -273,15 +277,21 @@ export function FormsStudio({
         forms={forms}
         loading={loading}
         onAction={onAction}
-        onImport={() => setImporting(true)}
-        onNew={() => setGallery(true)}
+        onImport={() => {
+          setImporting(true);
+        }}
+        onNew={() => {
+          setGallery(true);
+        }}
         onPickTemplate={pickTemplate}
       />
       {gallery ? (
         <TemplateGallery
           busy={busy}
           onChoose={choose}
-          onClose={() => setGallery(false)}
+          onClose={() => {
+            setGallery(false);
+          }}
           onImport={() => {
             setGallery(false);
             setImporting(true);
@@ -291,7 +301,9 @@ export function FormsStudio({
       {importing ? (
         <ImportDialog
           busy={busy}
-          onClose={() => setImporting(false)}
+          onClose={() => {
+            setImporting(false);
+          }}
           onImport={(document) => void create(document)}
         />
       ) : null}

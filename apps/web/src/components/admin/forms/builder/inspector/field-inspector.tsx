@@ -30,7 +30,9 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         try {
           await navigator.clipboard.writeText(text);
           setCopied(true);
-          window.setTimeout(() => setCopied(false), 1400);
+          window.setTimeout(() => {
+            setCopied(false);
+          }, 1400);
         } catch {
           // Clipboard refused (insecure context): nothing to do.
         }
@@ -71,8 +73,9 @@ export const FieldInspector = memo(function FieldInspector({
   const scoring = document.settings.scoring.enabled;
 
   const update = useCallback(
-    (patch: Partial<FormField>, coalesce?: string) =>
-      change((current) => patchField(current, field.id, patch), coalesce),
+    (patch: Partial<FormField>, coalesce?: string) => {
+      change((current) => patchField(current, field.id, patch), coalesce);
+    },
     [change, field.id],
   );
   const takenIds = useCallback(() => documentIds(document), [document]);
@@ -133,7 +136,9 @@ export const FieldInspector = memo(function FieldInspector({
               <PipingInput
                 earlier={earlier}
                 id={`${baseId}-label`}
-                onChange={(label) => update({ label }, `${field.id}:label`)}
+                onChange={(label) => {
+                  update({ label }, `${field.id}:label`);
+                }}
                 placeholder="Type a question"
                 value={field.label}
               />
@@ -142,7 +147,9 @@ export const FieldInspector = memo(function FieldInspector({
                 className={smallInputClass}
                 id={`${baseId}-label`}
                 maxLength={500}
-                onChange={(event) => update({ label: event.target.value }, `${field.id}:label`)}
+                onChange={(event) => {
+                  update({ label: event.target.value }, `${field.id}:label`);
+                }}
                 value={field.label}
               />
             )}
@@ -154,7 +161,9 @@ export const FieldInspector = memo(function FieldInspector({
                 <RichTextEditor
                   label="Question description"
                   minHeight={64}
-                  onChange={(value) => update({ description: value }, `${field.id}:description`)}
+                  onChange={(value) => {
+                    update({ description: value }, `${field.id}:description`);
+                  }}
                   placeholder="Optional extra context under the question"
                   value={field.description}
                   variant="compact"
@@ -176,12 +185,12 @@ export const FieldInspector = memo(function FieldInspector({
                   <input
                     className={smallInputClass}
                     maxLength={200}
-                    onChange={(event) =>
+                    onChange={(event) => {
                       update(
                         { placeholder: event.target.value || undefined },
                         `${field.id}:placeholder`,
-                      )
-                    }
+                      );
+                    }}
                     value={field.placeholder ?? ""}
                   />
                 </label>
@@ -191,9 +200,9 @@ export const FieldInspector = memo(function FieldInspector({
                 <input
                   className={smallInputClass}
                   maxLength={500}
-                  onChange={(event) =>
-                    update({ help: event.target.value || undefined }, `${field.id}:help`)
-                  }
+                  onChange={(event) => {
+                    update({ help: event.target.value || undefined }, `${field.id}:help`);
+                  }}
                   placeholder="Shown small, under the answer"
                   value={field.help ?? ""}
                 />
@@ -201,7 +210,9 @@ export const FieldInspector = memo(function FieldInspector({
               <Switch
                 checked={field.required}
                 label="Required"
-                onChange={(required) => update({ required })}
+                onChange={(required) => {
+                  update({ required });
+                }}
                 size="sm"
               />
               <div>
@@ -209,7 +220,9 @@ export const FieldInspector = memo(function FieldInspector({
                 <Segmented
                   fullWidth
                   label="Width"
-                  onChange={(width) => update({ width })}
+                  onChange={(width) => {
+                    update({ width });
+                  }}
                   options={[
                     { value: "full", label: "Full" },
                     { value: "half", label: "Half" },
@@ -242,7 +255,9 @@ export const FieldInspector = memo(function FieldInspector({
           <MediaPicker
             formId={formId}
             label="Question media"
-            onChange={(media) => update({ media })}
+            onChange={(media) => {
+              update({ media });
+            }}
             value={field.media}
           />
         </Section>
@@ -255,7 +270,9 @@ export const FieldInspector = memo(function FieldInspector({
             document={document}
             emptyHint="Always shown. Add a rule to show it only for some answers."
             label="Show this block when"
-            onChange={(visibleIf) => update({ visibleIf })}
+            onChange={(visibleIf) => {
+              update({ visibleIf });
+            }}
             readOnly={readOnly}
             value={field.visibleIf}
           />
@@ -285,14 +302,14 @@ export const FieldInspector = memo(function FieldInspector({
               <input
                 className={`${smallInputClass} font-mono`}
                 maxLength={64}
-                onChange={(event) =>
+                onChange={(event) => {
                   update(
                     {
                       prefillParam: event.target.value.replace(/[^A-Za-z0-9_.-]/g, "") || undefined,
                     },
                     `${field.id}:prefill`,
-                  )
-                }
+                  );
+                }}
                 placeholder={field.type === "hidden" ? "source" : "Optional"}
                 value={field.prefillParam ?? ""}
               />

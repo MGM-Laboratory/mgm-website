@@ -252,7 +252,13 @@ export function FlowMap({
                   : undefined
               }
               key={node.key}
-              onClick={interactive ? () => onSelectPage(node.pageId as string) : undefined}
+              onClick={
+                interactive
+                  ? () => {
+                      onSelectPage(node.pageId as string);
+                    }
+                  : undefined
+              }
               onKeyDown={
                 interactive
                   ? (event) => {

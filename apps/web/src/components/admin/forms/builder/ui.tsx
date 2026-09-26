@@ -278,7 +278,9 @@ export function Switch({
         className={`relative mt-0.5 inline-flex h-6 w-10 shrink-0 items-center rounded-full transition focus-visible:ring-4 focus-visible:ring-brand-blue/25 focus-visible:outline-none disabled:opacity-40 ${checked ? "bg-brand-blue" : "bg-[#d5dbe7] dark:bg-white/15"}`}
         disabled={disabled}
         id={id}
-        onClick={() => onChange(!checked)}
+        onClick={() => {
+          onChange(!checked);
+        }}
         role="switch"
         type="button"
       >
@@ -338,7 +340,9 @@ export function Segmented<T extends string>({
             aria-checked={selected}
             className={`${fullWidth ? "flex-1" : ""} inline-flex min-w-0 items-center justify-center gap-1.5 rounded-[10px] font-semibold transition focus-visible:ring-4 focus-visible:ring-brand-blue/20 focus-visible:outline-none ${size === "sm" ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-[13px]"} ${selected ? "bg-white text-[#171b25] shadow-[0_4px_12px_-8px_rgba(20,32,58,0.6)] dark:bg-white/15 dark:text-white" : "text-[#69748a] hover:text-[#171b25] dark:text-white/50 dark:hover:text-white"}`}
             key={option.value}
-            onClick={() => onChange(option.value)}
+            onClick={() => {
+              onChange(option.value);
+            }}
             ref={(element) => {
               refs.current[position] = element;
             }}
@@ -430,7 +434,9 @@ export function Menu({
     document.addEventListener("mousedown", onDown);
     const first = itemRefs.current.find((item) => item && !item.disabled);
     first?.focus();
-    return () => document.removeEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+    };
   }, [close, open]);
 
   const focusable = () =>
@@ -465,7 +471,9 @@ export function Menu({
           aria-label={label}
           className={`builder-pop-in absolute top-[calc(100%+0.35rem)] z-50 min-w-52 rounded-2xl border border-[#dfe4ee] bg-white p-1.5 shadow-[0_24px_55px_-28px_rgba(20,32,58,0.45)] dark:border-white/10 dark:bg-[#1a1f2b] ${align === "end" ? "right-0" : "left-0"}`}
           id={menuId}
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
           onKeyDown={(event) => {
             const list = focusable();
             const current = list.indexOf(document.activeElement as HTMLButtonElement);
@@ -589,7 +597,9 @@ export function useAnnouncer() {
   const [message, setMessage] = useState("");
   const announce = useCallback((next: string) => {
     setMessage("");
-    window.setTimeout(() => setMessage(next), 30);
+    window.setTimeout(() => {
+      setMessage(next);
+    }, 30);
   }, []);
   const node = (
     <p aria-live="polite" className="sr-only" role="status">

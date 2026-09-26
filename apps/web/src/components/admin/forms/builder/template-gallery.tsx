@@ -239,7 +239,9 @@ export function TemplateGallery({
                 aria-label="Search templates"
                 className={`${inputClass} pl-9`}
                 data-autofocus=""
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                }}
                 placeholder="Search templates"
                 type="search"
                 value={query}
@@ -264,7 +266,9 @@ export function TemplateGallery({
                   className={`relative shrink-0 rounded-t-lg px-3 pt-1.5 pb-2.5 text-sm font-semibold whitespace-nowrap transition focus-visible:ring-4 focus-visible:ring-brand-blue/20 focus-visible:outline-none ${selected ? "text-brand-blue" : "text-[#69748a] hover:text-[#171b25] dark:text-white/50 dark:hover:text-white"}`}
                   id={`template-tab-${item.id}`}
                   key={item.id}
-                  onClick={() => setTab(item.id)}
+                  onClick={() => {
+                    setTab(item.id);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "ArrowRight") {
                       event.preventDefault();
@@ -302,7 +306,9 @@ export function TemplateGallery({
               <button
                 className="group flex min-h-64 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-brand-blue/35 bg-brand-blue/[0.03] p-6 text-center transition hover:border-brand-blue hover:bg-brand-blue/[0.06] focus-visible:ring-4 focus-visible:ring-brand-blue/25 focus-visible:outline-none disabled:opacity-60"
                 disabled={busy}
-                onClick={() => onChoose({ kind: "blank" })}
+                onClick={() => {
+                  onChoose({ kind: "blank" });
+                }}
                 type="button"
               >
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-blue text-white shadow-[0_14px_28px_-16px_rgba(58,109,197,0.9)] transition group-hover:scale-105 motion-reduce:group-hover:scale-100">
@@ -327,7 +333,9 @@ export function TemplateGallery({
                       <button
                         className="flex w-full min-w-0 flex-col rounded-2xl border border-[#dfe4ee] bg-white p-2.5 text-left transition hover:border-brand-blue/50 focus-visible:ring-4 focus-visible:ring-brand-blue/25 focus-visible:outline-none dark:border-white/10 dark:bg-white/[0.035]"
                         disabled={busy}
-                        onClick={() => onChoose({ kind: "document", document, name: item.name })}
+                        onClick={() => {
+                          onChoose({ kind: "document", document, name: item.name });
+                        }}
                         type="button"
                       >
                         <MiniPreview document={document} />
@@ -360,7 +368,9 @@ export function TemplateGallery({
                   <TemplateTile
                     busy={busy}
                     key={template.id}
-                    onChoose={() => onChoose({ kind: "template", template })}
+                    onChoose={() => {
+                      onChoose({ kind: "template", template });
+                    }}
                     template={template}
                   />
                 ))}
@@ -468,7 +478,9 @@ export function ImportDialog({
           className={`${textareaClass} min-h-72 font-mono text-xs`}
           data-autofocus=""
           id="import-json"
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            setText(event.target.value);
+          }}
           placeholder='{ "kind": "mgm-form", "version": 1, "document": { "title": "…" } }'
           spellCheck={false}
           value={text}

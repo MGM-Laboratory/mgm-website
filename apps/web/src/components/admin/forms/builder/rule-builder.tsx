@@ -185,9 +185,9 @@ function OptionChips({
             className={`inline-flex min-h-8 max-w-[14rem] items-center rounded-lg border px-2 text-xs font-semibold transition disabled:opacity-50 ${on ? "border-brand-blue bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/20" : "border-[#d9dfeb] text-[#5d687d] hover:border-brand-blue/50 dark:border-white/10 dark:text-white/60"}`}
             disabled={readOnly}
             key={option.id}
-            onClick={() =>
-              onChange(on ? value.filter((id) => id !== option.id) : [...value, option.id])
-            }
+            onClick={() => {
+              onChange(on ? value.filter((id) => id !== option.id) : [...value, option.id]);
+            }}
             type="button"
           >
             <span className="truncate">{option.label}</span>
@@ -237,7 +237,9 @@ function ValueEditor({
     return (
       <Segmented<"yes" | "no">
         label="Value"
-        onChange={(next) => onChange(next === "yes")}
+        onChange={(next) => {
+          onChange(next === "yes");
+        }}
         options={[
           { value: "yes", label: field.type === "consent" ? "Agreed" : "Yes" },
           { value: "no", label: field.type === "consent" ? "Not agreed" : "No" },
@@ -258,7 +260,9 @@ function ValueEditor({
         aria-label="Option"
         className={`${smallInputClass} sm:max-w-[16rem]`}
         disabled={readOnly}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         value={String(Array.isArray(rule.value) ? rule.value[0] : (rule.value ?? ""))}
       >
         {field.options.map((option) => (
@@ -278,7 +282,9 @@ function ValueEditor({
         aria-label="Date"
         className={`${smallInputClass} sm:w-52`}
         disabled={readOnly}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         type={field.type === "date" ? "date" : "datetime-local"}
         value={typeof rule.value === "string" ? rule.value : ""}
       />
@@ -289,7 +295,9 @@ function ValueEditor({
       aria-label="Value"
       className={`${smallInputClass} sm:w-48`}
       disabled={readOnly}
-      onChange={(event) => onChange(event.target.value)}
+      onChange={(event) => {
+        onChange(event.target.value);
+      }}
       placeholder="Text to compare"
       type="text"
       value={
@@ -342,7 +350,9 @@ const RuleRow = memo(function RuleRow({
         {readOnly ? null : (
           <button
             className="shrink-0 rounded-lg px-2 py-1 font-semibold hover:bg-brand-yellow/20"
-            onClick={() => onRemove(index)}
+            onClick={() => {
+              onRemove(index);
+            }}
             type="button"
           >
             Remove
@@ -406,7 +416,9 @@ const RuleRow = memo(function RuleRow({
         <ValueEditor
           field={field}
           isScore={isScore}
-          onChange={(value) => onChange(index, { ...rule, value })}
+          onChange={(value) => {
+            onChange(index, { ...rule, value });
+          }}
           readOnly={readOnly}
           rule={rule}
         />
@@ -415,7 +427,9 @@ const RuleRow = memo(function RuleRow({
         <button
           aria-label={`Remove rule ${index + 1}`}
           className={`${iconButtonClass} self-end @xl:self-auto hover:!text-brand-red`}
-          onClick={() => onRemove(index)}
+          onClick={() => {
+            onRemove(index);
+          }}
           type="button"
         >
           <Trash size={15} />
@@ -459,8 +473,9 @@ export function RuleBuilder({
   const rules = value?.rules ?? [];
   const match = value?.match ?? "all";
 
-  const emit = (nextRules: FormCondition[], nextMatch = match) =>
+  const emit = (nextRules: FormCondition[], nextMatch = match) => {
     onChange(nextRules.length ? { match: nextMatch, rules: nextRules } : undefined);
+  };
 
   const addRule = () => {
     const first = subjects[subjects.length - 1];
@@ -487,7 +502,9 @@ export function RuleBuilder({
         {rules.length > 1 ? (
           <Segmented<"all" | "any">
             label="How rules combine"
-            onChange={(next) => emit(rules, next)}
+            onChange={(next) => {
+              emit(rules, next);
+            }}
             options={[
               { value: "all", label: "Match all rules" },
               { value: "any", label: "Match any rule" },
@@ -505,10 +522,12 @@ export function RuleBuilder({
               document={document}
               index={index}
               key={index}
-              onChange={(position, next) =>
-                emit(rules.map((item, itemIndex) => (itemIndex === position ? next : item)))
-              }
-              onRemove={(position) => emit(rules.filter((_, itemIndex) => itemIndex !== position))}
+              onChange={(position, next) => {
+                emit(rules.map((item, itemIndex) => (itemIndex === position ? next : item)));
+              }}
+              onRemove={(position) => {
+                emit(rules.filter((_, itemIndex) => itemIndex !== position));
+              }}
               readOnly={readOnly}
               rule={rule}
               subjects={subjects}

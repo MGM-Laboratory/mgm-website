@@ -68,7 +68,9 @@ export function PrintReport({
   onDone: () => void;
 }) {
   useEffect(() => {
-    const onAfter = () => onDone();
+    const onAfter = () => {
+      onDone();
+    };
     window.addEventListener("afterprint", onAfter);
     // Two frames so the charts measure and draw before the print dialog snapshots them.
     const frame = requestAnimationFrame(() =>

@@ -53,8 +53,12 @@ function LabelInput({
     <textarea
       aria-label={`${FIELD_TYPE_INFO[field.type].label} label`}
       className={`block w-full resize-none overflow-hidden bg-transparent outline-none placeholder:text-[#a8b0c0] placeholder:italic focus:placeholder:text-[#c4cbd8] dark:placeholder:text-white/25 [field-sizing:content] ${className}`}
-      onChange={(event) => onChange(event.target.value)}
-      onClick={(event) => event.stopPropagation()}
+      onChange={(event) => {
+        onChange(event.target.value);
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
       onKeyDown={(event) => {
         if (event.key === "Enter") event.preventDefault();
         event.stopPropagation();
@@ -213,7 +217,9 @@ export const BlockCard = memo(function BlockCard({
         aria-selected={selected}
         className="group/card relative py-2 outline-none"
         data-block-id={field.id}
-        onClick={(event) => actions.select(field.id, event)}
+        onClick={(event) => {
+          actions.select(field.id, event);
+        }}
         onKeyDown={onKeyDown}
         role="option"
         tabIndex={0}
@@ -230,9 +236,15 @@ export const BlockCard = memo(function BlockCard({
           <input
             aria-label="Page title"
             className="min-w-0 flex-1 basis-40 bg-transparent text-sm font-semibold outline-none placeholder:font-normal placeholder:text-[#a8b0c0] dark:placeholder:text-white/25"
-            onChange={(event) => actions.setPageTitle(field.id, event.target.value)}
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
+            onChange={(event) => {
+              actions.setPageTitle(field.id, event.target.value);
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+            }}
             placeholder="Page title (optional)"
             readOnly={readOnly}
             value={field.pageTitle ?? ""}
@@ -272,7 +284,9 @@ export const BlockCard = memo(function BlockCard({
       aria-selected={selected}
       className={`group/card relative rounded-2xl border bg-white px-4 pt-3.5 pb-4 shadow-[0_10px_30px_-28px_rgba(20,32,58,0.5)] outline-none transition focus-visible:ring-4 focus-visible:ring-brand-blue/20 dark:bg-white/[0.035] ${ring} ${field.width === "half" ? "sm:ml-0 sm:max-w-[calc(50%+2rem)]" : ""}`}
       data-block-id={field.id}
-      onClick={(event) => actions.select(field.id, event)}
+      onClick={(event) => {
+        actions.select(field.id, event);
+      }}
       onKeyDown={onKeyDown}
       role="option"
       tabIndex={0}
@@ -351,7 +365,9 @@ export const BlockCard = memo(function BlockCard({
                     : "text-[15px] leading-6 font-semibold text-[#171b25] dark:text-white"
               }
               field={field}
-              onChange={(value) => actions.setLabel(field.id, value)}
+              onChange={(value) => {
+                actions.setLabel(field.id, value);
+              }}
               placeholder={
                 isHeading
                   ? "Heading"

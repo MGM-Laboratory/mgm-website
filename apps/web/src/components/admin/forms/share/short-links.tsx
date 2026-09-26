@@ -61,7 +61,9 @@ function getAdminJson<T>(path: string): Promise<T> {
           ),
         );
     };
-    request.onerror = () => reject(new Error("Network error."));
+    request.onerror = () => {
+      reject(new Error("Network error."));
+    };
     request.send();
   });
 }
@@ -291,7 +293,9 @@ export function ShortLinks({
                 <button
                   aria-label={`QR code for ${link.shortUrl}`}
                   className="inline-flex h-10 items-center rounded-xl border border-[#d9dfeb] px-2.5 text-[#3b4150] hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/70"
-                  onClick={() => onShowQr(link)}
+                  onClick={() => {
+                    onShowQr(link);
+                  }}
                   type="button"
                 >
                   <QrCode size={16} />
@@ -340,7 +344,9 @@ export function ShortLinks({
                 aria-invalid={slugInvalid}
                 className={`${inputClass} font-mono ${slugInvalid ? "border-brand-red" : ""}`}
                 maxLength={64}
-                onChange={(event) => setSlug(event.target.value)}
+                onChange={(event) => {
+                  setSlug(event.target.value);
+                }}
                 placeholder="auto"
                 value={slug}
               />
@@ -349,7 +355,9 @@ export function ShortLinks({
               <span className={`${labelClass} mb-1 block`}>Expires</span>
               <select
                 className={inputClass}
-                onChange={(event) => setExpiresIn(event.target.value as typeof expiresIn)}
+                onChange={(event) => {
+                  setExpiresIn(event.target.value as typeof expiresIn);
+                }}
                 value={expiresIn}
               >
                 {EXPIRY_OPTIONS.map((option) => (
@@ -366,7 +374,9 @@ export function ShortLinks({
                   aria-checked={passphraseOn}
                   aria-label="Require a passphrase"
                   className={`relative h-6 w-11 shrink-0 rounded-full transition ${passphraseOn ? "bg-brand-blue" : "bg-[#d6dbe6] dark:bg-white/15"}`}
-                  onClick={() => setPassphraseOn((value) => !value)}
+                  onClick={() => {
+                    setPassphraseOn((value) => !value);
+                  }}
                   role="switch"
                   type="button"
                 >
@@ -378,7 +388,9 @@ export function ShortLinks({
                   <input
                     aria-label="Passphrase"
                     className={inputClass}
-                    onChange={(event) => setPassphrase(event.target.value)}
+                    onChange={(event) => {
+                      setPassphrase(event.target.value);
+                    }}
                     type="password"
                     value={passphrase}
                   />
@@ -406,9 +418,9 @@ export function ShortLinks({
                   <span className={`${labelClass} mb-1 block`}>{key}</span>
                   <input
                     className={`${inputClass} h-9`}
-                    onChange={(event) =>
-                      setUtm((current) => ({ ...current, [key]: event.target.value }))
-                    }
+                    onChange={(event) => {
+                      setUtm((current) => ({ ...current, [key]: event.target.value }));
+                    }}
                     placeholder={
                       key === "source"
                         ? "instagram"
@@ -440,9 +452,9 @@ export function ShortLinks({
                     </span>
                     <input
                       className={`${inputClass} h-9`}
-                      onChange={(event) =>
-                        setPrefill((current) => ({ ...current, [item.param]: event.target.value }))
-                      }
+                      onChange={(event) => {
+                        setPrefill((current) => ({ ...current, [item.param]: event.target.value }));
+                      }}
                       value={prefill[item.param] ?? ""}
                     />
                   </label>

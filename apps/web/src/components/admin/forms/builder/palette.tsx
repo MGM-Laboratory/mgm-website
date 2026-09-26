@@ -59,7 +59,9 @@ export const Palette = memo(function Palette({
           aria-label="Search block types"
           autoFocus={autoFocus}
           className="h-9 w-full rounded-lg border border-[#d9dfeb] bg-white pr-3 pl-8 text-sm outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.05] dark:text-white"
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter" && first) {
               event.preventDefault();
@@ -84,7 +86,9 @@ export const Palette = memo(function Palette({
                     className="group flex w-full items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-left transition hover:bg-white hover:shadow-[0_8px_20px_-16px_rgba(20,32,58,0.5)] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-brand-blue/30 focus-visible:outline-none disabled:opacity-40 dark:hover:bg-white/[0.06] dark:focus-visible:bg-white/[0.06]"
                     disabled={disabled}
                     draggable={!disabled && !dense}
-                    onClick={() => onAdd(info.type)}
+                    onClick={() => {
+                      onAdd(info.type);
+                    }}
                     onDragStart={(event) => {
                       event.dataTransfer.setData(FIELD_DRAG_TYPE, info.type);
                       event.dataTransfer.effectAllowed = "copy";

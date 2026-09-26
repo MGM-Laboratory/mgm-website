@@ -33,7 +33,9 @@ export function useMediaQuery(query: string) {
     (onChange) => {
       const list = window.matchMedia(query);
       list.addEventListener("change", onChange);
-      return () => list.removeEventListener("change", onChange);
+      return () => {
+        list.removeEventListener("change", onChange);
+      };
     },
     () => window.matchMedia(query).matches,
     () => true,
@@ -183,14 +185,18 @@ export function BuildTab({
         select(id);
         setSheetOpen(true);
       },
-      setLabel: (id, label) => change((doc) => patchField(doc, id, { label }), `${id}:label`),
-      setPageTitle: (id, pageTitle) =>
+      setLabel: (id, label) => {
+        change((doc) => patchField(doc, id, { label }), `${id}:label`);
+      },
+      setPageTitle: (id, pageTitle) => {
         change(
           (doc) => patchField(doc, id, { pageTitle: pageTitle || undefined }),
           `${id}:pageTitle`,
-        ),
-      toggleRequired: (id) =>
-        change((doc) => patchField(doc, id, (field) => ({ ...field, required: !field.required }))),
+        );
+      },
+      toggleRequired: (id) => {
+        change((doc) => patchField(doc, id, (field) => ({ ...field, required: !field.required })));
+      },
       duplicate: (id) => {
         const result = duplicateFields(latest.current.document, [id]);
         if (!result.newIds.length) return;
@@ -213,7 +219,12 @@ export function BuildTab({
           description: users.length
             ? `${users.length} rule${users.length === 1 ? "" : "s"} still point at it; see Problems.`
             : undefined,
-          action: { label: "Undo", onClick: () => undo() },
+          action: {
+            label: "Undo",
+            onClick: () => {
+              undo();
+            },
+          },
         });
       },
       move: (id, delta) => {
@@ -230,7 +241,9 @@ export function BuildTab({
         );
       },
       addBelow: () => undefined,
-      addAfter: (id, type) => addField(type, { after: id }),
+      addAfter: (id, type) => {
+        addField(type, { after: id });
+      },
     }),
     [addField, announce, change, focusBlock, select, setMulti, undo],
   );
@@ -250,7 +263,14 @@ export function BuildTab({
       if (action === "delete") {
         change((doc) => removeFields(doc, ids));
         select(null);
-        toast(`Deleted ${ids.length} blocks`, { action: { label: "Undo", onClick: () => undo() } });
+        toast(`Deleted ${ids.length} blocks`, {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              undo();
+            },
+          },
+        });
       } else if (action === "duplicate") {
         const result = duplicateFields(latest.current.document, ids);
         change(() => result.document);
@@ -323,14 +343,23 @@ export function BuildTab({
       ending={selectedEnding}
       formId={record.id}
       key={selectedEnding.id}
-      onRemoved={() => select(null)}
+      onRemoved={() => {
+        select(null);
+      }}
       readOnly={readOnly}
     />
   ) : (
     <FormInspector change={change} document={document} readOnly={readOnly} />
   );
 
-  const palette = <Palette disabled={readOnly} onAdd={(type) => addField(type)} />;
+  const palette = (
+    <Palette
+      disabled={readOnly}
+      onAdd={(type) => {
+        addField(type);
+      }}
+    />
+  );
 
   return (
     <div className="grid min-h-0 xl:grid-cols-[17rem_minmax(0,1fr)_23rem] lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -350,7 +379,9 @@ export function BuildTab({
           <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between gap-2">
             <button
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-brand-blue/45 bg-brand-blue/[0.04] px-4 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white"
-              onClick={() => setPaletteOpen(true)}
+              onClick={() => {
+                setPaletteOpen(true);
+              }}
               type="button"
             >
               <Plus size={16} weight="bold" />
@@ -359,7 +390,9 @@ export function BuildTab({
             {!medium ? (
               <button
                 className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#5d687d] hover:bg-white dark:text-white/55 dark:hover:bg-white/[0.06]"
-                onClick={() => setSheetOpen(true)}
+                onClick={() => {
+                  setSheetOpen(true);
+                }}
                 type="button"
               >
                 <SidebarSimple size={16} />
@@ -373,10 +406,14 @@ export function BuildTab({
           document={document}
           issues={issues}
           multi={multi}
-          onAddAt={(at, type) => addField(type, { at })}
+          onAddAt={(at, type) => {
+            addField(type, { at });
+          }}
           onAddEnding={onAddEnding}
           onBulk={onBulk}
-          onClearMulti={() => setMulti(new Set())}
+          onClearMulti={() => {
+            setMulti(new Set());
+          }}
           onReorder={onReorder}
           onSelectScreen={selectScreen}
           readOnly={readOnly}
@@ -392,13 +429,25 @@ export function BuildTab({
           {inspector}
         </aside>
       ) : sheetOpen && selection ? (
-        <Sheet label="Inspector" onClose={() => setSheetOpen(false)} side="bottom">
+        <Sheet
+          label="Inspector"
+          onClose={() => {
+            setSheetOpen(false);
+          }}
+          side="bottom"
+        >
           {inspector}
         </Sheet>
       ) : null}
 
       {!wide && paletteOpen ? (
-        <Sheet label="Add a block" onClose={() => setPaletteOpen(false)} side="left">
+        <Sheet
+          label="Add a block"
+          onClose={() => {
+            setPaletteOpen(false);
+          }}
+          side="left"
+        >
           <div className="flex h-full min-h-0 flex-col p-4">{palette}</div>
         </Sheet>
       ) : null}

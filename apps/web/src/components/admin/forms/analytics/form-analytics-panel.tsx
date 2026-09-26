@@ -144,7 +144,9 @@ export function FormAnalyticsPanel({ form }: FormAnalyticsPanelProps) {
         </button>
         <button
           className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#d9dfeb] bg-white px-3 text-sm font-semibold text-[#3b4150] hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:bg-white/[0.03] dark:text-white/75"
-          onClick={() => printElement(rootRef.current)}
+          onClick={() => {
+            printElement(rootRef.current);
+          }}
           type="button"
         >
           <Printer size={15} /> <span className="hidden sm:inline">Print report</span>
@@ -162,7 +164,9 @@ export function FormAnalyticsPanel({ form }: FormAnalyticsPanelProps) {
             aria-selected={tab === item.id}
             className={`h-9 shrink-0 rounded-xl px-3 text-sm font-semibold transition ${tab === item.id ? "bg-[#171b25] text-white dark:bg-white dark:text-[#171b25]" : "text-[#5c6679] hover:bg-white dark:text-white/60 dark:hover:bg-white/5"}`}
             key={item.id}
-            onClick={() => setTab(item.id)}
+            onClick={() => {
+              setTab(item.id);
+            }}
             role="tab"
             type="button"
           >
@@ -186,7 +190,9 @@ export function FormAnalyticsPanel({ form }: FormAnalyticsPanelProps) {
               aria-pressed={view.segment === segment.id}
               className={`h-7 rounded-full px-2.5 text-[11px] font-semibold ${view.segment === segment.id ? "bg-[#171b25] text-white dark:bg-white dark:text-[#171b25]" : "border border-[#d9dfeb] text-[#5c6679] hover:border-brand-blue dark:border-white/10 dark:text-white/60"}`}
               key={segment.id}
-              onClick={() => setView(form.id, { segment: segment.id })}
+              onClick={() => {
+                setView(form.id, { segment: segment.id });
+              }}
               type="button"
             >
               {segment.label}

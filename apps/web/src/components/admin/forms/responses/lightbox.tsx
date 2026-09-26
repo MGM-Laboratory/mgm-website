@@ -79,7 +79,9 @@ export function Lightbox({
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, [go, onClose]);
 
   if (!item) return null;
@@ -116,7 +118,9 @@ export function Lightbox({
               aria-label="Zoom out"
               className={buttonClass}
               disabled={zoom <= 1}
-              onClick={() => setZoom((value) => Math.max(1, value / 1.4))}
+              onClick={() => {
+                setZoom((value) => Math.max(1, value / 1.4));
+              }}
               type="button"
             >
               <MagnifyingGlassMinus size={18} />
@@ -125,7 +129,9 @@ export function Lightbox({
               aria-label="Zoom in"
               className={buttonClass}
               disabled={zoom >= 6}
-              onClick={() => setZoom((value) => Math.min(6, value * 1.4))}
+              onClick={() => {
+                setZoom((value) => Math.min(6, value * 1.4));
+              }}
               type="button"
             >
               <MagnifyingGlassPlus size={18} />
@@ -227,7 +233,9 @@ export function Lightbox({
             <button
               aria-label="Previous file"
               className={`${buttonClass} absolute top-1/2 left-2 -translate-y-1/2 sm:left-4`}
-              onClick={() => go(-1)}
+              onClick={() => {
+                go(-1);
+              }}
               type="button"
             >
               <ArrowLeft size={18} />
@@ -235,7 +243,9 @@ export function Lightbox({
             <button
               aria-label="Next file"
               className={`${buttonClass} absolute top-1/2 right-2 -translate-y-1/2 sm:right-4`}
-              onClick={() => go(1)}
+              onClick={() => {
+                go(1);
+              }}
               type="button"
             >
               <ArrowRight size={18} />

@@ -114,14 +114,18 @@ export function FilterEditor({
   const op = current.op;
   const options = op === "in" ? optionsFor(column, rows) : [];
   const [search, setSearch] = useState("");
-  const set = (patch: Partial<ColumnFilter>) => onChange({ ...current, ...patch });
+  const set = (patch: Partial<ColumnFilter>) => {
+    onChange({ ...current, ...patch });
+  };
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <select
           aria-label="Filter condition"
           className={inputClass}
-          onChange={(event) => set({ op: event.target.value as FilterOp })}
+          onChange={(event) => {
+            set({ op: event.target.value as FilterOp });
+          }}
           value={current.op}
         >
           {ops.map((op) => (
@@ -134,7 +138,9 @@ export function FilterEditor({
           <button
             aria-label="Clear filter"
             className="rounded-lg p-2 text-[#7e899d] hover:bg-[#f4f6fa] hover:text-brand-red dark:hover:bg-white/10"
-            onClick={() => onChange(null)}
+            onClick={() => {
+              onChange(null);
+            }}
             type="button"
           >
             <X size={14} />
@@ -146,7 +152,9 @@ export function FilterEditor({
           aria-label="Filter value"
           autoFocus
           className={inputClass}
-          onChange={(event) => set({ value: event.target.value })}
+          onChange={(event) => {
+            set({ value: event.target.value });
+          }}
           placeholder="Value"
           value={current.value ?? ""}
         />
@@ -157,9 +165,9 @@ export function FilterEditor({
             aria-label="Minimum"
             className={inputClass}
             inputMode="decimal"
-            onChange={(event) =>
-              set({ min: event.target.value === "" ? null : Number(event.target.value) })
-            }
+            onChange={(event) => {
+              set({ min: event.target.value === "" ? null : Number(event.target.value) });
+            }}
             placeholder="Min"
             type="number"
             value={current.min ?? ""}
@@ -168,9 +176,9 @@ export function FilterEditor({
             aria-label="Maximum"
             className={inputClass}
             inputMode="decimal"
-            onChange={(event) =>
-              set({ max: event.target.value === "" ? null : Number(event.target.value) })
-            }
+            onChange={(event) => {
+              set({ max: event.target.value === "" ? null : Number(event.target.value) });
+            }}
             placeholder="Max"
             type="number"
             value={current.max ?? ""}
@@ -182,14 +190,18 @@ export function FilterEditor({
           <input
             aria-label="From"
             className={inputClass}
-            onChange={(event) => set({ from: event.target.value })}
+            onChange={(event) => {
+              set({ from: event.target.value });
+            }}
             type="date"
             value={current.from ?? ""}
           />
           <input
             aria-label="To"
             className={inputClass}
-            onChange={(event) => set({ to: event.target.value })}
+            onChange={(event) => {
+              set({ to: event.target.value });
+            }}
             type="date"
             value={current.to ?? ""}
           />
@@ -201,7 +213,9 @@ export function FilterEditor({
             <input
               aria-label="Search options"
               className={`${inputClass} mb-2`}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
               placeholder="Search"
               value={search}
             />
@@ -219,13 +233,13 @@ export function FilterEditor({
                     <input
                       checked={checked}
                       className="size-4 accent-brand-blue"
-                      onChange={() =>
+                      onChange={() => {
                         set({
                           values: checked
                             ? (current.values ?? []).filter((id) => id !== option.id)
                             : [...(current.values ?? []), option.id],
-                        })
-                      }
+                        });
+                      }}
                       type="checkbox"
                     />
                     <span className="truncate">{option.label}</span>
@@ -237,7 +251,13 @@ export function FilterEditor({
         </div>
       ) : null}
       {["empty", "notEmpty", "isTrue", "isFalse"].includes(current.op) && !filter ? (
-        <button className={primaryButton} onClick={() => onChange(current)} type="button">
+        <button
+          className={primaryButton}
+          onClick={() => {
+            onChange(current);
+          }}
+          type="button"
+        >
           Apply
         </button>
       ) : null}
@@ -280,10 +300,22 @@ export function ColumnMenu({
         {column.label}
       </p>
       <div className="mb-2 border-b border-[#eef0f4] pb-2 dark:border-white/5">
-        <button className={item} onClick={() => onSort("asc")} type="button">
+        <button
+          className={item}
+          onClick={() => {
+            onSort("asc");
+          }}
+          type="button"
+        >
           <ArrowUp size={14} /> Sort ascending
         </button>
-        <button className={item} onClick={() => onSort("desc")} type="button">
+        <button
+          className={item}
+          onClick={() => {
+            onSort("desc");
+          }}
+          type="button"
+        >
           <ArrowDown size={14} /> Sort descending
         </button>
         <button className={item} onClick={onPin} type="button">
@@ -328,7 +360,9 @@ function ColumnItem({
       <span
         aria-hidden
         className="cursor-grab touch-none rounded p-1 text-[#9ba4b5] hover:bg-[#f4f6fa] active:cursor-grabbing dark:hover:bg-white/10"
-        onPointerDown={(event) => controls.start(event)}
+        onPointerDown={(event) => {
+          controls.start(event);
+        }}
       >
         <DotsSixVertical size={14} weight="bold" />
       </span>
@@ -388,14 +422,18 @@ export function ColumnsManager({
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
         <button
           className="rounded-lg px-2 py-1 font-semibold text-brand-blue hover:bg-brand-blue-50"
-          onClick={() => onShowAll("meta", true)}
+          onClick={() => {
+            onShowAll("meta", true);
+          }}
           type="button"
         >
           Show metadata
         </button>
         <button
           className="rounded-lg px-2 py-1 font-semibold text-brand-blue hover:bg-brand-blue-50"
-          onClick={() => onShowAll("meta", false)}
+          onClick={() => {
+            onShowAll("meta", false);
+          }}
           type="button"
         >
           Hide metadata
@@ -420,8 +458,12 @@ export function ColumnsManager({
               column={column}
               hidden={hidden.has(key)}
               key={key}
-              onMove={(delta) => move(key, delta)}
-              onToggle={() => onToggle(key)}
+              onMove={(delta) => {
+                move(key, delta);
+              }}
+              onToggle={() => {
+                onToggle(key);
+              }}
             />
           );
         })}

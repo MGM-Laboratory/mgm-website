@@ -120,10 +120,9 @@ export function PreviewFrame({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSrc(`${PREVIEW_PATH}?attempt=${attempt}`);
     setState("loading");
-    const timer = window.setTimeout(
-      () => setState((current) => (current === "ready" ? current : "unavailable")),
-      READY_TIMEOUT_MS,
-    );
+    const timer = window.setTimeout(() => {
+      setState((current) => (current === "ready" ? current : "unavailable"));
+    }, READY_TIMEOUT_MS);
     return () => {
       window.removeEventListener("message", onMessage);
       window.clearTimeout(timer);
@@ -143,7 +142,9 @@ export function PreviewFrame({
     };
     if (state !== "ready") return;
     const timer = window.setTimeout(post, SEND_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [endingId, focusFieldId, post, scheme, shown, slug, stage, state]);
 
   useEffect(() => {
@@ -154,7 +155,9 @@ export function PreviewFrame({
       setBox({ width, height });
     });
     observer.observe(node);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   const size = DEVICE_SIZES[device];
@@ -238,7 +241,9 @@ export function PreviewFrame({
                   </p>
                   <button
                     className={`${secondaryButtonClass} mt-4 h-9`}
-                    onClick={() => setAttempt((current) => current + 1)}
+                    onClick={() => {
+                      setAttempt((current) => current + 1);
+                    }}
                     type="button"
                   >
                     <ArrowClockwise size={15} weight="bold" />
@@ -401,7 +406,9 @@ export function PreviewOverlay({
             endings={document?.endings ?? []}
             onDevice={setDevice}
             onScheme={setScheme}
-            onStage={(next, endingId) => setStage({ stage: next, endingId })}
+            onStage={(next, endingId) => {
+              setStage({ stage: next, endingId });
+            }}
             scheme={scheme}
             stage={stage.stage}
           />
@@ -421,7 +428,9 @@ export function PreviewOverlay({
         document={document}
         endingId={stage.endingId}
         focusFieldId={focusFieldId}
-        onStage={(next) => setStage((current) => ({ ...current, stage: next }))}
+        onStage={(next) => {
+          setStage((current) => ({ ...current, stage: next }));
+        }}
         scheme={scheme}
         slug={slug}
         stage={stage.stage}

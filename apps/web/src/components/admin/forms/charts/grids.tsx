@@ -74,7 +74,7 @@ export function WeekHourHeatmap({
                 const count = grid.get(`${weekday}:${hour}`) ?? 0;
                 const x = left + hour * cell;
                 const y = row * cell;
-                const tip = () =>
+                const tip = () => {
                   show({
                     x: x + cell / 2,
                     y,
@@ -88,6 +88,7 @@ export function WeekHourHeatmap({
                       </>
                     ),
                   });
+                };
                 return (
                   <rect
                     fill={rampColor(count / max)}
@@ -289,7 +290,10 @@ export function ScatterPlot({
         best = index;
       }
     });
-    if (best < 0) return hide();
+    if (best < 0) {
+      hide();
+      return;
+    }
     const point = drawn[best];
     show({
       x: sx(point.x),

@@ -112,7 +112,9 @@ export function FileChips({
               event.stopPropagation();
               onOpen(files, index);
             }}
-            onDoubleClick={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+            }}
             title={file.name}
             type="button"
           >
@@ -136,7 +138,9 @@ export function FileChips({
               event.stopPropagation();
               onOpen(files, index);
             }}
-            onDoubleClick={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+            }}
             title={`${file.name} · ${formatBytes(file.size)}`}
             type="button"
           >
@@ -430,7 +434,9 @@ export function CellView({
         <a
           className="truncate text-brand-blue hover:underline"
           href={`mailto:${String(value)}`}
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
         >
           {String(value)}
         </a>
@@ -440,7 +446,9 @@ export function CellView({
         <a
           className="truncate tabular-nums text-brand-blue hover:underline"
           href={`tel:${String(value).replace(/[^\d+]/g, "")}`}
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
         >
           {String(value)}
         </a>
@@ -451,7 +459,9 @@ export function CellView({
         <a
           className="truncate text-brand-blue hover:underline"
           href={href}
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
           rel="noreferrer noopener"
           target="_blank"
         >

@@ -122,7 +122,9 @@ export function useSize<T extends HTMLElement>(initialWidth = 600) {
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
   return [ref, size] as const;
 }
@@ -135,8 +137,14 @@ export function useReveal(key: unknown = null) {
   const motion = useMotionPreference();
   const [revealed, setRevealed] = useState<unknown>(Symbol.for("unrevealed"));
   useEffect(() => {
-    const frame = requestAnimationFrame(() => requestAnimationFrame(() => setRevealed(key)));
-    return () => cancelAnimationFrame(frame);
+    const frame = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        setRevealed(key);
+      }),
+    );
+    return () => {
+      cancelAnimationFrame(frame);
+    };
   }, [key]);
   return !motion || revealed === key;
 }
@@ -159,7 +167,13 @@ export type TooltipState = { x: number; y: number; content: ReactNode } | null;
 
 export function useTooltip() {
   const [tooltip, setTooltip] = useState<TooltipState>(null);
-  return { tooltip, show: setTooltip, hide: () => setTooltip(null) };
+  return {
+    tooltip,
+    show: setTooltip,
+    hide: () => {
+      setTooltip(null);
+    },
+  };
 }
 
 /** A tooltip positioned inside a `relative` chart box, kept within its width. */
@@ -300,7 +314,9 @@ export function ChartCard({
             <button
               aria-pressed={asTable}
               className="h-7 rounded-lg border border-[#e4e8f0] px-2 text-[11px] font-semibold text-[#5c6679] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
-              onClick={() => setAsTable((value) => !value)}
+              onClick={() => {
+                setAsTable((value) => !value);
+              }}
               type="button"
             >
               {asTable ? "Chart" : "Table"}

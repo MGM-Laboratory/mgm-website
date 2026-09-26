@@ -53,8 +53,9 @@ export function WelcomeInspector({
   readOnly: boolean;
 }) {
   const welcome = document.welcome;
-  const update = (patch: Partial<FormWelcome>, coalesce?: string) =>
+  const update = (patch: Partial<FormWelcome>, coalesce?: string) => {
     change((current) => ({ ...current, welcome: { ...current.welcome, ...patch } }), coalesce);
+  };
   return (
     <fieldset className="min-w-0" disabled={readOnly}>
       <Header
@@ -67,7 +68,9 @@ export function WelcomeInspector({
           checked={welcome.enabled}
           description="Off: the form opens straight on the first question."
           label="Show a welcome screen"
-          onChange={(enabled) => update({ enabled })}
+          onChange={(enabled) => {
+            update({ enabled });
+          }}
           size="sm"
         />
         <label className="block">
@@ -75,9 +78,9 @@ export function WelcomeInspector({
           <input
             className={smallInputClass}
             maxLength={80}
-            onChange={(event) =>
-              update({ eyebrow: event.target.value || undefined }, "welcome.eyebrow")
-            }
+            onChange={(event) => {
+              update({ eyebrow: event.target.value || undefined }, "welcome.eyebrow");
+            }}
             placeholder="e.g. MGM Laboratory · 2026"
             value={welcome.eyebrow ?? ""}
           />
@@ -87,7 +90,9 @@ export function WelcomeInspector({
           <input
             className={smallInputClass}
             maxLength={200}
-            onChange={(event) => update({ title: event.target.value }, "welcome.title")}
+            onChange={(event) => {
+              update({ title: event.target.value }, "welcome.title");
+            }}
             placeholder={document.title}
             value={welcome.title}
           />
@@ -97,7 +102,9 @@ export function WelcomeInspector({
           <RichTextEditor
             label="Welcome text"
             minHeight={110}
-            onChange={(body) => update({ body }, "welcome.body")}
+            onChange={(body) => {
+              update({ body }, "welcome.body");
+            }}
             placeholder="What is this form for, and what happens next?"
             value={welcome.body}
           />
@@ -107,7 +114,9 @@ export function WelcomeInspector({
           <input
             className={smallInputClass}
             maxLength={40}
-            onChange={(event) => update({ buttonLabel: event.target.value }, "welcome.button")}
+            onChange={(event) => {
+              update({ buttonLabel: event.target.value }, "welcome.button");
+            }}
             placeholder="Start"
             value={welcome.buttonLabel}
           />
@@ -115,13 +124,17 @@ export function WelcomeInspector({
         <Switch
           checked={welcome.showDuration}
           label="Show “takes about N minutes”"
-          onChange={(showDuration) => update({ showDuration })}
+          onChange={(showDuration) => {
+            update({ showDuration });
+          }}
           size="sm"
         />
         <Switch
           checked={welcome.showQuestionCount}
           label="Show the number of questions"
-          onChange={(showQuestionCount) => update({ showQuestionCount })}
+          onChange={(showQuestionCount) => {
+            update({ showQuestionCount });
+          }}
           size="sm"
         />
       </Section>
@@ -130,7 +143,9 @@ export function WelcomeInspector({
           focal
           formId={formId}
           label="Welcome media"
-          onChange={(media) => update({ media })}
+          onChange={(media) => {
+            update({ media });
+          }}
           value={welcome.media}
         />
       </Section>
@@ -163,8 +178,9 @@ export function EndingInspector({
   const index = document.endings.findIndex((item) => item.id === ending.id);
   const defaultIndex = document.endings.findIndex((item) => !item.when?.rules.length);
   const isDefault = index === defaultIndex;
-  const update = (patch: Partial<FormEnding>, coalesce?: string) =>
+  const update = (patch: Partial<FormEnding>, coalesce?: string) => {
     change((current) => patchEnding(current, ending.id, patch), coalesce);
+  };
   const buttonError = urlError(ending.buttonUrl);
   const redirectError = urlError(ending.redirectUrl);
 
@@ -185,7 +201,9 @@ export function EndingInspector({
         <button
           className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-[#5d687d] hover:bg-[#eef1f7] disabled:opacity-30 dark:text-white/55 dark:hover:bg-white/[0.07]"
           disabled={index === 0}
-          onClick={() => change((current) => moveEnding(current, ending.id, -1))}
+          onClick={() => {
+            change((current) => moveEnding(current, ending.id, -1));
+          }}
           type="button"
         >
           <ArrowUp size={13} /> Earlier
@@ -193,7 +211,9 @@ export function EndingInspector({
         <button
           className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-[#5d687d] hover:bg-[#eef1f7] disabled:opacity-30 dark:text-white/55 dark:hover:bg-white/[0.07]"
           disabled={index === document.endings.length - 1}
-          onClick={() => change((current) => moveEnding(current, ending.id, 1))}
+          onClick={() => {
+            change((current) => moveEnding(current, ending.id, 1));
+          }}
           type="button"
         >
           <ArrowDown size={13} /> Later
@@ -219,7 +239,9 @@ export function EndingInspector({
           <input
             className={smallInputClass}
             maxLength={200}
-            onChange={(event) => update({ title: event.target.value }, `${ending.id}:title`)}
+            onChange={(event) => {
+              update({ title: event.target.value }, `${ending.id}:title`);
+            }}
             placeholder="Thank you"
             value={ending.title}
           />
@@ -229,7 +251,9 @@ export function EndingInspector({
           <RichTextEditor
             label="Ending text"
             minHeight={110}
-            onChange={(body) => update({ body }, `${ending.id}:body`)}
+            onChange={(body) => {
+              update({ body }, `${ending.id}:body`);
+            }}
             placeholder="What happens next?"
             value={ending.body}
           />
@@ -237,7 +261,9 @@ export function EndingInspector({
         <MediaPicker
           formId={formId}
           label="Ending media"
-          onChange={(media) => update({ media })}
+          onChange={(media) => {
+            update({ media });
+          }}
           value={ending.media}
         />
         <Switch
@@ -248,19 +274,25 @@ export function EndingInspector({
               : "Turn scoring on in Logic or Settings first."
           }
           label="Show the score"
-          onChange={(showScore) => update({ showScore })}
+          onChange={(showScore) => {
+            update({ showScore });
+          }}
           size="sm"
         />
         <Switch
           checked={ending.showShare}
           label="Show share buttons"
-          onChange={(showShare) => update({ showShare })}
+          onChange={(showShare) => {
+            update({ showShare });
+          }}
           size="sm"
         />
         <Switch
           checked={ending.allowAnother}
           label="Offer “Submit another response”"
-          onChange={(allowAnother) => update({ allowAnother })}
+          onChange={(allowAnother) => {
+            update({ allowAnother });
+          }}
           size="sm"
         />
       </Section>
@@ -271,9 +303,12 @@ export function EndingInspector({
             <input
               className={smallInputClass}
               maxLength={40}
-              onChange={(event) =>
-                update({ buttonLabel: event.target.value || undefined }, `${ending.id}:buttonLabel`)
-              }
+              onChange={(event) => {
+                update(
+                  { buttonLabel: event.target.value || undefined },
+                  `${ending.id}:buttonLabel`,
+                );
+              }}
               placeholder="Back to the site"
               value={ending.buttonLabel ?? ""}
             />
@@ -284,12 +319,12 @@ export function EndingInspector({
               aria-invalid={Boolean(buttonError) || undefined}
               className={smallInputClass}
               maxLength={2000}
-              onChange={(event) =>
+              onChange={(event) => {
                 update(
                   { buttonUrl: event.target.value.trim() || undefined },
                   `${ending.id}:buttonUrl`,
-                )
-              }
+                );
+              }}
               placeholder="https:// or /path"
               value={ending.buttonUrl ?? ""}
             />
@@ -307,12 +342,12 @@ export function EndingInspector({
               aria-invalid={Boolean(redirectError) || undefined}
               className={smallInputClass}
               maxLength={2000}
-              onChange={(event) =>
+              onChange={(event) => {
                 update(
                   { redirectUrl: event.target.value.trim() || undefined },
                   `${ending.id}:redirect`,
-                )
-              }
+                );
+              }}
               placeholder="Optional"
               value={ending.redirectUrl ?? ""}
             />
@@ -322,7 +357,7 @@ export function EndingInspector({
             <NumberInput
               max={60}
               min={0}
-              onChange={(value) =>
+              onChange={(value) => {
                 update(
                   {
                     redirectDelaySeconds:
@@ -331,8 +366,8 @@ export function EndingInspector({
                         : Math.min(60, Math.max(0, Math.round(value))),
                   },
                   `${ending.id}:delay`,
-                )
-              }
+                );
+              }}
               placeholder="5"
               value={ending.redirectDelaySeconds}
             />
@@ -353,7 +388,9 @@ export function EndingInspector({
           document={document}
           emptyHint="No rules: this can be the default ending."
           label="Show this ending when"
-          onChange={(when) => update({ when })}
+          onChange={(when) => {
+            update({ when });
+          }}
           readOnly={readOnly}
           value={ending.when}
         />
@@ -384,9 +421,9 @@ export function FormInspector({
           <input
             className={smallInputClass}
             maxLength={200}
-            onChange={(event) =>
-              change((current) => ({ ...current, title: event.target.value }), "form.title")
-            }
+            onChange={(event) => {
+              change((current) => ({ ...current, title: event.target.value }), "form.title");
+            }}
             value={document.title}
           />
         </label>
@@ -395,9 +432,9 @@ export function FormInspector({
           <RichTextEditor
             label="Form description"
             minHeight={90}
-            onChange={(description) =>
-              change((current) => ({ ...current, description }), "form.description")
-            }
+            onChange={(description) => {
+              change((current) => ({ ...current, description }), "form.description");
+            }}
             placeholder="Shown above the questions in the classic layout"
             value={document.description}
           />

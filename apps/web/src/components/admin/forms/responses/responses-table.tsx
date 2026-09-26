@@ -85,24 +85,28 @@ export function ResponsesTable(props: Props) {
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (!element) return;
-    const measure = () => setViewport({ top: element.scrollTop, height: element.clientHeight });
+    const measure = () => {
+      setViewport({ top: element.scrollTop, height: element.clientHeight });
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   const onScroll = useCallback(() => {
     const element = scrollRef.current;
     if (!element) return;
     // One state update per frame at most.
-    requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
       setViewport((current) =>
         current.top === element.scrollTop
           ? current
           : { top: element.scrollTop, height: element.clientHeight },
-      ),
-    );
+      );
+    });
   }, []);
 
   const start = Math.max(0, Math.floor(viewport.top / rowHeight) - OVERSCAN);
@@ -215,7 +219,9 @@ export function ResponsesTable(props: Props) {
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node)) setFocused(false);
       }}
-      onFocus={() => setFocused(true)}
+      onFocus={() => {
+        setFocused(true);
+      }}
       onKeyDown={onKeyDown}
       onScroll={onScroll}
       ref={scrollRef}
@@ -278,7 +284,9 @@ export function ResponsesTable(props: Props) {
               isActiveRow={props.activeRowId === row.id}
               isEdgeKey={pinnedEdge?.column.key ?? null}
               key={row.id}
-              onCancelEdit={() => setEditing(null)}
+              onCancelEdit={() => {
+                setEditing(null);
+              }}
               onCellClick={(col) => {
                 setActive({ row: index, col });
                 if (clickTimer.current) window.clearTimeout(clickTimer.current);
@@ -301,7 +309,9 @@ export function ResponsesTable(props: Props) {
                 scrollRef.current?.focus();
               }}
               onOpenFile={props.onOpenFile}
-              onToggle={(shift) => props.onToggleRow(row.id, index, shift)}
+              onToggle={(shift) => {
+                props.onToggleRow(row.id, index, shift);
+              }}
               row={row}
               rowHeight={rowHeight}
               selected={selected.has(row.id)}
@@ -349,7 +359,9 @@ function HeaderCell({
     >
       <button
         className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-3 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-[#687187] outline-none hover:text-[#171b25] focus-visible:bg-brand-blue-50 dark:text-white/45 dark:hover:text-white"
-        onClick={() => onSort(column.key)}
+        onClick={() => {
+          onSort(column.key);
+        }}
         title={`${column.label} · sort`}
         type="button"
       >
@@ -369,7 +381,9 @@ function HeaderCell({
       <button
         aria-label={`${column.label} options${filtered ? " (filtered)" : ""}`}
         className={`mr-1 inline-flex size-6 shrink-0 items-center justify-center rounded-md outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-brand-blue dark:hover:bg-white/10 ${filtered ? "bg-brand-blue text-white hover:bg-brand-blue" : "text-[#8a93a6] opacity-60 group-hover:opacity-100"}`}
-        onClick={(event) => onMenu(column, event.currentTarget.getBoundingClientRect())}
+        onClick={(event) => {
+          onMenu(column, event.currentTarget.getBoundingClientRect());
+        }}
         type="button"
       >
         <CaretDown size={12} weight="bold" />
@@ -377,7 +391,9 @@ function HeaderCell({
       <span
         aria-hidden
         className="absolute top-0 right-[-3px] z-10 h-full w-[6px] cursor-col-resize touch-none hover:bg-brand-blue/40"
-        onDoubleClick={() => onResize(column.key, column.width)}
+        onDoubleClick={() => {
+          onResize(column.key, column.width);
+        }}
         onPointerDown={(event) => {
           event.preventDefault();
           resizeStart.current = { x: event.clientX, width };
@@ -504,8 +520,12 @@ const Row = memo(function Row({
             className={`relative flex shrink-0 items-center overflow-hidden border-r border-[#f0f2f6] px-3 text-[#252a36] dark:border-white/[0.04] dark:text-white/80 ${cell.pinned ? `sticky z-[5] ${base} group-hover/row:bg-[#f6f8fc] dark:group-hover/row:bg-[#181c24]` : ""} ${isEdgeKey === cell.column.key ? "shadow-[6px_0_8px_-6px_rgba(20,32,58,0.18)]" : ""} ${activeCol === col ? "ring-2 ring-inset ring-brand-blue" : ""} ${isEditing ? "overflow-visible z-30" : ""} ${editable ? "cursor-text" : "cursor-pointer"}`}
             id={`cell-${row.id}-${col}`}
             key={cell.column.key}
-            onClick={() => onCellClick(col)}
-            onDoubleClick={() => onCellDoubleClick(col)}
+            onClick={() => {
+              onCellClick(col);
+            }}
+            onDoubleClick={() => {
+              onCellDoubleClick(col);
+            }}
             role="gridcell"
             style={{
               width: cell.width,
@@ -516,15 +536,21 @@ const Row = memo(function Row({
             {isEditing ? (
               <div
                 className="absolute top-1 left-1 z-30"
-                onClick={(event) => event.stopPropagation()}
-                onDoubleClick={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                }}
                 style={{ minWidth: Math.max(cell.width - 8, 220) }}
               >
                 <AnswerEditor
                   answers={row.answers}
                   column={cell.column}
                   onCancel={onCancelEdit}
-                  onCommit={(value) => onCommitEdit(cell.column, value)}
+                  onCommit={(value) => {
+                    onCommitEdit(cell.column, value);
+                  }}
                 />
               </div>
             ) : (

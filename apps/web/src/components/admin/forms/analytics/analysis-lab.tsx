@@ -130,7 +130,9 @@ function ColumnSelect({
       <span className={`${statLabel} mb-1 block`}>{label}</span>
       <select
         className={selectClass}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         value={value}
       >
         {allowNone ? <option value="">{allowNone}</option> : null}
@@ -258,7 +260,9 @@ function Crosstab({ categorical, rows }: { categorical: DataColumn[]; rows: Work
           <span className={`${statLabel} mb-1 block`}>Show</span>
           <select
             className={selectClass}
-            onChange={(event) => setMode(event.target.value as typeof mode)}
+            onChange={(event) => {
+              setMode(event.target.value as typeof mode);
+            }}
             value={mode}
           >
             <option value="count">Counts</option>
@@ -427,7 +431,9 @@ function NumericExplorer({ numeric, rows }: { numeric: DataColumn[]; rows: Worki
             className="mt-2 w-40 accent-brand-blue"
             max={40}
             min={2}
-            onChange={(event) => setBins(Number(event.target.value))}
+            onChange={(event) => {
+              setBins(Number(event.target.value));
+            }}
             type="range"
             value={binCount}
           />
@@ -660,7 +666,9 @@ function Correlations({
             aria-pressed={method === item}
             className={`h-8 rounded-full px-3 text-xs font-semibold capitalize ${method === item ? "bg-[#171b25] text-white dark:bg-white dark:text-[#171b25]" : "border border-[#d9dfeb] text-[#5c6679] dark:border-white/10 dark:text-white/60"}`}
             key={item}
-            onClick={() => setMethod(item)}
+            onClick={() => {
+              setMethod(item);
+            }}
             type="button"
           >
             {item}
@@ -807,7 +815,13 @@ export function AnalysisLab({
           testId="lab-correlation"
           title="Correlation matrix"
         >
-          <Correlations numeric={numeric} onPick={(x, y) => setScatterPick([x, y])} rows={rows} />
+          <Correlations
+            numeric={numeric}
+            onPick={(x, y) => {
+              setScatterPick([x, y]);
+            }}
+            rows={rows}
+          />
         </ChartCard>
         <ChartCard
           subtitle="Two numbers against each other, with a least-squares line"

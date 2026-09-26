@@ -111,7 +111,9 @@ export function BarList({
       {rows.length > limit ? (
         <button
           className="mt-3 text-xs font-semibold text-brand-blue hover:underline"
-          onClick={() => setExpanded((value) => !value)}
+          onClick={() => {
+            setExpanded((value) => !value);
+          }}
           type="button"
         >
           {expanded ? "Show fewer" : `Show all ${rows.length}`}
@@ -255,7 +257,9 @@ export function ColumnChart({
             barHeight > 0
               ? `M${x0},${y0 + barHeight}V${y0 + radius}Q${x0},${y0} ${x0 + radius},${y0}H${x0 + barWidth - radius}Q${x0 + barWidth},${y0} ${x0 + barWidth},${y0 + radius}V${y0 + barHeight}Z`
               : "";
-          const tip = () => tipFor(index);
+          const tip = () => {
+            tipFor(index);
+          };
           return (
             <g key={item.key}>
               {d ? (
@@ -472,7 +476,7 @@ export function Donut({
                     cy={size / 2}
                     fill="none"
                     key={segment.key}
-                    onPointerEnter={() =>
+                    onPointerEnter={() => {
                       show({
                         x: size / 2,
                         y: 10,
@@ -483,8 +487,8 @@ export function Donut({
                             value={`${formatCount(segment.value)} · ${formatPercent(segment.value / total)}`}
                           />
                         ),
-                      })
-                    }
+                      });
+                    }}
                     onPointerLeave={hide}
                     r={radius}
                     stroke={segment.color}

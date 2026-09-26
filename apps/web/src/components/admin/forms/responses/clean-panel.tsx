@@ -59,12 +59,14 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
   const changedCells = changes.reduce((total, change) => total + change.cells, 0);
   const statsById = new Map(result.steps.map((step) => [step.id, step]));
 
-  const update = (id: string, patch: Partial<CleanStep>) =>
+  const update = (id: string, patch: Partial<CleanStep>) => {
     setPipeline(form.id, (current) =>
       current.map((step) => (step.id === id ? ({ ...step, ...patch } as CleanStep) : step)),
     );
-  const remove = (id: string) =>
+  };
+  const remove = (id: string) => {
     setPipeline(form.id, (current) => current.filter((step) => step.id !== id));
+  };
   const add = (kind: CleanStepKind) => {
     const step = newStep(kind);
     setPipeline(form.id, (current) => [...current, step]);
@@ -158,13 +160,13 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
           as="ol"
           axis="y"
           className="space-y-2"
-          onReorder={(order: string[]) =>
+          onReorder={(order: string[]) => {
             setPipeline(form.id, (current) =>
               order
                 .map((id) => current.find((step) => step.id === id))
                 .filter((step): step is CleanStep => Boolean(step)),
-            )
-          }
+            );
+          }}
           values={steps.map((step) => step.id)}
         >
           {steps.map((step, index) => (
@@ -175,9 +177,15 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
               form={form}
               index={index}
               key={step.id}
-              onRemove={() => remove(step.id)}
-              onToggleOpen={() => setOpen((current) => (current === step.id ? null : step.id))}
-              onUpdate={(patch) => update(step.id, patch)}
+              onRemove={() => {
+                remove(step.id);
+              }}
+              onToggleOpen={() => {
+                setOpen((current) => (current === step.id ? null : step.id));
+              }}
+              onUpdate={(patch) => {
+                update(step.id, patch);
+              }}
               result={result}
               stats={statsById.get(step.id)}
               step={step}
@@ -188,7 +196,9 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
         <div className="relative mt-3">
           <button
             className={`${ghostButton} w-full justify-center`}
-            onClick={() => setAdding((value) => !value)}
+            onClick={() => {
+              setAdding((value) => !value);
+            }}
             type="button"
           >
             <Plus size={14} weight="bold" /> Add a step
@@ -199,7 +209,9 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
                 <button
                   className="rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-[#3b4150] hover:bg-brand-blue-50 hover:text-brand-blue dark:text-white/70 dark:hover:bg-white/5"
                   key={kind}
-                  onClick={() => add(kind)}
+                  onClick={() => {
+                    add(kind);
+                  }}
                   type="button"
                 >
                   {STEP_LABELS[kind]}
@@ -232,7 +244,13 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
               nor deleted, and computed or split columns stay virtual. It can&apos;t be undone.
             </p>
             <div className="flex gap-2">
-              <button className={ghostButton} onClick={() => setConfirming(false)} type="button">
+              <button
+                className={ghostButton}
+                onClick={() => {
+                  setConfirming(false);
+                }}
+                type="button"
+              >
                 Cancel
               </button>
               <button
@@ -253,7 +271,9 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
               <button
                 className={primaryButton}
                 disabled={!changedCells}
-                onClick={() => setConfirming(true)}
+                onClick={() => {
+                  setConfirming(true);
+                }}
                 type="button"
               >
                 Apply permanently
@@ -318,7 +338,9 @@ function StepCard({
         <span
           aria-hidden
           className="cursor-grab touch-none rounded p-1 text-[#9ba4b5] hover:bg-[#f4f6fa] dark:hover:bg-white/10"
-          onPointerDown={(event) => controls.start(event)}
+          onPointerDown={(event) => {
+            controls.start(event);
+          }}
         >
           <DotsSixVertical size={14} weight="bold" />
         </span>
@@ -346,7 +368,9 @@ function StepCard({
           aria-checked={step.enabled}
           aria-label={step.enabled ? "Turn step off" : "Turn step on"}
           className={`relative h-5 w-9 shrink-0 rounded-full transition ${step.enabled ? "bg-brand-blue" : "bg-[#d6dbe6] dark:bg-white/15"}`}
-          onClick={() => onUpdate({ enabled: !step.enabled })}
+          onClick={() => {
+            onUpdate({ enabled: !step.enabled });
+          }}
           role="switch"
           type="button"
         >
@@ -403,7 +427,9 @@ function ColumnPicker({
           <input
             checked={value === "all"}
             className="size-3.5 accent-brand-blue"
-            onChange={(event) => onChange(event.target.checked ? "all" : [])}
+            onChange={(event) => {
+              onChange(event.target.checked ? "all" : []);
+            }}
             type="checkbox"
           />
           Every text column
@@ -450,7 +476,9 @@ function SingleColumn({
       <span className={`${labelClass} mb-1 block`}>{label}</span>
       <select
         className={inputClass}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         value={value}
       >
         <option value="">Choose…</option>
@@ -516,7 +544,9 @@ function FormulaInput({
       <textarea
         aria-invalid={compiled ? !compiled.ok : undefined}
         className={`${inputClass} h-auto min-h-16 py-2 font-mono text-xs`}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         placeholder={placeholder}
         spellCheck={false}
         value={value}
@@ -553,7 +583,9 @@ function FormulaInput({
             <button
               className="rounded-md border border-[#e4e8f0] px-1.5 py-0.5 font-mono text-[10px] text-[#5c6679] hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
               key={column.key}
-              onClick={() => onChange(`${value}{${column.label}}`)}
+              onClick={() => {
+                onChange(`${value}{${column.label}}`);
+              }}
               type="button"
             >
               {`{${column.label.length > 18 ? column.label.slice(0, 17) + "…" : column.label}}`}
@@ -584,7 +616,9 @@ function StepEditor({
       return (
         <ColumnPicker
           columns={textColumns}
-          onChange={(value) => onUpdate({ columns: value })}
+          onChange={(value) => {
+            onUpdate({ columns: value });
+          }}
           value={step.columns}
         />
       );
@@ -595,7 +629,9 @@ function StepEditor({
             <span className={`${labelClass} mb-1 block`}>Case</span>
             <select
               className={inputClass}
-              onChange={(event) => onUpdate({ mode: event.target.value as typeof step.mode })}
+              onChange={(event) => {
+                onUpdate({ mode: event.target.value as typeof step.mode });
+              }}
               value={step.mode}
             >
               <option value="lower">lower case</option>
@@ -607,7 +643,9 @@ function StepEditor({
           <ColumnPicker
             allowAll
             columns={textColumns}
-            onChange={(value) => onUpdate({ columns: value })}
+            onChange={(value) => {
+              onUpdate({ columns: value });
+            }}
             value={step.columns}
           />
         </>
@@ -621,7 +659,9 @@ function StepEditor({
               <input
                 className={`${inputClass} font-mono`}
                 maxLength={200}
-                onChange={(event) => onUpdate({ find: event.target.value })}
+                onChange={(event) => {
+                  onUpdate({ find: event.target.value });
+                }}
                 value={step.find}
               />
             </label>
@@ -629,7 +669,9 @@ function StepEditor({
               <span className={`${labelClass} mb-1 block`}>Replace with</span>
               <input
                 className={`${inputClass} font-mono`}
-                onChange={(event) => onUpdate({ replace: event.target.value })}
+                onChange={(event) => {
+                  onUpdate({ replace: event.target.value });
+                }}
                 value={step.replace}
               />
             </label>
@@ -645,7 +687,9 @@ function StepEditor({
                 <input
                   checked={step[key]}
                   className="size-3.5 accent-brand-blue"
-                  onChange={(event) => onUpdate({ [key]: event.target.checked })}
+                  onChange={(event) => {
+                    onUpdate({ [key]: event.target.checked });
+                  }}
                   type="checkbox"
                 />
                 {label}
@@ -654,7 +698,9 @@ function StepEditor({
           </div>
           <ColumnPicker
             columns={textColumns}
-            onChange={(value) => onUpdate({ columns: value })}
+            onChange={(value) => {
+              onUpdate({ columns: value });
+            }}
             value={step.columns}
           />
         </>
@@ -666,7 +712,9 @@ function StepEditor({
             <span className={`${labelClass} mb-1 block`}>Fill empty cells with</span>
             <input
               className={inputClass}
-              onChange={(event) => onUpdate({ value: event.target.value })}
+              onChange={(event) => {
+                onUpdate({ value: event.target.value });
+              }}
               placeholder="e.g. Unknown, 0"
               value={step.value}
             />
@@ -681,7 +729,9 @@ function StepEditor({
                   column.valueType === "date" ||
                   column.group === "extra"),
             )}
-            onChange={(value) => onUpdate({ columns: value })}
+            onChange={(value) => {
+              onUpdate({ columns: value });
+            }}
             value={step.columns}
           />
         </>
@@ -696,14 +746,18 @@ function StepEditor({
           <ColumnPicker
             allowAll={false}
             columns={columns.filter((column) => column.group !== "meta" || column.key === "$ip")}
-            onChange={(value) => onUpdate({ columns: value === "all" ? [] : value })}
+            onChange={(value) => {
+              onUpdate({ columns: value === "all" ? [] : value });
+            }}
             value={step.columns}
           />
           <label className="block">
             <span className={`${labelClass} mb-1 block`}>Keep</span>
             <select
               className={inputClass}
-              onChange={(event) => onUpdate({ keep: event.target.value as "first" | "last" })}
+              onChange={(event) => {
+                onUpdate({ keep: event.target.value as "first" | "last" });
+              }}
               value={step.keep}
             >
               <option value="first">The newest (first in the list)</option>
@@ -722,7 +776,9 @@ function StepEditor({
             <span className={`${labelClass} mb-1 block`}>Exclude</span>
             <select
               className={inputClass}
-              onChange={(event) => onUpdate({ what: event.target.value as typeof step.what })}
+              onChange={(event) => {
+                onUpdate({ what: event.target.value as typeof step.what });
+              }}
               value={step.what}
             >
               <option value="spam">Spam</option>
@@ -734,7 +790,9 @@ function StepEditor({
           {step.what === "condition" ? (
             <FormulaInput
               columns={columns}
-              onChange={(formula) => onUpdate({ formula })}
+              onChange={(formula) => {
+                onUpdate({ formula });
+              }}
               placeholder='{Age} < 18 or contains({Email}, "test")'
               rows={result.rows}
               value={step.formula ?? ""}
@@ -749,7 +807,9 @@ function StepEditor({
             columns={columns.filter(
               (column) => column.group !== "meta" || column.valueType === "text",
             )}
-            onChange={(column) => onUpdate({ column })}
+            onChange={(column) => {
+              onUpdate({ column });
+            }}
             value={step.column}
           />
           <div className="grid grid-cols-2 gap-2">
@@ -757,7 +817,9 @@ function StepEditor({
               <span className={`${labelClass} mb-1 block`}>Delimiter</span>
               <input
                 className={`${inputClass} font-mono`}
-                onChange={(event) => onUpdate({ delimiter: event.target.value })}
+                onChange={(event) => {
+                  onUpdate({ delimiter: event.target.value });
+                }}
                 value={step.delimiter}
               />
             </label>
@@ -767,7 +829,9 @@ function StepEditor({
                 className={inputClass}
                 max={10}
                 min={2}
-                onChange={(event) => onUpdate({ maxParts: Number(event.target.value) })}
+                onChange={(event) => {
+                  onUpdate({ maxParts: Number(event.target.value) });
+                }}
                 type="number"
                 value={step.maxParts}
               />
@@ -782,13 +846,17 @@ function StepEditor({
             <span className={`${labelClass} mb-1 block`}>Column name</span>
             <input
               className={inputClass}
-              onChange={(event) => onUpdate({ name: event.target.value })}
+              onChange={(event) => {
+                onUpdate({ name: event.target.value });
+              }}
               value={step.name}
             />
           </label>
           <FormulaInput
             columns={columns}
-            onChange={(formula) => onUpdate({ formula })}
+            onChange={(formula) => {
+              onUpdate({ formula });
+            }}
             placeholder='if({Score} >= 8, "high", "low")'
             rows={result.rows}
             value={step.formula}
@@ -822,7 +890,9 @@ function StandardizeEditor({
     <>
       <SingleColumn
         columns={columns}
-        onChange={(key) => onUpdate({ column: key, mappings: [] })}
+        onChange={(key) => {
+          onUpdate({ column: key, mappings: [] });
+        }}
         value={step.column}
       />
       {step.mappings.length ? (
@@ -839,7 +909,7 @@ function StandardizeEditor({
                     <button
                       aria-label={`Keep ${value} as it is`}
                       className="rounded-full p-0.5 hover:text-brand-red"
-                      onClick={() =>
+                      onClick={() => {
                         onUpdate({
                           mappings: step.mappings
                             .map((item, i) =>
@@ -848,8 +918,8 @@ function StandardizeEditor({
                                 : item,
                             )
                             .filter((item) => item.from.length),
-                        })
-                      }
+                        });
+                      }}
                       type="button"
                     >
                       <X size={9} weight="bold" />
@@ -861,21 +931,21 @@ function StandardizeEditor({
                 <span className="shrink-0 text-[#8a93a6]">becomes</span>
                 <input
                   className={`${inputClass} h-8`}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     onUpdate({
                       mappings: step.mappings.map((item, i) =>
                         i === index ? { ...item, to: event.target.value } : item,
                       ),
-                    })
-                  }
+                    });
+                  }}
                   value={mapping.to}
                 />
                 <button
                   aria-label="Remove mapping"
                   className="shrink-0 rounded p-1 text-[#9ba4b5] hover:text-brand-red"
-                  onClick={() =>
-                    onUpdate({ mappings: step.mappings.filter((_, i) => i !== index) })
-                  }
+                  onClick={() => {
+                    onUpdate({ mappings: step.mappings.filter((_, i) => i !== index) });
+                  }}
                   type="button"
                 >
                   <Trash size={12} />
@@ -898,11 +968,11 @@ function StandardizeEditor({
                   </span>
                   <button
                     className="shrink-0 rounded-lg px-2 py-0.5 font-semibold text-brand-blue hover:bg-brand-blue-50"
-                    onClick={() =>
+                    onClick={() => {
                       onUpdate({
                         mappings: [...step.mappings, { from: suggestion.from, to: suggestion.to }],
-                      })
-                    }
+                      });
+                    }}
                     type="button"
                   >
                     Use
@@ -913,14 +983,14 @@ function StandardizeEditor({
             {fresh.length > 1 ? (
               <button
                 className="mt-1.5 text-xs font-semibold text-brand-blue hover:underline"
-                onClick={() =>
+                onClick={() => {
                   onUpdate({
                     mappings: [
                       ...step.mappings,
                       ...fresh.map((suggestion) => ({ from: suggestion.from, to: suggestion.to })),
                     ],
-                  })
-                }
+                  });
+                }}
                 type="button"
               >
                 Use all {fresh.length}
@@ -936,7 +1006,9 @@ function StandardizeEditor({
       <button
         className="text-xs font-semibold text-brand-blue hover:underline"
         disabled={!column}
-        onClick={() => onUpdate({ mappings: [...step.mappings, { from: [], to: "" }] })}
+        onClick={() => {
+          onUpdate({ mappings: [...step.mappings, { from: [], to: "" }] });
+        }}
         type="button"
       >
         + Add a mapping by hand
@@ -978,13 +1050,13 @@ function ManualVariants({
           <button
             className="rounded-full border border-[#e4e8f0] px-2 py-0.5 text-[11px] hover:border-brand-blue dark:border-white/10"
             key={value}
-            onClick={() =>
+            onClick={() => {
               onUpdate({
                 mappings: step.mappings.map((item, i) =>
                   i === index ? { from: [value], to: item.to || value } : item,
                 ),
-              })
-            }
+              });
+            }}
             type="button"
           >
             {value} <span className="text-[#9ba4b5]">{count}</span>

@@ -131,7 +131,9 @@ function ToolButton({
       disabled={disabled}
       onClick={onClick}
       // Keep the editor's selection when a toolbar button is pressed.
-      onMouseDown={(event) => event.preventDefault()}
+      onMouseDown={(event) => {
+        event.preventDefault();
+      }}
       tabIndex={-1}
       title={shortcut ? `${label} (${mod(shortcut)})` : label}
       type="button"
@@ -212,7 +214,9 @@ function ColorPopover({
           aria-label={kind === "highlight" ? "No highlight" : "Default colour"}
           aria-pressed={current === null}
           className={`grid size-8 place-items-center rounded-lg border text-[11px] font-bold transition max-sm:size-10 ${current === null ? "border-brand-blue ring-2 ring-brand-blue/30" : "border-[#dfe4ee] hover:border-brand-blue/50 dark:border-white/15"} text-[#5d687d] dark:text-white/60`}
-          onClick={() => onChoose(null)}
+          onClick={() => {
+            onChoose(null);
+          }}
           title={kind === "highlight" ? "No highlight" : "Default"}
           type="button"
         >
@@ -226,7 +230,9 @@ function ColorPopover({
             aria-pressed={current === token}
             className={`grid size-8 place-items-center rounded-lg border transition max-sm:size-10 ${current === token ? "border-brand-blue ring-2 ring-brand-blue/30" : "border-[#dfe4ee] hover:border-brand-blue/50 dark:border-white/15"}`}
             key={token}
-            onClick={() => onChoose(token)}
+            onClick={() => {
+              onChoose(token);
+            }}
             title={COLOR_NAMES[token]}
             type="button"
           >
@@ -287,7 +293,9 @@ function LinkPopover({
           aria-invalid={touched && !valid}
           className={smallInputClass}
           id={inputId}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
@@ -586,7 +594,10 @@ function Toolbar({
           active={state.link}
           expanded={linkOpen}
           label={state.link ? "Edit link" : "Add link"}
-          onClick={() => (linkOpen ? setLinkOpen(false) : onOpenLink())}
+          onClick={() => {
+            if (linkOpen) setLinkOpen(false);
+            else onOpenLink();
+          }}
           shortcut="Mod+K"
         >
           <LinkSimple size={16} weight="bold" />
@@ -630,7 +641,9 @@ function Toolbar({
           active={state.highlight !== null}
           expanded={colorOpen === "highlight"}
           label="Highlight"
-          onClick={() => setColorOpen((open) => (open === "highlight" ? null : "highlight"))}
+          onClick={() => {
+            setColorOpen((open) => (open === "highlight" ? null : "highlight"));
+          }}
         >
           <Highlighter size={16} weight="bold" />
         </ToolButton>
@@ -648,7 +661,9 @@ function Toolbar({
               // The popover took focus; hand it back once it has unmounted.
               window.requestAnimationFrame(() => editor.commands.focus());
             }}
-            onClose={() => setColorOpen(null)}
+            onClose={() => {
+              setColorOpen(null);
+            }}
           />
         ) : null}
       </div>
@@ -657,7 +672,9 @@ function Toolbar({
           active={state.color !== null}
           expanded={colorOpen === "text"}
           label="Text colour"
-          onClick={() => setColorOpen((open) => (open === "text" ? null : "text"))}
+          onClick={() => {
+            setColorOpen((open) => (open === "text" ? null : "text"));
+          }}
         >
           <span className="relative grid place-items-center">
             <TextAa size={16} weight="bold" />
@@ -678,7 +695,9 @@ function Toolbar({
               else chain().unsetColor().run();
               window.requestAnimationFrame(() => editor.commands.focus());
             }}
-            onClose={() => setColorOpen(null)}
+            onClose={() => {
+              setColorOpen(null);
+            }}
           />
         ) : null}
       </div>
@@ -798,7 +817,9 @@ export function RichTextEditor({
   });
 
   useEffect(() => {
-    openLinkRef.current = () => setLinkOpen(true);
+    openLinkRef.current = () => {
+      setLinkOpen(true);
+    };
   }, []);
 
   // Keep the editable's attributes current (label, invalid state).
@@ -840,7 +861,9 @@ export function RichTextEditor({
         <Toolbar
           editor={editor}
           linkOpen={linkOpen}
-          onOpenLink={() => setLinkOpen(true)}
+          onOpenLink={() => {
+            setLinkOpen(true);
+          }}
           setLinkOpen={setLinkOpen}
           variant={variant}
         />

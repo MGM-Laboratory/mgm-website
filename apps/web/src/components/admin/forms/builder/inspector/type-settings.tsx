@@ -71,9 +71,9 @@ function MaskEditor({ field, update }: { field: FormField; update: Update }) {
         <input
           className={`${smallInputClass} font-mono`}
           maxLength={120}
-          onChange={(event) =>
-            update({ pattern: event.target.value || undefined }, `${field.id}:pattern`)
-          }
+          onChange={(event) => {
+            update({ pattern: event.target.value || undefined }, `${field.id}:pattern`);
+          }}
           placeholder="e.g. AA-####"
           spellCheck={false}
           value={mask}
@@ -107,7 +107,9 @@ function MaskEditor({ field, update }: { field: FormField; update: Update }) {
               <input
                 aria-describedby={`${field.id}-mask-verdict`}
                 className={`${smallInputClass} pr-20`}
-                onChange={(event) => setSample(event.target.value)}
+                onChange={(event) => {
+                  setSample(event.target.value);
+                }}
                 placeholder="Type to test the mask"
                 value={sample}
               />
@@ -124,12 +126,12 @@ function MaskEditor({ field, update }: { field: FormField; update: Update }) {
             <input
               className={smallInputClass}
               maxLength={200}
-              onChange={(event) =>
+              onChange={(event) => {
                 update(
                   { patternMessage: event.target.value || undefined },
                   `${field.id}:patternMessage`,
-                )
-              }
+                );
+              }}
               placeholder="That answer doesn't match the expected format."
               value={field.patternMessage ?? ""}
             />
@@ -146,12 +148,12 @@ function LengthLimits({ field, update }: { field: FormField; update: Update }) {
       <Labeled label="Min characters">
         <NumberInput
           min={0}
-          onChange={(value) =>
+          onChange={(value) => {
             update(
               { minLength: value === undefined ? undefined : Math.max(0, Math.round(value)) },
               `${field.id}:minLength`,
-            )
-          }
+            );
+          }}
           placeholder="0"
           value={field.minLength}
         />
@@ -159,12 +161,12 @@ function LengthLimits({ field, update }: { field: FormField; update: Update }) {
       <Labeled label="Max characters">
         <NumberInput
           min={1}
-          onChange={(value) =>
+          onChange={(value) => {
             update(
               { maxLength: value === undefined ? undefined : Math.max(1, Math.round(value)) },
               `${field.id}:maxLength`,
-            )
-          }
+            );
+          }}
           placeholder={String(FORM_LIMITS.textAnswerMax)}
           value={field.maxLength}
         />
@@ -188,7 +190,9 @@ function MinMax({
     <Pair>
       <Labeled label={labels[0]}>
         <NumberInput
-          onChange={(value) => update({ min: value }, `${field.id}:min`)}
+          onChange={(value) => {
+            update({ min: value }, `${field.id}:min`);
+          }}
           placeholder={placeholders[0]}
           step="any"
           value={field.min}
@@ -196,7 +200,9 @@ function MinMax({
       </Labeled>
       <Labeled label={labels[1]}>
         <NumberInput
-          onChange={(value) => update({ max: value }, `${field.id}:max`)}
+          onChange={(value) => {
+            update({ max: value }, `${field.id}:max`);
+          }}
           placeholder={placeholders[1]}
           step="any"
           value={field.max}
@@ -221,9 +227,9 @@ function ScaleLabels({
         <input
           className={smallInputClass}
           maxLength={60}
-          onChange={(event) =>
-            update({ minLabel: event.target.value || undefined }, `${field.id}:minLabel`)
-          }
+          onChange={(event) => {
+            update({ minLabel: event.target.value || undefined }, `${field.id}:minLabel`);
+          }}
           value={field.minLabel ?? ""}
         />
       </Labeled>
@@ -232,9 +238,9 @@ function ScaleLabels({
           <input
             className={smallInputClass}
             maxLength={60}
-            onChange={(event) =>
-              update({ midLabel: event.target.value || undefined }, `${field.id}:midLabel`)
-            }
+            onChange={(event) => {
+              update({ midLabel: event.target.value || undefined }, `${field.id}:midLabel`);
+            }}
             value={field.midLabel ?? ""}
           />
         </Labeled>
@@ -243,9 +249,9 @@ function ScaleLabels({
         <input
           className={smallInputClass}
           maxLength={60}
-          onChange={(event) =>
-            update({ maxLabel: event.target.value || undefined }, `${field.id}:maxLabel`)
-          }
+          onChange={(event) => {
+            update({ maxLabel: event.target.value || undefined }, `${field.id}:maxLabel`);
+          }}
           value={field.maxLabel ?? ""}
         />
       </Labeled>
@@ -277,14 +283,14 @@ function ItemsEditor({
               aria-label={`${label} ${index + 1}`}
               className={`${smallInputClass} ${item.label.trim() ? "" : "border-brand-red/60"}`}
               maxLength={200}
-              onChange={(event) =>
+              onChange={(event) => {
                 onChange(
                   items.map((entry) =>
                     entry.id === item.id ? { ...entry, label: event.target.value } : entry,
                   ),
                   `${item.id}:label`,
-                )
-              }
+                );
+              }}
               onPaste={(event) => {
                 const lines = event.clipboardData
                   .getData("text")
@@ -308,7 +314,9 @@ function ItemsEditor({
               aria-label={`Remove ${item.label}`}
               className="grid size-8 shrink-0 place-items-center rounded-md text-[#8490a5] hover:bg-brand-red-50 hover:text-brand-red disabled:opacity-25"
               disabled={items.length <= 1}
-              onClick={() => onChange(items.filter((entry) => entry.id !== item.id))}
+              onClick={() => {
+                onChange(items.filter((entry) => entry.id !== item.id));
+              }}
               type="button"
             >
               <X size={13} weight="bold" />
@@ -319,7 +327,9 @@ function ItemsEditor({
       <button
         className="mt-1.5 inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-brand-blue hover:bg-brand-blue-50 disabled:opacity-40 dark:hover:bg-brand-blue/15"
         disabled={items.length >= max}
-        onClick={() => onChange([...items, add()])}
+        onClick={() => {
+          onChange([...items, add()]);
+        }}
         type="button"
       >
         <Plus size={13} weight="bold" />
@@ -360,7 +370,7 @@ export function TypeSettings({
             <NumberInput
               max={20}
               min={2}
-              onChange={(value) =>
+              onChange={(value) => {
                 update(
                   {
                     rows:
@@ -369,8 +379,8 @@ export function TypeSettings({
                         : Math.min(20, Math.max(2, Math.round(value))),
                   },
                   `${field.id}:rows`,
-                )
-              }
+                );
+              }}
               placeholder="4"
               value={field.rows}
             />
@@ -384,9 +394,9 @@ export function TypeSettings({
           <Pair>
             <Labeled label="Step">
               <NumberInput
-                onChange={(value) =>
-                  update({ step: value && value > 0 ? value : undefined }, `${field.id}:step`)
-                }
+                onChange={(value) => {
+                  update({ step: value && value > 0 ? value : undefined }, `${field.id}:step`);
+                }}
                 placeholder="1"
                 step="any"
                 value={field.step}
@@ -396,7 +406,7 @@ export function TypeSettings({
               <NumberInput
                 max={6}
                 min={0}
-                onChange={(value) =>
+                onChange={(value) => {
                   update(
                     {
                       decimals:
@@ -405,8 +415,8 @@ export function TypeSettings({
                           : Math.min(6, Math.max(0, Math.round(value))),
                     },
                     `${field.id}:decimals`,
-                  )
-                }
+                  );
+                }}
                 placeholder="0"
                 value={field.decimals}
               />
@@ -417,9 +427,9 @@ export function TypeSettings({
               <input
                 className={smallInputClass}
                 maxLength={12}
-                onChange={(event) =>
-                  update({ prefix: event.target.value || undefined }, `${field.id}:prefix`)
-                }
+                onChange={(event) => {
+                  update({ prefix: event.target.value || undefined }, `${field.id}:prefix`);
+                }}
                 placeholder="Rp"
                 value={field.prefix ?? ""}
               />
@@ -428,9 +438,9 @@ export function TypeSettings({
               <input
                 className={smallInputClass}
                 maxLength={12}
-                onChange={(event) =>
-                  update({ suffix: event.target.value || undefined }, `${field.id}:suffix`)
-                }
+                onChange={(event) => {
+                  update({ suffix: event.target.value || undefined }, `${field.id}:suffix`);
+                }}
                 placeholder="people"
                 value={field.suffix ?? ""}
               />
@@ -444,9 +454,9 @@ export function TypeSettings({
           <Labeled label="Icon">
             <select
               className={smallInputClass}
-              onChange={(event) =>
-                update({ ratingIcon: event.target.value as FormField["ratingIcon"] })
-              }
+              onChange={(event) => {
+                update({ ratingIcon: event.target.value as FormField["ratingIcon"] });
+              }}
               value={field.ratingIcon ?? "star"}
             >
               {RATING_ICONS.map((icon) => (
@@ -460,7 +470,7 @@ export function TypeSettings({
             <NumberInput
               max={10}
               min={3}
-              onChange={(value) =>
+              onChange={(value) => {
                 update(
                   {
                     max:
@@ -469,8 +479,8 @@ export function TypeSettings({
                         : Math.min(10, Math.max(3, Math.round(value))),
                   },
                   `${field.id}:max`,
-                )
-              }
+                );
+              }}
               placeholder="5"
               value={field.max}
             />
@@ -503,9 +513,9 @@ export function TypeSettings({
           <MinMax field={field} placeholders={["0", "100"]} update={update} />
           <Labeled label="Step">
             <NumberInput
-              onChange={(value) =>
-                update({ step: value && value > 0 ? value : undefined }, `${field.id}:step`)
-              }
+              onChange={(value) => {
+                update({ step: value && value > 0 ? value : undefined }, `${field.id}:step`);
+              }}
               placeholder="1"
               step="any"
               value={field.step}
@@ -516,9 +526,9 @@ export function TypeSettings({
               <input
                 className={smallInputClass}
                 maxLength={12}
-                onChange={(event) =>
-                  update({ prefix: event.target.value || undefined }, `${field.id}:prefix`)
-                }
+                onChange={(event) => {
+                  update({ prefix: event.target.value || undefined }, `${field.id}:prefix`);
+                }}
                 value={field.prefix ?? ""}
               />
             </Labeled>
@@ -526,9 +536,9 @@ export function TypeSettings({
               <input
                 className={smallInputClass}
                 maxLength={12}
-                onChange={(event) =>
-                  update({ suffix: event.target.value || undefined }, `${field.id}:suffix`)
-                }
+                onChange={(event) => {
+                  update({ suffix: event.target.value || undefined }, `${field.id}:suffix`);
+                }}
                 placeholder="%"
                 value={field.suffix ?? ""}
               />
@@ -545,20 +555,26 @@ export function TypeSettings({
             items={field.rowsList ?? []}
             label="Rows"
             max={FORM_LIMITS.matrixRowsMax}
-            onChange={(items, coalesce) => update({ rowsList: items }, coalesce)}
+            onChange={(items, coalesce) => {
+              update({ rowsList: items }, coalesce);
+            }}
           />
           <ItemsEditor
             add={() => ({ id: mintId("col", takenIds()), label: "New column" })}
             items={field.columnsList ?? []}
             label="Columns"
             max={FORM_LIMITS.matrixColumnsMax}
-            onChange={(items, coalesce) => update({ columnsList: items }, coalesce)}
+            onChange={(items, coalesce) => {
+              update({ columnsList: items }, coalesce);
+            }}
           />
           <Switch
             checked={Boolean(field.matrixMultiple)}
             description="Checkboxes instead of one choice per row."
             label="Several answers per row"
-            onChange={(value) => update({ matrixMultiple: value || undefined })}
+            onChange={(value) => {
+              update({ matrixMultiple: value || undefined });
+            }}
             size="sm"
           />
         </Section>
@@ -571,7 +587,9 @@ export function TypeSettings({
             <Labeled label="Earliest">
               <input
                 className={smallInputClass}
-                onChange={(event) => update({ minDate: event.target.value || undefined })}
+                onChange={(event) => {
+                  update({ minDate: event.target.value || undefined });
+                }}
                 type="date"
                 value={field.minDate ?? ""}
               />
@@ -579,7 +597,9 @@ export function TypeSettings({
             <Labeled label="Latest">
               <input
                 className={smallInputClass}
-                onChange={(event) => update({ maxDate: event.target.value || undefined })}
+                onChange={(event) => {
+                  update({ maxDate: event.target.value || undefined });
+                }}
                 type="date"
                 value={field.maxDate ?? ""}
               />
@@ -633,7 +653,7 @@ export function TypeSettings({
                 <NumberInput
                   max={FORM_LIMITS.filesPerFieldMax}
                   min={1}
-                  onChange={(value) =>
+                  onChange={(value) => {
                     update(
                       {
                         maxFiles:
@@ -645,8 +665,8 @@ export function TypeSettings({
                               ),
                       },
                       `${field.id}:maxFiles`,
-                    )
-                  }
+                    );
+                  }}
                   placeholder="1"
                   value={field.maxFiles}
                 />
@@ -655,7 +675,7 @@ export function TypeSettings({
                 <NumberInput
                   max={FORM_LIMITS.fileMbMax}
                   min={0.1}
-                  onChange={(value) =>
+                  onChange={(value) => {
                     update(
                       {
                         maxFileMb:
@@ -664,8 +684,8 @@ export function TypeSettings({
                             : Math.min(FORM_LIMITS.fileMbMax, Math.max(0.1, value)),
                       },
                       `${field.id}:maxFileMb`,
-                    )
-                  }
+                    );
+                  }}
                   placeholder="10"
                   step="any"
                   value={field.maxFileMb}
@@ -686,12 +706,12 @@ export function TypeSettings({
             <input
               className={`${smallInputClass} uppercase`}
               maxLength={2}
-              onChange={(event) =>
+              onChange={(event) => {
                 update(
                   { defaultCountry: event.target.value.toUpperCase().slice(0, 2) || undefined },
                   `${field.id}:country`,
-                )
-              }
+                );
+              }}
               placeholder="ID"
               value={field.defaultCountry ?? ""}
             />
@@ -704,7 +724,9 @@ export function TypeSettings({
           <RichTextEditor
             label="Consent text"
             minHeight={80}
-            onChange={(value) => update({ consentText: value }, `${field.id}:consent`)}
+            onChange={(value) => {
+              update({ consentText: value }, `${field.id}:consent`);
+            }}
             placeholder="I agree to…"
             value={field.consentText}
             variant="compact"
@@ -716,7 +738,9 @@ export function TypeSettings({
         <Section title="Heading">
           <Segmented
             label="Heading size"
-            onChange={(value) => update({ headingLevel: Number(value) as 1 | 2 | 3 })}
+            onChange={(value) => {
+              update({ headingLevel: Number(value) as 1 | 2 | 3 });
+            }}
             options={[
               { value: "1", label: "Large" },
               { value: "2", label: "Medium" },
@@ -726,7 +750,9 @@ export function TypeSettings({
           />
           <Segmented
             label="Alignment"
-            onChange={(value) => update({ align: value })}
+            onChange={(value) => {
+              update({ align: value });
+            }}
             options={[
               { value: "left", label: "Left" },
               { value: "center", label: "Center" },
@@ -746,7 +772,9 @@ export function TypeSettings({
             <Segmented
               fullWidth
               label="Tone"
-              onChange={(value) => update({ calloutTone: value })}
+              onChange={(value) => {
+                update({ calloutTone: value });
+              }}
               options={CALLOUT_TONES.map((tone) => ({
                 value: tone,
                 label: tone[0].toUpperCase() + tone.slice(1),
@@ -758,7 +786,9 @@ export function TypeSettings({
           <RichTextEditor
             label={`${field.type} text`}
             minHeight={120}
-            onChange={(value) => update({ content: value }, `${field.id}:content`)}
+            onChange={(value) => {
+              update({ content: value }, `${field.id}:content`);
+            }}
             value={field.content}
             variant={field.type === "paragraph" ? "full" : "compact"}
           />
@@ -769,7 +799,9 @@ export function TypeSettings({
           ) : null}
           <Segmented
             label="Alignment"
-            onChange={(value) => update({ align: value })}
+            onChange={(value) => {
+              update({ align: value });
+            }}
             options={[
               { value: "left", label: "Left" },
               { value: "center", label: "Center" },
@@ -787,12 +819,16 @@ export function TypeSettings({
             focal={field.type === "image"}
             formId={formId}
             label={field.type === "image" ? "Image" : "Video"}
-            onChange={(media) => update({ media })}
+            onChange={(media) => {
+              update({ media });
+            }}
             value={field.media}
           />
           <Segmented
             label="Alignment"
-            onChange={(value) => update({ align: value })}
+            onChange={(value) => {
+              update({ align: value });
+            }}
             options={[
               { value: "left", label: "Left" },
               { value: "center", label: "Center" },
@@ -807,7 +843,9 @@ export function TypeSettings({
           <Segmented
             fullWidth
             label="Size"
-            onChange={(value) => update({ spacerSize: value })}
+            onChange={(value) => {
+              update({ spacerSize: value });
+            }}
             options={[
               { value: "sm", label: "S" },
               { value: "md", label: "M" },
@@ -828,9 +866,9 @@ export function TypeSettings({
             <input
               className={smallInputClass}
               maxLength={200}
-              onChange={(event) =>
-                update({ pageTitle: event.target.value || undefined }, `${field.id}:pageTitle`)
-              }
+              onChange={(event) => {
+                update({ pageTitle: event.target.value || undefined }, `${field.id}:pageTitle`);
+              }}
               placeholder="Optional"
               value={field.pageTitle ?? ""}
             />
@@ -840,9 +878,9 @@ export function TypeSettings({
             <RichTextEditor
               label="Page intro"
               minHeight={72}
-              onChange={(value) =>
-                update({ pageDescription: value }, `${field.id}:pageDescription`)
-              }
+              onChange={(value) => {
+                update({ pageDescription: value }, `${field.id}:pageDescription`);
+              }}
               value={field.pageDescription}
               variant="compact"
             />

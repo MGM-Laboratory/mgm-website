@@ -162,7 +162,9 @@ function EmailChips({
               aria-label={`Remove ${email}`}
               className="grid size-5 place-items-center rounded-full transition hover:bg-brand-blue/15 hover:text-brand-red"
               disabled={disabled}
-              onClick={() => onChange(values.filter((item) => item !== email))}
+              onClick={() => {
+                onChange(values.filter((item) => item !== email));
+              }}
               type="button"
             >
               <X size={10} weight="bold" />
@@ -290,7 +292,9 @@ function PassphraseCard({
             <button
               className={secondaryButtonClass}
               disabled={readOnly}
-              onClick={() => setEditing(true)}
+              onClick={() => {
+                setEditing(true);
+              }}
               type="button"
             >
               {record.hasPassphrase ? "Change" : "Set passphrase"}
@@ -299,7 +303,9 @@ function PassphraseCard({
               <button
                 className={secondaryButtonClass}
                 disabled={readOnly}
-                onClick={() => setRemoving(true)}
+                onClick={() => {
+                  setRemoving(true);
+                }}
                 type="button"
               >
                 Remove
@@ -321,14 +327,18 @@ function PassphraseCard({
                   className={`${smallInputClass} pr-10`}
                   data-autofocus=""
                   maxLength={200}
-                  onChange={(event) => setValue(event.target.value)}
+                  onChange={(event) => {
+                    setValue(event.target.value);
+                  }}
                   type={show ? "text" : "password"}
                   value={value}
                 />
                 <button
                   aria-label={show ? "Hide passphrase" : "Show passphrase"}
                   className="absolute top-1/2 right-1 grid size-7 -translate-y-1/2 place-items-center rounded-md text-[#8490a5] hover:text-brand-blue"
-                  onClick={() => setShow((current) => !current)}
+                  onClick={() => {
+                    setShow((current) => !current);
+                  }}
                   type="button"
                 >
                   {show ? <EyeSlash size={15} /> : <Eye size={15} />}
@@ -343,7 +353,9 @@ function PassphraseCard({
                 autoComplete="new-password"
                 className={smallInputClass}
                 maxLength={200}
-                onChange={(event) => setConfirm(event.target.value)}
+                onChange={(event) => {
+                  setConfirm(event.target.value);
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") void save();
                 }}
@@ -394,7 +406,9 @@ function PassphraseCard({
           body="Anyone with the link will be able to open and answer the form."
           busy={busy}
           confirmLabel="Remove passphrase"
-          onCancel={() => setRemoving(false)}
+          onCancel={() => {
+            setRemoving(false);
+          }}
           onConfirm={remove}
           title="Remove the passphrase?"
         />
@@ -430,8 +444,9 @@ export function SettingsTab({
   const computedMax = useMemo(() => maxScore(document), [document]);
   const emailFields = document.fields.filter((field) => field.type === "email");
 
-  const update = (patch: Partial<FormSettings>, coalesce?: string) =>
+  const update = (patch: Partial<FormSettings>, coalesce?: string) => {
     change((current) => ({ ...current, settings: { ...current.settings, ...patch } }), coalesce);
+  };
 
   const opensLocal = isoToLocalInput(settings.opensAt);
   const closesLocal = isoToLocalInput(settings.closesAt);
@@ -468,7 +483,9 @@ export function SettingsTab({
               <span className={labelText}>Language of the form&rsquo;s interface</span>
               <Segmented
                 label="Language"
-                onChange={(language) => update({ language })}
+                onChange={(language) => {
+                  update({ language });
+                }}
                 options={[
                   { value: "en", label: "English" },
                   { value: "id", label: "Bahasa Indonesia" },
@@ -479,13 +496,17 @@ export function SettingsTab({
             <Switch
               checked={settings.showQuestionNumbers}
               label="Number the questions"
-              onChange={(showQuestionNumbers) => update({ showQuestionNumbers })}
+              onChange={(showQuestionNumbers) => {
+                update({ showQuestionNumbers });
+              }}
             />
             <Switch
               checked={settings.autosave}
               description="Unfinished answers stay in the respondent's browser, so a reload doesn't lose them."
               label="Keep progress while answering"
-              onChange={(autosave) => update({ autosave })}
+              onChange={(autosave) => {
+                update({ autosave });
+              }}
             />
             <div>
               <div className="mb-1 flex items-center justify-between">
@@ -498,12 +519,12 @@ export function SettingsTab({
                 className={textareaClass}
                 id="settings-note"
                 maxLength={2000}
-                onChange={(event) =>
+                onChange={(event) => {
                   change(
                     (current) => ({ ...current, internalNote: event.target.value || undefined }),
                     "settings.internalNote",
-                  )
-                }
+                  );
+                }}
                 placeholder="Who owns this form, when to archive it…"
                 value={document.internalNote ?? ""}
               />
@@ -513,7 +534,9 @@ export function SettingsTab({
                 aria-controls="settings-labels"
                 aria-expanded={labelsOpen}
                 className="flex w-full items-center gap-2 px-3.5 py-3 text-left"
-                onClick={() => setLabelsOpen((current) => !current)}
+                onClick={() => {
+                  setLabelsOpen((current) => !current);
+                }}
                 type="button"
               >
                 <span className="min-w-0 flex-1">
@@ -560,7 +583,9 @@ export function SettingsTab({
                   <button
                     className={`${secondaryButtonClass} mt-3`}
                     disabled={!Object.keys(settings.labels).length}
-                    onClick={() => update({ labels: {} })}
+                    onClick={() => {
+                      update({ labels: {} });
+                    }}
                     type="button"
                   >
                     <ArrowCounterClockwise size={15} />
@@ -592,13 +617,13 @@ export function SettingsTab({
                       }
                       aria-invalid={(key === "closesAt" && Boolean(scheduleError)) || undefined}
                       className={smallInputClass}
-                      onChange={(event) =>
+                      onChange={(event) => {
                         update(
                           key === "opensAt"
                             ? { opensAt: localInputToIso(event.target.value) }
                             : { closesAt: localInputToIso(event.target.value) },
-                        )
-                      }
+                        );
+                      }}
                       type="datetime-local"
                       value={local}
                     />
@@ -606,11 +631,11 @@ export function SettingsTab({
                       <button
                         aria-label={`Clear ${label.toLowerCase()} time`}
                         className="grid size-9 shrink-0 place-items-center rounded-lg text-[#8490a5] hover:bg-[#eef1f7] hover:text-brand-red dark:hover:bg-white/10"
-                        onClick={() =>
+                        onClick={() => {
                           update(
                             key === "opensAt" ? { opensAt: undefined } : { closesAt: undefined },
-                          )
-                        }
+                          );
+                        }}
                         type="button"
                       >
                         <X size={14} weight="bold" />
@@ -633,12 +658,12 @@ export function SettingsTab({
               <span className={labelText}>Response limit</span>
               <NumberInput
                 min={1}
-                onChange={(value) =>
+                onChange={(value) => {
                   update(
                     { responseLimit: value && value > 0 ? Math.round(value) : undefined },
                     "settings.limit",
-                  )
-                }
+                  );
+                }}
                 placeholder="No limit"
                 value={settings.responseLimit}
               />
@@ -649,9 +674,12 @@ export function SettingsTab({
                 <input
                   className={smallInputClass}
                   maxLength={200}
-                  onChange={(event) =>
-                    update({ closedTitle: event.target.value || undefined }, "settings.closedTitle")
-                  }
+                  onChange={(event) => {
+                    update(
+                      { closedTitle: event.target.value || undefined },
+                      "settings.closedTitle",
+                    );
+                  }}
                   placeholder={defaults.closed}
                   value={settings.closedTitle ?? ""}
                 />
@@ -661,12 +689,12 @@ export function SettingsTab({
                 <textarea
                   className={textareaClass}
                   maxLength={1000}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     update(
                       { closedMessage: event.target.value || undefined },
                       "settings.closedMessage",
-                    )
-                  }
+                    );
+                  }}
                   placeholder="Thanks for your interest. Follow MGM Laboratory for the next one."
                   value={settings.closedMessage ?? ""}
                 />
@@ -676,7 +704,9 @@ export function SettingsTab({
               checked={settings.onePerDevice}
               description="A browser that has already submitted sees a notice instead of the form. Not a guarantee: another browser can answer again."
               label="One response per device"
-              onChange={(onePerDevice) => update({ onePerDevice })}
+              onChange={(onePerDevice) => {
+                update({ onePerDevice });
+              }}
             />
           </Card>
 
@@ -685,7 +715,9 @@ export function SettingsTab({
               checked={settings.collectLocation}
               description="Stores the respondent's IP address and an approximate city and country with each response."
               label="Collect IP address and location"
-              onChange={(collectLocation) => update({ collectLocation })}
+              onChange={(collectLocation) => {
+                update({ collectLocation });
+              }}
             />
             {settings.collectLocation ? (
               <p className="rounded-xl bg-brand-yellow-50 p-3 text-xs leading-5 text-[#7a5a10] dark:bg-brand-yellow/10 dark:text-brand-yellow">
@@ -699,15 +731,15 @@ export function SettingsTab({
               <NumberInput
                 max={600}
                 min={0}
-                onChange={(value) =>
+                onChange={(value) => {
                   update(
                     {
                       minSeconds:
                         value === undefined ? 0 : Math.min(600, Math.max(0, Math.round(value))),
                     },
                     "settings.minSeconds",
-                  )
-                }
+                  );
+                }}
                 placeholder="3"
                 value={settings.minSeconds}
               />
@@ -720,7 +752,9 @@ export function SettingsTab({
           <Card id="notifications" title="Notifications">
             <EmailChips
               disabled={readOnly}
-              onChange={(notifyEmails) => update({ notifyEmails })}
+              onChange={(notifyEmails) => {
+                update({ notifyEmails });
+              }}
               values={settings.notifyEmails}
             />
             <div className="space-y-3 border-t border-[#eef1f6] pt-4 dark:border-white/[0.07]">
@@ -728,7 +762,7 @@ export function SettingsTab({
                 checked={settings.receipt.enabled}
                 description="Emails the respondent a copy of their answers."
                 label="Send a receipt"
-                onChange={(enabled) =>
+                onChange={(enabled) => {
                   update({
                     receipt: {
                       ...settings.receipt,
@@ -736,8 +770,8 @@ export function SettingsTab({
                       emailFieldId:
                         settings.receipt.emailFieldId ?? (enabled ? emailFields[0]?.id : undefined),
                     },
-                  })
-                }
+                  });
+                }}
               />
               {settings.receipt.enabled ? (
                 emailFields.length ? (
@@ -746,14 +780,14 @@ export function SettingsTab({
                       <span className={labelText}>Send to the answer of</span>
                       <select
                         className={smallInputClass}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           update({
                             receipt: {
                               ...settings.receipt,
                               emailFieldId: event.target.value || undefined,
                             },
-                          })
-                        }
+                          });
+                        }}
                         value={settings.receipt.emailFieldId ?? ""}
                       >
                         <option value="">Choose an email question</option>
@@ -769,7 +803,7 @@ export function SettingsTab({
                       <input
                         className={smallInputClass}
                         maxLength={200}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           update(
                             {
                               receipt: {
@@ -778,8 +812,8 @@ export function SettingsTab({
                               },
                             },
                             "settings.receipt.subject",
-                          )
-                        }
+                          );
+                        }}
                         placeholder={`Your answers to ${document.title}`}
                         value={settings.receipt.subject ?? ""}
                       />
@@ -789,7 +823,7 @@ export function SettingsTab({
                       <textarea
                         className={textareaClass}
                         maxLength={2000}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           update(
                             {
                               receipt: {
@@ -798,8 +832,8 @@ export function SettingsTab({
                               },
                             },
                             "settings.receipt.message",
-                          )
-                        }
+                          );
+                        }}
                         placeholder="Thanks for your response. Here is a copy of what you sent."
                         value={settings.receipt.message ?? ""}
                       />
@@ -824,14 +858,16 @@ export function SettingsTab({
               checked={settings.scoring.enabled}
               description="Adds up the points of the chosen options; endings can show the score or depend on it."
               label="Score answers"
-              onChange={(enabled) => update({ scoring: { ...settings.scoring, enabled } })}
+              onChange={(enabled) => {
+                update({ scoring: { ...settings.scoring, enabled } });
+              }}
             />
             {settings.scoring.enabled ? (
               <label className="block sm:max-w-xs">
                 <span className={labelText}>Maximum score</span>
                 <NumberInput
                   min={1}
-                  onChange={(value) =>
+                  onChange={(value) => {
                     update(
                       {
                         scoring: {
@@ -840,8 +876,8 @@ export function SettingsTab({
                         },
                       },
                       "settings.scoring.max",
-                    )
-                  }
+                    );
+                  }}
                   placeholder={String(computedMax || "")}
                   step="any"
                   value={settings.scoring.maxScore}
@@ -859,12 +895,12 @@ export function SettingsTab({
               <input
                 className={smallInputClass}
                 maxLength={120}
-                onChange={(event) =>
+                onChange={(event) => {
                   update(
                     { seo: { ...settings.seo, title: event.target.value || undefined } },
                     "settings.seo.title",
-                  )
-                }
+                  );
+                }}
                 placeholder={document.title}
                 value={settings.seo.title ?? ""}
               />
@@ -880,12 +916,12 @@ export function SettingsTab({
                 className={textareaClass}
                 id="settings-seo-description"
                 maxLength={300}
-                onChange={(event) =>
+                onChange={(event) => {
                   update(
                     { seo: { ...settings.seo, description: event.target.value || undefined } },
                     "settings.seo.description",
-                  )
-                }
+                  );
+                }}
                 placeholder="One or two sentences shown in link previews."
                 value={settings.seo.description ?? ""}
               />
@@ -896,7 +932,9 @@ export function SettingsTab({
                 accept={["image"]}
                 formId={record.id}
                 label="Share image"
-                onChange={(image) => update({ seo: { ...settings.seo, image } })}
+                onChange={(image) => {
+                  update({ seo: { ...settings.seo, image } });
+                }}
                 value={settings.seo.image}
               />
             </div>
@@ -904,7 +942,9 @@ export function SettingsTab({
               checked={settings.seo.noindex}
               description="Keeps the form out of search results; people with the link can still open it."
               label="Hide from search engines"
-              onChange={(noindex) => update({ seo: { ...settings.seo, noindex } })}
+              onChange={(noindex) => {
+                update({ seo: { ...settings.seo, noindex } });
+              }}
             />
             <div>
               <p className={eyebrowClass}>Link preview</p>

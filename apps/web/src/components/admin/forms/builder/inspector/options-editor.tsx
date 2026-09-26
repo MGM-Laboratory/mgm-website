@@ -46,12 +46,15 @@ export function OptionsEditor({
   const multi = isMultiChoiceType(field.type, field) || field.type === "picture_choice";
   const picture = field.type === "picture_choice";
 
-  const setOptions = (next: FormOption[], coalesce?: string) => update({ options: next }, coalesce);
-  const patchOption = (id: string, patch: Partial<FormOption>, key: string) =>
+  const setOptions = (next: FormOption[], coalesce?: string) => {
+    update({ options: next }, coalesce);
+  };
+  const patchOption = (id: string, patch: Partial<FormOption>, key: string) => {
     setOptions(
       options.map((option) => (option.id === id ? { ...option, ...patch } : option)),
       `${field.id}:opt:${id}:${key}`,
     );
+  };
   const addLabels = (labels: string[], afterIndex = options.length - 1) => {
     const taken = takenIds();
     const room = FORM_LIMITS.optionsMax - options.length;
@@ -106,7 +109,7 @@ export function OptionsEditor({
         <button
           aria-pressed={bulk !== null}
           className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-[#5d687d] transition hover:bg-[#eef1f7] dark:text-white/55 dark:hover:bg-white/[0.07]"
-          onClick={() =>
+          onClick={() => {
             setBulk((current) =>
               current === null
                 ? options
@@ -117,8 +120,8 @@ export function OptionsEditor({
                     )
                     .join("\n")
                 : null,
-            )
-          }
+            );
+          }}
           type="button"
         >
           {bulk === null ? <TextAlignLeft size={14} /> : <ListBullets size={14} />}
@@ -132,7 +135,9 @@ export function OptionsEditor({
             aria-label="Options, one per line"
             autoFocus
             className={`${textareaClass} min-h-40 font-mono text-xs`}
-            onChange={(event) => setBulk(event.target.value)}
+            onChange={(event) => {
+              setBulk(event.target.value);
+            }}
             value={bulk}
           />
           <p className="text-[11px] leading-5 text-[#8490a5]">
@@ -142,7 +147,9 @@ export function OptionsEditor({
           <div className="flex justify-end gap-2">
             <button
               className="h-8 rounded-lg px-3 text-xs font-semibold text-[#5d687d] hover:bg-[#eef1f7] dark:text-white/55"
-              onClick={() => setBulk(null)}
+              onClick={() => {
+                setBulk(null);
+              }}
               type="button"
             >
               Cancel
@@ -170,7 +177,9 @@ export function OptionsEditor({
                     aria-expanded={open}
                     aria-label={`More settings for ${option.label || "option"}`}
                     className="grid size-7 shrink-0 place-items-center rounded-md text-[#8490a5] hover:bg-[#eef1f7] dark:hover:bg-white/[0.07]"
-                    onClick={() => setExpanded(open ? null : option.id)}
+                    onClick={() => {
+                      setExpanded(open ? null : option.id);
+                    }}
                     type="button"
                   >
                     {open ? <CaretDown size={13} /> : <CaretRight size={13} />}
@@ -180,9 +189,9 @@ export function OptionsEditor({
                     aria-label={`Option ${index + 1}`}
                     className={`h-8 min-w-0 flex-1 rounded-md border bg-transparent px-2 text-sm outline-none focus:border-brand-blue focus:bg-white dark:focus:bg-white/[0.05] ${option.label.trim() ? "border-transparent hover:border-[#e3e7f0] dark:hover:border-white/10" : "border-brand-red/60"}`}
                     maxLength={FORM_LIMITS.optionLabelMax}
-                    onChange={(event) =>
-                      patchOption(option.id, { label: event.target.value }, "label")
-                    }
+                    onChange={(event) => {
+                      patchOption(option.id, { label: event.target.value }, "label");
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
@@ -223,7 +232,9 @@ export function OptionsEditor({
                       <NumberInput
                         ariaLabel={`Points for ${option.label}`}
                         className="h-8 w-full rounded-md border border-[#e3e7f0] bg-transparent px-1.5 text-center font-mono text-xs outline-none focus:border-brand-blue dark:border-white/10"
-                        onChange={(value) => patchOption(option.id, { points: value }, "points")}
+                        onChange={(value) => {
+                          patchOption(option.id, { points: value }, "points");
+                        }}
                         placeholder="pts"
                         value={option.points}
                       />
@@ -234,7 +245,9 @@ export function OptionsEditor({
                       aria-label={`Move ${option.label} up`}
                       className="grid size-7 place-items-center rounded-md text-[#8490a5] hover:bg-[#eef1f7] disabled:opacity-25 dark:hover:bg-white/[0.07]"
                       disabled={index === 0}
-                      onClick={() => move(index, -1)}
+                      onClick={() => {
+                        move(index, -1);
+                      }}
                       type="button"
                     >
                       <ArrowUp size={13} />
@@ -243,7 +256,9 @@ export function OptionsEditor({
                       aria-label={`Move ${option.label} down`}
                       className="grid size-7 place-items-center rounded-md text-[#8490a5] hover:bg-[#eef1f7] disabled:opacity-25 dark:hover:bg-white/[0.07]"
                       disabled={index === options.length - 1}
-                      onClick={() => move(index, 1)}
+                      onClick={() => {
+                        move(index, 1);
+                      }}
                       type="button"
                     >
                       <ArrowDown size={13} />
@@ -252,7 +267,9 @@ export function OptionsEditor({
                       aria-label={`Remove ${option.label}`}
                       className="grid size-7 place-items-center rounded-md text-[#8490a5] hover:bg-brand-red-50 hover:text-brand-red disabled:opacity-25"
                       disabled={options.length <= 1}
-                      onClick={() => setOptions(options.filter((item) => item.id !== option.id))}
+                      onClick={() => {
+                        setOptions(options.filter((item) => item.id !== option.id));
+                      }}
                       title={
                         options.length <= 1
                           ? "A choice question needs at least one option"
@@ -271,7 +288,9 @@ export function OptionsEditor({
                       compact
                       formId={formId}
                       label={`Image for ${option.label}`}
-                      onChange={(media) => patchOption(option.id, { image: media }, "image")}
+                      onChange={(media) => {
+                        patchOption(option.id, { image: media }, "image");
+                      }}
                       value={option.image}
                     />
                   </div>
@@ -285,13 +304,13 @@ export function OptionsEditor({
                       <input
                         className={smallInputClass}
                         maxLength={300}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           patchOption(
                             option.id,
                             { description: event.target.value || undefined },
                             "description",
-                          )
-                        }
+                          );
+                        }}
                         placeholder="A line under the label"
                         value={option.description ?? ""}
                       />
@@ -301,7 +320,9 @@ export function OptionsEditor({
                         Points
                       </span>
                       <NumberInput
-                        onChange={(value) => patchOption(option.id, { points: value }, "points")}
+                        onChange={(value) => {
+                          patchOption(option.id, { points: value }, "points");
+                        }}
                         placeholder="0"
                         value={option.points}
                       />
@@ -315,7 +336,9 @@ export function OptionsEditor({
                         compact
                         formId={formId}
                         label={`Image for ${option.label}`}
-                        onChange={(media) => patchOption(option.id, { image: media }, "image")}
+                        onChange={(media) => {
+                          patchOption(option.id, { image: media }, "image");
+                        }}
                         value={option.image}
                       />
                     </div>
@@ -346,7 +369,9 @@ export function OptionsEditor({
           checked={Boolean(field.allowOther)}
           description="Adds a last choice with a text box."
           label="Allow “Other”"
-          onChange={(value) => update({ allowOther: value || undefined })}
+          onChange={(value) => {
+            update({ allowOther: value || undefined });
+          }}
           size="sm"
         />
       ) : null}
@@ -355,9 +380,9 @@ export function OptionsEditor({
           aria-label="Other option label"
           className={smallInputClass}
           maxLength={100}
-          onChange={(event) =>
-            update({ otherLabel: event.target.value || undefined }, `${field.id}:otherLabel`)
-          }
+          onChange={(event) => {
+            update({ otherLabel: event.target.value || undefined }, `${field.id}:otherLabel`);
+          }}
           placeholder="Other"
           value={field.otherLabel ?? ""}
         />
@@ -366,7 +391,9 @@ export function OptionsEditor({
         checked={Boolean(field.randomize)}
         description="Each respondent sees the options in a different order."
         label="Shuffle options"
-        onChange={(value) => update({ randomize: value || undefined })}
+        onChange={(value) => {
+          update({ randomize: value || undefined });
+        }}
         size="sm"
       />
       {field.type === "multiple_choice" ||
@@ -379,7 +406,9 @@ export function OptionsEditor({
           <Segmented
             fullWidth
             label="Option layout"
-            onChange={(value) => update({ optionLayout: value })}
+            onChange={(value) => {
+              update({ optionLayout: value });
+            }}
             options={[
               { value: "list", label: "List" },
               { value: "grid", label: "Grid" },
@@ -398,14 +427,14 @@ export function OptionsEditor({
             </span>
             <NumberInput
               min={0}
-              onChange={(value) =>
+              onChange={(value) => {
                 update(
                   {
                     minSelections: value === undefined ? undefined : Math.max(0, Math.round(value)),
                   },
                   `${field.id}:min`,
-                )
-              }
+                );
+              }}
               placeholder="0"
               value={field.minSelections}
             />
@@ -416,14 +445,14 @@ export function OptionsEditor({
             </span>
             <NumberInput
               min={1}
-              onChange={(value) =>
+              onChange={(value) => {
                 update(
                   {
                     maxSelections: value === undefined ? undefined : Math.max(1, Math.round(value)),
                   },
                   `${field.id}:max`,
-                )
-              }
+                );
+              }}
               placeholder={picture ? "1" : "Any"}
               value={field.maxSelections}
             />

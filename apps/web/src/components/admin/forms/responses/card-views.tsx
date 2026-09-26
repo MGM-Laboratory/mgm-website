@@ -44,7 +44,9 @@ export function CardsView({
               <header className="mb-3 flex items-center gap-2">
                 <button
                   className="min-w-0 flex-1 truncate text-left text-xs font-semibold text-brand-blue hover:underline"
-                  onClick={() => onOpen(row)}
+                  onClick={() => {
+                    onOpen(row);
+                  }}
                   type="button"
                 >
                   {formatDateTime(row.record.createdAt)}
@@ -100,7 +102,9 @@ export function CardsView({
         <div className="mt-5 text-center">
           <button
             className="h-9 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold hover:border-brand-blue hover:text-brand-blue dark:border-white/10"
-            onClick={() => setLimit((value) => value + PAGE)}
+            onClick={() => {
+              setLimit((value) => value + PAGE);
+            }}
             type="button"
           >
             Show more ({rows.length - limit} left)
@@ -160,7 +164,9 @@ export function GalleryView({
             aria-pressed={fieldKey === option.key}
             className={`h-8 rounded-full px-3 text-xs font-semibold transition ${fieldKey === option.key ? "bg-[#171b25] text-white dark:bg-white dark:text-[#171b25]" : "border border-[#d9dfeb] text-[#5c6679] hover:border-brand-blue dark:border-white/10 dark:text-white/60"}`}
             key={option.key}
-            onClick={() => setFieldKey(option.key)}
+            onClick={() => {
+              setFieldKey(option.key);
+            }}
             type="button"
           >
             {option.label}
@@ -179,7 +185,9 @@ export function GalleryView({
               aria-label={`Open ${item.name}`}
               className="group relative mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl border border-[#e4e8f0] bg-[#f4f6fa] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue dark:border-white/10 dark:bg-white/5"
               key={`${item.rowId}-${item.key}`}
-              onClick={() => onOpenItems(items, index)}
+              onClick={() => {
+                onOpenItems(items, index);
+              }}
               type="button"
             >
               {isVideoFile(item) ? (
@@ -220,7 +228,9 @@ export function GalleryView({
         <div className="mt-4 text-center">
           <button
             className="h-9 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold hover:border-brand-blue hover:text-brand-blue dark:border-white/10"
-            onClick={() => setLimit((value) => value + 80)}
+            onClick={() => {
+              setLimit((value) => value + 80);
+            }}
             type="button"
           >
             Show more

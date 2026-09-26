@@ -82,8 +82,12 @@ function acceptAttr(accept: Source[]) {
 function readAsDataUrl(file: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("This file could not be read."));
+    reader.onload = () => {
+      resolve(String(reader.result));
+    };
+    reader.onerror = () => {
+      reject(new Error("This file could not be read."));
+    };
     reader.readAsDataURL(file);
   });
 }
@@ -91,8 +95,12 @@ function readAsDataUrl(file: Blob) {
 function imageSize(dataUrl: string) {
   return new Promise<{ width: number; height: number }>((resolve, reject) => {
     const image = new window.Image();
-    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
-    image.onerror = () => reject(new Error("This image could not be read."));
+    image.onload = () => {
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onerror = () => {
+      reject(new Error("This image could not be read."));
+    };
     image.src = dataUrl;
   });
 }
@@ -210,7 +218,9 @@ function MediaThumb({
         aria-hidden="true"
         className={`${fit} ${className}`}
         muted
-        onError={() => setFailed(true)}
+        onError={() => {
+          setFailed(true);
+        }}
         playsInline
         preload="metadata"
         src={src}
@@ -224,7 +234,9 @@ function MediaThumb({
     <img
       alt=""
       className={`${fit} ${className}`}
-      onError={() => setFailed(true)}
+      onError={() => {
+        setFailed(true);
+      }}
       src={src}
       style={{ objectPosition: position }}
     />
@@ -262,7 +274,9 @@ function FocalPointPicker({
         </span>
         <button
           className="text-[11px] font-semibold text-brand-blue hover:underline"
-          onClick={() => onChange(50, 50)}
+          onClick={() => {
+            onChange(50, 50);
+          }}
           type="button"
         >
           Centre
@@ -381,7 +395,9 @@ function DropZone({
   return (
     <div
       className={`relative rounded-2xl border-2 border-dashed p-6 text-center transition sm:p-8 ${over ? "border-brand-blue bg-brand-blue-50/70 dark:bg-brand-blue/10" : "border-[#cfd6e3] bg-white hover:border-brand-blue/50 dark:border-white/15 dark:bg-white/[0.02]"}`}
-      onDragLeave={() => setOver(false)}
+      onDragLeave={() => {
+        setOver(false);
+      }}
       onDragOver={(event) => {
         event.preventDefault();
         setOver(true);
@@ -485,8 +501,9 @@ function MediaDialog({
     initial?.kind === "youtube" || initial?.kind === "vimeo" ? (initial.url ?? "") : "",
   );
 
-  const patch = (next: Partial<FormMedia>) =>
+  const patch = (next: Partial<FormMedia>) => {
     setDraft((current) => (current ? { ...current, ...next } : current));
+  };
 
   const upload = useCallback(
     async (file: File) => {
@@ -585,7 +602,9 @@ function MediaDialog({
           <button
             className={primaryButtonClass}
             disabled={!draft || busy}
-            onClick={() => draft && onUse(draft)}
+            onClick={() => {
+              if (draft) onUse(draft);
+            }}
             type="button"
           >
             Use media
@@ -611,7 +630,9 @@ function MediaDialog({
                 className={`inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold whitespace-nowrap transition focus-visible:ring-4 focus-visible:ring-brand-blue/20 focus-visible:outline-none max-sm:h-11 ${selected ? "bg-white text-[#171b25] shadow-[0_4px_12px_-8px_rgba(20,32,58,0.6)] dark:bg-white/15 dark:text-white" : "text-[#69748a] hover:text-[#171b25] dark:text-white/50 dark:hover:text-white"}`}
                 id={`${baseId}-tab-${item.id}`}
                 key={item.id}
-                onClick={() => setTab(item.id)}
+                onClick={() => {
+                  setTab(item.id);
+                }}
                 onKeyDown={(event) => {
                   const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
                   if (!delta) return;
@@ -671,7 +692,9 @@ function MediaDialog({
                 <input
                   className={inputClass}
                   id={`${baseId}-link`}
-                  onChange={(event) => setLinkUrl(event.target.value)}
+                  onChange={(event) => {
+                    setLinkUrl(event.target.value);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
@@ -708,7 +731,9 @@ function MediaDialog({
                 <input
                   className={inputClass}
                   id={`${baseId}-embed`}
-                  onChange={(event) => setEmbedUrl(event.target.value)}
+                  onChange={(event) => {
+                    setEmbedUrl(event.target.value);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
@@ -756,7 +781,9 @@ function MediaDialog({
             <p className={eyebrowClass}>Selected · {kindLabel(draft.kind)}</p>
             <button
               className="text-xs font-semibold text-brand-red hover:underline"
-              onClick={() => setDraft(undefined)}
+              onClick={() => {
+                setDraft(undefined);
+              }}
               type="button"
             >
               Clear
@@ -767,7 +794,9 @@ function MediaDialog({
               {focal && !isEmbed ? (
                 <FocalPointPicker
                   media={draft}
-                  onChange={(focalX, focalY) => patch({ focalX, focalY })}
+                  onChange={(focalX, focalY) => {
+                    patch({ focalX, focalY });
+                  }}
                 />
               ) : (
                 <div className="relative overflow-hidden rounded-xl bg-[#eef1f7] dark:bg-white/[0.05]">
@@ -801,7 +830,9 @@ function MediaDialog({
                   className={smallInputClass}
                   id={`${baseId}-alt`}
                   maxLength={300}
-                  onChange={(event) => patch({ alt: event.target.value || undefined })}
+                  onChange={(event) => {
+                    patch({ alt: event.target.value || undefined });
+                  }}
                   value={draft.alt ?? ""}
                 />
               </Field>
@@ -810,7 +841,9 @@ function MediaDialog({
                   className={smallInputClass}
                   id={`${baseId}-caption`}
                   maxLength={300}
-                  onChange={(event) => patch({ caption: event.target.value || undefined })}
+                  onChange={(event) => {
+                    patch({ caption: event.target.value || undefined });
+                  }}
                   placeholder="Optional"
                   value={draft.caption ?? ""}
                 />
@@ -822,7 +855,9 @@ function MediaDialog({
                   </span>
                   <Segmented
                     label="Fit"
-                    onChange={(fit) => patch({ fit })}
+                    onChange={(fit) => {
+                      patch({ fit });
+                    }}
                     options={[
                       { value: "cover", label: "Fill (crop)" },
                       { value: "contain", label: "Fit (whole)" },
@@ -837,15 +872,17 @@ function MediaDialog({
                   <Switch
                     checked={draft.autoplay ?? false}
                     label="Autoplay"
-                    onChange={(autoplay) =>
-                      patch(autoplay ? { autoplay, muted: true } : { autoplay })
-                    }
+                    onChange={(autoplay) => {
+                      patch(autoplay ? { autoplay, muted: true } : { autoplay });
+                    }}
                     size="sm"
                   />
                   <Switch
                     checked={draft.loop ?? false}
                     label="Loop"
-                    onChange={(loop) => patch({ loop })}
+                    onChange={(loop) => {
+                      patch({ loop });
+                    }}
                     size="sm"
                   />
                   <Switch
@@ -853,7 +890,9 @@ function MediaDialog({
                     description={draft.autoplay ? "Browsers only autoplay muted video." : undefined}
                     disabled={draft.autoplay}
                     label="Muted"
-                    onChange={(muted) => patch({ muted })}
+                    onChange={(muted) => {
+                      patch({ muted });
+                    }}
                     size="sm"
                   />
                 </div>
@@ -892,7 +931,9 @@ export function MediaPicker({
 
   const dropProps = acceptsFiles
     ? {
-        onDragLeave: () => setOver(false),
+        onDragLeave: () => {
+          setOver(false);
+        },
         onDragOver: (event: React.DragEvent) => {
           event.preventDefault();
           setOver(true);
@@ -932,7 +973,9 @@ export function MediaPicker({
         <button
           aria-label={`${label}: ${emptyLabel}`}
           className={`flex w-full items-center justify-center gap-2 rounded-xl border border-dashed text-sm font-semibold transition focus-visible:ring-4 focus-visible:ring-brand-blue/20 focus-visible:outline-none ${compact ? "h-11 px-2 text-xs" : "h-24 flex-col px-4"} ${over ? "border-brand-blue bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/15" : "border-[#c6cedd] bg-white/60 text-[#5d687d] hover:border-brand-blue hover:text-brand-blue dark:border-white/15 dark:bg-white/[0.02] dark:text-white/55"}`}
-          onClick={() => openWith()}
+          onClick={() => {
+            openWith();
+          }}
           type="button"
           {...dropProps}
         >
@@ -956,7 +999,9 @@ export function MediaPicker({
           <button
             aria-label={`${label}: change`}
             className="relative size-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-[#dfe4ee] focus-visible:ring-4 focus-visible:ring-brand-blue/25 focus-visible:outline-none dark:ring-white/10"
-            onClick={() => openWith()}
+            onClick={() => {
+              openWith();
+            }}
             type="button"
             {...dropProps}
           >
@@ -965,7 +1010,9 @@ export function MediaPicker({
           <button
             aria-label={`Remove ${label.toLowerCase()}`}
             className="grid size-8 place-items-center rounded-lg text-[#8490a5] transition hover:bg-brand-red-50 hover:text-brand-red"
-            onClick={() => onChange(undefined)}
+            onClick={() => {
+              onChange(undefined);
+            }}
             title="Remove"
             type="button"
           >
@@ -1013,7 +1060,13 @@ export function MediaPicker({
               (value.caption ?? kindLabel(value.kind))
             )}
           </p>
-          <button className={ghostButtonClass} onClick={() => openWith()} type="button">
+          <button
+            className={ghostButtonClass}
+            onClick={() => {
+              openWith();
+            }}
+            type="button"
+          >
             <PencilSimple size={14} />
             Edit
           </button>
@@ -1021,7 +1074,9 @@ export function MediaPicker({
             <button
               aria-label="Set focal point"
               className={ghostButtonClass}
-              onClick={() => openWith()}
+              onClick={() => {
+                openWith();
+              }}
               title="Focal point"
               type="button"
             >
@@ -1031,7 +1086,9 @@ export function MediaPicker({
           <button
             aria-label={`Remove ${label.toLowerCase()}`}
             className={`${ghostButtonClass} hover:bg-brand-red-50 hover:text-brand-red dark:hover:bg-brand-red/15`}
-            onClick={() => onChange(undefined)}
+            onClick={() => {
+              onChange(undefined);
+            }}
             type="button"
           >
             <Trash size={14} />

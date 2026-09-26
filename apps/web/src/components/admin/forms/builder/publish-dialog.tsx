@@ -247,7 +247,9 @@ export function PublishDialog({
             {availability.suggestion ? (
               <button
                 className="font-semibold underline underline-offset-2 hover:text-brand-blue"
-                onClick={() => setSlug(availability.suggestion ?? "")}
+                onClick={() => {
+                  setSlug(availability.suggestion ?? "");
+                }}
                 type="button"
               >
                 Use {availability.suggestion}
@@ -325,7 +327,9 @@ export function PublishDialog({
             </div>
             <button
               className={secondaryButtonClass}
-              onClick={() => setSlug(randomSlug())}
+              onClick={() => {
+                setSlug(randomSlug());
+              }}
               title="A random link"
               type="button"
             >
@@ -335,7 +339,9 @@ export function PublishDialog({
             <button
               className={secondaryButtonClass}
               disabled={!slugify(record.document.title)}
-              onClick={() => setSlug(slugify(record.document.title))}
+              onClick={() => {
+                setSlug(slugify(record.document.title));
+              }}
               title="Make the link from the title"
               type="button"
             >
@@ -363,7 +369,9 @@ export function PublishDialog({
             onClick={async () => {
               if (await copyText(url)) {
                 setCopied(true);
-                window.setTimeout(() => setCopied(false), 1400);
+                window.setTimeout(() => {
+                  setCopied(false);
+                }, 1400);
               }
             }}
             type="button"

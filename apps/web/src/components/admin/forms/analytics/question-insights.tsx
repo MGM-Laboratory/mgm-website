@@ -294,7 +294,9 @@ function NumberInsight({ field, answered }: { field: FormField; answered: unknow
           className="w-28 accent-brand-blue"
           max={40}
           min={2}
-          onChange={(event) => setBins(Number(event.target.value))}
+          onChange={(event) => {
+            setBins(Number(event.target.value));
+          }}
           type="range"
           value={bins}
         />
@@ -496,7 +498,9 @@ function TextInsight({ field, rows }: { field: FormField; rows: WorkingRow[] }) 
           <input
             aria-label={`Search answers to ${field.label}`}
             className="h-7 w-40 rounded-lg border border-[#e4e8f0] bg-transparent px-2 text-xs outline-none focus:border-brand-blue dark:border-white/10"
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
             placeholder="Search"
             type="search"
             value={query}

@@ -125,7 +125,9 @@ function QuickAdd({
       if (event.target instanceof Node && !ref.current?.contains(event.target)) onClose();
     };
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+    };
   }, [onClose]);
   return (
     <div
@@ -225,7 +227,9 @@ export function Canvas({
   const cardActions = useMemo<BlockActions>(
     () => ({
       ...actions,
-      addBelow: (id, anchor) => setQuickAdd({ id, anchor }),
+      addBelow: (id, anchor) => {
+        setQuickAdd({ id, anchor });
+      },
     }),
     [actions],
   );
@@ -255,7 +259,9 @@ export function Canvas({
           active={selection === "welcome"}
           icon={<HandWaving size={13} weight="bold" />}
           label={welcome.enabled ? "Welcome screen" : "Welcome screen (off)"}
-          onSelect={() => onSelectScreen("welcome")}
+          onSelect={() => {
+            onSelectScreen("welcome");
+          }}
           tone={
             welcome.enabled
               ? "bg-white dark:bg-white/[0.035]"
@@ -307,7 +313,9 @@ export function Canvas({
               as="div"
               axis="y"
               className="space-y-3"
-              onReorder={(next: string[]) => setDragOrder(next)}
+              onReorder={(next: string[]) => {
+                setDragOrder(next);
+              }}
               ref={listRef}
               values={order}
             >
@@ -372,7 +380,9 @@ export function Canvas({
                 icon={<Flag size={13} weight="bold" />}
                 key={ending.id}
                 label={`Ending ${index + 1}${isDefault ? " · default" : ending.when?.rules.length ? " · by rule" : ""}`}
-                onSelect={() => onSelectScreen(`ending:${ending.id}`)}
+                onSelect={() => {
+                  onSelectScreen(`ending:${ending.id}`);
+                }}
                 tone="bg-white dark:bg-white/[0.035]"
               >
                 <p className="mt-2 font-display text-lg font-semibold tracking-[-0.03em]">
@@ -415,28 +425,36 @@ export function Canvas({
             <span className="px-2.5 text-sm font-semibold">{multi.size} selected</span>
             <button
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold hover:bg-[#f2f5fa] dark:hover:bg-white/[0.07]"
-              onClick={() => onBulk("require")}
+              onClick={() => {
+                onBulk("require");
+              }}
               type="button"
             >
               <Asterisk size={15} weight="bold" /> Require
             </button>
             <button
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold hover:bg-[#f2f5fa] dark:hover:bg-white/[0.07]"
-              onClick={() => onBulk("optional")}
+              onClick={() => {
+                onBulk("optional");
+              }}
               type="button"
             >
               Optional
             </button>
             <button
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold hover:bg-[#f2f5fa] dark:hover:bg-white/[0.07]"
-              onClick={() => onBulk("duplicate")}
+              onClick={() => {
+                onBulk("duplicate");
+              }}
               type="button"
             >
               <Copy size={15} /> Duplicate
             </button>
             <button
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-brand-red hover:bg-brand-red-50 dark:hover:bg-brand-red/15"
-              onClick={() => onBulk("delete")}
+              onClick={() => {
+                onBulk("delete");
+              }}
               type="button"
             >
               <Trash size={15} /> Delete
@@ -456,8 +474,12 @@ export function Canvas({
       {quickAdd ? (
         <QuickAdd
           anchor={quickAdd.anchor}
-          onAdd={(type) => actions.addAfter(quickAdd.id, type)}
-          onClose={() => setQuickAdd(null)}
+          onAdd={(type) => {
+            actions.addAfter(quickAdd.id, type);
+          }}
+          onClose={() => {
+            setQuickAdd(null);
+          }}
         />
       ) : null}
     </div>

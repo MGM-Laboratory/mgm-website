@@ -146,7 +146,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [printing, setPrinting] = useState(false);
-  const stopPrinting = useCallback(() => setPrinting(false), []);
+  const stopPrinting = useCallback(() => {
+    setPrinting(false);
+  }, []);
 
   useEffect(() => {
     void loadResponses(form.id).catch(() => undefined);
@@ -162,13 +164,19 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
       if (document.visibilityState === "visible")
         void loadResponses(form.id, { force: true, quiet: true }).catch(() => undefined);
     }, AUTO_REFRESH_MS);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+    };
   }, [autoRefresh, form.id]);
 
   // Debounced search into the shared view.
   useEffect(() => {
-    const timer = window.setTimeout(() => setView(form.id, { search: searchText }), 180);
-    return () => window.clearTimeout(timer);
+    const timer = window.setTimeout(() => {
+      setView(form.id, { search: searchText });
+    }, 180);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [searchText, form.id]);
 
   useEffect(() => {
@@ -244,10 +252,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
     };
   }, [data.filtered, data.rows.length, state.responses]);
 
-  const openFiles = useCallback(
-    (files: FormFileAnswer[], index: number) => setLightbox({ items: files, index }),
-    [],
-  );
+  const openFiles = useCallback((files: FormFileAnswer[], index: number) => {
+    setLightbox({ items: files, index });
+  }, []);
 
   const patch = useCallback(
     async (row: WorkingRow, body: FormResponsePatch, optimisticAnswers?: FormAnswers) => {
@@ -318,12 +325,13 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
     [rows],
   );
 
-  const toggleAll = () =>
+  const toggleAll = () => {
     setSelected((current) => {
       const allOn = rows.length > 0 && rows.every((row) => current.has(row.id));
       if (allOn) return new Set();
       return new Set(rows.map((row) => row.id));
     });
+  };
 
   const bulk = async (action: FormBulkAction, tag?: string) => {
     const ids = [...selected];
@@ -374,15 +382,16 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
     }
   };
 
-  const setFilter = (key: string, filter: ColumnFilter | null) =>
+  const setFilter = (key: string, filter: ColumnFilter | null) => {
     setView(form.id, (view) => ({
       ...view,
       filters: filter
         ? [...view.filters.filter((item) => item.key !== key), filter]
         : view.filters.filter((item) => item.key !== key),
     }));
+  };
 
-  const onSort = (key: string) =>
+  const onSort = (key: string) => {
     setView(form.id, (view) => ({
       ...view,
       sort:
@@ -392,6 +401,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             ? { key, direction: "desc" }
             : null,
     }));
+  };
 
   const refresh = async () => {
     setRefreshing(true);
@@ -460,7 +470,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           />
           <input
             className={`${inputClass} pl-9`}
-            onChange={(event) => setSearchText(event.target.value)}
+            onChange={(event) => {
+              setSearchText(event.target.value);
+            }}
             placeholder="Search every answer, tag and note"
             type="search"
             value={searchText}
@@ -483,7 +495,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
               aria-pressed={mode === id}
               className={`inline-flex h-8 items-center gap-1.5 rounded-[10px] px-2.5 text-xs font-semibold transition ${mode === id ? "bg-brand-blue text-white" : "text-[#5c6679] hover:text-brand-blue dark:text-white/60"}`}
               key={id}
-              onClick={() => setMode(id)}
+              onClick={() => {
+                setMode(id);
+              }}
               type="button"
             >
               <Icon size={14} /> <span className="hidden sm:inline">{label}</span>
@@ -495,7 +509,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             <button
               aria-label="Columns"
               className={ghostButton}
-              onClick={(event) => setColumnsAnchor(event.currentTarget.getBoundingClientRect())}
+              onClick={(event) => {
+                setColumnsAnchor(event.currentTarget.getBoundingClientRect());
+              }}
               type="button"
             >
               <Columns size={15} /> <span className="hidden sm:inline">Columns</span>
@@ -503,7 +519,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             <button
               aria-label={`Density: ${config.density}`}
               className={ghostButton}
-              onClick={() =>
+              onClick={() => {
                 setConfig((current) => ({
                   ...current,
                   density:
@@ -512,8 +528,8 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
                       : current.density === "normal"
                         ? "roomy"
                         : "compact",
-                }))
-              }
+                }));
+              }}
               title="Row density"
               type="button"
             >
@@ -526,7 +542,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           aria-label="Clean data"
           aria-pressed={cleanOpen}
           className={`${ghostButton} ${cleanOpen || state.pipeline.length ? "border-brand-green text-brand-green" : ""}`}
-          onClick={() => setCleanOpen((value) => !value)}
+          onClick={() => {
+            setCleanOpen((value) => !value);
+          }}
           type="button"
         >
           <Broom size={15} /> <span className="hidden sm:inline">Clean data</span>
@@ -540,7 +558,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           className={ghostButton}
           aria-label="Export"
           data-testid="export-button"
-          onClick={(event) => setExportAnchor(event.currentTarget.getBoundingClientRect())}
+          onClick={(event) => {
+            setExportAnchor(event.currentTarget.getBoundingClientRect());
+          }}
           type="button"
         >
           <DownloadSimple size={15} /> <span className="hidden sm:inline">Export</span>
@@ -565,7 +585,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             <input
               checked={autoRefresh}
               className="size-3.5 accent-brand-blue"
-              onChange={(event) => setAutoRefresh(event.target.checked)}
+              onChange={(event) => {
+                setAutoRefresh(event.target.checked);
+              }}
               type="checkbox"
             />{" "}
             Auto
@@ -583,7 +605,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             aria-pressed={state.view.segment === segment.id}
             className={segmentButton(state.view.segment === segment.id)}
             key={segment.id}
-            onClick={() => setView(form.id, { segment: segment.id })}
+            onClick={() => {
+              setView(form.id, { segment: segment.id });
+            }}
             type="button"
           >
             {segment.label}
@@ -653,7 +677,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
               <button
                 aria-label="Remove filter"
                 className="rounded-full p-0.5 hover:bg-white dark:hover:bg-white/10"
-                onClick={() => setFilter(filter.key, null)}
+                onClick={() => {
+                  setFilter(filter.key, null);
+                }}
                 type="button"
               >
                 <X size={10} weight="bold" />
@@ -662,7 +688,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           ))}
           <button
             className="text-xs font-semibold text-[#7e899d] hover:text-brand-red"
-            onClick={() => setView(form.id, { filters: [] })}
+            onClick={() => {
+              setView(form.id, { filters: [] });
+            }}
             type="button"
           >
             Clear all
@@ -715,29 +743,31 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
                 disabled={busy}
                 icon={<Tag size={13} />}
                 label="Tag"
-                onClick={(event) =>
+                onClick={(event) => {
                   setTagAnchor({
                     anchor: event.currentTarget.getBoundingClientRect(),
                     action: "tag",
-                  })
-                }
+                  });
+                }}
               />
               <BulkButton
                 disabled={busy}
                 label="Untag"
-                onClick={(event) =>
+                onClick={(event) => {
                   setTagAnchor({
                     anchor: event.currentTarget.getBoundingClientRect(),
                     action: "untag",
-                  })
-                }
+                  });
+                }}
               />
             </>
           ) : null}
           <BulkButton
             icon={<DownloadSimple size={13} />}
             label="Export"
-            onClick={(event) => setExportAnchor(event.currentTarget.getBoundingClientRect())}
+            onClick={(event) => {
+              setExportAnchor(event.currentTarget.getBoundingClientRect());
+            }}
           />
           {canDelete ? (
             <BulkButton
@@ -751,7 +781,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           <button
             aria-label="Clear selection"
             className="ml-auto rounded-lg p-1.5 text-brand-blue hover:bg-white dark:hover:bg-white/10"
-            onClick={() => setSelected(new Set())}
+            onClick={() => {
+              setSelected(new Set());
+            }}
             type="button"
           >
             <X size={14} />
@@ -778,15 +810,19 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
                 filteredKeys={filteredKeys}
                 formId={form.id}
                 onEdit={(row, column, value) => void editAnswer(row, column, value)}
-                onHeaderMenu={(column, anchor) => setMenu({ column, anchor })}
-                onOpen={(row) => setOpenId(row.id)}
+                onHeaderMenu={(column, anchor) => {
+                  setMenu({ column, anchor });
+                }}
+                onOpen={(row) => {
+                  setOpenId(row.id);
+                }}
                 onOpenFile={openFiles}
-                onResize={(key, width) =>
+                onResize={(key, width) => {
                   setConfig((current) => ({
                     ...current,
                     widths: { ...current.widths, [key]: width },
-                  }))
-                }
+                  }));
+                }}
                 onSort={onSort}
                 onToggleAll={toggleAll}
                 onToggleRow={toggleRow}
@@ -801,7 +837,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             <CardsView
               columns={visibleColumns}
               formId={form.id}
-              onOpen={(row) => setOpenId(row.id)}
+              onOpen={(row) => {
+                setOpenId(row.id);
+              }}
               onOpenFile={openFiles}
               rows={rows}
             />
@@ -809,7 +847,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             <GalleryView
               columns={data.answerColumns}
               formId={form.id}
-              onOpenItems={(items, index) => setLightbox({ items, index })}
+              onOpenItems={(items, index) => {
+                setLightbox({ items, index });
+              }}
               rows={rows}
             />
           )}
@@ -821,7 +861,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
                 baseColumns={[...data.answerColumns, ...data.metaColumns]}
                 canWrite={canWrite}
                 form={form}
-                onClose={() => setCleanOpen(false)}
+                onClose={() => {
+                  setCleanOpen(false);
+                }}
                 result={data.pipeline}
                 steps={state.pipeline}
               />
@@ -834,7 +876,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
                   baseColumns={[...data.answerColumns, ...data.metaColumns]}
                   canWrite={canWrite}
                   form={form}
-                  onClose={() => setCleanOpen(false)}
+                  onClose={() => {
+                    setCleanOpen(false);
+                  }}
                   result={data.pipeline}
                   steps={state.pipeline}
                 />
@@ -850,8 +894,12 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           anchor={menu.anchor}
           column={menu.column}
           filter={state.view.filters.find((filter) => filter.key === menu.column.key)}
-          onClose={() => setMenu(null)}
-          onFilter={(filter) => setFilter(menu.column.key, filter)}
+          onClose={() => {
+            setMenu(null);
+          }}
+          onFilter={(filter) => {
+            setFilter(menu.column.key, filter);
+          }}
           onHide={() => {
             setConfig((current) => ({ ...current, hidden: [...current.hidden, menu.column.key] }));
             setMenu(null);
@@ -880,18 +928,22 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           anchor={columnsAnchor}
           columns={columns}
           hidden={hidden}
-          onClose={() => setColumnsAnchor(null)}
-          onOrder={(next) => setConfig((current) => ({ ...current, order: next }))}
-          onReset={() =>
+          onClose={() => {
+            setColumnsAnchor(null);
+          }}
+          onOrder={(next) => {
+            setConfig((current) => ({ ...current, order: next }));
+          }}
+          onReset={() => {
             setConfig((current) => ({
               ...current,
               order: [],
               hidden: DEFAULT_HIDDEN_META,
               widths: {},
               pinned: 1,
-            }))
-          }
-          onShowAll={(group, show) =>
+            }));
+          }}
+          onShowAll={(group, show) => {
             setConfig((current) => {
               const keys = columns
                 .filter((column) => group === "all" || column.group === group)
@@ -902,16 +954,16 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
                 else next.add(key);
               }
               return { ...current, hidden: [...next] };
-            })
-          }
-          onToggle={(key) =>
+            });
+          }}
+          onToggle={(key) => {
             setConfig((current) => ({
               ...current,
               hidden: current.hidden.includes(key)
                 ? current.hidden.filter((item) => item !== key)
                 : [...current.hidden, key],
-            }))
-          }
+            }));
+          }}
           order={order}
         />
       ) : null}
@@ -925,8 +977,12 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           filteredRows={rows}
           form={form}
           metaColumns={data.metaColumns}
-          onClose={() => setExportAnchor(null)}
-          onPrint={() => setPrinting(true)}
+          onClose={() => {
+            setExportAnchor(null);
+          }}
+          onPrint={() => {
+            setPrinting(true);
+          }}
           rawAll={rawRows}
           selectedRows={selectedRows}
           visibleOrder={visibleColumns.map((column) => column.key)}
@@ -937,7 +993,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
         <Popover
           anchor={tagAnchor.anchor}
           label={tagAnchor.action === "tag" ? "Add a tag" : "Remove a tag"}
-          onClose={() => setTagAnchor(null)}
+          onClose={() => {
+            setTagAnchor(null);
+          }}
           width={280}
         >
           <form
@@ -955,7 +1013,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
               autoFocus
               className={inputClass}
               list="bulk-tags"
-              onChange={(event) => setTagText(event.target.value)}
+              onChange={(event) => {
+                setTagText(event.target.value);
+              }}
               placeholder="Tag name"
               value={tagText}
             />
@@ -979,7 +1039,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           columns={columns}
           count={rows.length}
           form={form}
-          onClose={() => setOpenId(null)}
+          onClose={() => {
+            setOpenId(null);
+          }}
           onDelete={async () => {
             try {
               await formsAdminApi.bulk(form.id, { ids: [openRow.id], action: "delete" });
@@ -1022,8 +1084,12 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           formId={form.id}
           index={lightbox.index}
           items={lightbox.items}
-          onClose={() => setLightbox(null)}
-          onIndex={(index) => setLightbox((current) => (current ? { ...current, index } : current))}
+          onClose={() => {
+            setLightbox(null);
+          }}
+          onIndex={(index) => {
+            setLightbox((current) => (current ? { ...current, index } : current));
+          }}
         />
       ) : null}
     </div>

@@ -101,13 +101,14 @@ export function WorldMap({
     (sum, bucket) => ({ view: sum.view + bucket.view, submit: sum.submit + bucket.submit }),
     { view: 0, submit: 0 },
   );
-  const toggle = (kind: "view" | "submit") =>
+  const toggle = (kind: "view" | "submit") => {
     setHidden((current) => {
       const next = new Set(current);
       if (next.has(kind)) next.delete(kind);
       else next.add(kind);
       return next;
     });
+  };
 
   return (
     <div>
@@ -117,7 +118,9 @@ export function WorldMap({
             aria-pressed={!hidden.has(kind)}
             className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition ${hidden.has(kind) ? "border-[#e4e8f0] text-[#9ba4b5] dark:border-white/10" : "border-[#d9dfeb] text-[#3b4150] dark:border-white/15 dark:text-white/75"}`}
             key={kind}
-            onClick={() => toggle(kind)}
+            onClick={() => {
+              toggle(kind);
+            }}
             type="button"
           >
             <span
@@ -147,7 +150,7 @@ export function WorldMap({
                   .map((bucket, index) => {
                     const { x, y } = project(bucket.latitude, bucket.longitude);
                     const r = radiusOf(bucket[kind]);
-                    const tip = () =>
+                    const tip = () => {
                       show({
                         x,
                         y: y - r,
@@ -170,6 +173,7 @@ export function WorldMap({
                           </>
                         ),
                       });
+                    };
                     return (
                       <circle
                         cx={x}

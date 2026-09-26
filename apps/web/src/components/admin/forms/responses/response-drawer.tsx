@@ -101,7 +101,9 @@ export function ResponseDrawer({
       else if (event.key === "k" || event.key === "K") onStep(-1);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, [onClose, onStep]);
 
   useEffect(() => {
@@ -269,7 +271,9 @@ export function ResponseDrawer({
             aria-label="Previous response (K)"
             className="rounded-lg p-2 text-[#5c6679] hover:bg-[#f4f6fa] disabled:opacity-30 dark:text-white/60 dark:hover:bg-white/10"
             disabled={position <= 0}
-            onClick={() => onStep(-1)}
+            onClick={() => {
+              onStep(-1);
+            }}
             title="Previous (K)"
             type="button"
           >
@@ -279,7 +283,9 @@ export function ResponseDrawer({
             aria-label="Next response (J)"
             className="rounded-lg p-2 text-[#5c6679] hover:bg-[#f4f6fa] disabled:opacity-30 dark:text-white/60 dark:hover:bg-white/10"
             disabled={position >= count - 1}
-            onClick={() => onStep(1)}
+            onClick={() => {
+              onStep(1);
+            }}
             title="Next (J)"
             type="button"
           >
@@ -304,7 +310,9 @@ export function ResponseDrawer({
                 "border-[#e0a82a] bg-brand-yellow-50 text-[#8a6412] dark:bg-brand-yellow/15 dark:text-brand-yellow",
               )}
               disabled={!canWrite}
-              onClick={() => toggle("starred")}
+              onClick={() => {
+                toggle("starred");
+              }}
               type="button"
             >
               <Star size={14} weight={record.admin.starred ? "fill" : "regular"} />{" "}
@@ -317,7 +325,9 @@ export function ResponseDrawer({
                 "border-brand-red bg-brand-red-50 text-brand-red dark:bg-brand-red/15",
               )}
               disabled={!canWrite}
-              onClick={() => toggle("flagged")}
+              onClick={() => {
+                toggle("flagged");
+              }}
               type="button"
             >
               <Flag size={14} weight={record.admin.flagged ? "fill" : "regular"} />{" "}
@@ -330,7 +340,9 @@ export function ResponseDrawer({
                 "border-brand-green bg-brand-green-50 text-brand-green dark:bg-brand-green/15",
               )}
               disabled={!canWrite}
-              onClick={() => toggle("reviewed")}
+              onClick={() => {
+                toggle("reviewed");
+              }}
               type="button"
             >
               <CheckCircle size={14} weight={record.admin.reviewed ? "fill" : "regular"} />{" "}
@@ -343,7 +355,9 @@ export function ResponseDrawer({
                 "border-[#5c6470] bg-[#eef0f4] text-[#3b4150] dark:bg-white/10 dark:text-white/75",
               )}
               disabled={!canWrite}
-              onClick={() => toggle("spam")}
+              onClick={() => {
+                toggle("spam");
+              }}
               type="button"
             >
               <Prohibit size={14} /> {record.spam ? "Spam" : "Mark spam"}
@@ -366,7 +380,9 @@ export function ResponseDrawer({
                         <button
                           aria-label={`Edit ${column.label}`}
                           className="rounded p-1 text-[#9ba4b5] opacity-0 transition hover:text-brand-blue focus-visible:opacity-100 group-hover:opacity-100"
-                          onClick={() => setEditing(column.key)}
+                          onClick={() => {
+                            setEditing(column.key);
+                          }}
                           type="button"
                         >
                           <PencilSimple size={13} />
@@ -379,7 +395,9 @@ export function ResponseDrawer({
                           answers={row.answers}
                           column={column}
                           compact={false}
-                          onCancel={() => setEditing(null)}
+                          onCancel={() => {
+                            setEditing(null);
+                          }}
                           onCommit={(next) => {
                             setEditing(null);
                             void onEditAnswer(column, next);
@@ -459,7 +477,9 @@ export function ResponseDrawer({
                   aria-label="Add a tag"
                   className="h-7 min-w-28 flex-1 rounded-lg border border-dashed border-[#d9dfeb] bg-transparent px-2 text-xs outline-none focus:border-brand-blue dark:border-white/15"
                   list={`tags-${form.id}`}
-                  onChange={(event) => setTagInput(event.target.value)}
+                  onChange={(event) => {
+                    setTagInput(event.target.value);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === ",") {
                       event.preventDefault();
@@ -482,7 +502,9 @@ export function ResponseDrawer({
                   <button
                     className="rounded-full border border-[#e4e8f0] px-2 py-0.5 text-[11px] text-[#5c6679] hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
                     key={tag}
-                    onClick={() => addTag(tag)}
+                    onClick={() => {
+                      addTag(tag);
+                    }}
                     type="button"
                   >
                     + {tag}
@@ -504,7 +526,9 @@ export function ResponseDrawer({
                 if ((record.admin.note ?? "") !== note)
                   void onPatch({ note: note.trim() ? note : null });
               }}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => {
+                setNote(event.target.value);
+              }}
               placeholder="Only admins see this."
               value={note}
             />

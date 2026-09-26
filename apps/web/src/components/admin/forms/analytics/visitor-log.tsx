@@ -103,7 +103,9 @@ export function VisitorLog({ form }: { form: FormRecord }) {
           />
           <input
             className="h-9 w-full rounded-xl border border-[#d9dfeb] bg-white pr-3 pl-8 text-sm outline-none focus:border-brand-blue dark:border-white/10 dark:bg-white/[0.045]"
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
             placeholder="IP, place, device, referrer, question"
             type="search"
             value={query}
@@ -115,7 +117,9 @@ export function VisitorLog({ form }: { form: FormRecord }) {
               aria-pressed={type === item}
               className={`h-8 rounded-full px-3 text-xs font-semibold capitalize ${type === item ? "bg-[#171b25] text-white dark:bg-white dark:text-[#171b25]" : "border border-[#d9dfeb] text-[#5c6679] dark:border-white/10 dark:text-white/60"}`}
               key={item}
-              onClick={() => setType(item)}
+              onClick={() => {
+                setType(item);
+              }}
               type="button"
             >
               {item}

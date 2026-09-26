@@ -133,8 +133,12 @@ export function AnswerEditor({
           <select
             className={editorInput}
             defaultValue={typeof original === "string" ? original : ""}
-            onBlur={(event) => commit(event.target.value || undefined)}
-            onChange={(event) => commit(event.target.value || undefined)}
+            onBlur={(event) => {
+              commit(event.target.value || undefined);
+            }}
+            onChange={(event) => {
+              commit(event.target.value || undefined);
+            }}
             onKeyDown={onKeyDown}
             ref={(element) => {
               ref.current = element;
@@ -169,13 +173,13 @@ export function AnswerEditor({
               <input
                 checked={multi.includes(option.id)}
                 className="size-4 accent-brand-blue"
-                onChange={(event) =>
+                onChange={(event) => {
                   setMulti((current) =>
                     event.target.checked
                       ? [...current, option.id]
                       : current.filter((id) => id !== option.id),
-                  )
-                }
+                  );
+                }}
                 type="checkbox"
               />
               {option.label}
@@ -190,12 +194,12 @@ export function AnswerEditor({
         <select
           className={editorInput}
           defaultValue={original === true ? "true" : original === false ? "false" : ""}
-          onBlur={(event) =>
-            commit(event.target.value === "" ? undefined : event.target.value === "true")
-          }
-          onChange={(event) =>
-            commit(event.target.value === "" ? undefined : event.target.value === "true")
-          }
+          onBlur={(event) => {
+            commit(event.target.value === "" ? undefined : event.target.value === "true");
+          }}
+          onChange={(event) => {
+            commit(event.target.value === "" ? undefined : event.target.value === "true");
+          }}
           onKeyDown={onKeyDown}
           ref={(element) => {
             ref.current = element;
@@ -210,8 +214,12 @@ export function AnswerEditor({
       return (
         <textarea
           className={`${editorInput} ${compact ? "min-h-28 shadow-xl" : "min-h-32"}`}
-          onBlur={() => commit(fromText())}
-          onChange={(event) => setText(event.target.value)}
+          onBlur={() => {
+            commit(fromText());
+          }}
+          onChange={(event) => {
+            setText(event.target.value);
+          }}
           onKeyDown={onKeyDown}
           ref={(element) => {
             ref.current = element;
@@ -246,7 +254,9 @@ export function AnswerEditor({
             <input
               aria-label="Pick a colour"
               className="h-7 w-8 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                setText(event.target.value);
+              }}
               type="color"
               value={/^#[0-9a-f]{6}$/i.test(text) ? text : "#000000"}
             />
@@ -255,8 +265,12 @@ export function AnswerEditor({
             className={editorInput}
             max={field.max}
             min={field.min}
-            onBlur={() => commit(fromText())}
-            onChange={(event) => setText(event.target.value)}
+            onBlur={() => {
+              commit(fromText());
+            }}
+            onChange={(event) => {
+              setText(event.target.value);
+            }}
             onKeyDown={onKeyDown}
             ref={(element) => {
               ref.current = element;

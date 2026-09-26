@@ -101,36 +101,48 @@ function FormActions({
         {
           label: canWrite ? "Open builder" : "Open",
           icon: <PencilSimple size={16} />,
-          onSelect: () => onAction("open", form),
+          onSelect: () => {
+            onAction("open", form);
+          },
         },
         {
           label: "Open responses",
           icon: <Tray size={16} />,
-          onSelect: () => onAction("responses", form),
+          onSelect: () => {
+            onAction("responses", form);
+          },
         },
         {
           label: "Analytics",
           icon: <ChartLineUp size={16} />,
-          onSelect: () => onAction("analytics", form),
+          onSelect: () => {
+            onAction("analytics", form);
+          },
         },
         "separator",
         {
           label: "Copy public link",
           icon: <LinkSimple size={16} />,
-          onSelect: () => onAction("copy", form),
+          onSelect: () => {
+            onAction("copy", form);
+          },
         },
         {
           label: "View live",
           icon: <ArrowSquareOut size={16} />,
           disabled: form.status === "draft",
           hint: form.status === "draft" ? "draft" : undefined,
-          onSelect: () => onAction("live", form),
+          onSelect: () => {
+            onAction("live", form);
+          },
         },
         {
           label: "Duplicate",
           icon: <Copy size={16} />,
           disabled: !canWrite,
-          onSelect: () => onAction("duplicate", form),
+          onSelect: () => {
+            onAction("duplicate", form);
+          },
         },
         "separator",
         {
@@ -138,7 +150,9 @@ function FormActions({
           icon: <Trash size={16} />,
           danger: true,
           disabled: !canDelete,
-          onSelect: () => onAction("delete", form),
+          onSelect: () => {
+            onAction("delete", form);
+          },
         },
       ]}
       label={`Actions for ${form.title || "Untitled form"}`}
@@ -182,7 +196,9 @@ function FormCard({
             <h3 className="truncate font-display text-lg font-semibold tracking-[-0.03em]">
               <button
                 className="text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
-                onClick={() => onAction("open", form)}
+                onClick={() => {
+                  onAction("open", form);
+                }}
                 type="button"
               >
                 {title}
@@ -244,7 +260,9 @@ function FormRow({
       <div className="min-w-0 flex-1 basis-48">
         <button
           className="block max-w-full truncate text-left text-sm font-semibold after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
-          onClick={() => onAction("open", form)}
+          onClick={() => {
+            onAction("open", form);
+          }}
           type="button"
         >
           {form.title || "Untitled form"}
@@ -393,7 +411,9 @@ export function FormsList({
               <input
                 aria-label="Search forms by title or link"
                 className={`${inputClass} pl-9`}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                }}
                 placeholder="Search title or link"
                 type="search"
                 value={query}
@@ -420,7 +440,9 @@ export function FormsList({
               <select
                 className={`${inputClass} w-auto pr-8`}
                 id="forms-sort"
-                onChange={(event) => setSort(event.target.value as SortKey)}
+                onChange={(event) => {
+                  setSort(event.target.value as SortKey);
+                }}
                 value={sort}
               >
                 <option value="updated">Last updated</option>
@@ -538,7 +560,9 @@ export function FormsList({
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button
                     className={primaryButtonClass}
-                    onClick={() => onPickTemplate(null)}
+                    onClick={() => {
+                      onPickTemplate(null);
+                    }}
                     type="button"
                   >
                     <Plus size={16} weight="bold" />
@@ -559,7 +583,9 @@ export function FormsList({
                 {featured.map((template) => (
                   <TemplateTile
                     key={template.id}
-                    onChoose={() => onPickTemplate(template)}
+                    onChoose={() => {
+                      onPickTemplate(template);
+                    }}
                     template={template}
                   />
                 ))}

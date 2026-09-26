@@ -76,7 +76,9 @@ function TileGroup<T extends string>({
               className={`group relative flex min-w-0 flex-col gap-1.5 rounded-xl p-2 text-left transition focus-visible:ring-4 focus-visible:ring-brand-blue/25 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${selected ? "bg-brand-blue-50 ring-2 ring-brand-blue dark:bg-brand-blue/15" : "ring-1 ring-[#dfe4ee] hover:bg-[#f5f7fb] hover:ring-brand-blue/40 dark:ring-white/10 dark:hover:bg-white/[0.05]"}`}
               disabled={disabled}
               key={tile.value}
-              onClick={() => onChange(tile.value)}
+              onClick={() => {
+                onChange(tile.value);
+              }}
               ref={(element) => {
                 refs.current[position] = element;
               }}
@@ -144,7 +146,9 @@ function Range({
         id={id}
         max={max}
         min={0}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={(event) => {
+          onChange(Number(event.target.value));
+        }}
         step={1}
         type="range"
         value={value}
@@ -437,14 +441,16 @@ export function DesignTab({
   const [follow, setFollow] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
 
-  const set = <K extends keyof FormDesign>(key: K, value: FormDesign[K]) =>
+  const set = <K extends keyof FormDesign>(key: K, value: FormDesign[K]) => {
     change((doc) => ({ ...doc, design: { ...doc.design, [key]: value } }), `design.${key}`);
-  const setCover = (patch: Partial<FormDesign["cover"]>, key: string) =>
+  };
+  const setCover = (patch: Partial<FormDesign["cover"]>, key: string) => {
     change(
       (doc) => ({ ...doc, design: { ...doc.design, cover: { ...doc.design.cover, ...patch } } }),
       `design.cover.${key}`,
     );
-  const setBackground = (patch: Partial<FormDesign["background"]>, key: string) =>
+  };
+  const setBackground = (patch: Partial<FormDesign["background"]>, key: string) => {
     change(
       (doc) => ({
         ...doc,
@@ -452,11 +458,13 @@ export function DesignTab({
       }),
       `design.background.${key}`,
     );
-  const setMotion = (patch: Partial<FormDesign["motion"]>, key: string) =>
+  };
+  const setMotion = (patch: Partial<FormDesign["motion"]>, key: string) => {
     change(
       (doc) => ({ ...doc, design: { ...doc.design, motion: { ...doc.design.motion, ...patch } } }),
       `design.motion.${key}`,
     );
+  };
 
   const selectedField =
     selection && !selection.startsWith("ending:") && selection !== "welcome"
@@ -509,9 +517,9 @@ export function DesignTab({
             <ThemePicker
               columnsClassName="grid-cols-3 sm:grid-cols-4"
               labelId={themeLabelId}
-              onChange={(theme?: ProjectThemeId) =>
-                !readOnly && set("theme", theme ?? projectThemeId({ slug: record.slug }))
-              }
+              onChange={(theme?: ProjectThemeId) => {
+                if (!readOnly) set("theme", theme ?? projectThemeId({ slug: record.slug }));
+              }}
               slug={record.slug}
               value={design.theme}
             />
@@ -519,7 +527,9 @@ export function DesignTab({
               <p className={`${eyebrowClass} mb-2`}>Colour mode</p>
               <Segmented<FormDesign["colorMode"]>
                 label="Colour mode"
-                onChange={(value) => !readOnly && set("colorMode", value)}
+                onChange={(value) => {
+                  if (!readOnly) set("colorMode", value);
+                }}
                 options={[
                   { value: "auto", label: "Follow device" },
                   { value: "light", label: "Light" },
@@ -534,7 +544,9 @@ export function DesignTab({
               columns="grid-cols-2"
               disabled={readOnly}
               label="Font"
-              onChange={(value) => set("font", value)}
+              onChange={(value) => {
+                set("font", value);
+              }}
               tiles={(Object.keys(fontFaces) as FormDesign["font"][]).map((font) => ({
                 value: font,
                 label: fontFaces[font].name,
@@ -555,7 +567,9 @@ export function DesignTab({
               columns="grid-cols-2"
               disabled={readOnly}
               label="Layout"
-              onChange={(value) => set("layout", value)}
+              onChange={(value) => {
+                set("layout", value);
+              }}
               tiles={[
                 {
                   value: "classic",
@@ -577,7 +591,9 @@ export function DesignTab({
                 <p className={`${eyebrowClass} mb-2`}>Alignment</p>
                 <Segmented<FormDesign["align"]>
                   label="Alignment"
-                  onChange={(value) => !readOnly && set("align", value)}
+                  onChange={(value) => {
+                    if (!readOnly) set("align", value);
+                  }}
                   options={[
                     { value: "left", label: "Left" },
                     { value: "center", label: "Center" },
@@ -589,7 +605,9 @@ export function DesignTab({
                 <p className={`${eyebrowClass} mb-2`}>Density</p>
                 <Segmented<FormDesign["density"]>
                   label="Density"
-                  onChange={(value) => !readOnly && set("density", value)}
+                  onChange={(value) => {
+                    if (!readOnly) set("density", value);
+                  }}
                   options={[
                     { value: "cozy", label: "Cozy" },
                     { value: "comfortable", label: "Comfy" },
@@ -603,7 +621,9 @@ export function DesignTab({
               columns="grid-cols-3"
               disabled={readOnly}
               label="Field style"
-              onChange={(value) => set("fieldStyle", value)}
+              onChange={(value) => {
+                set("fieldStyle", value);
+              }}
               tiles={(["boxed", "underline", "soft"] as const).map((style) => ({
                 value: style,
                 label: titleCase(style),
@@ -615,7 +635,9 @@ export function DesignTab({
               columns="grid-cols-3"
               disabled={readOnly}
               label="Button shape"
-              onChange={(value) => set("buttonShape", value)}
+              onChange={(value) => {
+                set("buttonShape", value);
+              }}
               tiles={(["pill", "rounded", "square"] as const).map((shape) => ({
                 value: shape,
                 label: titleCase(shape),
@@ -627,7 +649,9 @@ export function DesignTab({
               <p className={`${eyebrowClass} mb-2`}>Progress</p>
               <Segmented<FormDesign["progress"]>
                 label="Progress indicator"
-                onChange={(value) => !readOnly && set("progress", value)}
+                onChange={(value) => {
+                  if (!readOnly) set("progress", value);
+                }}
                 options={[
                   { value: "bar", label: "Bar" },
                   { value: "steps", label: "Steps" },
@@ -642,7 +666,9 @@ export function DesignTab({
               description="The MGM Laboratory mark above the form."
               disabled={readOnly}
               label="Show the lab logo"
-              onChange={(value) => set("showLogo", value)}
+              onChange={(value) => {
+                set("showLogo", value);
+              }}
             />
           </Section>
           <Section title="Cover">
@@ -650,7 +676,9 @@ export function DesignTab({
               columns="grid-cols-2 sm:grid-cols-4 xl:grid-cols-2"
               disabled={readOnly}
               label="Cover style"
-              onChange={(value) => setCover({ style: value }, "style")}
+              onChange={(value) => {
+                setCover({ style: value }, "style");
+              }}
               tiles={(["none", "banner", "hero", "split"] as const).map((style) => ({
                 value: style,
                 label: titleCase(style),
@@ -665,14 +693,18 @@ export function DesignTab({
                   focal
                   formId={record.id}
                   label="Cover image or video"
-                  onChange={(media) => setCover({ media }, "media")}
+                  onChange={(media) => {
+                    setCover({ media }, "media");
+                  }}
                   value={design.cover.media}
                 />
                 <Range
                   disabled={readOnly}
                   label="Overlay"
                   max={85}
-                  onChange={(value) => setCover({ overlay: value }, "overlay")}
+                  onChange={(value) => {
+                    setCover({ overlay: value }, "overlay");
+                  }}
                   value={design.cover.overlay}
                 />
               </>
@@ -683,7 +715,9 @@ export function DesignTab({
               columns="grid-cols-2 sm:grid-cols-3"
               disabled={readOnly}
               label="Scene"
-              onChange={(value) => setBackground({ scene: value }, "scene")}
+              onChange={(value) => {
+                setBackground({ scene: value }, "scene");
+              }}
               tiles={(["orbit", "constellation", "paper", "blocks", "none"] as const).map(
                 (scene) => ({ value: scene, label: titleCase(scene), visual: sceneVisuals[scene] }),
               )}
@@ -693,7 +727,9 @@ export function DesignTab({
               <p className={`${eyebrowClass} mb-2`}>Intensity</p>
               <Segmented<FormDesign["background"]["intensity"]>
                 label="Scene intensity"
-                onChange={(value) => !readOnly && setBackground({ intensity: value }, "intensity")}
+                onChange={(value) => {
+                  if (!readOnly) setBackground({ intensity: value }, "intensity");
+                }}
                 options={[
                   { value: "calm", label: "Calm" },
                   { value: "lively", label: "Lively" },
@@ -706,7 +742,9 @@ export function DesignTab({
               columns="grid-cols-3 sm:grid-cols-4"
               disabled={readOnly}
               label="Pattern"
-              onChange={(value) => setBackground({ pattern: value }, "pattern")}
+              onChange={(value) => {
+                setBackground({ pattern: value }, "pattern");
+              }}
               tiles={(["none", ...PATTERN_FILES, "mixed"] as FormPattern[]).map((pattern) => ({
                 value: pattern,
                 label: pattern === "x" ? "X" : titleCase(pattern),
@@ -718,14 +756,18 @@ export function DesignTab({
               accept={["image", "video"]}
               formId={record.id}
               label="Background image or video"
-              onChange={(media) => setBackground({ media }, "media")}
+              onChange={(media) => {
+                setBackground({ media }, "media");
+              }}
               value={design.background.media}
             />
             <Range
               disabled={readOnly}
               label="Dim"
               max={90}
-              onChange={(value) => setBackground({ dim: value }, "dim")}
+              onChange={(value) => {
+                setBackground({ dim: value }, "dim");
+              }}
               value={design.background.dim}
             />
           </Section>
@@ -734,7 +776,9 @@ export function DesignTab({
               columns="grid-cols-3 sm:grid-cols-5 xl:grid-cols-3"
               disabled={readOnly}
               label="Entrance"
-              onChange={(value) => setMotion({ entrance: value }, "entrance")}
+              onChange={(value) => {
+                setMotion({ entrance: value }, "entrance");
+              }}
               tiles={(["rise", "pop", "slide", "blur", "type"] as const).map((entrance) => ({
                 value: entrance,
                 label: titleCase(entrance),
@@ -746,7 +790,9 @@ export function DesignTab({
               <p className={`${eyebrowClass} mb-2`}>Speed</p>
               <Segmented<FormDesign["motion"]["speed"]>
                 label="Motion speed"
-                onChange={(value) => !readOnly && setMotion({ speed: value }, "speed")}
+                onChange={(value) => {
+                  if (!readOnly) setMotion({ speed: value }, "speed");
+                }}
                 options={[
                   { value: "slow", label: "Slow" },
                   { value: "normal", label: "Normal" },
@@ -759,7 +805,9 @@ export function DesignTab({
               <p className={`${eyebrowClass} mb-2`}>Celebration on submit</p>
               <Segmented<FormDesign["motion"]["celebration"]>
                 label="Celebration on submit"
-                onChange={(value) => !readOnly && setMotion({ celebration: value }, "celebration")}
+                onChange={(value) => {
+                  if (!readOnly) setMotion({ celebration: value }, "celebration");
+                }}
                 options={(["confetti", "fireworks", "bloom", "assemble", "none"] as const).map(
                   (value) => ({ value, label: titleCase(value) }),
                 )}
@@ -772,20 +820,26 @@ export function DesignTab({
               description="Soft clicks on answers, off unless the respondent's device allows sound."
               disabled={readOnly}
               label="Sound"
-              onChange={(value) => setMotion({ sound: value }, "sound")}
+              onChange={(value) => {
+                setMotion({ sound: value }, "sound");
+              }}
             />
             <Switch
               checked={design.motion.interactive}
               description="Parallax and pointer-reactive decoration. Reduced motion always turns it off."
               disabled={readOnly}
               label="Interactive background"
-              onChange={(value) => setMotion({ interactive: value }, "interactive")}
+              onChange={(value) => {
+                setMotion({ interactive: value }, "interactive");
+              }}
             />
           </Section>
         </div>
         <button
           className={`${secondaryButtonClass} w-full xl:hidden`}
-          onClick={() => setShowPreview((current) => !current)}
+          onClick={() => {
+            setShowPreview((current) => !current);
+          }}
           type="button"
         >
           {showPreview ? <EyeSlash size={16} /> : <Eye size={16} />}
