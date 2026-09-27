@@ -12,6 +12,12 @@ import { PlayerEngine, type LetterboxBar, type PlayerUiState } from "./player-en
 import { BURST, Bit, TONES } from "./player-shapes";
 import type { PlayerUiProps } from "./session";
 
+function completeRefs<T extends Record<string, Element | null>>(
+  refs: T,
+): refs is { [K in keyof T]: NonNullable<T[K]> } {
+  return Object.values(refs).every((element) => element !== null);
+}
+
 /** Room between two plus marks in the letterbox bars, px. */
 const MARK_SPACING = 56;
 
@@ -161,49 +167,52 @@ export function ReelPlayer({ session, onDone }: PlayerUiProps) {
   const tickList = useMemo(() => tickTimes(ui.duration), [ui.duration]);
 
   useLayoutEffect(() => {
-    const player = new PlayerEngine(
-      {
-        root: root.current!,
-        stage: stage.current!,
-        slot: slot.current!,
-        iris: iris.current!,
-        top: top.current!,
-        controls: controls.current!,
-        closeButton: closeButton.current!,
-        playButton: playButton.current!,
-        soundButton: soundButton.current!,
-        bigPlay: bigPlay.current!,
-        track: track.current!,
-        bar: bar.current!,
-        fill: fill.current!,
-        preview: preview.current!,
-        head: head.current!,
-        ticks: ticks.current!,
-        time: time.current!,
-        waitHead: waitHead.current!,
-        waitCentre: waitCentre.current!,
-        ripple: ripple.current!,
-        flash: flash.current!,
-        star: star.current!,
-        bursts: bursts.current!,
-        marks: marks.current!,
-        cursor: {
-          root: cursorRoot.current!,
-          scale: cursorScale.current!,
-          body: cursorBody.current!,
-          fill: cursorFill.current!,
-          outline: cursorOutline.current!,
-          liquid: cursorLiquid.current!,
-          x: cursorX.current!,
-          plate: cursorPlate.current!,
-          label: cursorLabel.current!,
-          tip: cursorTip.current!,
-          tipText: cursorTipText.current!,
-        },
-      },
-      session,
-      { onState: setUi, onBars: setBars, announce: setMessage, onDone },
-    );
+    const elements = {
+      root: root.current,
+      stage: stage.current,
+      slot: slot.current,
+      iris: iris.current,
+      top: top.current,
+      controls: controls.current,
+      closeButton: closeButton.current,
+      playButton: playButton.current,
+      soundButton: soundButton.current,
+      bigPlay: bigPlay.current,
+      track: track.current,
+      bar: bar.current,
+      fill: fill.current,
+      preview: preview.current,
+      head: head.current,
+      ticks: ticks.current,
+      time: time.current,
+      waitHead: waitHead.current,
+      waitCentre: waitCentre.current,
+      ripple: ripple.current,
+      flash: flash.current,
+      star: star.current,
+      bursts: bursts.current,
+      marks: marks.current,
+    };
+    const cursor = {
+      root: cursorRoot.current,
+      scale: cursorScale.current,
+      body: cursorBody.current,
+      fill: cursorFill.current,
+      outline: cursorOutline.current,
+      liquid: cursorLiquid.current,
+      x: cursorX.current,
+      plate: cursorPlate.current,
+      label: cursorLabel.current,
+      tip: cursorTip.current,
+      tipText: cursorTipText.current,
+    };
+    if (!completeRefs(elements) || !completeRefs(cursor)) return;
+    const player = new PlayerEngine({ ...elements, cursor }, session, {
+      onState: setUi,
+      onBars: setBars,
+      announce: setMessage,
+      onDone,
+    });
     engine.current = player;
     player.start();
     return () => {

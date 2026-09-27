@@ -390,7 +390,7 @@ export class ReelController {
 
     this.state = {
       vw: window.innerWidth,
-      vh: window.innerHeight,
+      vh: Math.max(1, window.innerHeight),
       diag: Math.hypot(window.innerWidth, window.innerHeight),
       time: 0,
       mobile: compactLayout(),
@@ -416,7 +416,9 @@ export class ReelController {
     this.sync(true);
     this.render(0);
     gsap.ticker.add(this.tick);
-    this.offs.push(() => gsap.ticker.remove(this.tick));
+    this.offs.push(() => {
+      gsap.ticker.remove(this.tick);
+    });
   }
 
   // ------------------------------------------------------------ public
@@ -515,27 +517,87 @@ export class ReelController {
       options?: AddEventListenerOptions,
     ) => {
       window.addEventListener(type, handler, options);
-      this.offs.push(() => window.removeEventListener(type, handler, options));
+      this.offs.push(() => {
+        window.removeEventListener(type, handler, options);
+      });
     };
 
-    listen("resize", () => this.measure());
-    listen("wheel", (event) => this.onWheel(event), { passive: true });
-    listen("keydown", (event) => this.onKey(event));
-    listen("touchstart", (event) => this.onTouchStart(event), { passive: true });
-    listen("touchmove", (event) => this.onTouchMove(event), { passive: true });
-    listen("touchend", () => this.onTouchEnd(), { passive: true });
-    listen("touchcancel", () => this.onTouchEnd(), { passive: true });
-    listen("pointerdown", (event) => this.onPointerDown(event), { passive: true });
-    listen("pointerup", () => this.onPointerUp(), { passive: true });
-    listen("scroll", () => this.onScroll(), { passive: true });
+    listen("resize", () => {
+      this.measure();
+    });
+    listen(
+      "wheel",
+      (event) => {
+        this.onWheel(event);
+      },
+      { passive: true },
+    );
+    listen("keydown", (event) => {
+      this.onKey(event);
+    });
+    listen(
+      "touchstart",
+      (event) => {
+        this.onTouchStart(event);
+      },
+      { passive: true },
+    );
+    listen(
+      "touchmove",
+      (event) => {
+        this.onTouchMove(event);
+      },
+      { passive: true },
+    );
+    listen(
+      "touchend",
+      () => {
+        this.onTouchEnd();
+      },
+      { passive: true },
+    );
+    listen(
+      "touchcancel",
+      () => {
+        this.onTouchEnd();
+      },
+      { passive: true },
+    );
+    listen(
+      "pointerdown",
+      (event) => {
+        this.onPointerDown(event);
+      },
+      { passive: true },
+    );
+    listen(
+      "pointerup",
+      () => {
+        this.onPointerUp();
+      },
+      { passive: true },
+    );
+    listen(
+      "scroll",
+      () => {
+        this.onScroll();
+      },
+      { passive: true },
+    );
 
-    const onVisibility = () => this.updatePlayback();
+    const onVisibility = () => {
+      this.updatePlayback();
+    };
     document.addEventListener("visibilitychange", onVisibility);
-    this.offs.push(() => document.removeEventListener("visibilitychange", onVisibility));
+    this.offs.push(() => {
+      document.removeEventListener("visibilitychange", onVisibility);
+    });
 
-    this.resizeObserver = new ResizeObserver(() => this.measure());
+    this.resizeObserver = new ResizeObserver(() => {
+      this.measure();
+    });
     this.resizeObserver.observe(this.root);
-    void document.fonts?.ready.then(() => {
+    void document.fonts.ready.then(() => {
       if (!this.disposed) this.measure();
     });
 
@@ -616,7 +678,9 @@ export class ReelController {
       this.lastInputAt = performance.now();
     };
     this.root.addEventListener("focusin", onFocusIn);
-    this.offs.push(() => this.root.removeEventListener("focusin", onFocusIn));
+    this.offs.push(() => {
+      this.root.removeEventListener("focusin", onFocusIn);
+    });
 
     const watch = this.el.watch;
     const target = this.el.hoverTarget;
@@ -651,7 +715,9 @@ export class ReelController {
       const blur = () => {
         this.buttonFocus = false;
       };
-      const click = () => this.openPlayer();
+      const click = () => {
+        this.openPlayer();
+      };
       watch.addEventListener("pointerdown", down);
       watch.addEventListener("pointerup", up);
       watch.addEventListener("pointercancel", up);
@@ -673,7 +739,7 @@ export class ReelController {
     if (this.disposed) return;
     const s = this.state;
     s.vw = window.innerWidth;
-    s.vh = window.innerHeight;
+    s.vh = Math.max(1, window.innerHeight);
     s.diag = Math.hypot(s.vw, s.vh);
     s.mobile = compactLayout();
     const section = this.root.getBoundingClientRect();

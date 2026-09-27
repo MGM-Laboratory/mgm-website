@@ -84,14 +84,14 @@ export function LogoStage({ ref, className }: { ref?: Ref<LogoStageHandle>; clas
     };
     const load = async () => {
       const { createLogoEngine } = await import("./logo-engine");
-      if (cancelled) return;
+      if (cancelled || !motionAllowed()) return;
       const paths = [...flat.querySelectorAll("path")];
       engineRef.current = createLogoEngine(box, {
         paths: paths.map((p) => p.getAttribute("d") ?? ""),
         colors: paths.map((p) => p.getAttribute("fill") ?? "#3A6DC5"),
         viewBox: VIEW_BOX,
         onReady: () => {
-          if (!cancelled) setMode("gl");
+          if (!cancelled && motionAllowed()) setMode("gl");
         },
         onFail: () => {
           if (!cancelled) stop();

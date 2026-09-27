@@ -14,7 +14,7 @@ type PlaybackOptions = {
 };
 
 /** For uuid-keyed uploads: the bytes behind a key never change. */
-export const IMMUTABLE_VIDEO_CACHE = "public, max-age=31536000, immutable";
+export const IMMUTABLE_VIDEO_CACHE = "private, max-age=31536000, immutable";
 
 /**
  * A public, range-seekable video-playback proxy: relays Range requests to

@@ -281,7 +281,9 @@ export function createLogoEngine(host: HTMLElement, options: Options): LogoEngin
     renderer.render(scene, camera);
   }
 
-  const hopeless = new HopelessWatch(() => fail());
+  const hopeless = new HopelessWatch(() => {
+    fail();
+  });
 
   const tick = (_time: number, deltaMs: number) => {
     if (disposed) return;
@@ -353,12 +355,19 @@ export function createLogoEngine(host: HTMLElement, options: Options): LogoEngin
     const side = event.clientX < rect.left + rect.width / 2 ? -1 : 1;
     kick(side, 1);
   };
+  const onCancel = () => {
+    dragging = false;
+    dragMoved = 0;
+    spin.speed = 0;
+    canvas.style.cursor = "grab";
+    onLeave();
+  };
   canvas.addEventListener("pointerenter", onEnter);
   canvas.addEventListener("pointerleave", onLeave);
   canvas.addEventListener("pointerdown", onDown);
   canvas.addEventListener("pointermove", onMove);
   canvas.addEventListener("pointerup", onUp);
-  canvas.addEventListener("pointercancel", onLeave);
+  canvas.addEventListener("pointercancel", onCancel);
   // Keeps the shared pointer reading alive for the camera follow.
   const offPointer = onPointer(() => {});
 
@@ -386,7 +395,9 @@ export function createLogoEngine(host: HTMLElement, options: Options): LogoEngin
   renderer
     .compileAsync(scene, camera)
     .then(start)
-    .catch(() => start());
+    .catch(() => {
+      start();
+    });
 
   return {
     celebrate() {
@@ -405,7 +416,7 @@ export function createLogoEngine(host: HTMLElement, options: Options): LogoEngin
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
-      canvas.removeEventListener("pointercancel", onLeave);
+      canvas.removeEventListener("pointercancel", onCancel);
       canvas.removeEventListener("webglcontextlost", onContextLost);
       for (const shard of shards) {
         shard.mesh.geometry.dispose();

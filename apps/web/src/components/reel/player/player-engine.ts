@@ -277,11 +277,17 @@ export class PlayerEngine {
     this.listen(video, "loadedmetadata", this.onMetadata);
     const observer = new ResizeObserver(this.onResize);
     observer.observe(el.root);
-    this.cleanups.push(() => observer.disconnect());
+    this.cleanups.push(() => {
+      observer.disconnect();
+    });
 
     session.playAttempt?.then(
-      () => this.setUi({ playing: !video.paused, refused: false }),
-      (error: unknown) => this.onPlayRefused(error),
+      () => {
+        this.setUi({ playing: !video.paused, refused: false });
+      },
+      (error: unknown) => {
+        this.onPlayRefused(error);
+      },
     );
     if (!session.playAttempt) this.setUi({ refused: video.paused });
     if (video.error) this.onError();
@@ -296,7 +302,9 @@ export class PlayerEngine {
       if (this.phase === "opening") this.phase = "open";
     });
     gsap.ticker.add(this.tick);
-    this.cleanups.push(() => gsap.ticker.remove(this.tick));
+    this.cleanups.push(() => {
+      gsap.ticker.remove(this.tick);
+    });
     this.tick(0, 0);
     el.playButton.focus({ preventScroll: true });
   }
@@ -382,10 +390,14 @@ export class PlayerEngine {
     this.tweens.push(
       gsap.to(this.closeProgress, { value: 1, duration: this.reduced ? 0.15 : 0.62, ease: "none" }),
     );
-    this.iris.close(target, () => this.finish());
+    this.iris.close(target, () => {
+      this.finish();
+    });
     // Lag smoothing on a slow machine, or a tab hidden mid-close, must never
     // leave the player (and its report) hanging: finish on the clock too.
-    this.failsafe = window.setTimeout(() => this.finish(), 1800 * slowdown);
+    this.failsafe = window.setTimeout(() => {
+      this.finish();
+    }, 1800 * slowdown);
   }
 
   private finish() {
@@ -404,8 +416,12 @@ export class PlayerEngine {
   private play() {
     const attempt = this.video.play();
     attempt?.then(
-      () => this.setUi({ refused: false }),
-      (error: unknown) => this.onPlayRefused(error),
+      () => {
+        this.setUi({ refused: false });
+      },
+      (error: unknown) => {
+        this.onPlayRefused(error);
+      },
     );
   }
 
@@ -479,10 +495,19 @@ export class PlayerEngine {
         title: "Company profile",
         artist: "MGM Laboratory",
       });
-      navigator.mediaSession.setActionHandler("play", () => this.play());
-      navigator.mediaSession.setActionHandler("pause", () => this.video.pause());
-      navigator.mediaSession.setActionHandler("seekbackward", () => this.seekBy(-5));
-      navigator.mediaSession.setActionHandler("seekforward", () => this.seekBy(5));
+      navigator.mediaSession.setActionHandler("play", () => {
+        this.cancelEnding();
+        this.play();
+      });
+      navigator.mediaSession.setActionHandler("pause", () => {
+        this.video.pause();
+      });
+      navigator.mediaSession.setActionHandler("seekbackward", () => {
+        this.seekBy(-5);
+      });
+      navigator.mediaSession.setActionHandler("seekforward", () => {
+        this.seekBy(5);
+      });
       navigator.mediaSession.setActionHandler("seekto", (details) => {
         if (details.seekTime !== undefined) this.seek(details.seekTime, false);
       });
@@ -602,7 +627,9 @@ export class PlayerEngine {
   ) {
     const listener = handler as EventListener;
     target.addEventListener(type, listener, options);
-    this.cleanups.push(() => target.removeEventListener(type, listener, options));
+    this.cleanups.push(() => {
+      target.removeEventListener(type, listener, options);
+    });
   }
 
   private onActivity = () => {
