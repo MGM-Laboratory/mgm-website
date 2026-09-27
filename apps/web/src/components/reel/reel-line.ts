@@ -51,6 +51,12 @@ const JITTER = 0.011;
 /** The same curve every time: a fixed seed, never the clock. */
 const SEED = 0x6d676d;
 
+function readAt<T>(items: { at(index: number): T | undefined }, index: number): T {
+  const value = items.at(index);
+  if (value === undefined) throw new Error(`Reel line sample ${index} is out of bounds.`);
+  return value;
+}
+
 export type ReelLine = {
   count: number;
   /** Centreline, line units. */
@@ -74,16 +80,18 @@ function catmullRom(points: ReadonlyArray<readonly [number, number]>, perSegment
   // Centripetal parameterisation (alpha 0.5): no cusps, no self-loops
   // inside a segment, even where control points bunch up.
   const out: Array<[number, number]> = [];
-  const pts = [points[0], ...points, points[points.length - 1]];
+  const first = readAt(points, 0);
+  const last = readAt(points, points.length - 1);
+  const pts = [first, ...points, last];
   const knot = (a: readonly [number, number], b: readonly [number, number], t: number) => {
     const d = Math.pow(Math.hypot(b[0] - a[0], b[1] - a[1]), 0.5);
     return t + (d > 1e-6 ? d : 1e-4);
   };
   for (let i = 1; i < pts.length - 2; i += 1) {
-    const p0 = pts[i - 1];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2];
+    const p0 = readAt(pts, i - 1);
+    const p1 = readAt(pts, i);
+    const p2 = readAt(pts, i + 1);
+    const p3 = readAt(pts, i + 2);
     const t0 = 0;
     const t1 = knot(p0, p1, t0);
     const t2 = knot(p1, p2, t1);
@@ -92,18 +100,24 @@ function catmullRom(points: ReadonlyArray<readonly [number, number]>, perSegment
       const t = t1 + ((t2 - t1) * s) / perSegment;
       const point: [number, number] = [0, 0];
       for (let k = 0; k < 2; k += 1) {
-        const a1 = ((t1 - t) / (t1 - t0 || 1e-6)) * p0[k] + ((t - t0) / (t1 - t0 || 1e-6)) * p1[k];
-        const a2 = ((t2 - t) / (t2 - t1)) * p1[k] + ((t - t1) / (t2 - t1)) * p2[k];
-        const a3 = ((t3 - t) / (t3 - t2 || 1e-6)) * p2[k] + ((t - t2) / (t3 - t2 || 1e-6)) * p3[k];
+        const p0k = readAt(p0, k);
+        const p1k = readAt(p1, k);
+        const p2k = readAt(p2, k);
+        const p3k = readAt(p3, k);
+        const a1 = ((t1 - t) / (t1 - t0 || 1e-6)) * p0k + ((t - t0) / (t1 - t0 || 1e-6)) * p1k;
+        const a2 = ((t2 - t) / (t2 - t1)) * p1k + ((t - t1) / (t2 - t1)) * p2k;
+        const a3 = ((t3 - t) / (t3 - t2 || 1e-6)) * p2k + ((t - t2) / (t3 - t2 || 1e-6)) * p3k;
         const b1 = ((t2 - t) / (t2 - t0)) * a1 + ((t - t0) / (t2 - t0)) * a2;
         const b2 = ((t3 - t) / (t3 - t1)) * a2 + ((t - t1) / (t3 - t1)) * a3;
-        point[k] = ((t2 - t) / (t2 - t1)) * b1 + ((t - t1) / (t2 - t1)) * b2;
+        const coordinate = ((t2 - t) / (t2 - t1)) * b1 + ((t - t1) / (t2 - t1)) * b2;
+        if (k === 0) point[0] = coordinate;
+        else point[1] = coordinate;
       }
       out.push(point);
     }
   }
-  const last = points[points.length - 1];
-  out.push([last[0], last[1]]);
+  const lastPoint = readAt(points, points.length - 1);
+  out.push([readAt(lastPoint, 0), readAt(lastPoint, 1)]);
   return out;
 }
 
@@ -144,22 +158,32 @@ export function reelLine(samples = 320): ReelLine {
   // Even arc-length resampling.
   const lengths = new Float64Array(dense.length);
   for (let i = 1; i < dense.length; i += 1) {
-    lengths[i] =
-      lengths[i - 1] + Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]);
+    lengths.set(
+      [
+        readAt(lengths, i - 1) +
+          Math.hypot(
+            readAt(readAt(dense, i), 0) - readAt(readAt(dense, i - 1), 0),
+            readAt(readAt(dense, i), 1) - readAt(readAt(dense, i - 1), 1),
+          ),
+      ],
+      i,
+    );
   }
-  const total = lengths[dense.length - 1];
+  const total = readAt(lengths, dense.length - 1);
   const x = new Float32Array(samples);
   const y = new Float32Array(samples);
   const t = new Float32Array(samples);
   let j = 1;
   for (let i = 0; i < samples; i += 1) {
     const target = (total * i) / (samples - 1);
-    while (j < dense.length - 1 && lengths[j] < target) j += 1;
-    const span = lengths[j] - lengths[j - 1] || 1;
-    const f = Math.min(1, Math.max(0, (target - lengths[j - 1]) / span));
-    x[i] = dense[j - 1][0] + (dense[j][0] - dense[j - 1][0]) * f;
-    y[i] = dense[j - 1][1] + (dense[j][1] - dense[j - 1][1]) * f;
-    t[i] = i / (samples - 1);
+    while (j < dense.length - 1 && readAt(lengths, j) < target) j += 1;
+    const span = readAt(lengths, j) - readAt(lengths, j - 1) || 1;
+    const f = Math.min(1, Math.max(0, (target - readAt(lengths, j - 1)) / span));
+    const previous = readAt(dense, j - 1);
+    const current = readAt(dense, j);
+    x.set([readAt(previous, 0) + (readAt(current, 0) - readAt(previous, 0)) * f], i);
+    y.set([readAt(previous, 1) + (readAt(current, 1) - readAt(previous, 1)) * f], i);
+    t.set([i / (samples - 1)], i);
   }
 
   const nx = new Float32Array(samples);
@@ -167,11 +191,11 @@ export function reelLine(samples = 320): ReelLine {
   for (let i = 0; i < samples; i += 1) {
     const a = Math.max(0, i - 1);
     const b = Math.min(samples - 1, i + 1);
-    const tx = x[b] - x[a];
-    const ty = y[b] - y[a];
+    const tx = readAt(x, b) - readAt(x, a);
+    const ty = readAt(y, b) - readAt(y, a);
     const length = Math.hypot(tx, ty) || 1;
-    nx[i] = -ty / length;
-    ny[i] = tx / length;
+    nx.set([-ty / length], i);
+    ny.set([tx / length], i);
   }
 
   // The self-crossing: the first place a later stretch passes over an
@@ -182,19 +206,19 @@ export function reelLine(samples = 320): ReelLine {
   outer: for (let later = Math.floor(samples * 0.4); later < samples - 1; later += 1) {
     for (let early = 0; early < later - 12; early += 1) {
       const hit = segmentHit(
-        x[early],
-        y[early],
-        x[early + 1],
-        y[early + 1],
-        x[later],
-        y[later],
-        x[later + 1],
-        y[later + 1],
+        readAt(x, early),
+        readAt(y, early),
+        readAt(x, early + 1),
+        readAt(y, early + 1),
+        readAt(x, later),
+        readAt(y, later),
+        readAt(x, later + 1),
+        readAt(y, later + 1),
       );
       if (hit) {
-        crossT = t[later] + (t[later + 1] - t[later]) * hit.v;
-        crossX = x[early] + (x[early + 1] - x[early]) * hit.u;
-        crossY = y[early] + (y[early + 1] - y[early]) * hit.u;
+        crossT = readAt(t, later) + (readAt(t, later + 1) - readAt(t, later)) * hit.v;
+        crossX = readAt(x, early) + (readAt(x, early + 1) - readAt(x, early)) * hit.u;
+        crossY = readAt(y, early) + (readAt(y, early + 1) - readAt(y, early)) * hit.u;
         break outer;
       }
     }
@@ -204,17 +228,17 @@ export function reelLine(samples = 320): ReelLine {
   if (Number.isFinite(crossX)) {
     const sigma = 0.075;
     for (let i = 0; i < samples; i += 1) {
-      if (t[i] > crossT - 0.08) break;
-      const d = Math.hypot(x[i] - crossX, y[i] - crossY);
-      ao[i] = 1 - Math.exp(-(d * d) / (2 * sigma * sigma));
+      if (readAt(t, i) > crossT - 0.08) break;
+      const d = Math.hypot(readAt(x, i) - crossX, readAt(y, i) - crossY);
+      ao.set([1 - Math.exp(-(d * d) / (2 * sigma * sigma))], i);
     }
   }
 
   let minY = Infinity;
   let maxY = -Infinity;
   for (let i = 0; i < samples; i += 1) {
-    minY = Math.min(minY, y[i]);
-    maxY = Math.max(maxY, y[i]);
+    minY = Math.min(minY, readAt(y, i));
+    maxY = Math.max(maxY, readAt(y, i));
   }
 
   cached = { count: samples, x, y, nx, ny, t, ao, crossT, minY, maxY };
@@ -247,7 +271,7 @@ export function lineHead(line: ReelLine, reveal: number) {
   const f = Math.min(1, Math.max(0, reveal)) * (line.count - 1);
   const i = Math.min(line.count - 2, Math.floor(f));
   const k = f - i;
-  const lerp = (a: Float32Array) => a[i] + (a[i + 1] - a[i]) * k;
+  const lerp = (a: Float32Array) => readAt(a, i) + (readAt(a, i + 1) - readAt(a, i)) * k;
   return {
     x: lerp(line.x),
     y: lerp(line.y),
@@ -261,13 +285,13 @@ export function lineHead(line: ReelLine, reveal: number) {
 export function linePath(line: ReelLine, diag: number) {
   const parts: string[] = [];
   for (let i = 0; i < line.count; i += 2) {
-    const px = (line.x[i] + LINE_MARGIN_X) * diag;
-    const py = (-LINE_MARGIN_Y - line.y[i]) * diag;
+    const px = (readAt(line.x, i) + LINE_MARGIN_X) * diag;
+    const py = (-LINE_MARGIN_Y - readAt(line.y, i)) * diag;
     parts.push(`${i === 0 ? "M" : "L"}${px.toFixed(1)} ${py.toFixed(1)}`);
   }
   const last = line.count - 1;
   parts.push(
-    `L${((line.x[last] + LINE_MARGIN_X) * diag).toFixed(1)} ${((-LINE_MARGIN_Y - line.y[last]) * diag).toFixed(1)}`,
+    `L${((readAt(line.x, last) + LINE_MARGIN_X) * diag).toFixed(1)} ${((-LINE_MARGIN_Y - readAt(line.y, last)) * diag).toFixed(1)}`,
   );
   return parts.join("");
 }
