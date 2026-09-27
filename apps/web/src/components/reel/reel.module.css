@@ -506,6 +506,17 @@
   height: 6em;
 }
 
+/* The idle call: a ring that leaves the button like a ripple (GSAP owns
+   its transform and opacity). */
+.watchRing {
+  position: absolute;
+  inset: 0;
+  border: 0.16em solid var(--brand-yellow);
+  border-radius: 22.5em;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .watch {
   position: relative;
   display: flex;

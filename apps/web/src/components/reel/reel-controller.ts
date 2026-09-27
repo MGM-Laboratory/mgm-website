@@ -129,6 +129,8 @@ type ReelElements = {
   /** Per word, each letter's rising track. */
   charTracks: HTMLElement[][];
   watch: HTMLButtonElement | null;
+  watchIcon: SVGElement | null;
+  watchRing: HTMLElement | null;
   caption: HTMLElement | null;
   hoverTarget: HTMLElement | null;
   readout: HTMLElement | null;
@@ -313,6 +315,7 @@ export class ReelController {
   private readoutState = 2;
   private readoutFront = 0;
   private nextReadoutAt = 3.2;
+  private nextNudgeAt = 2.2;
   private lastTimecode: string | null = null;
   private loops = 1;
   private lastVideoTime = 0;
@@ -361,6 +364,8 @@ export class ReelController {
       words: words.map((word) => qa(word, "char")),
       charTracks: words.map((word) => qa(word, "char-track")),
       watch: q<HTMLButtonElement>(root, "watch"),
+      watchIcon: q<SVGElement>(root, "watch-icon"),
+      watchRing: q(root, "watch-ring"),
       caption: q(root, "caption"),
       hoverTarget: q(root, "watch") ?? q(root, "frame"),
       readout: q(root, "readout"),
@@ -486,6 +491,7 @@ export class ReelController {
     this.resizeObserver?.disconnect();
     this.card?.dispose();
     gsap.killTweensOf([
+      ...[this.el.watchIcon, this.el.watchRing].filter((el) => el !== null),
       ...this.el.markSwaps,
       ...this.el.stripTexts.flat(),
       ...this.el.readoutLines,
@@ -1238,7 +1244,10 @@ export class ReelController {
     }
 
     // Idle variations while the big video is up.
+    if (hovered || this.pressTarget)
+      this.nextNudgeAt = Math.max(this.nextNudgeAt, this.clock + 2.4);
     if (btnR >= 1 && this.decoT >= 1.4) {
+      if (this.clock >= this.nextNudgeAt) this.nudgeWatch();
       if (this.clock >= this.nextSwapAt) this.swapMarks();
       if ((hovered || mobile) && this.clock >= this.nextStripAt) this.cycleStrip(false);
       if (this.clock >= this.nextReadoutAt) this.rollReadout();
@@ -1246,6 +1255,24 @@ export class ReelController {
   }
 
   // ------------------------------------------------------------ variations
+
+  /** The button calls out while nobody touches it: the triangle hops forward and a ring ripples off. */
+  private nudgeWatch() {
+    this.nextNudgeAt = this.clock + 3.2 + random() * 1.6;
+    const icon = this.el.watchIcon;
+    const ring = this.el.watchRing;
+    if (!icon || !ring || this.playerOpen) return;
+    gsap
+      .timeline()
+      .to(icon, { xPercent: 16, scaleX: 0.9, duration: 0.16, ease: "power2.out" })
+      .to(icon, { xPercent: -4, scaleX: 1.04, duration: 0.18, ease: "power2.inOut" })
+      .to(icon, { xPercent: 0, scaleX: 1, duration: 0.7, ease: "elastic.out(1, 0.45)" });
+    gsap.fromTo(
+      ring,
+      { scale: 1, opacity: 0.7 },
+      { scale: 1.32, opacity: 0, duration: 1.1, delay: 0.12, ease: "power2.out", overwrite: true },
+    );
+  }
 
   private swapMarks() {
     this.nextSwapAt = this.clock + 2.8 + random() * 2.4;

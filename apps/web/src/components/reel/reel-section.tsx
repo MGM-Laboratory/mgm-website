@@ -290,6 +290,7 @@ export function ReelSection({ content }: Readonly<{ content: HomeContent }>) {
                   <PlayWord text={copy.playWords[1]} />
                 </div>
                 <div className={styles.watchMagnet} data-reel="watch-magnet">
+                  <span className={styles.watchRing} data-reel="watch-ring" aria-hidden="true" />
                   <button
                     type="button"
                     className={cx(styles.watch, "reel-watch")}
@@ -299,6 +300,7 @@ export function ReelSection({ content }: Readonly<{ content: HomeContent }>) {
                     <span className={styles.watchFill} aria-hidden="true" />
                     <svg
                       className={styles.watchIcon}
+                      data-reel="watch-icon"
                       viewBox="0 0 36 36"
                       aria-hidden="true"
                       focusable="false"
