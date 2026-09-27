@@ -67,7 +67,11 @@ export function ConfettiBurst({
     const layer = layerRef.current;
     if (!layer) return;
     const els = [...layer.children] as HTMLElement[];
-    const tl = gsap.timeline({ onComplete: () => done.current() });
+    const tl = gsap.timeline({
+      onComplete: () => {
+        done.current();
+      },
+    });
     els.forEach((el, i) => {
       // Mostly up and out, a few straight up, so it reads as a pop.
       const angle = randomBetween(-165, -15);

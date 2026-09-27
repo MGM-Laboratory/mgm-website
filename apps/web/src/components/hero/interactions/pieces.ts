@@ -455,7 +455,13 @@ export function createPieces(stage: Stage): PiecesSystem {
         },
         0.28,
       )
-      .call(() => toggleNudge(), [], 0.5);
+      .call(
+        () => {
+          toggleNudge();
+        },
+        [],
+        0.5,
+      );
     if (toggleOn) {
       // Lights back on: every shape pops once.
       pieces.forEach((other, i) => {
@@ -538,7 +544,11 @@ export function createPieces(stage: Stage): PiecesSystem {
     // Open wide, snap shut past closed (the chomp), once more, then settle
     // back open if the cursor is still there.
     biting = gsap
-      .timeline({ onComplete: () => mouth(p.hovered) })
+      .timeline({
+        onComplete: () => {
+          mouth(p.hovered);
+        },
+      })
       .to(domeTop, { ...top, y: -18, rotation: -12, duration: 0.1, ease: "power2.out" }, 0)
       .to(domeBottom, { ...bottom, y: 13, rotation: 7, duration: 0.1, ease: "power2.out" }, 0)
       .to(domeTop, { ...top, y: 4, rotation: 0, duration: 0.07, ease: "power4.in" }, 0.1)
@@ -659,12 +669,24 @@ export function createPieces(stage: Stage): PiecesSystem {
         p.jelly.v += 2.4;
         break;
       case "leaves":
-        if (p.hovered) gsap.delayedCall(0.28, () => p.hovered && bloom(true));
-        else gsap.delayedCall(0.28, () => bloom(true));
-        if (!p.hovered) gsap.delayedCall(1, () => !p.hovered && bloom(false));
+        if (p.hovered)
+          gsap.delayedCall(0.28, () => {
+            if (p.hovered) bloom(true);
+          });
+        else
+          gsap.delayedCall(0.28, () => {
+            bloom(true);
+          });
+        if (!p.hovered)
+          gsap.delayedCall(1, () => {
+            if (!p.hovered) bloom(false);
+          });
         break;
       case "logo":
-        if (p.hovered) gsap.delayedCall(0.55, () => p.hovered && explode(true));
+        if (p.hovered)
+          gsap.delayedCall(0.55, () => {
+            if (p.hovered) explode(true);
+          });
         break;
       default:
         break;

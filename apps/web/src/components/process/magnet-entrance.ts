@@ -68,7 +68,14 @@ export function startMagnetEntrance(board: MagnetBoard, trigger: HTMLElement): M
   };
 
   const tl = gsap.timeline({
-    scrollTrigger: { trigger, start: START, once: false, onKill: () => resolve() },
+    scrollTrigger: {
+      trigger,
+      start: START,
+      once: false,
+      onKill: () => {
+        resolve();
+      },
+    },
   });
 
   magnets.forEach((m, i) => {
@@ -109,7 +116,13 @@ export function startMagnetEntrance(board: MagnetBoard, trigger: HTMLElement): M
         { scaleX: 1, scaleY: 1, duration: SLAM, ease: "power2.in", immediateRender: false },
         t,
       )
-      .call(() => landed(m), [], t + SLAM);
+      .call(
+        () => {
+          landed(m);
+        },
+        [],
+        t + SLAM,
+      );
   });
 
   tl.eventCallback("onComplete", () => {

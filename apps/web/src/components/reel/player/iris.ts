@@ -112,7 +112,9 @@ export class Iris {
           opacity: 1,
           duration: instant ? 0 : FADE_SECONDS,
           ease: "none",
-          onComplete: () => this.finishOpen(done),
+          onComplete: () => {
+            this.finishOpen(done);
+          },
         }),
       );
       return;
@@ -128,7 +130,9 @@ export class Iris {
         duration: OPEN_SECONDS,
         delay: RING_LEAD,
         ease: "none",
-        onComplete: () => this.finishOpen(done),
+        onComplete: () => {
+          this.finishOpen(done);
+        },
       }),
     );
   }
@@ -154,7 +158,9 @@ export class Iris {
           opacity: 0,
           duration: FADE_SECONDS,
           ease: "none",
-          onComplete: () => this.finishClose(done),
+          onComplete: () => {
+            this.finishClose(done);
+          },
         }),
       );
       return;
@@ -171,7 +177,9 @@ export class Iris {
         close: 1,
         duration: CLOSE_SECONDS,
         ease: "none",
-        onComplete: () => this.finishClose(done),
+        onComplete: () => {
+          this.finishClose(done);
+        },
       }),
     );
   }

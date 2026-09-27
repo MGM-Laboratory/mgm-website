@@ -162,10 +162,18 @@ export function LabNotes() {
           key={current.id + current.text}
           ref={cardRef}
           className="lab-note pointer-events-none invisible relative pointer-fine:pointer-events-auto flex items-start gap-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)] py-3 pr-10 pl-3 text-sm leading-snug text-foreground opacity-0 shadow-[var(--shadow-2)]"
-          onBlur={() => setHold(false)}
-          onFocus={() => setHold(true)}
-          onPointerEnter={() => setHold(true)}
-          onPointerLeave={() => setHold(false)}
+          onBlur={() => {
+            setHold(false);
+          }}
+          onFocus={() => {
+            setHold(true);
+          }}
+          onPointerEnter={() => {
+            setHold(true);
+          }}
+          onPointerLeave={() => {
+            setHold(false);
+          }}
         >
           <svg ref={shapeRef} aria-hidden className="mt-0.5 size-5 shrink-0" viewBox="0 0 24 24">
             <NoteShape shape={current.shape ?? "circle"} color={color} />

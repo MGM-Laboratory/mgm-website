@@ -155,7 +155,9 @@ function PlayerCover({
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, [onClose]);
   useEffect(() => {
     if (failed) showNativeControls(session.video);
@@ -234,8 +236,12 @@ export function ReelPlayerHost() {
         next.coveredEarly = true;
         setFailed(false);
         loadPlayerUi().then(
-          (loaded) => setUi(() => loaded),
-          () => setFailed(true),
+          (loaded) => {
+            setUi(() => loaded);
+          },
+          () => {
+            setFailed(true);
+          },
         );
       }
       current.current = next;
@@ -248,16 +254,22 @@ export function ReelPlayerHost() {
     if (loadedUi) return;
     const load = () => {
       loadPlayerUi().then(
-        (loaded) => setUi(() => loaded),
+        (loaded) => {
+          setUi(() => loaded);
+        },
         () => {},
       );
     };
     if (typeof window.requestIdleCallback === "function") {
       const handle = window.requestIdleCallback(load, { timeout: 4000 });
-      return () => window.cancelIdleCallback(handle);
+      return () => {
+        window.cancelIdleCallback(handle);
+      };
     }
     const timer = window.setTimeout(load, 2500);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, []);
 
   // Where the next open's cursor should appear, and whether it came from the keyboard.
@@ -294,7 +306,12 @@ export function ReelPlayerHost() {
     [endNow],
   );
 
-  useEffect(() => () => endNow(), [endNow]);
+  useEffect(
+    () => () => {
+      endNow();
+    },
+    [endNow],
+  );
 
   // Development only: open the player from the console without the reel,
   // for example `__openReelPlayer()` (the homepage video on the page) or

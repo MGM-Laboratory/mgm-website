@@ -277,7 +277,9 @@ export function TrustedBySection({
         scale: 0.94,
         duration: 0.18,
         ease: "power2.in",
-        onComplete: () => setDisplayed(null),
+        onComplete: () => {
+          setDisplayed(null);
+        },
       });
     }, CLOSE_DELAY_MS);
   }
@@ -424,7 +426,9 @@ export function TrustedBySection({
       <PartnerMark
         key={key}
         partner={partner}
-        onOpen={() => open(partner.slug)}
+        onOpen={() => {
+          open(partner.slug);
+        }}
         onScheduleClose={scheduleClose}
         onCancelClose={cancelClose}
         markRef={(el) => {

@@ -68,11 +68,11 @@ export type CursorInput = {
   height: number;
 };
 
-const TONE_FALLBACK: Record<Tone, string> = {
-  yellow: "#f7bf33",
-  blue: "#3a6dc5",
-  red: "#f94141",
-  green: "#0f8657",
+const TONE_FALLBACK: Record<Tone, [number, number, number]> = {
+  yellow: [247, 191, 51],
+  blue: [58, 109, 197],
+  red: [249, 65, 65],
+  green: [15, 134, 87],
 };
 
 function parseHex(value: string): [number, number, number] | null {
@@ -86,8 +86,7 @@ function readTones() {
   const style = getComputedStyle(document.documentElement);
   const tones = {} as Record<Tone, [number, number, number]>;
   for (const tone of Object.keys(TONE_FALLBACK) as Tone[]) {
-    tones[tone] =
-      parseHex(style.getPropertyValue(`--brand-${tone}`)) ?? parseHex(TONE_FALLBACK[tone])!;
+    tones[tone] = parseHex(style.getPropertyValue(`--brand-${tone}`)) ?? TONE_FALLBACK[tone];
   }
   return tones;
 }

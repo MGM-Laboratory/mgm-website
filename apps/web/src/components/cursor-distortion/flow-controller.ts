@@ -72,10 +72,14 @@ function wanted() {
 function whenIdle(callback: () => void, timeout: number) {
   if (typeof window.requestIdleCallback === "function") {
     const handle = window.requestIdleCallback(callback, { timeout });
-    return () => window.cancelIdleCallback(handle);
+    return () => {
+      window.cancelIdleCallback(handle);
+    };
   }
   const handle = globalThis.setTimeout(callback, Math.min(timeout, 1200));
-  return () => globalThis.clearTimeout(handle);
+  return () => {
+    globalThis.clearTimeout(handle);
+  };
 }
 
 class FlowController {
@@ -107,19 +111,29 @@ class FlowController {
       return;
     }
     this.offs.push(
-      onReducedMotion(() => this.shutdown()),
-      onArticleTransitionChange(() => this.apply()),
+      onReducedMotion(() => {
+        this.shutdown();
+      }),
+      onArticleTransitionChange(() => {
+        this.apply();
+      }),
     );
     const onMove = (event: PointerEvent) => {
       if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
       window.removeEventListener("pointermove", onMove);
       // Soon, but not inside a busy frame of whatever the move started.
       this.cancelIdle?.();
-      this.cancelIdle = whenIdle(() => this.load(), 400);
+      this.cancelIdle = whenIdle(() => {
+        this.load();
+      }, 400);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
-    this.offs.push(() => window.removeEventListener("pointermove", onMove));
-    this.cancelIdle = whenIdle(() => this.load(), 2500);
+    this.offs.push(() => {
+      window.removeEventListener("pointermove", onMove);
+    });
+    this.cancelIdle = whenIdle(() => {
+      this.load();
+    }, 2500);
   }
 
   setActive(active: boolean) {
@@ -162,7 +176,9 @@ class FlowController {
         let engine: FlowEngine;
         try {
           engine = new FlowEngine({
-            onFail: (reason) => this.fail(reason),
+            onFail: (reason) => {
+              this.fail(reason);
+            },
             grid: dev && params.has("flowgrid"),
           });
         } catch {
@@ -186,13 +202,17 @@ class FlowController {
         }
         if (this.active) this.show();
       })
-      .catch(() => this.shutdown());
+      .catch(() => {
+        this.shutdown();
+      });
   }
 
   private show() {
     const engine = this.engine;
     if (this.state === "idle" && !this.cancelIdle) {
-      this.cancelIdle = whenIdle(() => this.load(), 2500);
+      this.cancelIdle = whenIdle(() => {
+        this.load();
+      }, 2500);
       return;
     }
     if (this.state !== "ready" || !engine || this.shown) return;

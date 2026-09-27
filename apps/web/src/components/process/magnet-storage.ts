@@ -8,38 +8,38 @@
  */
 
 export type SavedMagnet = { x: number; y: number; a: number };
-export type Arrangement = Record<string, SavedMagnet>;
+export type Arrangement = Map<string, SavedMagnet>;
 
 const KEY = "mgm:process-magnets:v1";
 const LIMIT = 6000;
 
-function finite(value: unknown, limit: number) {
+function finite(value: unknown, limit: number): value is number {
   return typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= limit;
 }
 
 export function loadArrangement(): Arrangement {
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return {};
+    if (!raw) return new Map();
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return {};
-    const out: Arrangement = {};
+    if (!parsed || typeof parsed !== "object") return new Map();
+    const out: Arrangement = new Map();
     for (const [word, value] of Object.entries(parsed as Record<string, unknown>)) {
       const v = value as Partial<SavedMagnet> | null;
       if (v && finite(v.x, LIMIT) && finite(v.y, LIMIT) && finite(v.a, 8)) {
-        out[word] = { x: v.x!, y: v.y!, a: v.a! };
+        out.set(word, { x: v.x, y: v.y, a: v.a });
       }
     }
     return out;
   } catch {
-    return {};
+    return new Map();
   }
 }
 
 export function saveArrangement(arrangement: Arrangement) {
   try {
-    if (Object.keys(arrangement).length) {
-      window.localStorage.setItem(KEY, JSON.stringify(arrangement));
+    if (arrangement.size) {
+      window.localStorage.setItem(KEY, JSON.stringify(Object.fromEntries(arrangement)));
     } else {
       window.localStorage.removeItem(KEY);
     }

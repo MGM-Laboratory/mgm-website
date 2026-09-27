@@ -166,9 +166,13 @@ export function CoreCompetenciesSection() {
     });
 
     return () => {
-      hoverTimelines.current.forEach((tl) => tl?.kill());
+      hoverTimelines.current.forEach((tl) => {
+        tl?.kill();
+      });
       hoverTimelines.current = [];
-      idleLoops.forEach((loop) => loop.kill());
+      idleLoops.forEach((loop) => {
+        loop.kill();
+      });
     };
   }, []);
 
@@ -229,9 +233,15 @@ export function CoreCompetenciesSection() {
                 ref={(el) => {
                   cardRefs.current[i] = el;
                 }}
-                onMouseEnter={() => play(i)}
-                onMouseLeave={() => reverse(i)}
-                onFocus={() => play(i)}
+                onMouseEnter={() => {
+                  play(i);
+                }}
+                onMouseLeave={() => {
+                  reverse(i);
+                }}
+                onFocus={() => {
+                  play(i);
+                }}
                 onBlur={(e) => {
                   // Focus moving to this same card's front trigger or one of
                   // its now-reachable back-face links must not reverse the

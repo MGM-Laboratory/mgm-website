@@ -615,7 +615,8 @@ export function createToybox(options: ToyboxOptions): Toybox {
     const found = new Set<Live>([live]);
     const queue = [live];
     while (queue.length) {
-      const under = queue.shift()!.body.bounds;
+      const under = queue.shift()?.body.bounds;
+      if (!under) continue;
       for (const other of lives) {
         if (!other.inWorld || found.has(other)) continue;
         const b = other.body.bounds;
@@ -898,7 +899,9 @@ export function createToybox(options: ToyboxOptions): Toybox {
       wake();
     };
     wordEl.addEventListener("click", onClick);
-    wordOff.push(() => wordEl.removeEventListener("click", onClick));
+    wordOff.push(() => {
+      wordEl.removeEventListener("click", onClick);
+    });
   });
 
   layer.addEventListener("pointerdown", onPointerDown);
@@ -910,7 +913,9 @@ export function createToybox(options: ToyboxOptions): Toybox {
   layer.addEventListener("touchend", onTouchEnd);
   layer.addEventListener("touchcancel", onTouchEnd);
   // No native image or text drag from a shape.
-  const noDrag = (event: Event) => event.preventDefault();
+  const noDrag = (event: Event) => {
+    event.preventDefault();
+  };
   layer.addEventListener("dragstart", noDrag);
 
   // -- Shake, tilt and idle ------------------------------------------------
@@ -993,7 +998,9 @@ export function createToybox(options: ToyboxOptions): Toybox {
     }
   }
 
-  const syncPaused = () => setPaused(!visible || document.hidden);
+  const syncPaused = () => {
+    setPaused(!visible || document.hidden);
+  };
   const observer = new IntersectionObserver(([entry]) => {
     visible = entry?.isIntersecting ?? true;
     // The entrance plays out even if the visitor scrolls away mid-drop.
@@ -1085,7 +1092,11 @@ export function createToybox(options: ToyboxOptions): Toybox {
       debug.strokeStyle = body.isStatic ? "rgba(58,109,197,0.8)" : "rgba(249,65,65,0.9)";
       for (const part of body.parts.length > 1 ? body.parts.slice(1) : body.parts) {
         debug.beginPath();
-        part.vertices.forEach((v, i) => (i ? debug!.lineTo(v.x, v.y) : debug!.moveTo(v.x, v.y)));
+        const debugContext = debug;
+        part.vertices.forEach((v, i) => {
+          if (i) debugContext.lineTo(v.x, v.y);
+          else debugContext.moveTo(v.x, v.y);
+        });
         debug.closePath();
         debug.stroke();
       }
@@ -1119,7 +1130,10 @@ export function createToybox(options: ToyboxOptions): Toybox {
 
   if (options.entrance === "drop") {
     const tl = gsap.timeline({ onComplete: finishEntrance });
-    for (const item of DROPS[layout]) tl.add(() => drop(item.id, item.x), item.at * 0.55);
+    for (const item of DROPS[layout])
+      tl.add(() => {
+        drop(item.id, item.x);
+      }, item.at * 0.55);
     tl.add(() => {}, 1.8);
     entrance = tl;
     start();
@@ -1130,11 +1144,16 @@ export function createToybox(options: ToyboxOptions): Toybox {
       fx.ripple(media, 0, size);
       if (media[3]) fx.coin(media[3]);
     }, 0);
-    for (const item of DROPS[layout]) tl.add(() => drop(item.id, item.x), item.at);
+    for (const item of DROPS[layout])
+      tl.add(() => {
+        drop(item.id, item.x);
+      }, item.at);
     tl.add(() => {
       if (wordEls[1]) fx.turn(wordEls[1]);
     }, 1.05);
-    tl.add(() => fx.roll([...(chars[2] ?? []), ...(chars[3] ?? [])]), 1.7);
+    tl.add(() => {
+      fx.roll([...(chars[2] ?? []), ...(chars[3] ?? [])]);
+    }, 1.7);
     tl.add(onReveal, 2.5);
     tl.add(() => {}, 3.1);
     entrance = tl;
@@ -1202,8 +1221,12 @@ export function createToybox(options: ToyboxOptions): Toybox {
       document.removeEventListener("visibilitychange", syncPaused);
       cancelTouch();
       endGrab(false);
-      hoverOff.forEach((off) => off());
-      wordOff.forEach((off) => off());
+      hoverOff.forEach((off) => {
+        off();
+      });
+      wordOff.forEach((off) => {
+        off();
+      });
       layer.removeEventListener("pointerdown", onPointerDown);
       layer.removeEventListener("pointermove", onPointerMove);
       layer.removeEventListener("pointerup", onPointerUp);

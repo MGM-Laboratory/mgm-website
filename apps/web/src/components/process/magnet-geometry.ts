@@ -71,17 +71,17 @@ export function resolveOverlaps(
   bounds: Bounds,
   gap = 14,
 ): Map<number, Offset> {
-  const offsets = items.map((item) => ({ ...item.offset }));
-  const placed = items.map((item, i) => ({ ...item, offset: offsets[i] }));
+  const placed = items.map((item) => ({ ...item, offset: { ...item.offset } }));
   const changed = new Map<number, Offset>();
-  const queue = [moved];
+  const queue = placed.filter((_, i) => i === moved);
   let guard = 0;
-  while (queue.length && guard++ < 60) {
-    const pusher = queue.shift()!;
-    const a = boxAt(placed[pusher], 2);
-    for (let other = 0; other < placed.length; other++) {
-      if (other === pusher || other === moved || placed[other].locked) continue;
-      const b = boxAt(placed[other], 2);
+  while (guard++ < 60) {
+    const pusher = queue.shift();
+    if (!pusher) break;
+    const a = boxAt(pusher, 2);
+    for (const [other, item] of placed.entries()) {
+      if (item === pusher || other === moved || item.locked) continue;
+      const b = boxAt(item, 2);
       const o = overlap(a, b);
       if (o.x <= 0 || o.y <= 0) continue;
       const dirX = b.x + b.w / 2 >= a.x + a.w / 2 ? 1 : -1;
@@ -93,24 +93,23 @@ export function resolveOverlaps(
         { x: -dirX * (b.w + a.w - o.x + gap), y: 0 },
         { x: 0, y: -dirY * (b.h + a.h - o.y + gap) },
       ].sort((p, q) => Math.abs(p.x) + Math.abs(p.y) - (Math.abs(q.x) + Math.abs(q.y)));
-      const current = placed[other].offset;
+      const current = item.offset;
       let best: Offset | null = null;
       for (const exit of exits) {
-        const next = clampOffset(placed[other].home, bounds, {
+        const next = clampOffset(item.home, bounds, {
           x: current.x + exit.x,
           y: current.y + exit.y,
         });
-        const left = overlap(a, boxAt({ ...placed[other], offset: next }, 2));
+        const left = overlap(a, boxAt({ ...item, offset: next }, 2));
         if (left.x <= 0 || left.y <= 0) {
           best = next;
           break;
         }
       }
       if (!best) continue; // Walled in: leave it rather than shove it offscreen.
-      placed[other].offset = best;
-      offsets[other] = best;
+      item.offset = best;
       changed.set(other, best);
-      queue.push(other);
+      queue.push(item);
     }
   }
   return changed;

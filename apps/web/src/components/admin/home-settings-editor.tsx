@@ -279,7 +279,9 @@ export function HomeSettingsEditor({
           <span>{loadError}</span>
           <button
             className="rounded-lg border border-current px-3 py-1.5 font-semibold transition hover:bg-white/50 dark:hover:bg-white/10"
-            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            onClick={() => {
+              setLoadAttempt((attempt) => attempt + 1);
+            }}
             type="button"
           >
             Retry
@@ -323,7 +325,9 @@ export function HomeSettingsEditor({
             aria-label="Save home content"
             className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#171b25] px-5 text-sm font-semibold text-white shadow-[0_18px_35px_-16px_rgba(20,32,58,0.55)] transition hover:bg-brand-blue active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
             disabled={status === "saving" || !ready}
-            onClick={save}
+            onClick={() => {
+              void save();
+            }}
             type="button"
           >
             {status === "saved" && !isDirty ? (

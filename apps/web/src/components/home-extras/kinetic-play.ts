@@ -92,6 +92,7 @@ const clamp = (lo: number, hi: number, v: number) => Math.min(hi, Math.max(lo, v
 export function startKinetic(root: HTMLElement): () => void {
   const heading = root.querySelector<HTMLElement>(".kinetic-heading");
   if (!heading) return () => {};
+  const activeHeading = heading;
   const slots = [...heading.querySelectorAll<HTMLElement>(".kh-char")];
   const words = [...heading.querySelectorAll<HTMLElement>(".kh-word")];
   const chapter = root.querySelector<HTMLElement>(".kh-chapter");
@@ -249,7 +250,7 @@ export function startKinetic(root: HTMLElement): () => void {
 
   // ---- width lock ----
   function measureCentres() {
-    const box = heading!.getBoundingClientRect();
+    const box = activeHeading.getBoundingClientRect();
     for (const g of glyphs) {
       const r = g.slot.getBoundingClientRect();
       g.cx = (r.left + r.width / 2 - box.left) / E;
@@ -258,7 +259,7 @@ export function startKinetic(root: HTMLElement): () => void {
   }
 
   function lock() {
-    E = Number.parseFloat(getComputedStyle(heading!).fontSize) || E;
+    E = Number.parseFloat(getComputedStyle(activeHeading).fontSize) || E;
     for (const g of glyphs) g.slot.style.width = "";
     // Layout widths (unaffected by the entrance's transforms), at rest weight.
     const widths = glyphs.map((g) => Number.parseFloat(getComputedStyle(g.el).width));
@@ -271,7 +272,10 @@ export function startKinetic(root: HTMLElement): () => void {
 
   const fonts = "fonts" in document ? document.fonts.ready : Promise.resolve();
   fonts.then(() => {
-    if (alive) requestAnimationFrame(() => alive && lock());
+    if (alive)
+      requestAnimationFrame(() => {
+        if (alive) lock();
+      });
   });
 
   let resizeTimer = 0;
@@ -297,7 +301,7 @@ export function startKinetic(root: HTMLElement): () => void {
       local.near = false;
       return;
     }
-    const r = heading!.getBoundingClientRect();
+    const r = activeHeading.getBoundingClientRect();
     const pad = E * 1.1;
     local.near =
       p.x > r.left - pad && p.x < r.right + pad && p.y > r.top - pad && p.y < r.bottom + pad;
@@ -476,7 +480,7 @@ export function startKinetic(root: HTMLElement): () => void {
   }
 
   function nearestGlyph(clientX: number, clientY: number) {
-    const r = heading!.getBoundingClientRect();
+    const r = activeHeading.getBoundingClientRect();
     const x = (clientX - r.left) / E;
     const y = (clientY - r.top) / E;
     let best = 0;
@@ -496,7 +500,9 @@ export function startKinetic(root: HTMLElement): () => void {
     hopWave(nearestGlyph(event.clientX, event.clientY));
   };
   heading.addEventListener("pointerdown", onDown);
-  const onHop = () => hopWave(Math.floor(glyphs.length / 2), 1.15);
+  const onHop = () => {
+    hopWave(Math.floor(glyphs.length / 2), 1.15);
+  };
   heading.addEventListener("kinetic:hop", onHop);
 
   // ---- idle beats ----

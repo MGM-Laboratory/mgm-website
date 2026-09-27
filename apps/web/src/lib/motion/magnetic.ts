@@ -56,7 +56,8 @@ export function attachMagnetic(el: HTMLElement, options: MagneticOptions = {}) {
       return;
     }
     if (!box || performance.now() - measuredAt > 16) measure();
-    const b = box!;
+    const b = box;
+    if (!b) return;
     const cx = b.x + b.width / 2;
     const cy = b.y + b.height / 2;
     const dx = state.x - cx;

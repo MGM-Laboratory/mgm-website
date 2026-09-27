@@ -127,7 +127,9 @@ export function flourish(kind: ToyFlourish, art: HTMLElement, squashEl: HTMLElem
         .to(top, { y: -12, duration: 0.18, ease: "power2.out" })
         .to(bottom, { y: 12, duration: 0.18, ease: "power2.out" }, "<")
         .to([top, bottom], { y: 0, duration: 0.14, ease: "power3.in" })
-        .add(() => squash(squashEl, 0.4, "y", "50% 50%"));
+        .add(() => {
+          squash(squashEl, 0.4, "y", "50% 50%");
+        });
       return;
     }
     case "logo": {

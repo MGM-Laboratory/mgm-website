@@ -23,7 +23,9 @@ export function startScrollCue(stage: Stage) {
     repeat: -1,
     paused: !stage.active(),
   });
-  const offActive = stage.onActiveChange((active) => bob.paused(!active));
+  const offActive = stage.onActiveChange((active) => {
+    bob.paused(!active);
+  });
 
   let over = false;
   const set = (on: boolean) => {
@@ -45,12 +47,16 @@ export function startScrollCue(stage: Stage) {
   const onEnter = (event: PointerEvent) => {
     if (event.pointerType !== "touch") set(true);
   };
-  const onLeave = () => set(button.matches(":focus-visible"));
+  const onLeave = () => {
+    set(button.matches(":focus-visible"));
+  };
   // Keyboard focus only: a mouse click focuses the button as well.
   const onFocus = () => {
     if (button.matches(":focus-visible")) set(true);
   };
-  const onBlur = () => set(false);
+  const onBlur = () => {
+    set(false);
+  };
   button.addEventListener("pointerenter", onEnter);
   button.addEventListener("pointerleave", onLeave);
   button.addEventListener("focus", onFocus);

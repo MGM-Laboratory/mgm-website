@@ -65,7 +65,8 @@ export function requestMotionAccess() {
 }
 
 function screenAngle() {
-  const angle = screen.orientation?.angle;
+  // Older Safari has no screen.orientation, whatever the types say.
+  const angle = (screen as { orientation?: ScreenOrientation }).orientation?.angle;
   if (typeof angle === "number") return angle;
   const legacy = (window as unknown as { orientation?: number }).orientation;
   return typeof legacy === "number" ? legacy : 0;

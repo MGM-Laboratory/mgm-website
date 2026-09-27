@@ -50,7 +50,14 @@ export function playOnScroll(
   };
 
   const tl = gsap.timeline({
-    scrollTrigger: { trigger, start, once: false, onKill: () => resolve() },
+    scrollTrigger: {
+      trigger,
+      start,
+      once: false,
+      onKill: () => {
+        resolve();
+      },
+    },
   });
   build(tl);
   tl.eventCallback("onComplete", () => {

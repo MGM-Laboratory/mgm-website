@@ -98,8 +98,7 @@ function outline(glyph: Glyph, u: number): Point[] {
 /** Twice the signed area; positive when the outline runs clockwise on screen. */
 function signedArea(points: Point[]) {
   let area = 0;
-  for (let i = 0; i < points.length; i++) {
-    const [x0, y0] = points[i];
+  for (const [i, [x0, y0]] of points.entries()) {
     const [x1, y1] = points[(i + 1) % points.length];
     area += x0 * y1 - x1 * y0;
   }
@@ -108,20 +107,21 @@ function signedArea(points: Point[]) {
 
 function resample(points: Point[], count: number) {
   const lengths = [0];
-  for (let i = 0; i < points.length; i++) {
-    const [x0, y0] = points[i];
+  let total = 0;
+  for (const [i, [x0, y0]] of points.entries()) {
     const [x1, y1] = points[(i + 1) % points.length];
-    lengths.push(lengths[i] + Math.hypot(x1 - x0, y1 - y0));
+    total += Math.hypot(x1 - x0, y1 - y0);
+    lengths.push(total);
   }
-  const total = lengths[points.length];
   const out = new Float32Array(count * 2);
   let edge = 0;
   for (let i = 0; i < count; i++) {
     const at = (total * i) / count;
     while (edge < points.length - 1 && lengths[edge + 1] < at) edge++;
-    const span = lengths[edge + 1] - lengths[edge] || 1;
-    const t = (at - lengths[edge]) / span;
-    const [x0, y0] = points[edge];
+    const start = lengths.at(edge) ?? 0;
+    const span = lengths[edge + 1] - start || 1;
+    const t = (at - start) / span;
+    const [x0, y0] = points.at(edge) ?? [0, 0];
     const [x1, y1] = points[(edge + 1) % points.length];
     out[i * 2] = x0 + (x1 - x0) * t;
     out[i * 2 + 1] = y0 + (y1 - y0) * t;
@@ -147,9 +147,9 @@ export function alignTo(current: Float32Array, target: Float32Array) {
   for (let shift = 0; shift < n; shift++) {
     let cost = 0;
     for (let i = 0; i < n && cost < bestCost; i++) {
-      const j = ((i + shift) % n) * 2;
-      const dx = current[i * 2] - target[j];
-      const dy = current[i * 2 + 1] - target[j + 1];
+      const k = (i + shift) % n;
+      const dx = current[i * 2] - target[k * 2];
+      const dy = current[i * 2 + 1] - target[k * 2 + 1];
       cost += dx * dx + dy * dy;
     }
     if (cost < bestCost) {
@@ -158,12 +158,10 @@ export function alignTo(current: Float32Array, target: Float32Array) {
     }
   }
   if (!best) return target;
+  // The same points, starting from `best` and wrapping round to the start.
   const out = new Float32Array(target.length);
-  for (let i = 0; i < n; i++) {
-    const j = ((i + best) % n) * 2;
-    out[i * 2] = target[j];
-    out[i * 2 + 1] = target[j + 1];
-  }
+  out.set(target.subarray(best * 2));
+  out.set(target.subarray(0, best * 2), (n - best) * 2);
   return out;
 }
 
@@ -171,7 +169,9 @@ export function alignTo(current: Float32Array, target: Float32Array) {
 export function outlinePath(points: Float32Array) {
   let d = "";
   for (let i = 0; i < points.length; i += 2) {
-    d += `${i ? "L" : "M"}${points[i].toFixed(2)} ${points[i + 1].toFixed(2)}`;
+    const x = points.at(i) ?? 0;
+    const y = points.at(i + 1) ?? 0;
+    d += `${i ? "L" : "M"}${x.toFixed(2)} ${y.toFixed(2)}`;
   }
   return `${d}Z`;
 }
@@ -181,8 +181,10 @@ export function reach(points: Float32Array) {
   let right = 0;
   let top = 0;
   for (let i = 0; i < points.length; i += 2) {
-    if (points[i] > right) right = points[i];
-    if (-points[i + 1] > top) top = -points[i + 1];
+    const x = points.at(i) ?? 0;
+    const y = points.at(i + 1) ?? 0;
+    if (x > right) right = x;
+    if (-y > top) top = -y;
   }
   return { right, top };
 }

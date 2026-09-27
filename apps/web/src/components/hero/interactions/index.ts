@@ -93,7 +93,9 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
       tapRelease?.kill();
       pieces.release();
       press(pending.target, pending.x, pending.y, true);
-      tapRelease = gsap.delayedCall(TAP_HOLD, () => pieces.release());
+      tapRelease = gsap.delayedCall(TAP_HOLD, () => {
+        pieces.release();
+      });
       return;
     }
     pieces.release();

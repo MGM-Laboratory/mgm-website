@@ -133,6 +133,21 @@ function part<T extends Element = HTMLElement>(root: Element, name: string) {
   return found;
 }
 
+function boardPart<T extends Element = HTMLElement>(section: HTMLElement, selector: string) {
+  const found = section.querySelector<T>(selector);
+  if (!found) throw new Error("magnet board markup");
+  return found;
+}
+
+/**
+ * The DOM typings promise both of these everywhere, but Safari has no
+ * vibrate and older browsers have no userActivation.
+ */
+type LooseNavigator = {
+  userActivation?: { hasBeenActive: boolean };
+  vibrate?: (pattern: number) => boolean;
+};
+
 function clampAngle(angle: number) {
   return Math.max(-4, Math.min(4, angle));
 }
@@ -151,11 +166,10 @@ function crookedAngle(previous: number) {
  * imperative: React renders the magnets once and never touches them again.
  */
 export function createMagnetBoard(section: HTMLElement) {
-  const rows = section.querySelector<HTMLElement>("[data-magnet-rows]");
-  const controls = section.querySelector<HTMLElement>("[data-magnet-controls]");
-  const resetButton = section.querySelector<HTMLButtonElement>("[data-magnet-reset]");
-  const resetWrap = section.querySelector<HTMLElement>("[data-magnet-reset-wrap]");
-  if (!rows || !controls || !resetButton || !resetWrap) throw new Error("magnet board markup");
+  const rows = boardPart(section, "[data-magnet-rows]");
+  const controls = boardPart(section, "[data-magnet-controls]");
+  const resetButton = boardPart<HTMLButtonElement>(section, "[data-magnet-reset]");
+  const resetWrap = boardPart(section, "[data-magnet-reset-wrap]");
 
   const cleanups: (() => void)[] = [];
   const listen = <K extends keyof HTMLElementEventMap>(
@@ -165,7 +179,9 @@ export function createMagnetBoard(section: HTMLElement) {
     options?: AddEventListenerOptions,
   ) => {
     target.addEventListener(type, handler as EventListener, options);
-    cleanups.push(() => target.removeEventListener(type, handler as EventListener, options));
+    cleanups.push(() => {
+      target.removeEventListener(type, handler as EventListener, options);
+    });
   };
 
   const saved = loadArrangement();
@@ -174,7 +190,7 @@ export function createMagnetBoard(section: HTMLElement) {
   ).map((el, index) => {
     const word = el.dataset.magnet ?? String(index);
     const homeAngle = HOME_ANGLES[index % HOME_ANGLES.length];
-    const stored = saved[word];
+    const stored = saved.get(word);
     return {
       index,
       word,
@@ -230,7 +246,7 @@ export function createMagnetBoard(section: HTMLElement) {
       left: EDGE,
       top: EDGE,
       right: section.clientWidth - EDGE,
-      bottom: Math.max(rows!.offsetTop + rows!.offsetHeight, controls!.offsetTop - EDGE),
+      bottom: Math.max(rows.offsetTop + rows.offsetHeight, controls.offsetTop - EDGE),
     };
   }
 
@@ -429,18 +445,18 @@ export function createMagnetBoard(section: HTMLElement) {
   }
 
   function persist() {
-    const arrangement: Arrangement = {};
+    const arrangement: Arrangement = new Map();
     for (const m of magnets) {
       if (isMoved(m)) {
-        arrangement[m.word] = {
+        arrangement.set(m.word, {
           x: Math.round(m.x * 10) / 10,
           y: Math.round(m.y * 10) / 10,
           a: Math.round(m.angle * 100) / 100,
-        };
+        });
       }
     }
     saveArrangement(arrangement);
-    showReset(Object.keys(arrangement).length > 0);
+    showReset(arrangement.size > 0);
   }
 
   function showReset(show: boolean) {
@@ -455,8 +471,7 @@ export function createMagnetBoard(section: HTMLElement) {
         { autoAlpha: 1, scale: 1, y: 0, duration: 0.45 * d, ease: "back.out(2.2)" },
       );
     } else {
-      if (resetWrap!.contains(document.activeElement))
-        magnets[0]?.el.focus({ preventScroll: true });
+      if (resetWrap.contains(document.activeElement)) magnets[0]?.el.focus({ preventScroll: true });
       gsap.to(resetButton, {
         autoAlpha: 0,
         scale: 0.9,
@@ -500,7 +515,8 @@ export function createMagnetBoard(section: HTMLElement) {
       bounds,
     );
     for (const [i, offset] of pushed) {
-      const other = magnets[i];
+      const other = magnets.at(i);
+      if (!other) continue;
       nudge(other, offset.x, offset.y);
       squash(other, 0.35);
     }
@@ -585,7 +601,9 @@ export function createMagnetBoard(section: HTMLElement) {
     if (on) {
       placeBack(m);
       m.el.style.zIndex = "40";
-      m.flipBack = gsap.delayedCall(FLIP_HOLD, () => setFlipped(m, false));
+      m.flipBack = gsap.delayedCall(FLIP_HOLD, () => {
+        setFlipped(m, false);
+      });
     }
     m.el.dataset.flipped = on ? "true" : "false";
     ensureTicking();
@@ -740,7 +758,9 @@ export function createMagnetBoard(section: HTMLElement) {
         duration: { min: 0.2, max: 1.1, overshoot: 0.25 } as gsap.InertiaDuration as number,
         resistance: 1400,
       },
-      onComplete: () => land(m, { countAs: countAs ?? "drag" }),
+      onComplete: () => {
+        land(m, { countAs: countAs ?? "drag" });
+      },
     });
   }
 
@@ -795,8 +815,9 @@ export function createMagnetBoard(section: HTMLElement) {
       current.holdTimer = window.setTimeout(() => {
         if (press !== current) return;
         current.held = true;
+        const nav: LooseNavigator = navigator;
         // Before any tap the browser refuses (and reports) a vibration.
-        if (navigator.userActivation?.hasBeenActive !== false) navigator.vibrate?.(8);
+        if (nav.userActivation?.hasBeenActive !== false) nav.vibrate?.(8);
         pressSquash(m);
         ensureTicking();
       }, HOLD_MS);
@@ -877,12 +898,12 @@ export function createMagnetBoard(section: HTMLElement) {
 
   // ---- Keyboard ------------------------------------------------------------
 
-  const KEY_STEPS: Record<string, [number, number]> = {
-    ArrowLeft: [-1, 0],
-    ArrowRight: [1, 0],
-    ArrowUp: [0, -1],
-    ArrowDown: [0, 1],
-  };
+  const KEY_STEPS = new Map<string, [number, number]>([
+    ["ArrowLeft", [-1, 0]],
+    ["ArrowRight", [1, 0]],
+    ["ArrowUp", [0, -1]],
+    ["ArrowDown", [0, 1]],
+  ]);
 
   function keyMove(m: MagnetState, dx: number, dy: number, repeat: boolean) {
     if (!m.ready || m.dragging || m.flying) return;
@@ -925,7 +946,7 @@ export function createMagnetBoard(section: HTMLElement) {
   function onKeyDown(m: MagnetState, event: KeyboardEvent) {
     lastInput = performance.now();
     if (event.altKey || event.ctrlKey || event.metaKey) return;
-    const step = KEY_STEPS[event.key];
+    const step = KEY_STEPS.get(event.key);
     if (step) {
       event.preventDefault();
       const distance = event.shiftKey ? 64 : 16;
@@ -953,7 +974,7 @@ export function createMagnetBoard(section: HTMLElement) {
     if (!moved.length) return;
     const motion = motionAllowed();
     gsap.fromTo(
-      resetButton!.querySelector('[data-part="reset-icon"]'),
+      resetButton.querySelector('[data-part="reset-icon"]'),
       { rotation: 0 },
       { rotation: -360, duration: motion ? 0.8 : 0, ease: "power3.inOut" },
     );
@@ -961,7 +982,7 @@ export function createMagnetBoard(section: HTMLElement) {
     const finish = () => {
       pending--;
       if (pending > 0) return;
-      saveArrangement({});
+      saveArrangement(new Map());
       showReset(false);
       labNote({
         id: "magnets-reset",
@@ -1034,14 +1055,30 @@ export function createMagnetBoard(section: HTMLElement) {
     gsap.set(m.pose, { rotation: m.angle });
     gsap.set(m.flip, { rotationX: 0, transformPerspective: 900 });
 
-    listen(m.el, "pointerdown", (e: PointerEvent) => onPointerDown(m, e));
-    listen(m.el, "pointermove", (e: PointerEvent) => onPointerMove(m, e));
-    listen(m.el, "pointerup", (e: PointerEvent) => onPointerUp(m, e));
-    listen(m.el, "pointercancel", (e: PointerEvent) => onPointerCancel(m, e));
-    listen(m.el, "lostpointercapture", (e: PointerEvent) => onPointerCancel(m, e));
-    listen(m.el, "pointerenter", (e: PointerEvent) => onPointerEnter(m, e));
-    listen(m.el, "pointerleave", (e: PointerEvent) => onPointerLeave(m, e));
-    listen(m.el, "keydown", (e: KeyboardEvent) => onKeyDown(m, e));
+    listen(m.el, "pointerdown", (e: PointerEvent) => {
+      onPointerDown(m, e);
+    });
+    listen(m.el, "pointermove", (e: PointerEvent) => {
+      onPointerMove(m, e);
+    });
+    listen(m.el, "pointerup", (e: PointerEvent) => {
+      onPointerUp(m, e);
+    });
+    listen(m.el, "pointercancel", (e: PointerEvent) => {
+      onPointerCancel(m, e);
+    });
+    listen(m.el, "lostpointercapture", (e: PointerEvent) => {
+      onPointerCancel(m, e);
+    });
+    listen(m.el, "pointerenter", (e: PointerEvent) => {
+      onPointerEnter(m, e);
+    });
+    listen(m.el, "pointerleave", (e: PointerEvent) => {
+      onPointerLeave(m, e);
+    });
+    listen(m.el, "keydown", (e: KeyboardEvent) => {
+      onKeyDown(m, e);
+    });
     listen(m.el, "focus", () => {
       // Tabbing in before the throw: every magnet lands at once, so focus
       // never sits on an invisible magnet that ignores the keys.
@@ -1081,9 +1118,11 @@ export function createMagnetBoard(section: HTMLElement) {
       bounds,
     );
     for (const [i, offset] of pushed) {
-      magnets[i].x = offset.x;
-      magnets[i].y = offset.y;
-      setOffset(magnets[i], offset.x, offset.y);
+      const other = magnets.at(i);
+      if (!other) continue;
+      other.x = offset.x;
+      other.y = offset.y;
+      setOffset(other, offset.x, offset.y);
     }
   }
   showReset(magnets.some(isMoved));

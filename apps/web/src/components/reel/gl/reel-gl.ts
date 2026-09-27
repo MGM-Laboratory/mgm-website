@@ -216,7 +216,9 @@ export class ReelGlLayer {
     this.group.add(this.ribbon, this.cap, this.plane);
     this.group.visible = false;
     this.readColors();
-    this.observer = new MutationObserver(() => this.readColors());
+    this.observer = new MutationObserver(() => {
+      this.readColors();
+    });
     this.observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class"],

@@ -46,7 +46,7 @@ export function startDoze(stage: Stage, loops: IdleLoops, sleepers: Sleeper[]) {
     fade?.kill();
     fade = gsap.to(level, { value: 1, duration: 2.6, ease: "sine.inOut", onUpdate: apply });
     gsap.to(slowLoops, {
-      timeScale: (i: number) => (slowLoops[i] === loops.logo ? 0.3 : 0.4),
+      timeScale: (i: number) => (slowLoops.at(i) === loops.logo ? 0.3 : 0.4),
       duration: 2.6,
       ease: "sine.inOut",
       overwrite: "auto",
@@ -76,7 +76,10 @@ export function startDoze(stage: Stage, loops: IdleLoops, sleepers: Sleeper[]) {
     if (stage.active()) for (const sleeper of sleepers) sleeper.startle();
   }
 
-  const offDoze = onIdle(DOZE_AFTER_MS, (idle) => (idle ? fallAsleep() : wakeUp()));
+  const offDoze = onIdle(DOZE_AFTER_MS, (idle) => {
+    if (idle) fallAsleep();
+    else wakeUp();
+  });
   const offNote = onIdle(NOTE_AFTER_MS, (idle) => {
     if (!idle || !stage.active()) return;
     labNote({

@@ -121,7 +121,9 @@ export function ProjectCardCover({
     const timer = window.setTimeout(() => {
       delete frame.dataset.projectLanding;
     }, LANDING_FAILSAFE_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [landing]);
 
   // DOM opening: plays for every card the WebGL stage isn't drawing, in any

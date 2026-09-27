@@ -24,7 +24,9 @@ const COMPACT_QUERY = "(max-width: 879px)";
 function subscribeCompact(listener: () => void) {
   const query = window.matchMedia(COMPACT_QUERY);
   query.addEventListener("change", listener);
-  return () => query.removeEventListener("change", listener);
+  return () => {
+    query.removeEventListener("change", listener);
+  };
 }
 
 const LINES = [
@@ -77,7 +79,11 @@ function rattle(icon: SVGSVGElement | null, strong: boolean) {
 function collectNodes(layer: HTMLElement) {
   const nodes = {} as Record<ToyId, ToyNodes>;
   for (const outer of layer.querySelectorAll<HTMLElement>("[data-toy]")) {
-    const pick = (name: string) => outer.querySelector<HTMLElement>(`[data-toy-layer='${name}']`)!;
+    const pick = (name: string) => {
+      const node = outer.querySelector<HTMLElement>(`[data-toy-layer='${name}']`);
+      if (!node) throw new Error(`The toy's "${name}" layer is missing.`);
+      return node;
+    };
     nodes[outer.dataset.toy as ToyId] = {
       outer,
       lift: pick("lift"),
@@ -172,13 +178,15 @@ export function CompactHero() {
     // Counts visible time only: a tab opened in the background must not
     // reveal the call to action over an entrance nobody has seen.
     let visibleMs = 0;
-    if (!revealed) {
+    const armFailsafe = () => {
+      if (revealed) return;
       failsafe = window.setInterval(() => {
         if (document.hidden) return;
         visibleMs += 250;
         if (visibleMs >= CTA_FAILSAFE_MS) revealCta(true);
       }, 250);
-    }
+    };
+    armFailsafe();
 
     let cancelled = false;
     let engine: Toybox | null = null;
@@ -215,7 +223,9 @@ export function CompactHero() {
             chars: splits.map((split) => split.chars as HTMLElement[]),
             nodes: collectNodes(layer),
             entrance: entrance ? "full" : late && onScreen ? "drop" : "settled",
-            onReveal: () => revealCta(true),
+            onReveal: () => {
+              revealCta(true);
+            },
           });
           engineRef.current = engine;
           if (entrance) playedRef.current = true;
@@ -238,7 +248,7 @@ export function CompactHero() {
       window.clearInterval(failsafe);
       engine?.destroy();
       engineRef.current = null;
-      splits.forEach((split) => split.revert());
+      for (const split of splits) split.revert();
       if (shakeButton) gsap.killTweensOf(shakeButton);
       if (shakeIcon) gsap.killTweensOf(shakeIcon);
       delete box.dataset.toybox;

@@ -72,7 +72,9 @@ export class LabelRoller {
       duration: 0.22,
       ease: "power2.in",
       stagger: 0.014,
-      onComplete: () => previous.remove(),
+      onComplete: () => {
+        previous.remove();
+      },
     });
     gsap.fromTo(
       letters,

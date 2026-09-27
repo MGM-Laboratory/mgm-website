@@ -194,7 +194,9 @@ export function startCardTilt(elements: HTMLElement[], { reach = 150 } = {}) {
     offIdle();
     swayCall?.kill();
     io.disconnect();
-    downs.forEach((off) => off());
+    downs.forEach((off) => {
+      off();
+    });
     loop.sleep();
     gsap.set(elements, { clearProps: "transform" });
   };

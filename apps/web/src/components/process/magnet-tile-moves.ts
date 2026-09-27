@@ -93,7 +93,10 @@ export function playTileMove(motif: SVGGElement, kind: PatternKind, settle = fal
         .to(motif, { scale: 1, duration: 0.6, ease: "elastic.out(1.2, 0.35)" });
     case "leaves":
       setLeavesOpen(motif, true);
-      if (settle) gsap.delayedCall(0.55, () => setLeavesOpen(motif, false));
+      if (settle)
+        gsap.delayedCall(0.55, () => {
+          setLeavesOpen(motif, false);
+        });
       return null;
     case "plus":
       return gsap.to(motif, {

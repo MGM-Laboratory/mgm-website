@@ -145,7 +145,9 @@ export function ShowcaseSection({
                     type="button"
                     aria-label={`Scroll ${title} left`}
                     aria-disabled={edges.start || undefined}
-                    onClick={() => scrollTrack(-1)}
+                    onClick={() => {
+                      scrollTrack(-1);
+                    }}
                     className={ARROW_BUTTON}
                   >
                     <ArrowLeft
@@ -159,7 +161,9 @@ export function ShowcaseSection({
                     type="button"
                     aria-label={`Scroll ${title} right`}
                     aria-disabled={edges.end || undefined}
-                    onClick={() => scrollTrack(1)}
+                    onClick={() => {
+                      scrollTrack(1);
+                    }}
                     className={ARROW_BUTTON}
                   >
                     <ArrowRight

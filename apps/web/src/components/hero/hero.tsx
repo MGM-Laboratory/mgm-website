@@ -204,7 +204,7 @@ function buildEntranceTimeline(
   mobileSplit: SplitText,
 ) {
   const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-  const iChar = mediaSplit.chars[MEDIA_I_INDEX];
+  const iChar = mediaSplit.chars.at(MEDIA_I_INDEX);
   const MEDIA_CHAR_DURATION = 0.7;
   const MEDIA_CHAR_STAGGER = 0.055;
   // The moment the "i" itself lands (mid-stagger), not when the whole word
@@ -243,6 +243,7 @@ function buildEntranceTimeline(
     // down like a coin settling, instead of a single snap.
     .call(
       () => {
+        if (!iChar) return;
         gsap.to(iChar, {
           rotateX: 360 * 4,
           transformOrigin: "50% 50%",
@@ -498,19 +499,19 @@ export function Hero() {
     const mobileText = mobileTextRef.current;
     if (!row1 || !row2 || !row3 || !bridge || !arrowWrap || !shapesBGroup || !mobileText) return;
 
-    function measure() {
+    const measure = () => {
       // Only ever WRITE a row's width if it actually needs to change —
       // writing on every call (even to the same value) can make a
       // ResizeObserver that also watches these rows re-fire indefinitely.
-      const targetWidth = `${row1!.offsetWidth}px`;
-      if (row2!.style.width !== targetWidth) row2!.style.width = targetWidth;
-      if (row3!.style.width !== targetWidth) row3!.style.width = targetWidth;
+      const targetWidth = `${row1.offsetWidth}px`;
+      if (row2.style.width !== targetWidth) row2.style.width = targetWidth;
+      if (row3.style.width !== targetWidth) row3.style.width = targetWidth;
 
-      const bridgeRect = bridge!.getBoundingClientRect();
-      const row2Rect = row2!.getBoundingClientRect();
-      const row3Rect = row3!.getBoundingClientRect();
-      const shapesBRect = shapesBGroup!.getBoundingClientRect();
-      const mobileTextRect = mobileText!.getBoundingClientRect();
+      const bridgeRect = bridge.getBoundingClientRect();
+      const row2Rect = row2.getBoundingClientRect();
+      const row3Rect = row3.getBoundingClientRect();
+      const shapesBRect = shapesBGroup.getBoundingClientRect();
+      const mobileTextRect = mobileText.getBoundingClientRect();
       const top = row2Rect.top + row2Rect.height / 2 - bridgeRect.top;
       const bottom = row3Rect.top + row3Rect.height / 2 - bridgeRect.top;
       const height = Math.max(bottom - top, 1);
@@ -523,14 +524,14 @@ export function Hero() {
       const bottomEndX = Math.max(mobileTextRect.left - bridgeRect.left - gap, 48);
       const width = Math.max(topEndX, bottomEndX, 1);
 
-      arrowWrap!.style.top = `${top}px`;
-      arrowWrap!.style.height = `${height}px`;
-      arrowWrap!.style.width = `${width}px`;
+      arrowWrap.style.top = `${top}px`;
+      arrowWrap.style.height = `${height}px`;
+      arrowWrap.style.width = `${width}px`;
 
-      const svg = arrowWrap!.querySelector("svg.arrow-connector");
-      const path = arrowWrap!.querySelector("[data-part='arrow-path']");
-      const head = arrowWrap!.querySelector("[data-part='arrow-head']");
-      const spark = arrowWrap!.querySelector("[data-part='arrow-spark']");
+      const svg = arrowWrap.querySelector("svg.arrow-connector");
+      const path = arrowWrap.querySelector("[data-part='arrow-path']");
+      const head = arrowWrap.querySelector("[data-part='arrow-head']");
+      const spark = arrowWrap.querySelector("[data-part='arrow-spark']");
       if (!svg || !path || !head || !spark) return;
 
       // Real pixel coordinates from here on — no scaling trick. The
@@ -549,7 +550,7 @@ export function Hero() {
       );
       spark.setAttribute("cx", `${topEndX}`);
       spark.setAttribute("cy", "0");
-    }
+    };
 
     measure();
     // Only row1 is observed: it's the sole driver of row2/row3's width, and
@@ -622,18 +623,29 @@ export function Hero() {
           if (cancelled) return;
 
           try {
-            mediaSplit = SplitText.create(root.querySelector(".line-media")!, {
+            const mediaLine = root.querySelector(".line-media");
+            const gameLine = root.querySelector(".line-game");
+            const mobileLine = root.querySelector(".line-mobile");
+            if (!mediaLine || !gameLine || !mobileLine) return;
+            mediaSplit = SplitText.create(mediaLine, {
               type: "chars",
               charsClass: "media-char",
             });
-            gameSplit = SplitText.create(root.querySelector(".line-game")!, {
+            gameSplit = SplitText.create(gameLine, {
               type: "chars",
               charsClass: "game-char",
             });
-            mobileSplit = SplitText.create(root.querySelector(".line-mobile")!, {
+            mobileSplit = SplitText.create(mobileLine, {
               type: "words, chars",
               charsClass: "mobile-char",
             });
+            const currentMediaSplit = mediaSplit;
+            const currentGameSplit = gameSplit;
+            const currentMobileSplit = mobileSplit;
+            const mediaChars = currentMediaSplit.chars as HTMLElement[];
+            const gameChars = currentGameSplit.chars as HTMLElement[];
+            const mobileChars = currentMobileSplit.chars as HTMLElement[];
+            const mobileWords = currentMobileSplit.words as HTMLElement[];
 
             mm.add(
               {
@@ -668,7 +680,9 @@ export function Hero() {
                 let observer: IntersectionObserver | undefined;
                 let visible = true;
                 const pauseWhenHidden = () => {
-                  idleLoops.forEach((loop) => loop.paused(!visible || document.hidden));
+                  idleLoops.forEach((loop) => {
+                    loop.paused(!visible || document.hidden);
+                  });
                 };
                 const startIdle = () => {
                   idleContext.add(() => {
@@ -696,18 +710,20 @@ export function Hero() {
                       if (stopped || !loops) return;
                       stopInteractions = startHeroInteractions(root, {
                         words: [
-                          mediaSplit!.chars as HTMLElement[],
-                          gameSplit!.chars as HTMLElement[],
-                          ...(mobileSplit!.words as HTMLElement[]).map((word) =>
+                          mediaChars,
+                          gameChars,
+                          ...mobileWords.map((word) =>
                             Array.from(word.querySelectorAll<HTMLElement>(".mobile-char")),
                           ),
                         ],
-                        flipper: (mediaSplit!.chars[MEDIA_I_INDEX] as HTMLElement) ?? null,
+                        flipper: mediaChars.at(MEDIA_I_INDEX) ?? null,
                         loops,
                         arrowGeometry: () => arrowGeometryRef.current,
                       });
                     })
-                    .catch((err) => console.error("Hero interactions failed to load.", err));
+                    .catch((err) => {
+                      console.error("Hero interactions failed to load.", err);
+                    });
                 };
                 const stopIdle = () => {
                   stopInteractions();
@@ -720,7 +736,7 @@ export function Hero() {
 
                 if (reduced || startedScrolled || cameFromInternalNav) {
                   gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                  gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
+                  gsap.set([mediaChars, gameChars, mobileChars], {
                     opacity: 1,
                     x: 0,
                     y: 0,
@@ -743,7 +759,11 @@ export function Hero() {
                   return stopIdle;
                 }
 
-                const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
+                const tl = buildEntranceTimeline(
+                  currentMediaSplit,
+                  currentGameSplit,
+                  currentMobileSplit,
+                );
                 tl.eventCallback("onComplete", () => {
                   startIdle();
                   reveal(true);
@@ -753,7 +773,9 @@ export function Hero() {
                   Object.assign(window, {
                     __heroTl: tl,
                     __heroReplay: () => {
-                      idleLoops.forEach((loop) => loop.kill());
+                      idleLoops.forEach((loop) => {
+                        loop.kill();
+                      });
                       idleLoops = [];
                       stopIdle();
                       gsap.set(".scroll-indicator", { opacity: 0, y: 14 });

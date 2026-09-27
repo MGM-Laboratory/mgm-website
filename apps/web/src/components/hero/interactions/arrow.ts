@@ -41,6 +41,10 @@ export function createArrow(
   const head = wrap?.querySelector<SVGPathElement>("[data-part='arrow-head']");
   const spark = wrap?.querySelector<SVGCircleElement>("[data-part='arrow-spark']");
   if (!wrap || !path || !head || !spark) return null;
+  const safeWrap = wrap;
+  const safePath = path;
+  const safeHead = head;
+  const safeSpark = spark;
 
   let x0 = 0;
   let y0 = 0;
@@ -50,15 +54,15 @@ export function createArrow(
   let ring: gsap.core.Tween | null = null;
 
   function measure() {
-    const offset = offsetIn(wrap!, root);
+    const offset = offsetIn(safeWrap, root);
     x0 = offset.x;
     y0 = offset.y;
   }
 
   /** The pointer in the arrow's own pixels (its box moves with parallax). */
   function local(x: number, y: number) {
-    const ox = Number(gsap.getProperty(wrap!, "x")) || 0;
-    const oy = Number(gsap.getProperty(wrap!, "y")) || 0;
+    const ox = Number(gsap.getProperty(safeWrap, "x")) || 0;
+    const oy = Number(gsap.getProperty(safeWrap, "y")) || 0;
     return { x: x - x0 - ox, y: y - y0 - oy };
   }
 
@@ -103,8 +107,8 @@ export function createArrow(
     run?.kill();
     const release = stage.hold();
     const motion = (end: number) => ({
-      path: path!,
-      align: path!,
+      path: safePath,
+      align: safePath,
       alignOrigin: [0.5, 0.5] as [number, number],
       start: 0,
       end,
@@ -112,14 +116,14 @@ export function createArrow(
     run = gsap
       .timeline({ onComplete: release, onInterrupt: release })
       .fromTo(
-        spark!,
+        safeSpark,
         { opacity: 1, motionPath: motion(0) },
         { motionPath: motion(1), duration: 0.85, ease: "power2.inOut", immediateRender: true },
       )
-      .to(spark!, { opacity: 0, duration: 0.14, ease: "power1.in" }, 0.76)
+      .to(safeSpark, { opacity: 0, duration: 0.14, ease: "power1.in" }, 0.76)
       // The head nods as the spark arrives.
-      .to(head!, { x: 7, duration: 0.1, ease: "power2.out" }, 0.8)
-      .to(head!, { x: 0, duration: 0.6, ease: "elastic.out(1, 0.35)" }, 0.9);
+      .to(safeHead, { x: 7, duration: 0.1, ease: "power2.out" }, 0.8)
+      .to(safeHead, { x: 0, duration: 0.6, ease: "elastic.out(1, 0.35)" }, 0.9);
   }
 
   function pluck(segment: Segment, t: number, side: number, pull: number) {
@@ -141,7 +145,7 @@ export function createArrow(
         const bend =
           amplitude * decay * Math.cos(2 * Math.PI * RING_HZ * state.t) +
           amplitude * 0.22 * decay * decay * Math.sin(2 * Math.PI * RING_HZ * 2.1 * state.t);
-        path!.setAttribute("d", arrowPathD(current, { segment, at, bend }));
+        safePath.setAttribute("d", arrowPathD(current, { segment, at, bend }));
       },
       onComplete: settle,
       onInterrupt: settle,
@@ -150,7 +154,7 @@ export function createArrow(
 
   function settle() {
     const g = geometry();
-    if (g) path!.setAttribute("d", arrowPathD(g));
+    if (g) safePath.setAttribute("d", arrowPathD(g));
   }
 
   return {

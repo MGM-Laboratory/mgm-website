@@ -37,7 +37,9 @@ export class StandaloneGlHost implements GlHost {
   private readonly startedAt = performance.now();
   private clearPending = true;
   private disposed = false;
-  private readonly onResize = () => this.resize();
+  private readonly onResize = () => {
+    this.resize();
+  };
   private readonly onLost: (event: Event) => void;
 
   constructor(options: { onContextLost: () => void }) {

@@ -69,8 +69,12 @@ export function startReelGl(controller: ReelController) {
         // hand-over both ways (window.__reelGl.fakeFlowHost(), then .clear()).
         Object.assign(window, {
           __reelGl: {
-            fakeFlowHost: () => setGlHost(new host.StandaloneGlHost({ onContextLost: () => {} })),
-            clear: () => setGlHost(null),
+            fakeFlowHost: () => {
+              setGlHost(new host.StandaloneGlHost({ onContextLost: () => {} }));
+            },
+            clear: () => {
+              setGlHost(null);
+            },
             layer: () => layer,
             state: () => ({
               failed,

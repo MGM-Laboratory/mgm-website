@@ -159,7 +159,15 @@ export function HomeFinale() {
           className="finale-reveal mx-auto w-[clamp(11rem,46vw,15rem)] md:w-[clamp(14rem,24vw,19rem)]"
         />
       </div>
-      {burst ? <ConfettiBurst key={burst.id} burst={burst} onDone={() => setBurst(null)} /> : null}
+      {burst ? (
+        <ConfettiBurst
+          key={burst.id}
+          burst={burst}
+          onDone={() => {
+            setBurst(null);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
