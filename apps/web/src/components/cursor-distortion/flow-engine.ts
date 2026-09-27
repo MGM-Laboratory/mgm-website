@@ -97,12 +97,13 @@ const TINT_LIGHT = 12.5;
 /**
  * Dark theme, tuned by eye: an additive sine clips its negative lobes to
  * black on a dark page and leaves only hard, bright streaks. Folding the
- * lobes up (abs) keeps both halves of every contour line as light, and a
- * little desaturation toward grey reads as a pearl sheen rather than an
- * oil slick.
+ * lobes up (abs) keeps both halves of every contour line as light. A
+ * touch more strength than the light theme and a light pull toward grey
+ * leave a faint rainbow on the contour lines over a pearl haze: side by
+ * side, more grey read as smoke, and none as a hard oil slick.
  */
-const TINT_DARK = 14;
-const PEARL_DARK = 0.35;
+const TINT_DARK = 16;
+const PEARL_DARK = 0.15;
 /** A pointer jump longer than this (a return from outside, a hitch) starts a fresh stroke. */
 const MAX_SEGMENT_PX = 360;
 /** A content jump longer than this share of the viewport (a route reset, an anchor) clears the paint. */
