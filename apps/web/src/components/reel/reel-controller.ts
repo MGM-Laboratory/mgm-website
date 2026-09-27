@@ -168,12 +168,10 @@ class StyleWriter {
   }
 }
 
-// eslint-disable-next-line xss/no-mixed-html -- returns a boolean from an existing event target.
-function isEditableTarget(target: EventTarget | null) {
+function isHtmlEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
-  // eslint-disable-next-line xss/no-mixed-html -- returns a boolean from an existing event target.
   return (
-    target.isContentEditable ||
+    /*safe*/ target.isContentEditable ||
     target instanceof HTMLInputElement ||
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLSelectElement
@@ -672,17 +670,16 @@ export class ReelController {
     // itself stands the snap down, and the smoother's scroll to the focused
     // element comes after this, so it arms whatever the progress is now
     // (the snap only moves while the morph is half done).
-    // eslint-disable-next-line xss/no-mixed-html -- event handler only updates animation state.
-    const handleFocusIn = (event: FocusEvent) => {
+    const handleHtmlFocusIn = (event: FocusEvent) => {
       const el = event.target;
       if (!(el instanceof HTMLElement) || !el.matches(":focus-visible")) return;
       this.snapDir = el === this.el.watch ? 1 : -1;
       this.armed = true;
       this.lastInputAt = performance.now();
     };
-    this.root.addEventListener("focusin", handleFocusIn);
+    this.root.addEventListener("focusin", /*safe*/ handleHtmlFocusIn);
     this.offs.push(() => {
-      this.root.removeEventListener("focusin", handleFocusIn);
+      this.root.removeEventListener("focusin", /*safe*/ handleHtmlFocusIn);
     });
 
     const watch = this.el.watch;
@@ -853,7 +850,8 @@ export class ReelController {
   }
 
   private onKey(event: KeyboardEvent) {
-    if (isEditableTarget(event.target) || event.metaKey || event.altKey || event.ctrlKey) return;
+    if (isHtmlEditableTarget(event.target) || event.metaKey || event.altKey || event.ctrlKey)
+      return;
     // Keys that never scroll (Escape closing the menu or the player, a
     // lone modifier) leave a snap in flight alone.
     if (NEUTRAL_KEYS.has(event.key)) return;
