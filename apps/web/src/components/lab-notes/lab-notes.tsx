@@ -151,13 +151,17 @@ export function LabNotes() {
   return createPortal(
     <div
       aria-live="polite"
-      className="pointer-events-none fixed bottom-4 left-4 z-[46] max-w-[min(22rem,calc(100vw-2rem))] sm:bottom-6 sm:left-6"
+      className="pointer-events-none fixed bottom-[4.75rem] left-4 z-[46] max-w-[min(22rem,calc(100vw-2rem))] sm:bottom-6 sm:left-6"
     >
       {current ? (
+        // On touch the card lets taps through to what is under it (a footer
+        // link, a magnet); only Dismiss takes them. A mouse can rest on it
+        // to hold the note. On narrow screens the note sits above the fixed
+        // Back to top button, so Dismiss never lands on it.
         <div
           key={current.id + current.text}
           ref={cardRef}
-          className="lab-note pointer-events-auto invisible relative flex items-start gap-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)] py-3 pr-10 pl-3 text-sm leading-snug text-foreground opacity-0 shadow-[var(--shadow-2)]"
+          className="lab-note pointer-events-none invisible relative pointer-fine:pointer-events-auto flex items-start gap-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)] py-3 pr-10 pl-3 text-sm leading-snug text-foreground opacity-0 shadow-[var(--shadow-2)]"
           onBlur={() => setHold(false)}
           onFocus={() => setHold(true)}
           onPointerEnter={() => setHold(true)}
@@ -176,7 +180,7 @@ export function LabNotes() {
           </p>
           <button
             aria-label="Dismiss note"
-            className="absolute top-2 right-2 grid size-7 place-items-center rounded-full text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
+            className="pointer-events-auto absolute top-2 right-2 grid size-7 place-items-center rounded-full text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
             onClick={() => {
               timeline.current?.kill();
               setCurrent(queue.current.shift() ?? null);
