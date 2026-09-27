@@ -39,20 +39,29 @@ The workspace is composed in `apps/web/src/components/admin/member-cms-studio.ts
 
 The API stores each collection as a slug-keyed JSONB `data` record. Prisma defines the current tables in `apps/api/prisma/schema.prisma`: `CmsMember`, `CmsArticle`, `CmsPublication`, `CmsProject`, `CmsResearchInitiative`, `CmsJobPosting`, `CmsJobApplication`, `CmsEvent`, `CmsEventRegistration`, `CmsContactInquiry`, `CmsAdmin`, and the singleton `CmsHomeContent` and `CmsContactSettings` records. The link shortener (`ShortLinkDomain`, `ShortLink`, `ShortLinkVisit`) and the form builder (`Form`, `FormResponse`, `FormEvent`, `FormUpload`) use ordinary relational tables instead; see [`shortlinks.md`](shortlinks.md) and [`forms.md`](forms.md). `PrismaService.onModuleInit()` creates these tables idempotently as an operational safety net; schema migrations remain the durable migration record.
 
-| Collection        | Public path                             | Notable admin capability                                                             |
-| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------ |
-| Members           | `/member`, `/member/[slug]`             | profile photo crop/upload and structured profile fields                              |
-| Articles          | `/articles`, `/articles/[slug]`         | BlockNote body, cover uploads, page theme                                            |
-| Publications      | `/publications`, `/publications/[slug]` | paper PDF, author photos, citations, preview metadata                                |
-| Projects          | `/projects`, `/projects/[slug]`         | detail page theme, CTA and services, ordered image and video media sections          |
-| Research          | `/research`, `/research/[slug]`         | initiative detail, linked outcomes, cover upload                                     |
-| Careers           | `/careers`, detail, apply               | openings, BlockNote detail, application inbox and CV files                           |
-| Events            | `/events`, `/events/[slug]`             | event media, registrations, calendar export, map-link resolution                     |
-| Links             | `/s/[slug]` and custom short domains    | domains with Cloudflare setup, links with expiry and passphrases, per-link analytics |
-| Forms             | `/forms/[slug]`                         | form builder, templates, logic, themes and 3D scenes, responses, analytics, exports  |
-| Contact inquiries | `/contact`                              | inbox state and bulk actions; the original inquiry is persisted before mail is sent  |
-| Home              | `/`                                     | homepage video/settings singleton                                                    |
-| Contact settings  | `/contact`                              | addresses, map location, and mail routing strategy                                   |
+| Collection        | Public path                             | Notable admin capability                                                              |
+| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
+| Members           | `/member`, `/member/[slug]`             | profile photo crop/upload and structured profile fields                               |
+| Articles          | `/articles`, `/articles/[slug]`         | BlockNote body, cover uploads, page theme                                             |
+| Publications      | `/publications`, `/publications/[slug]` | paper PDF, author photos, citations, preview metadata                                 |
+| Projects          | `/projects`, `/projects/[slug]`         | detail page theme, CTA and services, ordered image and video media sections           |
+| Research          | `/research`, `/research/[slug]`         | initiative detail, linked outcomes, cover upload                                      |
+| Careers           | `/careers`, detail, apply               | openings, BlockNote detail, application inbox and CV files                            |
+| Events            | `/events`, `/events/[slug]`             | event media, registrations, calendar export, map-link resolution                      |
+| Links             | `/s/[slug]` and custom short domains    | domains with Cloudflare setup, links with expiry and passphrases, per-link analytics  |
+| Forms             | `/forms/[slug]`                         | form builder, templates, logic, themes and 3D scenes, responses, analytics, exports   |
+| Contact inquiries | `/contact`                              | inbox state and bulk actions; the original inquiry is persisted before mail is sent   |
+| Home              | `/`                                     | the company profile video for the homepage reel, upload only (see "Home video" below) |
+| Contact settings  | `/contact`                              | addresses, map location, and mail routing strategy                                    |
+
+### Home video
+
+The Home record (`packages/shared/src/schemas/home.ts`, the `CmsHomeContent` singleton) holds one thing: the company profile video the homepage reel plays. There are no editorial fields: the reel's title, description and CTA are written into the page (`apps/web/src/data/reel.ts`).
+
+- **Upload only.** `videoMode` is `"none"` or `"upload"`, with `videoKey`, `videoName` and `videoSize`. A record saved with the old `"url"` or `"youtube"` modes reads as `"none"`, and the old `videoUrl`, `videoTitle` and `videoDescription` fields are stripped on parse, so older records keep validating.
+- **Editor.** `components/admin/home-settings-editor.tsx` uploads a file (`POST /cms/home/video`, raw body, which mints a `home-video-<uuid>.<ext>` key) and previews the saved video. There is no preview of a file before it is uploaded: a local blob preview was removed because CodeQL flagged it as DOM XSS, and a failing CodeQL check blocks `/merge`.
+- **Playback.** `app/api/home-cms/video/[key]/route.ts` checks the key's shape and proxies to the API, which serves only the key the saved record holds (a signed storage redirect, with Range support). Every upload mints a fresh key and a replaced video's old key stops resolving, so the bytes behind a key never change: the route answers `Cache-Control: public, max-age=31536000, immutable` (`IMMUTABLE_VIDEO_CACHE` in `lib/video-proxy.ts`) and passes ETag and Last-Modified through.
+- **On the page.** `homeVideoSource()` in `lib/home-cms.ts` turns the record into the reel's source. With no upload (or after a Remove) the reel shows an animated test card and the caption "Our film is on its way." instead of a play button.
 
 The careers workflow has additional validation, upload constraints, and inbox behavior; read [`careers-cms.md`](careers-cms.md) before modifying it. Contact settings control mail routing, which is detailed in [`mail-system.md`](mail-system.md).
 
@@ -63,7 +72,7 @@ The API's `StorageService` writes to AWS S3 or an S3-compatible bucket. It gives
 Large bodies must be streamed through the Next proxy, not parsed into `request.formData()` or JSON first. The established paths use raw PDF/video bodies or streamed multipart forwarding:
 
 - publication papers: `CMS_MAX_PAPER_BYTES`, default 200 MB;
-- project videos: `CMS_MAX_VIDEO_BYTES`, default 500 MB, MP4 or WebM;
+- project and home videos: `CMS_MAX_VIDEO_BYTES`, default 500 MB, MP4 or WebM;
 - job CVs: `CMS_MAX_CV_BYTES`, default 100 MB, PDF/DOC/DOCX;
 - contact attachments: 25 MB hard limit.
 
