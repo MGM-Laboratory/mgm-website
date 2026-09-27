@@ -206,7 +206,9 @@ export function ReelSection({ content }: Readonly<{ content: HomeContent }>) {
       </h2>
 
       <div className={styles.content} data-reel="content">
-        <p className={styles.desc} data-reel="desc">
+        {/* data-flow-keep: on the stacked layout the paragraph paints the page
+            colour over the ribbon, and the cursor flow must not clear it. */}
+        <p className={styles.desc} data-reel="desc" data-flow-keep="">
           {descWords.map((word, index) => (
             <span key={index}>
               <span className={styles.descWord} data-reel="desc-word">
