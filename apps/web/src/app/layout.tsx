@@ -27,7 +27,8 @@ const hanken = Hanken_Grotesk({
 
 export const metadata: Metadata = {
   title: "MGM Laboratory",
-  description: "MGM Laboratory — company profile.",
+  description:
+    "MGM Laboratory is the Media, Game and Mobile lab at FILKOM, Universitas Brawijaya. We build games, apps and websites.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

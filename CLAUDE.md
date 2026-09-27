@@ -8,7 +8,7 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 2. `docs/project-overview.md`: what the site is, all pages, content status.
 3. `docs/architecture.md`: monorepo layout, component/data map, routing.
 4. `docs/cms-admin.md`: CMS collections, the `/admin` workspace, signed sessions, RBAC, API proxy boundaries, and media storage.
-5. `docs/animation-system.md`: GSAP setup, conventions, and the **gotchas that have already cost days** (read before touching any animation).
+5. `docs/animation-system.md`: GSAP setup, conventions, the homepage (hero play, magnets, reel and player, cursor flow), and the **gotchas that have already cost days** (read before touching any animation).
 6. `docs/navigation-menu.md`: the full-screen nav menu system spec.
 7. `docs/page-transition.md`: the full-screen navigation curtain played on every internal route change, and the related homepage-entrance-skip behavior.
 8. `docs/projects-page.md`: the `/projects` index and the `/projects/[slug]` detail pages, the most animated pages (intro choreography, hero play, the WebGL cover stage, the horizontal themed detail page and its media stage, the project zoom transitions).
@@ -56,13 +56,17 @@ Node **22** (`.nvmrc`), pnpm **11.3.0** (`packageManager`), Turbo 2.10.
 ```
 apps/web/            Next.js 16 marketing site (the focus of most work)
   src/app/           29 page files: public pages, dynamic detail pages, and the admin workspace (plus API route handlers)
-  src/components/    hero/ nav/ transition/ (page-transition curtain) process/ sections/
+  src/components/    hero/ (interactions/ = desktop hero play, compact/ = the toy box under 880 px)
+                     process/ (the fridge magnets) reel/ (the homepage reel, player/ = full-screen player)
+                     cursor-distortion/ (site-wide cursor flow) home-extras/ (kinetic headings, finale,
+                     3D mark) lab-notes/ nav/ transition/ (page-transition curtain) sections/
                      contact/ careers/ members/ articles/ (world/ list/ detail/ transitions/)
                      projects/ (all real, CMS-driven)
                      + admin/ (internal CMS workspace), site-header, smooth-scroll, theme-toggle,
                      social-icons, providers, api-status, app-boot-tracker
-  src/data/          nav.ts (menu config), competencies.ts, and other static page content
-  src/lib/           env.ts (zod-validated), scroll-reveal.ts (fadeUpOnScroll), app-boot.ts, utils.ts
+  src/data/          nav.ts (menu config), competencies.ts, process-magnets.ts, reel.ts, and other static page content
+  src/lib/           env.ts (zod-validated), scroll-reveal.ts (fadeUpOnScroll), app-boot.ts, utils.ts,
+                     gl-host.ts (cursor flow GL contract), reel-player.ts, lab-notes.ts, motion/ (pointer, magnetic, idle)
   src/hooks/         use-health.ts (API health polling); the WIB menu clock hook lives inside nav/nav-menu.tsx
   public/            logo.svg, patterns/*.svg (pattern tiles), logo/*.svg (dept logos, untracked)
 apps/api/            NestJS + Prisma API (health, mail [3-provider: Resend/SMTP/SES], storage, shortlinks modules; port 4000)
@@ -74,7 +78,7 @@ docs/                deep-dive documentation (read them)
 
 ## Pages (apps/web/src/app)
 
-`/` (hero + competencies + process + showcase) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services` · `/forms/[slug]` (public forms built in the admin). `/admin` is the internal, signed-session CMS workspace and is deliberately outside the public menu. Only `/media`, `/privacy-policy`, and `/terms-of-services` are bare `PageBand` stubs; every other public route is real and CMS-driven where applicable. Full inventory: `docs/project-overview.md`; CMS detail: `docs/cms-admin.md`.
+`/` (hero, process magnets, reel, featured projects, competencies, Trusted By, publications, articles, footer finale) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services` · `/forms/[slug]` (public forms built in the admin). `/admin` is the internal, signed-session CMS workspace and is deliberately outside the public menu. Only `/media`, `/privacy-policy`, and `/terms-of-services` are bare `PageBand` stubs; every other public route is real and CMS-driven where applicable. Full inventory: `docs/project-overview.md`; CMS detail: `docs/cms-admin.md`.
 
 ## CI/CD at a glance
 

@@ -1,0 +1,9 @@
+/* The cursor flow (cursor-flow.tsx). While the stage is up, the page's
+   full-width surfaces in the page colour turn transparent so the flow
+   canvas under them shows through (flow-surfaces.ts marks them). The canvas
+   paints the same colour, so the page looks the same at rest. Unlayered, so
+   it wins over Tailwind's utilities; an inline background still wins, which
+   keeps an animated background in charge of itself. */
+html[data-flow]:not([data-flow-scan]) [data-flow-clear] {
+  background-color: transparent;
+}

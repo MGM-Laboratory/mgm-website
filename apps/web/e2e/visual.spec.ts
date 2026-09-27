@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// The Projects section's covers are lazy-loaded and its scroll reveal only
+// Featured project covers are lazy-loaded and their scroll reveal only
 // plays once the section actually crosses into the viewport, so a fullPage
 // screenshot taken from the top of the page — which doesn't itself scroll
 // far enough to trigger either, Chromium's full-page capture just expands
@@ -12,8 +12,8 @@ import { test, expect, type Page } from "@playwright/test";
 // covers keep their pixels once scrolled back away from.
 //
 // The whole check runs in one page.evaluate rather than through a locator:
-// this suite runs against a web build with no API behind it, so the section
-// renders its "no featured projects" state, `#projects img` never exists, and
+// this suite runs against a web build whose fixture has no featured projects,
+// so the section is omitted, `#projects img` never exists, and
 // a locator would sit there waiting for it until the test timed out.
 async function primeProjectsSection(page: Page) {
   for (let i = 0; i < 30; i++) {
@@ -29,7 +29,7 @@ async function primeProjectsSection(page: Page) {
       };
     });
     // Covers on the page: stop as soon as they've painted. No covers (the
-    // empty state this suite's web-only build renders): keep scrolling all
+    // omitted section this suite's fixture produces): keep scrolling all
     // the way down, the same distance this helper always scrolled, so the
     // scroll-revealed sections below land in the state the baseline captured.
     if (state.inView && state.covers > 0 && state.loaded) break;
@@ -67,8 +67,8 @@ test.describe("visual regression", () => {
   });
 
   // Reduced motion isn't just a faster settle: without it, the homepage's
-  // perpetual decorative loops (the hero shapes' idle motion, the Projects
-  // carousel's autoplay) each land on whatever frame the loop happens to be
+  // perpetual decorative loops (for example, the hero shapes' idle motion)
+  // each land on whatever frame the loop happens to be
   // on when the screenshot fires, which is a different, high-contrast
   // region of the page on every run — comfortably past maxDiffPixelRatio on
   // a sizeable fraction of runs. Every component already collapses to an

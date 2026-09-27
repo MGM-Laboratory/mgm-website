@@ -9,11 +9,17 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { ArrowDown } from "lucide-react";
 
+import type { ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
 import { setupParallax } from "@/lib/parallax";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
+import { CompactHero } from "@/components/hero/compact/compact-hero";
+import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
+import type { IdleLoops } from "@/components/hero/interactions";
+import { arrowPathD, type ArrowGeometry } from "@/components/hero/interactions/arrow-path";
 
 import {
   ArrowConnector,
@@ -55,10 +61,64 @@ const shapeHeightClass = "h-[clamp(4rem,8vw,6.5rem)]";
 
 const MEDIA_I_INDEX = 3; // "Media," -> M(0) e(1) d(2) i(3) a(4) ,(5)
 
-function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
+// The desktop hero's play (interactions/*), loaded on demand: the desktop
+// branch starts the download as its entrance begins, so it is ready when
+// the entrance ends, and the compact hero never fetches it.
+const loadInteractions = () => import("@/components/hero/interactions");
+
+/**
+ * One shape in the composition, three layers with one owner each: the
+ * `.parallax-el` moves with the mouse parallax, the `.hero-piece` is the
+ * play's (hover, press, proximity; interactions/pieces.ts), and the shape
+ * div inside keeps the entrance and its idle loop.
+ */
+function Piece({
+  name,
+  depth,
+  className,
+  children,
+}: {
+  name: string;
+  depth: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="parallax-el" data-depth={depth}>
+      <div className={cn("hero-piece", className)} data-piece={name}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// The burst a click on empty hero space throws: a fixed pool of small
+// brand shapes, reused round-robin (interactions/motifs.ts). Kinds are the
+// ones that read cleanly while tumbling (see see-work-button.tsx).
+const BURST_KINDS: PatternKind[] = ["circle", "fans", "square", "x", "arcs", "plus", "domes"];
+const BURST_TONES: PatternTone[] = ["red", "blue", "yellow", "green", "blue", "red", "yellow"];
+const BURST_POOL = Array.from({ length: 24 }, (_, i) => ({
+  kind: BURST_KINDS[i % BURST_KINDS.length],
+  tone: BURST_TONES[(i * 3) % BURST_TONES.length],
+  size: 12 + ((i * 5) % 4) * 2,
+}));
+
+// The X's idle rhythm: a still rest, then an eased quarter turn.
+const X_TURN_REST = 2.8;
+const X_TURN_DURATION = 1.1;
+
+function startIdleLoops(root: HTMLElement): IdleLoops {
   const q = gsap.utils.selector(root);
   const loops: gsap.core.Animation[] = [];
 
+  const logo = gsap.to(q(".hero-logo"), {
+    scale: 1.05,
+    transformOrigin: "50% 50%",
+    duration: 2.6,
+    ease: "sine.inOut",
+    yoyo: true,
+    repeat: -1,
+  });
   // A small number of clear, long-running motions preserves the hero's
   // energy without continuously repainting every decorative element.
   loops.push(
@@ -76,14 +136,7 @@ function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
       yoyo: true,
       repeat: -1,
     }),
-    gsap.to(q(".hero-logo"), {
-      scale: 1.05,
-      transformOrigin: "50% 50%",
-      duration: 2.6,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
-    }),
+    logo,
     gsap.to(q(".corner-pattern"), {
       y: -8,
       duration: 3.8,
@@ -102,10 +155,10 @@ function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
       q("div.shape-x"),
       {
         rotation: quarter * 90,
-        duration: 1.1,
+        duration: X_TURN_DURATION,
         ease: "sine.inOut",
       },
-      "+=2.8",
+      `+=${X_TURN_REST}`,
     );
   }
   loops.push(turns);
@@ -136,7 +189,13 @@ function startIdleLoops(root: HTMLElement): gsap.core.Animation[] {
     );
   });
 
-  return loops;
+  return {
+    all: loops,
+    turns,
+    turnRest: X_TURN_REST,
+    turnDuration: X_TURN_DURATION,
+    logo,
+  };
 }
 
 function buildEntranceTimeline(
@@ -145,7 +204,7 @@ function buildEntranceTimeline(
   mobileSplit: SplitText,
 ) {
   const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-  const iChar = mediaSplit.chars[MEDIA_I_INDEX];
+  const iChar = mediaSplit.chars.at(MEDIA_I_INDEX);
   const MEDIA_CHAR_DURATION = 0.7;
   const MEDIA_CHAR_STAGGER = 0.055;
   // The moment the "i" itself lands (mid-stagger), not when the whole word
@@ -184,6 +243,7 @@ function buildEntranceTimeline(
     // down like a coin settling, instead of a single snap.
     .call(
       () => {
+        if (!iChar) return;
         gsap.to(iChar, {
           rotateX: 360 * 4,
           transformOrigin: "50% 50%",
@@ -209,12 +269,12 @@ function buildEntranceTimeline(
       "-=0.2",
     )
     .to(
-      ".toggle-switch [data-part='knob']",
+      ".shape-toggle .toggle-switch [data-part='knob']",
       { attr: { cx: 175 }, duration: 0.45, ease: "power2.inOut" },
       "+=0.05",
     )
     .to(
-      ".toggle-switch [data-part='track']",
+      ".shape-toggle .toggle-switch [data-part='track']",
       { attr: { fill: "#f94141" }, duration: 0.45, ease: "power2.inOut" },
       "<",
     )
@@ -398,52 +458,6 @@ function buildEntranceTimeline(
   return tl;
 }
 
-function buildCompactEntranceTimeline(root: HTMLDivElement) {
-  const q = gsap.utils.selector(root);
-  const logoShards = q(".compact-hero-logo [data-part^='shard-']");
-  const title = q(".compact-hero-title");
-  const cta = q(".compact-hero-cta");
-  const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-
-  tl.fromTo(
-    logoShards,
-    {
-      opacity: 0,
-      scale: 0.35,
-      x: (index: number) => [-38, -48, 48][index] ?? 0,
-      y: (index: number) => [-52, 42, 42][index] ?? 0,
-      rotate: (index: number) => [-135, 115, -115][index] ?? 0,
-    },
-    {
-      opacity: 1,
-      scale: 1,
-      x: 0,
-      y: 0,
-      rotate: 0,
-      duration: 0.6,
-      stagger: 0.1,
-      ease: "back.out(1.9)",
-    },
-  )
-    .to(".compact-hero-logo", { scale: 1.08, duration: 0.12, ease: "power1.out" }, "-=0.1")
-    .to(".compact-hero-logo", { scale: 1, duration: 0.24, ease: "back.out(3)" })
-    .fromTo(
-      title,
-      { opacity: 0, y: 28, scale: 0.96 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: "back.out(1.6)" },
-      "-=0.08",
-    )
-    .fromTo(
-      cta,
-      { opacity: 0, y: 16, scale: 0.9 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: "back.out(2.2)" },
-      "-=0.25",
-    );
-
-  tl.timeScale(1.25);
-  return tl;
-}
-
 export function Hero() {
   // Captured synchronously during the first render, not read fresh inside
   // the fonts.ready callback below: by the time that promise resolves, the
@@ -466,6 +480,8 @@ export function Hero() {
   const arrowWrapRef = useRef<HTMLDivElement>(null);
   const shapesBGroupRef = useRef<HTMLDivElement>(null);
   const mobileTextRef = useRef<HTMLSpanElement>(null);
+  // The arrow as last measured, for the play to pluck and settle back on.
+  const arrowGeometryRef = useRef<ArrowGeometry | null>(null);
 
   // Rows 2 and 3 both match row 1's rendered width and right-align their
   // content, so GAME lines up under circle B and "& Mobile Laboratory"
@@ -483,19 +499,19 @@ export function Hero() {
     const mobileText = mobileTextRef.current;
     if (!row1 || !row2 || !row3 || !bridge || !arrowWrap || !shapesBGroup || !mobileText) return;
 
-    function measure() {
+    const measure = () => {
       // Only ever WRITE a row's width if it actually needs to change —
       // writing on every call (even to the same value) can make a
       // ResizeObserver that also watches these rows re-fire indefinitely.
-      const targetWidth = `${row1!.offsetWidth}px`;
-      if (row2!.style.width !== targetWidth) row2!.style.width = targetWidth;
-      if (row3!.style.width !== targetWidth) row3!.style.width = targetWidth;
+      const targetWidth = `${row1.offsetWidth}px`;
+      if (row2.style.width !== targetWidth) row2.style.width = targetWidth;
+      if (row3.style.width !== targetWidth) row3.style.width = targetWidth;
 
-      const bridgeRect = bridge!.getBoundingClientRect();
-      const row2Rect = row2!.getBoundingClientRect();
-      const row3Rect = row3!.getBoundingClientRect();
-      const shapesBRect = shapesBGroup!.getBoundingClientRect();
-      const mobileTextRect = mobileText!.getBoundingClientRect();
+      const bridgeRect = bridge.getBoundingClientRect();
+      const row2Rect = row2.getBoundingClientRect();
+      const row3Rect = row3.getBoundingClientRect();
+      const shapesBRect = shapesBGroup.getBoundingClientRect();
+      const mobileTextRect = mobileText.getBoundingClientRect();
       const top = row2Rect.top + row2Rect.height / 2 - bridgeRect.top;
       const bottom = row3Rect.top + row3Rect.height / 2 - bridgeRect.top;
       const height = Math.max(bottom - top, 1);
@@ -508,14 +524,14 @@ export function Hero() {
       const bottomEndX = Math.max(mobileTextRect.left - bridgeRect.left - gap, 48);
       const width = Math.max(topEndX, bottomEndX, 1);
 
-      arrowWrap!.style.top = `${top}px`;
-      arrowWrap!.style.height = `${height}px`;
-      arrowWrap!.style.width = `${width}px`;
+      arrowWrap.style.top = `${top}px`;
+      arrowWrap.style.height = `${height}px`;
+      arrowWrap.style.width = `${width}px`;
 
-      const svg = arrowWrap!.querySelector("svg.arrow-connector");
-      const path = arrowWrap!.querySelector("[data-part='arrow-path']");
-      const head = arrowWrap!.querySelector("[data-part='arrow-head']");
-      const spark = arrowWrap!.querySelector("[data-part='arrow-spark']");
+      const svg = arrowWrap.querySelector("svg.arrow-connector");
+      const path = arrowWrap.querySelector("[data-part='arrow-path']");
+      const head = arrowWrap.querySelector("[data-part='arrow-head']");
+      const spark = arrowWrap.querySelector("[data-part='arrow-spark']");
       if (!svg || !path || !head || !spark) return;
 
       // Real pixel coordinates from here on — no scaling trick. The
@@ -524,10 +540,9 @@ export function Hero() {
       // shared left margin ("Media,"/"&"'s column), rounded at both ends.
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       const r = 26;
-      path.setAttribute(
-        "d",
-        `M${topEndX} 0H${r}A${r} ${r} 0 0 0 0 ${r}V${height - r}A${r} ${r} 0 0 0 ${r} ${height}H${bottomEndX}`,
-      );
+      const geometry = { topEndX, bottomEndX, height, radius: r };
+      arrowGeometryRef.current = geometry;
+      path.setAttribute("d", arrowPathD(geometry));
       const hs = 13;
       head.setAttribute(
         "d",
@@ -535,7 +550,7 @@ export function Hero() {
       );
       spark.setAttribute("cx", `${topEndX}`);
       spark.setAttribute("cy", "0");
-    }
+    };
 
     measure();
     // Only row1 is observed: it's the sole driver of row2/row3's width, and
@@ -608,18 +623,37 @@ export function Hero() {
           if (cancelled) return;
 
           try {
-            mediaSplit = SplitText.create(root.querySelector(".line-media")!, {
+            const mediaLine = root.querySelector(".line-media");
+            const gameLine = root.querySelector(".line-game");
+            const mobileLine = root.querySelector(".line-mobile");
+            if (!mediaLine || !gameLine || !mobileLine) return;
+            mediaSplit = SplitText.create(mediaLine, {
               type: "chars",
               charsClass: "media-char",
             });
-            gameSplit = SplitText.create(root.querySelector(".line-game")!, {
+            gameSplit = SplitText.create(gameLine, {
               type: "chars",
               charsClass: "game-char",
             });
-            mobileSplit = SplitText.create(root.querySelector(".line-mobile")!, {
+            mobileSplit = SplitText.create(mobileLine, {
               type: "words, chars",
               charsClass: "mobile-char",
             });
+            const currentMediaSplit = mediaSplit;
+            const currentGameSplit = gameSplit;
+            const currentMobileSplit = mobileSplit;
+            const mediaChars = currentMediaSplit.chars.filter(
+              (node): node is HTMLElement => node instanceof HTMLElement,
+            );
+            const gameChars = currentGameSplit.chars.filter(
+              (node): node is HTMLElement => node instanceof HTMLElement,
+            );
+            const mobileChars = currentMobileSplit.chars.filter(
+              (node): node is HTMLElement => node instanceof HTMLElement,
+            );
+            const mobileWords = currentMobileSplit.words.filter(
+              (node): node is HTMLElement => node instanceof HTMLElement,
+            );
 
             mm.add(
               {
@@ -635,46 +669,33 @@ export function Hero() {
                 const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
 
                 if (compact) {
-                  const compactLogoShards = gsap.utils.selector(root)(
-                    ".compact-hero-logo [data-part^='shard-']",
-                  );
-
-                  if (reduced || startedScrolled || cameFromInternalNav) {
-                    gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                    gsap.set(compactLogoShards, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                    reveal(false);
-                    return;
-                  }
-
-                  const tl = buildCompactEntranceTimeline(root);
-                  const logo = gsap.utils.selector(root)(".compact-hero-logo");
-                  const idleLoop = gsap.to(logo, {
-                    y: -5,
-                    duration: 1.8,
-                    ease: "sine.inOut",
-                    yoyo: true,
-                    repeat: -1,
-                  });
-
-                  tl.eventCallback("onComplete", () => reveal(true));
-
-                  return () => {
-                    tl.kill();
-                    idleLoop.kill();
-                  };
+                  // The compact toy box (compact/compact-hero.tsx) owns its own
+                  // entrance and the CTA's reveal; this only shows the scroll cue.
+                  reveal(false);
+                  return;
                 }
 
+                if (!reduced) {
+                  loadInteractions().catch(() => {
+                    // startIdle reports a failed load; nothing to do here.
+                  });
+                }
                 const idleContext = gsap.context(() => {}, root);
                 let idleLoops: gsap.core.Animation[] = [];
+                let idleLoopSet: IdleLoops | null = null;
                 let removeParallax = () => {};
+                let stopInteractions = () => {};
                 let observer: IntersectionObserver | undefined;
                 let visible = true;
                 const pauseWhenHidden = () => {
-                  idleLoops.forEach((loop) => loop.paused(!visible || document.hidden));
+                  idleLoops.forEach((loop) => {
+                    loop.paused(!visible || document.hidden);
+                  });
                 };
-                const startIdle = () =>
+                const startIdle = () => {
                   idleContext.add(() => {
-                    idleLoops = startIdleLoops(root);
+                    idleLoopSet = startIdleLoops(root);
+                    idleLoops = idleLoopSet.all;
                     removeParallax = setupParallax(root);
                     observer = new IntersectionObserver(([entry]) => {
                       visible = entry.isIntersecting;
@@ -683,7 +704,38 @@ export function Hero() {
                     observer.observe(root);
                     document.addEventListener("visibilitychange", pauseWhenHidden);
                   });
+                  // The play (hover, press, proximity, doze) is motion by
+                  // definition: never under reduced motion. Loaded on first
+                  // use, so the compact hero never downloads it.
+                  if (reduced) return;
+                  const loops = idleLoopSet;
+                  let stopped = false;
+                  stopInteractions = () => {
+                    stopped = true;
+                  };
+                  loadInteractions()
+                    .then(({ startHeroInteractions }) => {
+                      if (stopped || !loops) return;
+                      stopInteractions = startHeroInteractions(root, {
+                        words: [
+                          mediaChars,
+                          gameChars,
+                          ...mobileWords.map((word) =>
+                            Array.from(word.querySelectorAll<HTMLElement>(".mobile-char")),
+                          ),
+                        ],
+                        flipper: mediaChars.at(MEDIA_I_INDEX) ?? null,
+                        loops,
+                        arrowGeometry: () => arrowGeometryRef.current,
+                      });
+                    })
+                    .catch((err) => {
+                      console.error("Hero interactions failed to load.", err);
+                    });
+                };
                 const stopIdle = () => {
+                  stopInteractions();
+                  stopInteractions = () => {};
                   observer?.disconnect();
                   document.removeEventListener("visibilitychange", pauseWhenHidden);
                   removeParallax();
@@ -692,7 +744,7 @@ export function Hero() {
 
                 if (reduced || startedScrolled || cameFromInternalNav) {
                   gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                  gsap.set([mediaSplit!.chars, gameSplit!.chars, mobileSplit!.chars], {
+                  gsap.set([mediaChars, gameChars, mobileChars], {
                     opacity: 1,
                     x: 0,
                     y: 0,
@@ -701,8 +753,12 @@ export function Hero() {
                     scale: 1,
                   });
                   gsap.set(".line-game", { scaleX: 1 });
-                  gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
-                  gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
+                  gsap.set(".shape-toggle .toggle-switch [data-part='knob']", {
+                    attr: { cx: 175 },
+                  });
+                  gsap.set(".shape-toggle .toggle-switch [data-part='track']", {
+                    attr: { fill: "#f94141" },
+                  });
                   gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
                   gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
                   gsap.set(".corner-pattern", { opacity: 0.6 });
@@ -711,7 +767,11 @@ export function Hero() {
                   return stopIdle;
                 }
 
-                const tl = buildEntranceTimeline(mediaSplit!, gameSplit!, mobileSplit!);
+                const tl = buildEntranceTimeline(
+                  currentMediaSplit,
+                  currentGameSplit,
+                  currentMobileSplit,
+                );
                 tl.eventCallback("onComplete", () => {
                   startIdle();
                   reveal(true);
@@ -721,7 +781,9 @@ export function Hero() {
                   Object.assign(window, {
                     __heroTl: tl,
                     __heroReplay: () => {
-                      idleLoops.forEach((loop) => loop.kill());
+                      idleLoops.forEach((loop) => {
+                        loop.kill();
+                      });
                       idleLoops = [];
                       stopIdle();
                       gsap.set(".scroll-indicator", { opacity: 0, y: 14 });
@@ -783,12 +845,24 @@ export function Hero() {
       ref={rootRef}
       className="hero relative flex flex-1 flex-col justify-center bg-[var(--surface-muted)] px-6 py-14 sm:px-10 sm:py-20 lg:px-16"
     >
-      {/* Ambient background motifs — pure whitespace flourish, idle-floating */}
-      <Dot className="bg-motif reveal-hidden absolute top-[10%] left-[5%] hidden size-3 opacity-0 text-brand-yellow min-[880px]:block min-[880px]:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden absolute top-[16%] right-[8%] hidden size-4 opacity-0 text-brand-blue min-[880px]:block min-[880px]:size-5" />
-      <RingMotif className="bg-motif reveal-hidden absolute bottom-[22%] left-[4%] hidden size-4 opacity-0 text-brand-red min-[880px]:block min-[880px]:size-5" />
-      <Dot className="bg-motif reveal-hidden absolute top-[46%] right-[5%] hidden size-3 opacity-0 text-brand-green min-[880px]:block min-[880px]:size-4" />
-      <PlusMotif className="bg-motif reveal-hidden absolute bottom-[10%] right-[22%] hidden size-3 opacity-0 text-brand-red min-[880px]:block min-[880px]:size-4" />
+      {/* Ambient background motifs: pure whitespace flourish, idle-floating.
+          The wrapper carries the position and the play's cursor repel; the
+          motif inside keeps the entrance and its idle drift. */}
+      <div className="hero-motif absolute top-[10%] left-[5%] hidden min-[880px]:block">
+        <Dot className="bg-motif reveal-hidden block size-4 opacity-0 text-brand-yellow" />
+      </div>
+      <div className="hero-motif absolute top-[16%] right-[8%] hidden min-[880px]:block">
+        <PlusMotif className="bg-motif reveal-hidden block size-5 opacity-0 text-brand-blue" />
+      </div>
+      <div className="hero-motif absolute bottom-[22%] left-[4%] hidden min-[880px]:block">
+        <RingMotif className="bg-motif reveal-hidden block size-5 opacity-0 text-brand-red" />
+      </div>
+      <div className="hero-motif absolute top-[46%] right-[5%] hidden min-[880px]:block">
+        <Dot className="bg-motif reveal-hidden block size-4 opacity-0 text-brand-green" />
+      </div>
+      <div className="hero-motif absolute right-[22%] bottom-[10%] hidden min-[880px]:block">
+        <PlusMotif className="bg-motif reveal-hidden block size-4 opacity-0 text-brand-red" />
+      </div>
 
       {/* Progressive enhancement: without JS the reveal timeline never runs,
           so don't leave the hero blank. */}
@@ -799,7 +873,7 @@ export function Hero() {
       <h1 className="sr-only">Media, Game &amp; Mobile Laboratory</h1>
 
       <div
-        className="mx-auto hidden w-fit max-w-full flex-col gap-3 min-[880px]:flex min-[880px]:gap-4"
+        className="hero-composition mx-auto hidden w-fit max-w-full flex-col gap-3 select-none min-[880px]:flex min-[880px]:gap-4"
         aria-hidden="true"
       >
         {/* Row 1 — Media, */}
@@ -810,38 +884,47 @@ export function Hero() {
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-            <div className="parallax-el" data-depth="0.7">
+            <Piece name="square" depth="0.7">
               <div className={`shape-square reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Square className="w-full" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.85">
+            </Piece>
+            <Piece name="toggle" depth="0.85">
               <div
                 className={`shape-toggle reveal-hidden opacity-0 aspect-[220/90] w-auto ${shapeHeightClass}`}
               >
                 <ToggleChip className="h-full w-full" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.6">
+            </Piece>
+            <Piece name="triangle" depth="0.6">
               <div className={`shape-triangle reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <TriangleShape className="w-full" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.9">
+            </Piece>
+            <Piece name="circle-yellow" depth="0.9">
               <div className={`shape-circle-yellow reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Circle className="w-full" color="var(--brand-yellow)" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="1">
+            </Piece>
+            <Piece name="x" depth="1">
               <div className="shape-x reveal-hidden opacity-0 w-[clamp(2.25rem,4.5vw,3.5rem)] text-foreground">
                 <XMark className="w-full" />
               </div>
-            </div>
-            <div className="parallax-el" data-depth="0.75">
+            </Piece>
+            <Piece name="circle-red" depth="0.75" className="relative">
               <div className={`shape-circle-red reveal-hidden opacity-0 ${shapeBoxClass}`}>
                 <Circle className="w-full" color="var(--brand-red)" />
               </div>
-            </div>
+              {/* The four small circles it pops into when pressed. */}
+              <span className="hero-red-bits pointer-events-none absolute inset-0">
+                {[0, 1, 2, 3].map((bit) => (
+                  <span
+                    key={bit}
+                    className="absolute top-[27%] left-[27%] block size-[46%] rounded-full bg-brand-red opacity-0"
+                  />
+                ))}
+              </span>
+            </Piece>
           </div>
         </div>
 
@@ -860,21 +943,21 @@ export function Hero() {
             className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3 sm:gap-x-6"
           >
             <div ref={shapesBGroupRef} className="flex flex-wrap items-center gap-5 sm:gap-8">
-              <div className="parallax-el" data-depth="0.7">
+              <Piece name="leaves" depth="0.7">
                 <div className={`leaves-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <LeavesMotif className="w-full" />
                 </div>
-              </div>
-              <div className="parallax-el" data-depth="0.9">
+              </Piece>
+              <Piece name="fans" depth="0.9">
                 <div className={`fans-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <FansMotif className="w-full" />
                 </div>
-              </div>
-              <div className="parallax-el" data-depth="0.6">
+              </Piece>
+              <Piece name="domes" depth="0.6">
                 <div className={`domes-motif-wrap reveal-hidden opacity-0 ${shapeBoxClass}`}>
                   <DomesMotif className="w-full" />
                 </div>
-              </div>
+              </Piece>
             </div>
             <div className="parallax-el" data-depth="0.4">
               <span className={cn("line-game inline-block", headline)}>Game,</span>
@@ -893,9 +976,9 @@ export function Hero() {
                 &amp; Mobile Laboratory
               </span>
             </div>
-            <div className="parallax-el" data-depth="0.4">
+            <Piece name="logo" depth="0.4">
               <LogoMark className={`hero-logo ${shapeBoxClass}`} />
-            </div>
+            </Piece>
           </div>
         </div>
       </div>
@@ -905,14 +988,30 @@ export function Hero() {
       </div>
 
       {/* The full geometric composition needs more horizontal room than a
-          phone affords. Keep its dense motion from 880px upward and
-          give compact screens a focused, fully visible brand entrance. */}
-      <div className="mx-auto flex w-full max-w-xs flex-col items-center text-center min-[880px]:hidden">
-        <LogoMark solid className="compact-hero-logo w-[clamp(7rem,38vw,9.5rem)]" />
-        <p className="compact-hero-title reveal-hidden mt-9 max-w-[18rem] opacity-0 font-display text-[clamp(2rem,9vw,2.75rem)] leading-[0.98] font-medium tracking-tight text-foreground">
-          Media, Game &amp; Mobile Laboratory
-        </p>
-        <SeeWorkButton animationClassName="compact-hero-cta" />
+          phone affords. Keep its dense motion from 880px upward and give
+          compact screens the toy box: the same words and shapes, stacked,
+          with the shapes as physics bodies to tap, fling and tilt. */}
+      <CompactHero />
+
+      {/* The pool a click on empty hero space throws from (interactions/motifs.ts). */}
+      <div
+        className="hero-burst pointer-events-none absolute inset-0 hidden min-[880px]:block"
+        aria-hidden="true"
+      >
+        {BURST_POOL.map((particle, index) => (
+          <div
+            key={index}
+            className="absolute top-0 left-0 opacity-0"
+            style={{
+              width: particle.size,
+              height: particle.size,
+              marginLeft: -particle.size / 2,
+              marginTop: -particle.size / 2,
+            }}
+          >
+            <FlairShape kind={particle.kind} tone={particle.tone} className="h-full w-full" />
+          </div>
+        ))}
       </div>
 
       <div className="corner-pattern reveal-hidden pointer-events-none absolute right-6 -bottom-6 z-10 hidden opacity-0 min-[880px]:block">
@@ -934,8 +1033,16 @@ export function Hero() {
         }}
       >
         <span data-part="content" className="flex flex-col items-center gap-1.5">
-          <span className="text-xs font-medium tracking-wide">Scroll</span>
-          <ArrowDown className="size-4" strokeWidth={2.25} />
+          {/* Two stacked copies, so hovering can roll the word over. */}
+          <span className="scroll-cue-label block h-4 overflow-hidden text-xs leading-4 font-medium tracking-wide">
+            <span className="scroll-cue-roll block">
+              <span className="block">Scroll</span>
+              <span className="block" aria-hidden="true">
+                Scroll
+              </span>
+            </span>
+          </span>
+          <ArrowDown className="scroll-cue-arrow size-4" strokeWidth={2.25} />
         </span>
       </button>
     </div>

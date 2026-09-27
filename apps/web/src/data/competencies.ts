@@ -6,9 +6,9 @@ export type Competency = {
   href: string;
   color: CompetencyColor;
   motif: CompetencyMotif;
-  /** Short blurb — shown on the back of the flip card. */
+  /** Short blurb: the back of the homepage flip card, and the Focus page's meta description. */
   description: string;
-  /** Longer intro paragraph — shown on the competency's own page. */
+  /** Longer intro paragraph for the competency's own page. */
   longDescription: string;
 };
 
@@ -18,9 +18,9 @@ export const COMPETENCIES: Competency[] = [
     href: "/website",
     color: "blue",
     motif: "ring",
-    description: "Fast, accessible product sites and web apps — built to launch and built to last.",
+    description: "Fast, accessible product sites and web apps, built to launch and built to last.",
     longDescription:
-      "We design and build web products end to end — marketing sites, dashboards, and full product platforms — with a focus on speed, accessibility, and code that's still easy to change a year later.",
+      "We design and build web products end to end: marketing sites, dashboards, and full product platforms. We focus on speed, accessibility, and code that is still easy to change a year later.",
   },
   {
     title: "Mobile Development",
@@ -29,7 +29,7 @@ export const COMPETENCIES: Competency[] = [
     motif: "bracket",
     description: "Native-feel iOS and Android apps, from first prototype to app-store release.",
     longDescription:
-      "From early prototypes to app-store releases, we build mobile apps that feel native on both iOS and Android — tuned for real devices and real usage, not just a simulator.",
+      "From early prototypes to app-store releases, we build mobile apps that feel native on both iOS and Android. We tune them on real devices, for the way people really use them.",
   },
   {
     title: "UX Research & Design",
@@ -39,7 +39,7 @@ export const COMPETENCIES: Competency[] = [
     description:
       "Usability studies and interface design grounded in how people actually use a product.",
     longDescription:
-      "Every interface we ship is grounded in research — usability studies, interviews, and iteration — so design decisions come from how people actually use a product, not assumptions about them.",
+      "Every interface we ship is grounded in research: usability studies, interviews, and iteration. Our design decisions come from watching how people actually use a product.",
   },
   {
     title: "Game & New Media",
@@ -48,6 +48,6 @@ export const COMPETENCIES: Competency[] = [
     motif: "chevron",
     description: "Game, VR, XR, and MR development for research, play, and new-media experiences.",
     longDescription:
-      "We build games and new-media experiences across VR, XR, and MR — from installations and prototypes to playable research tools, built for both play and publication.",
+      "We build games and new-media experiences across VR, XR, and MR, from installations and prototypes to playable research tools. We make them for play and for publication.",
   },
 ];

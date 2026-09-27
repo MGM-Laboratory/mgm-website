@@ -6,7 +6,10 @@ import { ArticlesSection } from "@/components/sections/articles-section";
 import { PublicationsPreviewSection } from "@/components/sections/publications-preview-section";
 import { FeaturedProjectsSection } from "@/components/sections/featured-projects-section";
 import { CtaFooter } from "@/components/sections/cta-footer";
-import { HomeVideoSection } from "@/components/sections/home-video-section";
+import { ReelSection } from "@/components/reel/reel-section";
+import { ReelPlayerHost } from "@/components/reel/player/reel-player-host";
+import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
+import { HomeFinale } from "@/components/home-extras/home-finale";
 import { publishedArticles } from "@/lib/article-cms";
 import { ensureArticleFeed } from "@/lib/article-cms-seed";
 import { fetchHomeContent } from "@/lib/home-cms-server";
@@ -38,14 +41,15 @@ export default async function Home() {
       <main className="flex flex-1 flex-col">
         <Hero />
         <ProcessSection />
-        <CoreCompetenciesSection />
-        <TrustedBySection compact />
-        <HomeVideoSection content={homeContent} />
+        <ReelSection content={homeContent} />
         <FeaturedProjectsSection records={projects} />
+        <CoreCompetenciesSection />
+        <TrustedBySection compact chapter={HOME_CHAPTERS.trustedBy} />
         <PublicationsPreviewSection records={publications} />
         <ArticlesSection initialRecords={initialArticles} />
       </main>
-      <CtaFooter />
+      <CtaFooter lead={<HomeFinale />} />
+      <ReelPlayerHost />
     </div>
   );
 }

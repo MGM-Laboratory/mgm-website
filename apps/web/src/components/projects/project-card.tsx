@@ -33,10 +33,12 @@ export function ProjectCard({
   record,
   index,
   className,
+  standalone = false,
 }: {
   record: CmsProjectRecord;
   index: number;
   className?: string;
+  standalone?: boolean;
 }) {
   const { project } = record;
   const coverUrl = projectGalleryKeys(project)
@@ -68,6 +70,7 @@ export function ProjectCard({
         alt={project.coverAlt || ""}
         slug={record.slug}
         index={index}
+        standalone={standalone}
       />
       <ProjectCardFooter title={project.title} categories={categories} />
     </Link>
