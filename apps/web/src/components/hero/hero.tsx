@@ -642,10 +642,18 @@ export function Hero() {
             const currentMediaSplit = mediaSplit;
             const currentGameSplit = gameSplit;
             const currentMobileSplit = mobileSplit;
-            const mediaChars = currentMediaSplit.chars as HTMLElement[];
-            const gameChars = currentGameSplit.chars as HTMLElement[];
-            const mobileChars = currentMobileSplit.chars as HTMLElement[];
-            const mobileWords = currentMobileSplit.words as HTMLElement[];
+            const mediaChars = currentMediaSplit.chars.filter(
+              (node): node is HTMLElement => node instanceof HTMLElement,
+            );
+            const gameChars = currentGameSplit.chars.filter(
+              (node): node is HTMLElement => node instanceof HTMLElement,
+            );
+            const mobileChars = currentMobileSplit.chars.filter(
+              (node): node is HTMLElement => node instanceof HTMLElement,
+            );
+            const mobileWords = currentMobileSplit.words.filter(
+              (node): node is HTMLElement => node instanceof HTMLElement,
+            );
 
             mm.add(
               {

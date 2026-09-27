@@ -103,7 +103,7 @@ type Glyph = {
   put: Record<"x" | "y" | "r" | "sx" | "sy" | "rx", Setter>;
 };
 
-type Line = { el: HTMLElement | null; ox: number; oy: number };
+type Line = { el: Element | null; ox: number; oy: number };
 
 type Word = {
   glyphs: Glyph[];
@@ -167,7 +167,7 @@ export function createLetters(
   flipper: HTMLElement | null,
 ): LettersSystem {
   const { root, pointer } = stage;
-  const lines = new Map<HTMLElement | null, Line>();
+  const lines = new Map<Element | null, Line>();
   const lineOf = (char: HTMLElement) => {
     const el = char.closest<HTMLElement>(".parallax-el");
     let line = lines.get(el);
@@ -293,7 +293,8 @@ export function createLetters(
       };
     });
     glyphs.forEach((g, i) => {
-      g.char.style.width = `${natural[i].width / natural[i].em + 1e-6}em`;
+      const measured = natural.at(i);
+      if (measured) g.char.style.width = `${measured.width / measured.em + 1e-6}em`;
     });
     return true;
   }
@@ -314,7 +315,7 @@ export function createLetters(
       g.em = Number.parseFloat(getComputedStyle(g.char).fontSize) || g.em;
     }
     for (const word of wordList) {
-      const first = word.glyphs[0];
+      const first = word.glyphs.at(0);
       if (!first) continue;
       const pad = first.em * 0.12;
       word.x0 = Math.min(...word.glyphs.map((g) => g.cx - g.char.offsetWidth / 2)) - pad;
@@ -519,7 +520,8 @@ export function createLetters(
     // The neighbours flinch.
     const i = glyphs.indexOf(g);
     for (const k of [-1, 1]) {
-      const n = glyphs[i + k];
+      const neighborIndex = i + k;
+      const n = neighborIndex >= 0 ? glyphs.at(neighborIndex) : undefined;
       if (n && n.word === g.word) {
         n.r.v += k * 70;
         n.x.v += k * 0.4 * n.em;
@@ -597,7 +599,7 @@ export function createLetters(
   function beat() {
     if (!alive) return;
     if (stage.active() && doze === 0 && !near()) {
-      const g = glyphs[randomInt(0, glyphs.length - 1)];
+      const g = glyphs.at(randomInt(0, glyphs.length - 1));
       if (g && !g.trick && g.hy === 0) {
         if (random() < 0.55) {
           hop(g, randomBetween(0.1, 0.17));

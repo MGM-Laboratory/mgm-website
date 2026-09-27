@@ -107,7 +107,8 @@ export function offsetIn(el: HTMLElement, root: HTMLElement) {
   while (node && node !== root) {
     x += node.offsetLeft;
     y += node.offsetTop;
-    node = node.offsetParent as HTMLElement | null;
+    const next: Element | null = node.offsetParent;
+    node = next instanceof HTMLElement ? next : null;
   }
   return { x, y };
 }
@@ -140,7 +141,7 @@ export function createStage(root: HTMLElement): Stage {
   let inView = true;
   let hidden = document.hidden;
   let locked = isScrollLocked();
-  let wasActive = inView && !hidden && !locked;
+  let wasActive = !hidden && !locked;
 
   const active = () => alive && inView && !hidden && !locked;
 
