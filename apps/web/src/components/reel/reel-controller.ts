@@ -168,7 +168,7 @@ class StyleWriter {
   }
 }
 
-function editableTarget(target: EventTarget | null) {
+function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
   return (
     target.isContentEditable ||
@@ -670,16 +670,16 @@ export class ReelController {
     // itself stands the snap down, and the smoother's scroll to the focused
     // element comes after this, so it arms whatever the progress is now
     // (the snap only moves while the morph is half done).
-    const onFocusIn = (event: FocusEvent) => {
+    const handleFocusIn = (event: FocusEvent) => {
       const el = event.target;
       if (!(el instanceof HTMLElement) || !el.matches(":focus-visible")) return;
       this.snapDir = el === this.el.watch ? 1 : -1;
       this.armed = true;
       this.lastInputAt = performance.now();
     };
-    this.root.addEventListener("focusin", onFocusIn);
+    this.root.addEventListener("focusin", handleFocusIn);
     this.offs.push(() => {
-      this.root.removeEventListener("focusin", onFocusIn);
+      this.root.removeEventListener("focusin", handleFocusIn);
     });
 
     const watch = this.el.watch;
@@ -770,9 +770,9 @@ export class ReelController {
     this.indent = firstLine ? Number.parseFloat(getComputedStyle(firstLine).paddingLeft) || 0 : 0;
     const style = getComputedStyle(this.root);
     s.radius = Number.parseFloat(style.getPropertyValue("--reel-radius")) || 20;
-    const slot = this.el.markSlots[0] ?? this.el.stripItems[0];
-    this.cross = slot?.offsetHeight || 14;
-    this.stripHalf = (this.el.strips[0]?.offsetWidth ?? 0) / 2;
+    const slot = this.el.markSlots.at(0) ?? this.el.stripItems.at(0);
+    this.cross = slot ? slot.offsetHeight || 14 : 14;
+    this.stripHalf = (this.el.strips.at(0)?.offsetWidth ?? 0) / 2;
 
     // The DOM ribbon: rebuilt for a new diagonal.
     const height = section.height;
@@ -850,7 +850,7 @@ export class ReelController {
   }
 
   private onKey(event: KeyboardEvent) {
-    if (editableTarget(event.target) || event.metaKey || event.altKey || event.ctrlKey) return;
+    if (isEditableTarget(event.target) || event.metaKey || event.altKey || event.ctrlKey) return;
     // Keys that never scroll (Escape closing the menu or the player, a
     // lone modifier) leave a snap in flight alone.
     if (NEUTRAL_KEYS.has(event.key)) return;
@@ -876,12 +876,12 @@ export class ReelController {
 
   private onTouchStart(event: TouchEvent) {
     this.touching = true;
-    this.lastTouchY = event.touches[0]?.clientY ?? 0;
+    this.lastTouchY = event.touches.item(0)?.clientY ?? 0;
     this.markInput();
   }
 
   private onTouchMove(event: TouchEvent) {
-    const y = event.touches[0]?.clientY ?? this.lastTouchY;
+    const y = event.touches.item(0)?.clientY ?? this.lastTouchY;
     const dy = this.lastTouchY - y;
     this.lastTouchY = y;
     if (Math.abs(dy) > 0.5) {
@@ -1227,14 +1227,17 @@ export class ReelController {
     for (let i = 0; i < slots.length; i += 1) {
       const column = i % 5;
       const slide = fit(this.hov2 - column / 10, 0, 0.7, 0, 1, expoInOut);
+      const slot = slots.at(i);
+      const emerge = this.el.markEmerges.at(i);
+      if (!slot || !emerge) continue;
       put.set(
-        slots[i],
+        slot,
         "transform",
         slide ? `translate3d(0,${(slide * this.cross).toFixed(2)}px,0)` : "none",
       );
       const grow = fit(this.decoT - column / 10, 0, 0.6, 0, 1, easeSettle);
       put.set(
-        this.el.markEmerges[i],
+        emerge,
         "transform",
         grow >= 1 ? "none" : `scale(${grow.toFixed(4)}) rotate(${(grow * 180).toFixed(2)}deg)`,
       );
@@ -1246,11 +1249,9 @@ export class ReelController {
     for (let i = 0; i < items.length; i += 1) {
       const index = i % 8;
       const y = mobile ? 0 : fit(this.hov2 - index / 25, 0.2, 1, 1.2, 0, expoInOut);
-      put.set(
-        items[i],
-        "transform",
-        y ? `translate3d(0,${(y * this.cross).toFixed(2)}px,0)` : "none",
-      );
+      const item = items.at(i);
+      if (!item) continue;
+      put.set(item, "transform", y ? `translate3d(0,${(y * this.cross).toFixed(2)}px,0)` : "none");
     }
     const T = mobile ? this.stripTime : this.hoverTime;
     const phase = (T % 15) / 15;
@@ -1301,12 +1302,14 @@ export class ReelController {
     }
     const hoverAge = this.clock - this.hoverSince;
     this.el.charTracks.forEach((tracks, wordIndex) => {
-      const chars = this.el.words[wordIndex];
+      const chars = this.el.words.at(wordIndex);
+      const leanRow = this.leans.at(wordIndex);
+      if (!chars || !leanRow) return;
       const count = tracks.length;
       tracks.forEach((track, charIndex) => {
         const rise = fit(this.showT - wordIndex / 4 - charIndex / 20, 0, 0.6, 200, 0, easeSettle);
         const roll =
-          charIndex === this.rollChars[wordIndex]
+          charIndex === this.rollChars.at(wordIndex)
             ? fit(this.rollTime - wordIndex / 10, 0.5, 1.3, 0, -100, easeSettle)
             : 0;
         const y = rise + roll;
@@ -1314,11 +1317,11 @@ export class ReelController {
         // Nearest the button leans first and most.
         const fromButton = wordIndex === 0 ? count - 1 - charIndex : charIndex;
         const target = hovered && hoverAge > fromButton * 0.035 ? 1 : 0;
-        const lean = stepSpring(this.leans[wordIndex][charIndex], target, dt, 190, 11);
+        const lean = stepSpring(leanRow.at(charIndex) ?? [0, 0], target, dt, 190, 11);
         const amount = lean * (1 - fromButton * 0.14);
         const sign = wordIndex === 0 ? 1 : -1;
         put.set(
-          chars[charIndex],
+          chars.at(charIndex),
           "transform",
           Math.abs(amount) < 0.001
             ? "none"
@@ -1382,8 +1385,13 @@ export class ReelController {
     for (let n = 0; n < count; n += 1) {
       const column = randomInt(0, 4);
       // A column swaps on both rows, mirrored, so the frame stays balanced.
-      const pair = [swaps[column], swaps[5 + (4 - column)]].filter(Boolean);
-      const current = (pair[0]?.dataset.kind as MarkKind) ?? "plus";
+      const pair = [swaps.at(column), swaps.at(5 + (4 - column))].filter(
+        (element): element is HTMLElement => element !== undefined,
+      );
+      const first = pair.at(0);
+      const second = pair.at(1);
+      if (!first || !second) return;
+      const current = first.dataset.kind as MarkKind;
       // Plus is home: every other swap returns there.
       const next =
         current !== "plus" && random() < 0.5
@@ -1406,14 +1414,17 @@ export class ReelController {
     const lines = this.stripLines;
     if (lines.length < 2) return;
     this.stripIndex = (this.stripIndex + 1) % lines.length;
-    const text = lines[this.stripIndex];
+    const text = lines.at(this.stripIndex);
+    if (text === undefined) return;
     const front = this.stripFront;
     const back = 1 - front;
     this.stripFront = back;
     this.el.stripTexts.forEach((pair, index) => {
-      const incoming = pair[back];
-      const outgoing = pair[front];
-      if (!incoming || !outgoing) return;
+      const first = pair.at(0);
+      const second = pair.at(1);
+      if (!first || !second) return;
+      const incoming = back === 0 ? first : second;
+      const outgoing = front === 0 ? first : second;
       incoming.textContent = text;
       const delay = immediate ? 0 : (index % 8) * 0.03;
       gsap.fromTo(
@@ -1460,7 +1471,7 @@ export class ReelController {
       if (video.currentTime + 0.5 < this.lastVideoTime) this.loops += 1;
       this.lastVideoTime = video.currentTime;
     }
-    const line = this.el.readoutLines[this.readoutFront];
+    const line = this.el.readoutLines.at(this.readoutFront);
     if (!line) return;
     const text = this.readoutText(this.readoutState);
     if (text !== this.lastTimecode) {
@@ -1479,15 +1490,18 @@ export class ReelController {
     this.readoutFront = back;
     const text = this.readoutText(this.readoutState);
     this.lastTimecode = text;
-    lines[back].textContent = text;
-    this.fitReadout(lines[back]);
+    const incoming = lines.at(back);
+    const outgoing = lines.at(front);
+    if (!incoming || !outgoing) return;
+    incoming.textContent = text;
+    this.fitReadout(incoming);
     gsap.fromTo(
-      lines[front],
+      outgoing,
       { yPercent: 0 },
       { yPercent: -110, duration: 0.4, ease: "power3.inOut", overwrite: true },
     );
     gsap.fromTo(
-      lines[back],
+      incoming,
       { yPercent: 110 },
       { yPercent: 0, duration: 0.5, delay: 0.05, ease: "power3.out", overwrite: true },
     );
@@ -1576,7 +1590,7 @@ export class ReelController {
     put.set(reveal, "opacity", "1");
     put.set(reveal, "transform", "none");
     put.set(this.el.readout, "opacity", "1");
-    const line = this.el.readoutLines[this.readoutFront];
+    const line = this.el.readoutLines.at(this.readoutFront);
     if (line) line.textContent = this.coordinates;
     this.setGlMode(false);
   }
