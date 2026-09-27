@@ -22,13 +22,14 @@ import { DROPS, TOYS, type Toy, type ToyId, type ToyLayout, type ToyPart } from 
  * elements the physics never touches.
  */
 
-const { Bodies, Body, Composite, Constraint, Engine, Events, Query, Sleeping, Vertices } = Matter;
+const { Bodies, Body, Composite, Engine, Events, Query, Sleeping, Vertices } = Matter;
 
 const STEP = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 4;
 // How much of the free space above the floor the shapes may fill.
 const FILL = 0.4;
 const MAX_SPEED = 38; // px per step, so a hard throw can't tunnel through a letter
+const HELD_SPEED = 22; // px per step while held: slower than a letter is thick
 const FLING_SPEED = 850; // px/s at release that counts as a throw
 const HOLD_MS = 170;
 const TAP_MS = 320;
@@ -82,10 +83,15 @@ type Glyph = { word: number; index: number; x0: number; x1: number; y0: number; 
 
 type Grab = {
   live: Live;
-  constraint: Matter.Constraint;
+  /** Where on the shape it was picked up, relative to its centre of mass. */
+  hold: { x: number; y: number };
+  /** The shape's angle when picked up; it sways around it while carried. */
+  angle: number;
   /** Latest pointer position in viewport pixels. */
   clientX: number;
   clientY: number;
+  /** Where the hand is, in the box. */
+  target: { x: number; y: number };
   /** The hand's smoothed velocity, px per step, and when it last moved. */
   vx: number;
   vy: number;
@@ -399,6 +405,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
   }
 
   function step() {
+    carry();
     Engine.update(engine, STEP);
     for (const live of lives) {
       if (!live.inWorld) continue;
@@ -501,17 +508,17 @@ export function createToybox(options: ToyboxOptions): Toybox {
     endGrab(false);
     const p = local(clientX, clientY);
     const body = live.body;
-    const constraint = Constraint.create({
-      pointA: p,
-      bodyB: body,
-      pointB: { x: p.x - body.position.x, y: p.y - body.position.y },
-      // No damping: against a fixed point it would brake the throw itself.
-      stiffness: 0.16,
-      damping: 0,
-      length: 0,
-    });
-    Composite.add(world, constraint);
-    grab = { live, constraint, clientX, clientY, vx: 0, vy: 0, moved: performance.now() };
+    grab = {
+      live,
+      hold: { x: p.x - body.position.x, y: p.y - body.position.y },
+      angle: body.angle,
+      clientX,
+      clientY,
+      target: p,
+      vx: 0,
+      vy: 0,
+      moved: performance.now(),
+    };
     live.nodes.outer.style.zIndex = "2";
     box.dataset.dragging = "";
     wake(live);
@@ -534,15 +541,37 @@ export function createToybox(options: ToyboxOptions): Toybox {
     if (!grab) return;
     const p = local(grab.clientX, grab.clientY);
     // Keep the hold inside the box, so a drag can't pull a shape through the floor.
-    grab.constraint.pointA = { x: clamp(p.x, 0, W), y: clamp(p.y, -base * 2, floorY) };
+    grab.target = { x: clamp(p.x, 0, W), y: clamp(p.y, -base * 2, floorY) };
     Sleeping.set(grab.live.body, false);
+  }
+
+  /**
+   * A held shape is steered by its velocity, not pulled by a spring: each
+   * step it heads for the hand at a capped speed, so the contact solver can
+   * stop it at a letter (a spring would drag it through the type). It sways
+   * a little with the carry, around the angle it was picked up at.
+   */
+  function carry() {
+    if (!grab) return;
+    const { body } = grab.live;
+    const turn = body.angle - grab.angle;
+    const h = rotate(grab.hold.x, grab.hold.y, turn);
+    let vx = (grab.target.x - (body.position.x + h.x)) * 0.35;
+    let vy = (grab.target.y - (body.position.y + h.y)) * 0.35;
+    const speed = Math.hypot(vx, vy);
+    if (speed > HELD_SPEED) {
+      vx *= HELD_SPEED / speed;
+      vy *= HELD_SPEED / speed;
+    }
+    Body.setVelocity(body, { x: vx, y: vy });
+    const sway = clamp(vx * 0.02, -0.28, 0.28);
+    Body.setAngularVelocity(body, (grab.angle + sway - body.angle) * 0.18);
   }
 
   function endGrab(throwIt: boolean) {
     if (!grab) return;
-    const { live, constraint } = grab;
-    Composite.remove(world, constraint);
-    // A throw leaves with the hand's speed: the spring lags behind it.
+    const { live } = grab;
+    // A throw leaves with the hand's speed: the carry is capped below it.
     const recent = performance.now() - grab.moved < 70;
     if (throwIt && recent) {
       const body = live.body;
