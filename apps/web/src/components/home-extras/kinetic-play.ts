@@ -118,6 +118,7 @@ export function startKinetic(root: HTMLElement): () => void {
 
   // eslint-disable-next-line xss/no-mixed-html -- GSAP receives an existing DOM node and fixed style keys.
   const qs = (htmlElement: Element, property: string, unit?: string) =>
+    // eslint-disable-next-line xss/no-mixed-html -- GSAP receives an existing DOM node and fixed style keys.
     gsap.quickSetter(htmlElement, property, unit) as Setter;
 
   const glyphs: Glyph[] = slots.map((slot) => {

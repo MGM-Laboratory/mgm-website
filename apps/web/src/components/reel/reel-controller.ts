@@ -171,6 +171,7 @@ class StyleWriter {
 // eslint-disable-next-line xss/no-mixed-html -- returns a boolean from an existing event target.
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
+  // eslint-disable-next-line xss/no-mixed-html -- returns a boolean from an existing event target.
   return (
     target.isContentEditable ||
     target instanceof HTMLInputElement ||
