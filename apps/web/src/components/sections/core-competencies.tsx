@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ComponentRef } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
@@ -13,6 +13,9 @@ import { startCardTilt } from "@/components/home-extras/card-tilt";
 import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
 import { KineticHeading } from "@/components/home-extras/kinetic-heading";
 import { CompetencyCardShape, CompetencyMotifShape } from "./competency-motif";
+
+type DivNode = ComponentRef<"div">;
+type ButtonNode = ComponentRef<"button">;
 
 // Blue, red, and green match the shared brand tokens exactly, but this
 // card's yellow is a one-off, more saturated shade the reference design
@@ -53,21 +56,21 @@ function reducedMotion() {
 
 export function CoreCompetenciesSection() {
   const rootRef = useFadeUpOnScroll<HTMLDivElement>(".reveal-card", { stagger: 0.12 });
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const innerRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const frontMotifRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const backFaceRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const backContentRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const triggerRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const hoverTimelines = useRef<(gsap.core.Timeline | null)[]>([]);
-  const tiltRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const cardRefs = useRef(new Map<number, DivNode>());
+  const innerRefs = useRef(new Map<number, DivNode>());
+  const frontMotifRefs = useRef(new Map<number, DivNode>());
+  const backFaceRefs = useRef(new Map<number, DivNode>());
+  const backContentRefs = useRef(new Map<number, DivNode>());
+  const triggerRefs = useRef(new Map<number, ButtonNode>());
+  const hoverTimelines = useRef(new Map<number, gsap.core.Timeline>());
+  const tiltRefs = useRef(new Map<number, DivNode>());
   const motion = useMotionPreference();
 
   // The cards lean toward a nearby cursor (home-extras/card-tilt.ts). That
   // lives on a wrapper around each card, so it never touches the card's own
   // lift or the flip below, or their race fixes.
   useLayoutEffect(() => {
-    const tilts = tiltRefs.current.filter((el): el is HTMLDivElement => el !== null);
+    const tilts = Array.from(tiltRefs.current.values());
     return startCardTilt(tilts);
   }, [motion]);
 
@@ -83,10 +86,10 @@ export function CoreCompetenciesSection() {
     const idleLoops: gsap.core.Animation[] = [];
 
     COMPETENCIES.forEach((_, i) => {
-      const card = cardRefs.current[i];
-      const inner = innerRefs.current[i];
-      const frontMotif = frontMotifRefs.current[i];
-      const back = backContentRefs.current[i];
+      const card = cardRefs.current.get(i);
+      const inner = innerRefs.current.get(i);
+      const frontMotif = frontMotifRefs.current.get(i);
+      const back = backContentRefs.current.get(i);
       if (!card || !inner || !frontMotif || !back) return;
 
       const d = reduced ? 0 : 1;
@@ -149,7 +152,7 @@ export function CoreCompetenciesSection() {
           },
           reduced ? 0 : 0.32,
         );
-      hoverTimelines.current[i] = tl;
+      hoverTimelines.current.set(i, tl);
 
       if (!reduced) {
         idleLoops.push(
@@ -167,9 +170,9 @@ export function CoreCompetenciesSection() {
 
     return () => {
       hoverTimelines.current.forEach((tl) => {
-        tl?.kill();
+        tl.kill();
       });
-      hoverTimelines.current = [];
+      hoverTimelines.current.clear();
       idleLoops.forEach((loop) => {
         loop.kill();
       });
@@ -182,8 +185,8 @@ export function CoreCompetenciesSection() {
   // opened it (mouse, keyboard focus, or a touch tap, which focuses a real
   // <button> the same way keyboard focus does).
   function setOpen(i: number, open: boolean) {
-    const backFace = backFaceRefs.current[i];
-    const trigger = triggerRefs.current[i];
+    const backFace = backFaceRefs.current.get(i);
+    const trigger = triggerRefs.current.get(i);
     if (backFace) {
       backFace.inert = !open;
       backFace.setAttribute("aria-hidden", open ? "false" : "true");
@@ -192,12 +195,12 @@ export function CoreCompetenciesSection() {
   }
 
   function play(i: number) {
-    hoverTimelines.current[i]?.play();
+    hoverTimelines.current.get(i)?.play();
     setOpen(i, true);
   }
 
   function reverse(i: number) {
-    hoverTimelines.current[i]?.reverse();
+    hoverTimelines.current.get(i)?.reverse();
     setOpen(i, false);
   }
 
@@ -226,12 +229,14 @@ export function CoreCompetenciesSection() {
             <div
               key={c.title}
               ref={(el) => {
-                tiltRefs.current[i] = el;
+                if (el) tiltRefs.current.set(i, el);
+                else tiltRefs.current.delete(i);
               }}
             >
               <div
                 ref={(el) => {
-                  cardRefs.current[i] = el;
+                  if (el) cardRefs.current.set(i, el);
+                  else cardRefs.current.delete(i);
                 }}
                 onMouseEnter={() => {
                   play(i);
@@ -255,7 +260,8 @@ export function CoreCompetenciesSection() {
               >
                 <div
                   ref={(el) => {
-                    innerRefs.current[i] = el;
+                    if (el) innerRefs.current.set(i, el);
+                    else innerRefs.current.delete(i);
                   }}
                   className="relative h-full w-full rounded-3xl [transform-style:preserve-3d]"
                 >
@@ -265,7 +271,8 @@ export function CoreCompetenciesSection() {
                   <button
                     type="button"
                     ref={(el) => {
-                      triggerRefs.current[i] = el;
+                      if (el) triggerRefs.current.set(i, el);
+                      else triggerRefs.current.delete(i);
                     }}
                     aria-expanded="false"
                     aria-label={`${c.title}, show the details`}
@@ -300,7 +307,8 @@ export function CoreCompetenciesSection() {
                       </h3>
                       <div
                         ref={(el) => {
-                          frontMotifRefs.current[i] = el;
+                          if (el) frontMotifRefs.current.set(i, el);
+                          else frontMotifRefs.current.delete(i);
                         }}
                         className="pointer-events-none absolute inset-0"
                       >
@@ -312,7 +320,8 @@ export function CoreCompetenciesSection() {
                   {/* Back */}
                   <div
                     ref={(el) => {
-                      backFaceRefs.current[i] = el;
+                      if (el) backFaceRefs.current.set(i, el);
+                      else backFaceRefs.current.delete(i);
                     }}
                     inert
                     aria-hidden="true"
@@ -337,7 +346,8 @@ export function CoreCompetenciesSection() {
                       />
                       <div
                         ref={(el) => {
-                          backContentRefs.current[i] = el;
+                          if (el) backContentRefs.current.set(i, el);
+                          else backContentRefs.current.delete(i);
                         }}
                         className="relative z-10 opacity-0"
                       >
