@@ -204,9 +204,15 @@ export function createPieces(stage: Stage): PiecesSystem {
     },
   }));
   const byName = new Map(pieces.map((p) => [p.name, p]));
-  const q = <T extends Element>(selector: string) => root.querySelector<T>(selector);
   const qa = <T extends Element>(selector: string) =>
     Array.from(root.querySelectorAll<T>(selector));
+  // The parts live in the desktop composition only. The compact toy box
+  // (mounted in the same hero root) draws the same shape components, so a
+  // root-wide query would also pick up its petals, domes and knob.
+  const composition = root.querySelector<HTMLElement>(".hero-composition") ?? root;
+  const q = <T extends Element>(selector: string) => composition.querySelector<T>(selector);
+  const qaPart = <T extends Element>(selector: string) =>
+    Array.from(composition.querySelectorAll<T>(selector));
 
   gsap.set(els, { transformOrigin: "50% 50%" });
   const triangle = byName.get("triangle");
@@ -216,14 +222,14 @@ export function createPieces(stage: Stage): PiecesSystem {
   // ---- the parts that personalities move ----
   const knob = q<SVGCircleElement>(".shape-toggle [data-part='knob']");
   const track = q<SVGRectElement>(".shape-toggle [data-part='track']");
-  const petals = qa<SVGPathElement>(".leaves-motif [data-part^='leaf-']");
+  const petals = qaPart<SVGPathElement>(".leaves-motif [data-part^='leaf-']");
   const domeTop = q<SVGPathElement>(".domes-motif [data-part='dome-top']");
   const domeBottom = q<SVGPathElement>(".domes-motif [data-part='dome-bottom']");
   const shards = [1, 2, 3].map((n) =>
     q<SVGPathElement>(`.hero-logo [data-part='shard-${n}'] path`),
   );
   const redCircle = q<SVGSVGElement>(".shape-circle-red svg");
-  const redBits = qa<HTMLElement>(".hero-red-bits > span");
+  const redBits = qaPart<HTMLElement>(".hero-red-bits > span");
   const partEls = [
     knob,
     track,
@@ -292,9 +298,10 @@ export function createPieces(stage: Stage): PiecesSystem {
       [1, 1],
     ];
     petals.forEach((petal, i) => {
+      const [dx, dy] = dirs[i % dirs.length];
       gsap.to(petal, {
-        x: open ? dirs[i][0] * 7 : 0,
-        y: open ? dirs[i][1] * 7 : 0,
+        x: open ? dx * 7 : 0,
+        y: open ? dy * 7 : 0,
         rotation: open ? 18 : 0,
         scale: open ? 0.94 : 1,
         duration: open ? 0.55 : 0.8,

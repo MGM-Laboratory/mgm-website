@@ -268,12 +268,12 @@ function buildEntranceTimeline(
       "-=0.2",
     )
     .to(
-      ".toggle-switch [data-part='knob']",
+      ".shape-toggle .toggle-switch [data-part='knob']",
       { attr: { cx: 175 }, duration: 0.45, ease: "power2.inOut" },
       "+=0.05",
     )
     .to(
-      ".toggle-switch [data-part='track']",
+      ".shape-toggle .toggle-switch [data-part='track']",
       { attr: { fill: "#f94141" }, duration: 0.45, ease: "power2.inOut" },
       "<",
     )
@@ -729,8 +729,12 @@ export function Hero() {
                     scale: 1,
                   });
                   gsap.set(".line-game", { scaleX: 1 });
-                  gsap.set(".toggle-switch [data-part='knob']", { attr: { cx: 175 } });
-                  gsap.set(".toggle-switch [data-part='track']", { attr: { fill: "#f94141" } });
+                  gsap.set(".shape-toggle .toggle-switch [data-part='knob']", {
+                    attr: { cx: 175 },
+                  });
+                  gsap.set(".shape-toggle .toggle-switch [data-part='track']", {
+                    attr: { fill: "#f94141" },
+                  });
                   gsap.set(".arrow-connector [data-part='arrow-path']", { drawSVG: "100%" });
                   gsap.set(".hero-logo [data-part^='shard-']", { opacity: 1 });
                   gsap.set(".corner-pattern", { opacity: 0.6 });
