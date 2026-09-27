@@ -1,0 +1,236 @@
+/*
+ * The compact hero's toy box (screens under 880px). Two layouts: four
+ * stacked lines, or two lines on short, wide screens (a phone on its side).
+ * The words are sized from the box itself (container units for the width,
+ * the screen height for the height), so the longest line always fits and
+ * the box, with the headroom above the words where the shapes pile up, stays
+ * within one screen.
+ */
+
+.box {
+  /* The hero root pads compact screens with px-6 py-14 (sm: px-10 py-20).
+     The box cancels that padding so the play area reaches the screen edges;
+     keep these in step with hero.tsx. */
+  --toybox-bleed-x: 1.5rem;
+  --toybox-bleed-y: 3.5rem;
+  --toybox-gutter: 1.25rem;
+  --toybox-header: 64px;
+  --toybox-h: max(18rem, calc(100svh - var(--toybox-header)));
+  --toybox-cta: 7.5rem;
+  /* The words' size. Width: "Laboratory" is 4.75em wide in Hanken Grotesk
+     at this tracking, with room for the fallback face before it swaps.
+     Height: four lines plus the headroom, over the call to action. */
+  --toybox-headroom: 1.8;
+  --toybox-f: max(
+    2.25rem,
+    min(
+      calc(100cqi / 4.95),
+      calc((var(--toybox-h) - var(--toybox-cta)) / (3.8 + var(--toybox-headroom))),
+      8rem
+    )
+  );
+
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  margin: calc(var(--toybox-bleed-y) * -1) calc(var(--toybox-bleed-x) * -1);
+  padding: 0 max(var(--toybox-gutter), env(safe-area-inset-right)) 1.25rem
+    max(var(--toybox-gutter), env(safe-area-inset-left));
+  container-type: inline-size;
+  overflow-x: clip;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* The desktop composition takes over from 880px. */
+@media (min-width: 880px) {
+  .box {
+    display: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .box {
+    --toybox-bleed-x: 2.5rem;
+    --toybox-bleed-y: 5rem;
+    --toybox-gutter: 2.5rem;
+    --toybox-cta: 8.25rem;
+  }
+}
+
+.sky {
+  flex: none;
+  height: calc(var(--toybox-f) * var(--toybox-headroom));
+}
+
+.words {
+  position: relative;
+  flex: none;
+  font-size: var(--toybox-f);
+  line-height: 0.95;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.line {
+  display: block;
+}
+
+.word {
+  display: block;
+  width: fit-content;
+  cursor: pointer;
+}
+
+.cta {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: max(1.25rem, 3svh);
+}
+
+/* SeeWorkButton brings the desktop's top margin; the row spaces itself. */
+.cta :global(.compact-hero-cta) {
+  margin-top: 0;
+}
+
+@media (min-aspect-ratio: 4/3) and (max-height: 560px) {
+  .box {
+    --toybox-layout: wide;
+    --toybox-cta: 6rem;
+    /* "& Mobile Laboratory" is 8.8em wide. */
+    --toybox-f: max(
+      2rem,
+      min(
+        calc(100cqi / 9.3),
+        calc((var(--toybox-h) - var(--toybox-cta)) / (1.9 + var(--toybox-headroom))),
+        8rem
+      )
+    );
+  }
+
+  .word {
+    display: inline-block;
+  }
+
+  .cta {
+    margin-top: 0.9rem;
+  }
+}
+
+/* The static poster: the shapes set beside and between the words. It is
+   what reduced motion and a page without JavaScript show; with motion the
+   physics layer takes over, so the poster waits hidden. */
+.poster {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.posterItem {
+  position: absolute;
+  left: var(--stack-x);
+  top: calc(var(--stack-y) - var(--stack-size));
+  width: calc(var(--stack-size) * var(--ratio));
+  height: var(--stack-size);
+  rotate: var(--stack-rotate);
+}
+
+@media (min-aspect-ratio: 4/3) and (max-height: 560px) {
+  .posterItem {
+    left: var(--wide-x);
+    top: calc(var(--wide-y) - var(--wide-size));
+    width: calc(var(--wide-size) * var(--ratio));
+    height: var(--wide-size);
+    rotate: var(--wide-rotate);
+  }
+}
+
+.posterItem > svg,
+.art > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .box:not([data-toybox="static"]) .poster {
+    visibility: hidden;
+  }
+}
+
+/* The physics layer: every shape is written from its body each frame. */
+.bodies {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.body {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  will-change: transform;
+}
+
+.lift,
+.squash,
+.rot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.art {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* What a finger or cursor catches: the body's own outline, not its box. */
+.hit {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.hit[data-hit="circle"] {
+  inset: 2%;
+  border-radius: 50%;
+}
+
+.hit[data-hit="pill"] {
+  border-radius: 999px;
+}
+
+.hit[data-hit="triangle"] {
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+.hit[data-hit="diamond"] {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.box[data-dragging] .hit,
+.box[data-dragging] .word {
+  cursor: grabbing;
+}
+
+.shake {
+  visibility: hidden;
+}
+
+.box[data-toybox="live"] .shake {
+  visibility: visible;
+}
