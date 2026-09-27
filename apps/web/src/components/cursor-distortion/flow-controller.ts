@@ -1,6 +1,7 @@
 // Type only (erased): the engine and three.js stay in the dynamic import.
 import type { FlowEngine, FlowFailure } from "@/components/cursor-distortion/flow-engine";
 import { FlowSurfaces, pageColor } from "@/components/cursor-distortion/flow-surfaces";
+import { isArticleTransitionBusy, onArticleTransitionChange } from "@/lib/article-transition";
 import { setGlHost } from "@/lib/gl-host";
 import { finePointer } from "@/lib/motion/pointer";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
@@ -19,6 +20,9 @@ import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
  * - Where it shows: one stage for the whole visit. Routes that draw their
  *   own cursor effect (a project page, the articles library) hide it and
  *   release its big buffers; returning shows it again, already compiled.
+ *   It also steps aside while an articles transition runs: the portal
+ *   lifts the page like a sheet over the library's arch, which sits under
+ *   the page just like this canvas would.
  * - What stops it for good: reduced motion switched on, a lost context,
  *   a renderer too slow to keep up. The page goes back to its CSS
  *   backgrounds and the canvas is removed.
@@ -69,6 +73,9 @@ function whenIdle(callback: () => void, timeout: number) {
 }
 
 class FlowController {
+  /** The route wants the stage (cursor-flow.tsx). */
+  private wanted = false;
+  /** The route wants it and nothing asks it to step aside. */
   private active = false;
   private state: "idle" | "loading" | "ready" | "off" = "idle";
   private engine: FlowEngine | null = null;
@@ -84,7 +91,10 @@ class FlowController {
       this.state = "off";
       return;
     }
-    this.offs.push(onReducedMotion(() => this.shutdown()));
+    this.offs.push(
+      onReducedMotion(() => this.shutdown()),
+      onArticleTransitionChange(() => this.apply()),
+    );
     const onMove = (event: PointerEvent) => {
       if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
       window.removeEventListener("pointermove", onMove);
@@ -98,8 +108,13 @@ class FlowController {
   }
 
   setActive(active: boolean) {
-    this.active = active;
-    if (active) this.show();
+    this.wanted = active;
+    this.apply();
+  }
+
+  private apply() {
+    this.active = this.wanted && !isArticleTransitionBusy();
+    if (this.active) this.show();
     else this.hide();
   }
 
