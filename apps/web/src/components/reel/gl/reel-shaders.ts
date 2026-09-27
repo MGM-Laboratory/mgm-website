@@ -78,10 +78,14 @@ void main() {
   float alpha = clamp(0.5 - d / max(fwidth(d), 1e-4), 0.0, 1.0);
 
   // The hover lens: under the pointer the picture swells a little and
-  // shows its true colours through the blue.
+  // shows its true colours through the blue, inside a faint light rim
+  // (only while there is blue to look through).
   vec2 fromCenter = (v_uv - u_hoverCenter) * v_size;
   float reach = 0.3 * min(v_size.x, v_size.y) + 60.0;
-  float lens = u_hover * (1.0 - smoothstep(reach * 0.3, reach, length(fromCenter)));
+  float dist = length(fromCenter);
+  float lens = u_hover * (1.0 - smoothstep(reach * 0.5, reach * 0.74, dist));
+  float rim = u_hover * smoothstep(reach * 0.62, reach * 0.74, dist)
+    * (1.0 - smoothstep(reach * 0.74, reach * 0.9, dist));
   vec2 uv = v_uv - (v_uv - u_hoverCenter) * 0.07 * lens;
 
   vec2 cover = mix(u_coverFrom, u_coverTo, v_progress);
@@ -94,6 +98,7 @@ void main() {
   vec3 tinted = max(u_tint, vec3(grey));
   vec3 outColor = mix(tinted, color, max(v_progress, lens));
   outColor += lens * 0.04;
+  outColor = mix(outColor, vec3(1.0), clamp(rim, 0.0, 1.0) * 0.28 * (1.0 - v_progress));
 
   gl_FragColor = vec4(outColor, alpha);
 }

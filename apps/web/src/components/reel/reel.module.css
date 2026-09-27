@@ -283,8 +283,8 @@
   mask-image:
     radial-gradient(
       circle var(--reel-hover-r, 0px) at var(--reel-hover-x, 50%) var(--reel-hover-y, 50%),
-      transparent 30%,
-      #000 100%
+      transparent 50%,
+      #000 74%
     ),
     linear-gradient(
       to bottom left,
