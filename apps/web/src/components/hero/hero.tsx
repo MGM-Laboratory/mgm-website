@@ -16,6 +16,7 @@ import { setupParallax } from "@/lib/parallax";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
+import { CompactHero } from "@/components/hero/compact/compact-hero";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 import type { IdleLoops } from "@/components/hero/interactions";
 import { arrowPathD, type ArrowGeometry } from "@/components/hero/interactions/arrow-path";
@@ -456,52 +457,6 @@ function buildEntranceTimeline(
   return tl;
 }
 
-function buildCompactEntranceTimeline(root: HTMLDivElement) {
-  const q = gsap.utils.selector(root);
-  const logoShards = q(".compact-hero-logo [data-part^='shard-']");
-  const title = q(".compact-hero-title");
-  const cta = q(".compact-hero-cta");
-  const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-
-  tl.fromTo(
-    logoShards,
-    {
-      opacity: 0,
-      scale: 0.35,
-      x: (index: number) => [-38, -48, 48][index] ?? 0,
-      y: (index: number) => [-52, 42, 42][index] ?? 0,
-      rotate: (index: number) => [-135, 115, -115][index] ?? 0,
-    },
-    {
-      opacity: 1,
-      scale: 1,
-      x: 0,
-      y: 0,
-      rotate: 0,
-      duration: 0.6,
-      stagger: 0.1,
-      ease: "back.out(1.9)",
-    },
-  )
-    .to(".compact-hero-logo", { scale: 1.08, duration: 0.12, ease: "power1.out" }, "-=0.1")
-    .to(".compact-hero-logo", { scale: 1, duration: 0.24, ease: "back.out(3)" })
-    .fromTo(
-      title,
-      { opacity: 0, y: 28, scale: 0.96 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: "back.out(1.6)" },
-      "-=0.08",
-    )
-    .fromTo(
-      cta,
-      { opacity: 0, y: 16, scale: 0.9 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: "back.out(2.2)" },
-      "-=0.25",
-    );
-
-  tl.timeScale(1.25);
-  return tl;
-}
-
 export function Hero() {
   // Captured synchronously during the first render, not read fresh inside
   // the fonts.ready callback below: by the time that promise resolves, the
@@ -694,33 +649,10 @@ export function Hero() {
                 const revealTargets = gsap.utils.toArray<HTMLElement>(".reveal-hidden", root);
 
                 if (compact) {
-                  const compactLogoShards = gsap.utils.selector(root)(
-                    ".compact-hero-logo [data-part^='shard-']",
-                  );
-
-                  if (reduced || startedScrolled || cameFromInternalNav) {
-                    gsap.set(revealTargets, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                    gsap.set(compactLogoShards, { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 });
-                    reveal(false);
-                    return;
-                  }
-
-                  const tl = buildCompactEntranceTimeline(root);
-                  const logo = gsap.utils.selector(root)(".compact-hero-logo");
-                  const idleLoop = gsap.to(logo, {
-                    y: -5,
-                    duration: 1.8,
-                    ease: "sine.inOut",
-                    yoyo: true,
-                    repeat: -1,
-                  });
-
-                  tl.eventCallback("onComplete", () => reveal(true));
-
-                  return () => {
-                    tl.kill();
-                    idleLoop.kill();
-                  };
+                  // The compact toy box (compact/compact-hero.tsx) owns its own
+                  // entrance and the CTA's reveal; this only shows the scroll cue.
+                  reveal(false);
+                  return;
                 }
 
                 if (!reduced) {
@@ -1022,15 +954,10 @@ export function Hero() {
       </div>
 
       {/* The full geometric composition needs more horizontal room than a
-          phone affords. Keep its dense motion from 880px upward and
-          give compact screens a focused, fully visible brand entrance. */}
-      <div className="mx-auto flex w-full max-w-xs flex-col items-center text-center min-[880px]:hidden">
-        <LogoMark solid className="compact-hero-logo w-[clamp(7rem,38vw,9.5rem)]" />
-        <p className="compact-hero-title reveal-hidden mt-9 max-w-[18rem] opacity-0 font-display text-[clamp(2rem,9vw,2.75rem)] leading-[0.98] font-medium tracking-tight text-foreground">
-          Media, Game &amp; Mobile Laboratory
-        </p>
-        <SeeWorkButton animationClassName="compact-hero-cta" />
-      </div>
+          phone affords. Keep its dense motion from 880px upward and give
+          compact screens the toy box: the same words and shapes, stacked,
+          with the shapes as physics bodies to tap, fling and tilt. */}
+      <CompactHero />
 
       {/* The pool a click on empty hero space throws from (interactions/motifs.ts). */}
       <div
