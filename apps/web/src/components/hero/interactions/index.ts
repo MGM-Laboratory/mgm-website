@@ -1,3 +1,5 @@
+import gsap from "gsap";
+
 import { createArrow } from "./arrow";
 import type { ArrowGeometry } from "./arrow-path";
 import { startDoze, type IdleLoops } from "./doze";
@@ -35,6 +37,10 @@ export type HeroInteractionsOptions = {
 
 /** What a press on these must never be taken for: an empty-space click. */
 const CONTROLS = "a, button, input, [role='button'], .hero-cta";
+/** A touch that travels further than this (px) is a swipe, not a tap. */
+const TAP_SLOP = 12;
+/** How long a tap holds its press before it lets go, seconds. */
+const TAP_HOLD = 0.12;
 
 export function startHeroInteractions(root: HTMLElement, options: HeroInteractionsOptions) {
   const stage = createStage(root);
@@ -49,28 +55,60 @@ export function startHeroInteractions(root: HTMLElement, options: HeroInteractio
   const stopDoze = startDoze(stage, options.loops, [letters, pieces]);
   const stopCue = startScrollCue(stage);
 
-  const onPointerDown = (event: PointerEvent) => {
-    if (!stage.active() || event.button > 0) return;
-    const target = event.target as Element | null;
-    if (!target || target.closest(CONTROLS)) return;
+  function press(target: Element, clientX: number, clientY: number, touch: boolean) {
     const rect = root.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const touch = event.pointerType === "touch";
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
     if (letters.press(target, x)) return;
     if (pieces.press(target, x, touch)) return;
     if (arrow?.press(x, y, touch)) return;
     motifs.burst(x, y);
+  }
+
+  // A mouse or pen presses on the way down. A finger may only be starting
+  // a scroll, so its press waits for the tap to finish: a swipe that
+  // begins on a shape (or on empty space) scrolls the page and nothing
+  // toggles, flips or bursts.
+  let tap: { id: number; x: number; y: number; target: Element } | null = null;
+  let tapRelease: gsap.core.Tween | null = null;
+
+  const onPointerDown = (event: PointerEvent) => {
+    if (!stage.active() || event.button > 0) return;
+    const target = event.target as Element | null;
+    if (!target || target.closest(CONTROLS)) return;
+    if (event.pointerType === "touch") {
+      tap = { id: event.pointerId, x: event.clientX, y: event.clientY, target };
+      return;
+    }
+    press(target, event.clientX, event.clientY, false);
   };
-  const onPointerUp = () => pieces.release();
+  const onPointerMove = (event: PointerEvent) => {
+    if (!tap || event.pointerId !== tap.id) return;
+    if (Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > TAP_SLOP) tap = null;
+  };
+  const onPointerUp = (event: PointerEvent) => {
+    const pending = tap;
+    tap = null;
+    if (pending && event.pointerId === pending.id && event.type === "pointerup" && stage.active()) {
+      tapRelease?.kill();
+      pieces.release();
+      press(pending.target, pending.x, pending.y, true);
+      tapRelease = gsap.delayedCall(TAP_HOLD, () => pieces.release());
+      return;
+    }
+    pieces.release();
+  };
   root.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointermove", onPointerMove, { passive: true });
   window.addEventListener("pointerup", onPointerUp);
   window.addEventListener("pointercancel", onPointerUp);
 
   return () => {
     root.removeEventListener("pointerdown", onPointerDown);
+    window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
     window.removeEventListener("pointercancel", onPointerUp);
+    tapRelease?.kill();
     stopCue();
     stopDoze();
     stage.destroy();
