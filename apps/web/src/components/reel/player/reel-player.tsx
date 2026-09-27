@@ -475,7 +475,7 @@ export function ReelPlayer({ session, onDone }: PlayerUiProps) {
               >
                 <span ref={time}>{timecode(session.startTime)}</span>
                 <span className="text-white/40"> / </span>
-                {timecode(ui.duration)}
+                {ui.duration ? timecode(ui.duration) : "--:--"}
               </span>
             </div>
 
