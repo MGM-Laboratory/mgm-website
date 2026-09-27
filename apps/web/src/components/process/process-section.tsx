@@ -100,7 +100,9 @@ export function ProcessSection() {
       data-magnet-board
     >
       <noscript>
-        <style>{".reveal-hidden{opacity:1 !important}"}</style>
+        <style>
+          {".reveal-hidden{opacity:1 !important}[data-magnet-hint]{display:none !important}"}
+        </style>
       </noscript>
 
       <h2
@@ -138,7 +140,15 @@ export function ProcessSection() {
         className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4 sm:mt-8"
         data-magnet-controls
       >
-        <p className="flex max-w-xl items-start gap-3 text-sm leading-relaxed text-foreground/70">
+        <noscript>
+          <p className="max-w-xl text-sm leading-relaxed text-foreground/70">
+            {PROCESS_COPY.hintStatic}
+          </p>
+        </noscript>
+        <p
+          className="flex max-w-xl items-start gap-3 text-sm leading-relaxed text-foreground/70"
+          data-magnet-hint
+        >
           <Hand aria-hidden className="mt-0.5 size-4 shrink-0" strokeWidth={2.25} />
           <span>
             {PROCESS_COPY.hint}{" "}

@@ -104,6 +104,8 @@ export const PROCESS_COPY = {
   chapterNumber: "02",
   chapter: "How we think",
   hint: "This is how we work. The order changes every day, so go ahead and move them.",
+  /** Without scripts nothing moves, so the hint only states the idea. */
+  hintStatic: "This is how we work. The order changes every day.",
   /** Appended for a mouse or trackpad. */
   hintFine: "Drag one anywhere, or click it to flip it over.",
   /** Appended for touch screens. */
