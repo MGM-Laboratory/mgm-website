@@ -21,6 +21,7 @@
   --reel-radius: 20px;
   --reel-header: 64px;
   --reel-ease: cubic-bezier(0.35, 0, 0, 1);
+  --reel-title-size: 10vw;
 
   position: relative;
   isolation: isolate;
@@ -55,13 +56,23 @@
 
 /* ---------------------------------------------------------------- title */
 
+/* The "03 Meet the lab" mark shares the title's grid row and sits in its
+   top margin (one title size tall), just above the first line's first word. */
+.chapter {
+  grid-row: 1;
+  grid-column: 3 / -1;
+  align-self: start;
+  margin: calc(var(--reel-title-size) - 2rem) 0 0;
+}
+
 .title {
   position: relative;
   left: -0.03em;
+  grid-row: 1;
   grid-column: 1 / -1;
   margin: 1em 0 0.5em;
   font-family: var(--font-display);
-  font-size: 10vw;
+  font-size: var(--reel-title-size);
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.035em;
@@ -653,9 +664,7 @@
 @media (min-aspect-ratio: 21 / 9) {
   .section {
     --reel-pad-x: max(6vw, 60px);
-  }
-  .title {
-    font-size: 6.7vw;
+    --reel-title-size: 6.7vw;
   }
   .content {
     grid-column: 8 / span 3;
@@ -670,17 +679,20 @@
     --reel-pad-x: 25px;
     --reel-pad-y: 25px;
     --reel-radius: 12px;
+    --reel-title-size: 13.8vw;
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
   .title {
     margin: 1em 0 0.5em;
-    font-size: 13.8vw;
   }
   .titleLine {
     overflow: visible;
   }
   .titleLineFirst {
     padding-left: 0;
+  }
+  .chapter {
+    grid-column: 1 / -1;
   }
   .content {
     grid-column: 1 / -1;
@@ -727,8 +739,8 @@
 }
 
 @media (max-width: 480px) {
-  .title {
-    font-size: 18.5vw;
+  .section {
+    --reel-title-size: 18.5vw;
   }
 }
 

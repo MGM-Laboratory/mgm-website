@@ -109,6 +109,8 @@ type ReelElements = {
   linePath: SVGPathElement | null;
   title: HTMLElement | null;
   titleInner: HTMLElement | null;
+  /** The "03 Meet the lab" mark above the title; it rides the title's parallax. */
+  chapter: HTMLElement | null;
   titleWords: HTMLElement[];
   content: HTMLElement | null;
   desc: HTMLElement | null;
@@ -347,6 +349,7 @@ export class ReelController {
       linePath: root.querySelector("[data-reel='line-path']"),
       title: q(root, "title"),
       titleInner: q(root, "title-inner"),
+      chapter: root.querySelector<HTMLElement>(".kh-chapter"),
       titleWords: qa(root, "title-word"),
       content: q(root, "content"),
       desc: q(root, "desc"),
@@ -962,17 +965,16 @@ export class ReelController {
         put.set(word, "opacity", "1");
       }
       put.set(this.el.titleInner, "transform", "none");
+      put.set(this.el.chapter, "transform", "none");
       put.set(this.el.desc, "transform", "none");
       put.set(this.el.ctaLift, "transform", "none");
       put.set(this.el.ctaLift, "opacity", "1");
     } else {
       const titleOffset = this.titleStarted ? (vh - titleY) / vh : 0;
       const contentOffset = this.contentStarted ? (vh - contentY) / vh : 0;
-      put.set(
-        this.el.titleInner,
-        "transform",
-        `translate3d(0,${(-0.05 * vh * titleOffset).toFixed(2)}px,0)`,
-      );
+      const titleLift = `translate3d(0,${(-0.05 * vh * titleOffset).toFixed(2)}px,0)`;
+      put.set(this.el.titleInner, "transform", titleLift);
+      put.set(this.el.chapter, "transform", titleLift);
       put.set(
         this.el.desc,
         "transform",
@@ -1485,6 +1487,7 @@ export class ReelController {
       put.set(word, "opacity", "1");
     }
     put.set(this.el.titleInner, "transform", "none");
+    put.set(this.el.chapter, "transform", "none");
     put.set(this.el.desc, "transform", "none");
     put.set(this.el.ctaLift, "transform", "none");
     put.set(this.el.ctaLift, "opacity", "1");

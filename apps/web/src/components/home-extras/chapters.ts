@@ -1,6 +1,6 @@
 /**
  * The homepage is told as a short story in chapters (hello, how we think,
- * meet the lab, what we do, and so on), and each section past the reel
+ * meet the lab, what we do, and so on), and each section from the reel on
  * carries a small chapter mark. They all live here, so renumbering the
  * story is a one-line change.
  */
@@ -18,6 +18,7 @@ export type HomeChapter = {
 };
 
 export const HOME_CHAPTERS = {
+  reel: { number: "03", label: "Meet the lab", tone: "red", shape: "triangle" },
   competencies: { number: "04", label: "What we do", tone: "yellow", shape: "circle" },
   trustedBy: { number: "05", label: "Who we build with", tone: "green", shape: "square" },
   projects: { number: "06", label: "What we made", tone: "blue", shape: "triangle" },

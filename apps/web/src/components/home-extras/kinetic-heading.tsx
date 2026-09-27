@@ -29,10 +29,28 @@ function ChapterGlyph({ shape, color }: { shape: ChapterShape; color: string }) 
   }
 }
 
-/** The small "04 · What we do" chapter mark above a homepage heading. */
-function ChapterMark({ chapter }: { chapter: HomeChapter }) {
+/**
+ * The small "04 · What we do" chapter mark above a homepage heading. It
+ * starts hidden for the kinetic heading's entrance; `still` shows it as is,
+ * for a section that places the mark itself.
+ */
+export function ChapterMark({
+  chapter,
+  still = false,
+  className,
+}: {
+  chapter: HomeChapter;
+  still?: boolean;
+  className?: string;
+}) {
   return (
-    <p className="kh-chapter mb-4 flex items-center gap-2.5 text-xs leading-none font-semibold tracking-[0.12em] text-foreground/60 uppercase opacity-0">
+    <p
+      className={cn(
+        "kh-chapter mb-4 flex items-center gap-2.5 text-xs leading-none font-semibold tracking-[0.12em] text-foreground/60 uppercase",
+        !still && "opacity-0",
+        className,
+      )}
+    >
       <span className="sr-only">{`Chapter ${chapter.number}: ${chapter.label}`}</span>
       <svg
         aria-hidden

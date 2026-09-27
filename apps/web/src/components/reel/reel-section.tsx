@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 
 import type { HomeContent } from "@repo/shared";
+import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
+import { ChapterMark } from "@/components/home-extras/kinetic-heading";
 import { ReelController } from "@/components/reel/reel-controller";
 import { startReelGl } from "@/components/reel/reel-gl-driver";
 import { REEL_COPY } from "@/data/reel";
@@ -182,6 +184,8 @@ export function ReelSection({ content }: Readonly<{ content: HomeContent }>) {
       <svg className={styles.lineSvg} data-reel="line-svg" aria-hidden="true" focusable="false">
         <path className={styles.linePath} data-reel="line-path" pathLength={1} />
       </svg>
+
+      <ChapterMark chapter={HOME_CHAPTERS.reel} still className={styles.chapter} />
 
       <h2 id="reel-title" className={styles.title} data-reel="title">
         <span className={styles.titleInner} data-reel="title-inner">
