@@ -610,14 +610,45 @@ export function createToybox(options: ToyboxOptions): Toybox {
     return Math.sqrt(2 * a * height);
   }
 
+  /** The shapes resting on this one, and the ones resting on those. */
+  function stackOn(live: Live) {
+    const found = new Set<Live>([live]);
+    const queue = [live];
+    while (queue.length) {
+      const under = queue.shift()!.body.bounds;
+      for (const other of lives) {
+        if (!other.inWorld || found.has(other)) continue;
+        const b = other.body.bounds;
+        if (Math.min(b.max.x, under.max.x) - Math.max(b.min.x, under.min.x) < 4) continue;
+        // Its bottom touches this shape's upper half.
+        if (b.max.y < under.min.y - 6 || b.max.y > (under.min.y + under.max.y) / 2) continue;
+        found.add(other);
+        queue.push(other);
+      }
+    }
+    found.delete(live);
+    return [...found];
+  }
+
   function tap(live: Live) {
     const body = live.body;
     Sleeping.set(body, false);
+    const rise = randomBetween(1.4, 2);
     Body.setVelocity(body, {
       x: body.velocity.x + randomBetween(-1.2, 1.2),
-      y: -hopSpeed(base * randomBetween(1.4, 2)),
+      y: -hopSpeed(base * rise),
     });
     Body.setAngularVelocity(body, randomPick([-1, 1]) * randomBetween(0.12, 0.22));
+    // A shape at the bottom of the pile lifts what sits on it, a little
+    // faster than itself, so the stack pops apart instead of pinning it.
+    for (const other of stackOn(live)) {
+      Sleeping.set(other.body, false);
+      Body.setVelocity(other.body, {
+        x: randomBetween(-1.8, 1.8),
+        y: -hopSpeed(base * (rise + randomBetween(0.2, 0.6))),
+      });
+      Body.setAngularVelocity(other.body, randomBetween(-0.14, 0.14));
+    }
     fx.flourish(live.toy.flourish, live.nodes.art, live.nodes.squash);
     wake(live);
   }
@@ -923,7 +954,8 @@ export function createToybox(options: ToyboxOptions): Toybox {
     fidget?.kill();
     fidget = gsap.delayedCall(randomBetween(4, 8), () => {
       if (!paused && !grab) {
-        const idle = lives.filter((live) => live.inWorld);
+        // Only a shape with nothing on it, so the fidget is seen.
+        const idle = lives.filter((live) => live.inWorld && !stackOn(live).length);
         const live = idle.length ? randomPick(idle) : null;
         if (live) {
           Sleeping.set(live.body, false);
