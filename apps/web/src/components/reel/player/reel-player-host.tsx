@@ -14,6 +14,7 @@ import gsap from "gsap";
 import { X } from "lucide-react";
 
 import { onPointer, pointer } from "@/lib/motion/pointer";
+import { motionAllowed } from "@/lib/reduced-motion";
 import {
   onReelPlayerRequest,
   openReelPlayer,
@@ -73,6 +74,9 @@ let sessionCount = 0;
 function startTimeFor(request: ReelPlayerRequest) {
   const remembered = resumeAt.get(request.src);
   if (remembered !== undefined) return remembered;
+  // Under reduced motion the reel shows a still frame a little way in, not
+  // a running loop: there is nothing to continue, so the film starts over.
+  if (!motionAllowed()) return 0;
   const loopTime = request.startTime ?? 0;
   return loopTime > 0 && loopTime < CONTINUE_WITHIN_SECONDS ? loopTime : 0;
 }
