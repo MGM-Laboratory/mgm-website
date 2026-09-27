@@ -982,8 +982,9 @@ export function createMagnetBoard(section: HTMLElement) {
     const finish = () => {
       pending--;
       if (pending > 0) return;
-      saveArrangement(new Map());
-      showReset(false);
+      // Recompute after all reset flights have landed. Another magnet can be
+      // moved while the animation runs, and that move must remain persisted.
+      persist();
       labNote({
         id: "magnets-reset",
         text: "Back to the plan. Until the next idea.",
