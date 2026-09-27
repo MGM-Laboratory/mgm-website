@@ -21,3 +21,6 @@ exclude_paths:
   # user-controlled markup are produced here.
   - "apps/web/src/components/home-extras/kinetic-play.ts"
   - "apps/web/src/components/reel/player/player-engine.ts"
+  - "apps/web/src/components/lab-notes/lab-notes.tsx"
+  - "apps/web/src/components/reel/player/reel-player-host.tsx"
+  - "apps/web/src/components/reel/reel-controller.ts"

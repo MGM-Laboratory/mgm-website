@@ -163,16 +163,16 @@ export function LabNotes() {
           ref={cardRef}
           className="lab-note pointer-events-none invisible relative pointer-fine:pointer-events-auto flex items-start gap-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)] py-3 pr-10 pl-3 text-sm leading-snug text-foreground opacity-0 shadow-[var(--shadow-2)]"
           onBlur={() => {
-            setHold(false);
+            void setHold(false);
           }}
           onFocus={() => {
-            setHold(true);
+            void setHold(true);
           }}
           onPointerEnter={() => {
-            setHold(true);
+            void setHold(true);
           }}
           onPointerLeave={() => {
-            setHold(false);
+            void setHold(false);
           }}
         >
           <svg ref={shapeRef} aria-hidden className="mt-0.5 size-5 shrink-0" viewBox="0 0 24 24">
