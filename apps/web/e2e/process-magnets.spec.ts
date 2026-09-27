@@ -17,7 +17,10 @@ test("magnets move with the keyboard, flip, persist and go back home", async ({ 
   await page.goto("/");
   await page.evaluate(() => localStorage.removeItem("mgm:process-magnets:v1"));
 
-  const magnet = page.getByRole("button", { name: /^Research\. Press Enter to flip/ });
+  // "We." opens the first row on every viewport, so it always has room to
+  // its right. Words further along can wrap differently with other fonts
+  // and end up against the board's edge, where the move is clamped.
+  const magnet = page.getByRole("button", { name: /^We\. Press Enter to flip/ });
   await magnet.focus();
   await expect(page.locator('#process[data-magnet-board="ready"]')).toHaveCount(1, {
     timeout: 15000,
@@ -36,7 +39,7 @@ test("magnets move with the keyboard, flip, persist and go back home", async ({ 
 
   // The arrangement survives a reload.
   await page.reload();
-  const again = page.getByRole("button", { name: /^Research\. Press Enter to flip/ });
+  const again = page.getByRole("button", { name: /^We\. Press Enter to flip/ });
   await again.focus();
   await expect(page.locator('#process[data-magnet-board="ready"]')).toHaveCount(1, {
     timeout: 15000,
