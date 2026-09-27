@@ -20,7 +20,7 @@ import { finePointer, onPointer, pointer } from "@/lib/motion/pointer";
 import { random, randomInt, randomPick } from "@/lib/random";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 import { isReelPlayerOpen, onReelPlayerClosed, openReelPlayer } from "@/lib/reel-player";
-import { isScrollLocked } from "@/lib/scroll-lock";
+import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";
 
 /**
  * The reel section's brain (reel-section.tsx renders the markup).
@@ -75,6 +75,9 @@ export type ReelFrameState = {
   /** Whether the section is near the viewport (the WebGL layer draws only then). */
   near: boolean;
 };
+
+/** Keys that don't scroll the page, so they neither steer nor cancel the snap. */
+const NEUTRAL_KEYS = new Set(["Escape", "Shift", "Control", "Alt", "Meta", "CapsLock"]);
 
 const KEY_DIRECTION: Record<string, number> = {
   ArrowDown: 1,
@@ -295,6 +298,8 @@ export class ReelController {
   private touching = false;
   private lastTouchY = 0;
   private scrollbarDrag = false;
+  /** When the page's scroll lock last changed (the smoother re-syncs its scroll then). */
+  private lockChangedAt = -1e9;
   private lastNativeY = 0;
   private autoWrittenY = Number.NaN;
   private stillFrames = 0;
@@ -556,6 +561,12 @@ export class ReelController {
     if (this.fine) this.offs.push(onPointer(() => {}));
 
     this.offs.push(
+      onScrollLockChange(() => {
+        this.lockChangedAt = performance.now();
+      }),
+    );
+
+    this.offs.push(
       onReducedMotion(() => {
         this.reduced = true;
         this.state.reduced = true;
@@ -752,6 +763,9 @@ export class ReelController {
 
   private onKey(event: KeyboardEvent) {
     if (editableTarget(event.target) || event.metaKey || event.altKey || event.ctrlKey) return;
+    // Keys that never scroll (Escape closing the menu or the player, a
+    // lone modifier) leave a snap in flight alone.
+    if (NEUTRAL_KEYS.has(event.key)) return;
     let direction = KEY_DIRECTION[event.key] ?? 0;
     if (event.key === " " || event.key === "Spacebar") direction = event.shiftKey ? -1 : 1;
     if (direction) {
@@ -820,8 +834,12 @@ export class ReelController {
     }
     // A scroll nobody asked for with the wheel, keys or a finger (a script,
     // focus, an anchor): never carry it on.
+    // The lock itself (the menu, the player) moves nothing the visitor
+    // asked for: a snap it paused carries on once it lets go.
+    const now = performance.now();
+    if (isScrollLocked() || now - this.lockChangedAt < 400) return;
     const ours = Number.isFinite(this.autoWrittenY) && Math.abs(y - this.autoWrittenY) < 1.5;
-    if (!ours && performance.now() - this.lastInputAt > 600) this.armed = false;
+    if (!ours && now - this.lastInputAt > 600) this.armed = false;
   }
 
   // ------------------------------------------------------------ frame
