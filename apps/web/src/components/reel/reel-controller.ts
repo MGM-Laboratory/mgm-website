@@ -1024,7 +1024,7 @@ export class ReelController {
 
     if (this.reduced || s.mobile || w >= 1) {
       put.set(visual, "transform", "none");
-      put.set(visual, "border-radius", `${s.radius}px`);
+      put.set(visual, "clip-path", `inset(0 round ${s.radius}px)`);
     } else {
       // The four corners, each on its own delay: the top right leads, the
       // bottom left trails (the same weights as the WebGL plane's vertices).
@@ -1062,8 +1062,8 @@ export class ReelController {
       const sy = Math.max(0.05, Math.hypot(bl[0] - tl[0], bl[1] - tl[1]) / H);
       put.set(
         visual,
-        "border-radius",
-        `${(s.radius / sx).toFixed(2)}px / ${(s.radius / sy).toFixed(2)}px`,
+        "clip-path",
+        `inset(0 round ${(s.radius / sx).toFixed(2)}px / ${(s.radius / sy).toFixed(2)}px)`,
       );
     }
 

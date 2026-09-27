@@ -249,17 +249,21 @@
   left: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
   isolation: isolate;
-  border-radius: var(--reel-radius);
+  /* One clip path rounds the whole picture, and the tints overhang it
+     (below), so the blue covers the video's edge pixels: clipped layer by
+     layer, the video's dark rim showed as a hairline around the blue
+     thumbnail. The controller rewrites the clip mid-morph. */
+  clip-path: inset(0 round var(--reel-radius));
   transform-origin: 0 0;
-  background: var(--surface-inverse);
   backface-visibility: hidden;
 }
 
+/* The dark stand-in until the first frame. */
 .media {
   position: absolute;
   inset: 0;
+  background: var(--surface-inverse);
 }
 
 .video,
@@ -278,7 +282,8 @@
 .tintGrey,
 .tintBlue {
   position: absolute;
-  inset: 0;
+  /* A little past the picture, so they cover its edge pixels too. */
+  inset: -2px;
   pointer-events: none;
   mask-image:
     radial-gradient(
