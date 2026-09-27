@@ -31,6 +31,19 @@ const FLOW = "data-flow";
 const MIN_WIDTH_SHARE = 0.9;
 /** Mutations are batched: one rescan at most this often. */
 const SCAN_THROTTLE_MS = 250;
+/** A surface still waiting for hydration is looked at again this often. */
+const HYDRATION_RETRY_MS = 400;
+
+/**
+ * Whether React owns this element yet. A streamed page hydrates its
+ * sections after the stage may already be up, and an attribute added to
+ * server HTML before its section hydrates is a hydration mismatch. React
+ * keeps its fiber on the element under a `__reactFiber$` key once it has
+ * hydrated (or rendered) it.
+ */
+function hydrated(element: Element) {
+  return Object.keys(element).some((key) => key.startsWith("__reactFiber$"));
+}
 
 function sameColor(a: Rgb, b: Rgb) {
   return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) <= 3;
@@ -56,9 +69,7 @@ export class FlowSurfaces {
 
   /** Marks the page and clears its surfaces. Returns the page colour it matched. */
   attach(): Rgb {
-    const html = document.documentElement;
-    html.setAttribute(FLOW, "");
-    const color = this.scan();
+    document.documentElement.setAttribute(FLOW, "");
     if (!this.attached) {
       this.attached = true;
       this.observer = new MutationObserver(this.onMutation);
@@ -70,7 +81,7 @@ export class FlowSurfaces {
         attributeFilter: ["class"],
       });
     }
-    return color;
+    return this.scan();
   }
 
   /** Removes every marker: the page is exactly as it is without the stage. */
@@ -96,6 +107,7 @@ export class FlowSurfaces {
     const color = pageColor();
     const previous = new Set(document.querySelectorAll(`[${MARK}]`));
     const marked = new Set<Element>();
+    let waiting = false;
     const content = document.getElementById("smooth-content");
     const minWidth = (html.clientWidth || window.innerWidth) * MIN_WIDTH_SHARE;
     if (content) {
@@ -113,7 +125,13 @@ export class FlowSurfaces {
         let seeThrough = !picture;
         if (background && background.alpha > 0.01) {
           if (background.alpha >= 0.99 && sameColor(background.rgb, color)) {
-            if (element !== content) marked.add(element);
+            if (element === content) {
+              // The content box itself stays as it is.
+            } else if (previous.has(element) || hydrated(element)) {
+              marked.add(element);
+            } else {
+              waiting = true;
+            }
           } else {
             seeThrough = false;
           }
@@ -127,6 +145,13 @@ export class FlowSurfaces {
     for (const element of previous) if (!marked.has(element)) element.removeAttribute(MARK);
     for (const element of marked) if (!previous.has(element)) element.setAttribute(MARK, "");
     html.removeAttribute(SCAN);
+    // Hydration mutates nothing, so a surface left for it is retried on a timer.
+    if (waiting && this.attached) {
+      this.timer = window.setTimeout(() => {
+        this.timer = 0;
+        if (this.attached) this.scan();
+      }, HYDRATION_RETRY_MS);
+    }
     return color;
   }
 
