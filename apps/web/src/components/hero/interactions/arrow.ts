@@ -95,7 +95,7 @@ export function createArrow(
       const inQuadrant = px <= cx && (cy === r ? py <= cy : py >= cy);
       return inQuadrant ? Math.abs(Math.hypot(px - cx, py - cy) - r) : Infinity;
     });
-    const best = runs.reduce((a, b) => (b.distance < a.distance ? b : a));
+    const best = runs.reduce((a, b) => (b.distance < a.distance ? b : a), runs[0]);
     return { ...best, lineDistance: Math.min(best.distance, ...corners) };
   }
 

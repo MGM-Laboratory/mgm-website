@@ -183,7 +183,10 @@ export function createLetters(
   const chars = words.flat();
   const reads = chars.map((char) => {
     const style = getComputedStyle(char);
-    return { em: parseFloat(style.fontSize) || 16, width: parseFloat(style.width) || 0 };
+    return {
+      em: Number.parseFloat(style.fontSize) || 16,
+      width: Number.parseFloat(style.width) || 0,
+    };
   });
 
   const glyphs: Glyph[] = [];
@@ -284,7 +287,10 @@ export function createLetters(
     for (const g of glyphs) g.char.style.width = "";
     const natural = glyphs.map((g) => {
       const style = getComputedStyle(g.char);
-      return { em: parseFloat(style.fontSize) || g.em, width: parseFloat(style.width) || 0 };
+      return {
+        em: Number.parseFloat(style.fontSize) || g.em,
+        width: Number.parseFloat(style.width) || 0,
+      };
     });
     glyphs.forEach((g, i) => {
       g.char.style.width = `${natural[i].width / natural[i].em + 1e-6}em`;
@@ -305,7 +311,7 @@ export function createLetters(
       const { x, y } = offsetIn(g.char, root);
       g.cx = x + g.char.offsetWidth / 2;
       g.cy = y + g.char.offsetHeight * 0.55;
-      g.em = parseFloat(getComputedStyle(g.char).fontSize) || g.em;
+      g.em = Number.parseFloat(getComputedStyle(g.char).fontSize) || g.em;
     }
     for (const word of wordList) {
       const first = word.glyphs[0];

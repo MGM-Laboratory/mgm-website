@@ -78,7 +78,7 @@ const TONE_FALLBACK: Record<Tone, string> = {
 function parseHex(value: string): [number, number, number] | null {
   const hex = value.trim().replace("#", "");
   if (!/^[0-9a-f]{6}$/i.test(hex)) return null;
-  return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
+  return [0, 2, 4].map((i) => Number.parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
 }
 
 /** The brand accents, read from the site tokens (the player stage is always dark). */

@@ -185,7 +185,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
     W = box.clientWidth;
     H = box.clientHeight;
     const style = getComputedStyle(words);
-    size = parseFloat(style.fontSize) || 48;
+    size = Number.parseFloat(style.fontSize) || 48;
     layout =
       getComputedStyle(box).getPropertyValue("--toybox-layout").trim() === "wide"
         ? "wide"

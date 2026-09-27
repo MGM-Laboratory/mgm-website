@@ -112,8 +112,8 @@ export function startKinetic(root: HTMLElement): () => void {
   let locked = false;
   let inView = false;
   let relockPending = false;
-  let E = parseFloat(getComputedStyle(heading).fontSize) || 32;
-  const restWeight = parseFloat(getComputedStyle(heading).fontWeight) || 600;
+  let E = Number.parseFloat(getComputedStyle(heading).fontSize) || 32;
+  const restWeight = Number.parseFloat(getComputedStyle(heading).fontWeight) || 600;
 
   const qs = (el: Element, property: string, unit?: string) =>
     gsap.quickSetter(el, property, unit) as Setter;
@@ -258,10 +258,10 @@ export function startKinetic(root: HTMLElement): () => void {
   }
 
   function lock() {
-    E = parseFloat(getComputedStyle(heading!).fontSize) || E;
+    E = Number.parseFloat(getComputedStyle(heading!).fontSize) || E;
     for (const g of glyphs) g.slot.style.width = "";
     // Layout widths (unaffected by the entrance's transforms), at rest weight.
-    const widths = glyphs.map((g) => parseFloat(getComputedStyle(g.el).width));
+    const widths = glyphs.map((g) => Number.parseFloat(getComputedStyle(g.el).width));
     glyphs.forEach((g, i) => {
       if (widths[i] > 0) g.slot.style.width = `${(widths[i] / E).toFixed(4)}em`;
     });

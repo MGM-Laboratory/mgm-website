@@ -501,7 +501,7 @@ export function ReelPlayer({ session, onDone }: PlayerUiProps) {
         </div>
       </div>
 
-      <canvas ref={iris} aria-hidden className="pointer-events-none absolute top-0 left-0 hidden" />
+      <canvas ref={iris} className="pointer-events-none absolute top-0 left-0 hidden" />
 
       <div
         ref={cursorRoot}

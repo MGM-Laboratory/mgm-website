@@ -30,7 +30,7 @@ import type { PlayerSession, PlayerUiProps } from "./session";
 const LOCK_OWNER = "reel-player";
 /**
  * The reel's muted loop hands over its current time. Continuing from it
- * keeps the open seamless, but a visitor who presses Play wants the whole
+ * keeps the open smooth, but a visitor who presses Play wants the whole
  * film with sound, so only a loop that has barely started is continued;
  * later than this, the player starts from the beginning.
  */
@@ -109,11 +109,8 @@ function createSession(request: ReelPlayerRequest): PlayerSession {
   let playAttempt: Promise<void> | null = null;
   const activation = navigator.userActivation;
   if (!activation || activation.isActive) {
-    try {
-      playAttempt = video.play() ?? null;
-    } catch {
-      playAttempt = null;
-    }
+    // A refused play() rejects its promise; it never throws.
+    playAttempt = video.play() ?? null;
     playAttempt?.catch(() => {});
   }
   const at = pointer();
