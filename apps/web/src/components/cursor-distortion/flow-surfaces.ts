@@ -31,6 +31,8 @@ const FLOW = "data-flow";
 const MIN_WIDTH_SHARE = 0.9;
 /** Mutations are batched: one rescan at most this often. */
 const SCAN_THROTTLE_MS = 250;
+/** A shell must be at least this share of the view tall to set the page colour. */
+const SHELL_HEIGHT_SHARE = 0.75;
 /** A surface still waiting for hydration is looked at again this often. */
 const HYDRATION_RETRY_MS = 400;
 
@@ -61,11 +63,53 @@ export function pageColor(): Rgb {
   return [255, 255, 255];
 }
 
+type Surface = { background: ReturnType<typeof parseCssColor>; picture: boolean };
+
+/** A box the scan may look at, or null (the footer, kept, hidden, fixed or sticky). */
+function readSurface(element: Element): Surface | null {
+  if (!(element instanceof HTMLElement)) return null;
+  if (element.tagName === "FOOTER" || element.hasAttribute("data-flow-keep")) return null;
+  const style = getComputedStyle(element);
+  if (style.display === "none" || style.position === "fixed" || style.position === "sticky") {
+    return null;
+  }
+  return {
+    background: parseCssColor(style.backgroundColor),
+    picture: style.backgroundImage !== "none",
+  };
+}
+
+/**
+ * The colour of the page's shell: the first opaque full-width box under
+ * the content, when it fills most of the view. Null when that box is
+ * smaller (a band, a hero of its own) or there is none.
+ */
+function shellSurface(content: Element, minWidth: number): Rgb | null {
+  const minHeight = window.innerHeight * SHELL_HEIGHT_SHARE;
+  const queue: Element[] = [content];
+  for (let index = 0; index < queue.length && index < 60; index += 1) {
+    const element = queue[index];
+    const surface = readSurface(element);
+    if (!surface) continue;
+    if (surface.picture) return null;
+    const { background } = surface;
+    if (background && background.alpha > 0.01) {
+      const fills = element.getBoundingClientRect().height >= minHeight;
+      return background.alpha >= 0.99 && fills ? background.rgb : null;
+    }
+    for (const child of element.children) {
+      if (child.getBoundingClientRect().width >= minWidth) queue.push(child);
+    }
+  }
+  return null;
+}
+
 export class FlowSurfaces {
   private attached = false;
   private observer: MutationObserver | null = null;
   private timer = 0;
   private lastScan = 0;
+  private shell: Rgb | null = null;
 
   /** Marks the page and clears its surfaces. Returns the page colour it matched. */
   attach(): Rgb {
@@ -96,7 +140,25 @@ export class FlowSurfaces {
     document.documentElement.removeAttribute(SCAN);
   }
 
-  /** Rescans now (a theme switch, a resize, a route change). Returns the page colour. */
+  /**
+   * The colour the stage paints under a page whose shell has a colour of
+   * its own (null: the body's colour). See `scan`.
+   */
+  get shellColor(): Rgb | null {
+    return this.shell;
+  }
+
+  /**
+   * Rescans now (a theme switch, a resize, a route change). Returns the
+   * colour the stage should paint: the page colour.
+   *
+   * The page colour is the body's, unless the page sits in a shell of
+   * another colour that fills the view (the events, careers, research,
+   * publications and projects pages wrap everything in one): the first
+   * opaque full-width box decides. The stage then paints the shell's
+   * colour, the shell and its surfaces in that colour clear, and the
+   * header reads the shell's colour where it looks through them.
+   */
   scan(): Rgb {
     const html = document.documentElement;
     window.clearTimeout(this.timer);
@@ -104,25 +166,27 @@ export class FlowSurfaces {
     this.lastScan = performance.now();
     // The rule stays off while this reads the real colours.
     html.setAttribute(SCAN, "");
-    const color = pageColor();
+    const body = pageColor();
     const previous = new Set(document.querySelectorAll(`[${MARK}]`));
     const marked = new Set<Element>();
     let waiting = false;
+    let color = body;
+    this.shell = null;
     const content = document.getElementById("smooth-content");
     const minWidth = (html.clientWidth || window.innerWidth) * MIN_WIDTH_SHARE;
     if (content) {
+      const shell = shellSurface(content, minWidth);
+      if (shell && !sameColor(shell, body)) {
+        color = shell;
+        this.shell = shell;
+      }
       const queue: Element[] = [content];
       for (let index = 0; index < queue.length && index < 600; index += 1) {
         const element = queue[index];
-        if (!(element instanceof HTMLElement)) continue;
-        if (element.tagName === "FOOTER" || element.hasAttribute("data-flow-keep")) continue;
-        const style = getComputedStyle(element);
-        if (style.display === "none" || style.position === "fixed" || style.position === "sticky") {
-          continue;
-        }
-        const background = parseCssColor(style.backgroundColor);
-        const picture = style.backgroundImage !== "none";
-        let seeThrough = !picture;
+        const surface = readSurface(element);
+        if (!surface) continue;
+        let seeThrough = !surface.picture;
+        const { background } = surface;
         if (background && background.alpha > 0.01) {
           if (background.alpha >= 0.99 && sameColor(background.rgb, color)) {
             if (element === content) {

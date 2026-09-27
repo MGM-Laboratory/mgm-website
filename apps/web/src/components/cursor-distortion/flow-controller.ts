@@ -3,6 +3,8 @@ import type { FlowEngine, FlowFailure } from "@/components/cursor-distortion/flo
 import { FlowSurfaces, pageColor } from "@/components/cursor-distortion/flow-surfaces";
 import { isArticleTransitionBusy, onArticleTransitionChange } from "@/lib/article-transition";
 import { setGlHost } from "@/lib/gl-host";
+import { registerHeaderToneProvider, type HeaderToneProvider } from "@/lib/header-tone";
+import { probePoint } from "@/lib/header-tone-probe";
 import { finePointer } from "@/lib/motion/pointer";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 
@@ -84,6 +86,7 @@ class FlowController {
   private readonly offs: Array<() => void> = [];
   private cancelIdle: (() => void) | null = null;
   private themeObserver: MutationObserver | null = null;
+  private offTone: (() => void) | null = null;
   private resizeTimer = 0;
 
   constructor() {
@@ -202,13 +205,32 @@ class FlowController {
       attributeFilter: ["class"],
     });
     window.addEventListener("resize", this.onResize);
+    this.offTone = registerHeaderToneProvider(this.headerTone);
     setGlHost(engine);
   }
+
+  /**
+   * The glass header looks through cleared surfaces to the body. Under a
+   * page shell of its own colour it must see that colour instead, which is
+   * what the stage paints there. Elsewhere the DOM probe is already right.
+   */
+  private readonly headerTone: HeaderToneProvider = (zones) => {
+    const shell = this.surfaces.shellColor;
+    if (!shell) return undefined;
+    const content = document.getElementById("smooth-content");
+    const skip = (element: Element) =>
+      element.closest("header") !== null && !content?.contains(element);
+    return zones.map((zone) =>
+      zone.points.map((point) => probePoint(point.x, point.y, skip, shell)),
+    );
+  };
 
   private hide() {
     if (!this.shown) return;
     this.shown = false;
     setGlHost(null);
+    this.offTone?.();
+    this.offTone = null;
     this.themeObserver?.disconnect();
     this.themeObserver = null;
     window.removeEventListener("resize", this.onResize);
