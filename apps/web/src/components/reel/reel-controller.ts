@@ -16,6 +16,7 @@ import {
 } from "@/components/reel/reel-math";
 import { lineHalfWidth, linePath, reelLine } from "@/components/reel/reel-line";
 import { ReelTestCard } from "@/components/reel/reel-test-card";
+import { labNote } from "@/lib/lab-notes";
 import { finePointer, onPointer, pointer } from "@/lib/motion/pointer";
 import { random, randomInt, randomPick } from "@/lib/random";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
@@ -316,6 +317,7 @@ export class ReelController {
   private readoutFront = 0;
   private nextReadoutAt = 3.2;
   private nextNudgeAt = 2.2;
+  private greeted = false;
   private lastTimecode: string | null = null;
   private loops = 1;
   private lastVideoTime = 0;
@@ -1247,6 +1249,16 @@ export class ReelController {
     if (hovered || this.pressTarget)
       this.nextNudgeAt = Math.max(this.nextNudgeAt, this.clock + 2.4);
     if (btnR >= 1 && this.decoT >= 1.4) {
+      // The first time the whole film sits on screen, a word from the lab.
+      if (!this.greeted && this.hasVideo && s.to.y >= 0 && s.to.y + s.to.h <= s.vh + 1) {
+        this.greeted = true;
+        labNote({
+          id: "reel-there-we-are",
+          text: "There we are. Press play whenever you have a minute.",
+          tone: "yellow",
+          shape: "triangle",
+        });
+      }
       if (this.clock >= this.nextNudgeAt) this.nudgeWatch();
       if (this.clock >= this.nextSwapAt) this.swapMarks();
       if ((hovered || mobile) && this.clock >= this.nextStripAt) this.cycleStrip(false);
