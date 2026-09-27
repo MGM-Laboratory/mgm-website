@@ -6,7 +6,6 @@ import Link from "next/link";
 import type { HomeContent } from "@repo/shared";
 import { ReelController } from "@/components/reel/reel-controller";
 import { startReelGl } from "@/components/reel/reel-gl-driver";
-import { ReelPlayerHost } from "@/components/reel/player/reel-player-host";
 import { REEL_COPY } from "@/data/reel";
 import { homeVideoSource } from "@/lib/home-cms";
 import { attachMagnetic } from "@/lib/motion/magnetic";
@@ -120,6 +119,10 @@ function PlayWord({ text }: { text: string }) {
  * ribbon in WebGL (reel-gl-driver.ts); everything else runs the DOM
  * version of the same choreography. Phones stack the section and skip the
  * morph and the pin; reduced motion shows the finished state, still.
+ *
+ * The full-screen player is not mounted here: the page mounts one
+ * `<ReelPlayerHost />` (components/reel/player), which answers
+ * `openReelPlayer()` from lib/reel-player.ts.
  */
 export function ReelSection({ content }: Readonly<{ content: HomeContent }>) {
   const rootRef = useRef<HTMLElement>(null);
@@ -331,8 +334,6 @@ export function ReelSection({ content }: Readonly<{ content: HomeContent }>) {
           </div>
         </div>
       </div>
-
-      <ReelPlayerHost />
     </section>
   );
 }
