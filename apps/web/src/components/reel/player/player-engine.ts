@@ -938,10 +938,11 @@ export class PlayerEngine {
 
   private pictureZone(x: number, y: number): Zone {
     const b = this.boxes;
-    // The generous centre of the picture plays and pauses; its edges close.
+    // Most of the picture says Close, as the default should: only a disc at
+    // its centre plays and pauses (the control row and Space/K do too).
     const v = b.video;
-    const rx = Math.max(110, v.width * 0.27);
-    const ry = Math.max(90, v.height * 0.3);
+    const rx = Math.max(80, Math.min(v.width, v.height) * 0.16);
+    const ry = rx;
     const dx = (x - (v.x + v.width / 2)) / rx;
     const dy = (y - (v.y + v.height / 2)) / ry;
     const reach = this.zone === "toggle" && !this.control ? 1.1 : 1;
