@@ -36,7 +36,14 @@ const LOCK_OWNER = "reel-player";
 const CONTINUE_WITHIN_SECONDS = 12;
 /** Closing this close to the end counts as done: the next open starts over. */
 const NEAR_END_SECONDS = 8;
-const DEV_VIDEO = "/api/home-cms/video/home-video-08102fd9-ea7f-4939-b929-28e86b231709.mp4";
+/** Development only: the homepage video already on the page (the reel's loop), if any. */
+function pageVideoSource() {
+  for (const video of Array.from(document.querySelectorAll("video"))) {
+    const src = video.currentSrc || video.src;
+    if (src.includes("/api/home-cms/video/")) return src;
+  }
+  return null;
+}
 
 type PlayerUi = ComponentType<PlayerUiProps>;
 
@@ -289,19 +296,23 @@ export function ReelPlayerHost() {
   useEffect(() => () => endNow(), [endNow]);
 
   // Development only: open the player from the console without the reel,
-  // for example `__openReelPlayer()` or `__openReelPlayer({ src })`.
+  // for example `__openReelPlayer()` (the homepage video on the page) or
+  // `__openReelPlayer({ src })`.
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
     const target = window as unknown as {
       __openReelPlayer?: (options?: Partial<ReelPlayerRequest>) => boolean;
     };
-    target.__openReelPlayer = (options) =>
-      openReelPlayer({
-        src: DEV_VIDEO,
+    target.__openReelPlayer = (options) => {
+      const src = options?.src ?? pageVideoSource();
+      if (!src) return false;
+      return openReelPlayer({
         startTime: 0,
         returnFocus: document.activeElement as HTMLElement | null,
         ...options,
+        src,
       });
+    };
     return () => {
       delete target.__openReelPlayer;
     };
