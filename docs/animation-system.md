@@ -240,9 +240,9 @@ A streamed page hydrates its sections after the cursor flow may already be up. T
 - **Engine.** `reel/player/player-engine.ts`, one GSAP ticker callback while open: idle hide after `2.5 s` (the close button stays on touch), a buffering chase of brand shapes, plus marks drifting in letterbox bars, and an ending that bursts shapes from the timeline's end, posts `reel-finished` and irises closed after `1.6 s`. Media Session handlers; the Fullscreen API on phones only.
 - **Accessibility.** `role="dialog"`, `aria-modal`, visible and focusable close, play/pause and sound buttons at every size, a `role="slider"` timeline with `aria-valuetext` in words, a focus trap, `aria-live` announcements, and Esc, Space/K, M, arrows (±`5 s`), Home/End and Page Up/Page Down.
 
-### Cursor flow
+## Cursor flow
 
-`CursorFlow` (`cursor-distortion/cursor-flow.tsx`) is mounted by `components/smooth-scroll.tsx` on every public route, with `active` false on project detail pages and in the articles library (they draw cursor effects of their own). `flow-controller.ts` owns one stage for the whole visit: hiding it on those routes releases its big buffers, and returning shows it again, already compiled.
+The cursor flow runs on every public route, not only on `/`. `CursorFlow` (`cursor-distortion/cursor-flow.tsx`) is mounted by `components/smooth-scroll.tsx` on every public route, with `active` false on project detail pages and in the articles library (they draw cursor effects of their own). `flow-controller.ts` owns one stage for the whole visit: hiding it on those routes releases its big buffers, and returning shows it again, already compiled.
 
 - **Who gets it.** A fine pointer, motion allowed, and a hardware WebGL2 context: a software renderer is rejected by its renderer string (SwiftShader, llvmpipe and similar), and one that hides its name by a timed warm-up frame. A slow renderer or a lost context hands the page back to plain CSS for good, and so does reduced motion switched on mid-visit. Everyone else never loads it.
 - **When it loads.** Never in the first chunk: the engine and three.js are imported once the browser is idle after load, or soon after the first mouse move.
