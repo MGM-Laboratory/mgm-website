@@ -18,6 +18,7 @@ import {
 import { peekProjectReturn } from "@/lib/project-transition";
 import { waitForGridReveal } from "@/lib/projects-intro";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
+import { startFeaturedProjectFluid } from "./featured-project-fluid";
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring
 // happens before first paint.
@@ -72,16 +73,19 @@ export function ProjectCardCover({
   alt,
   slug,
   index,
+  standalone = false,
 }: {
   coverUrl?: string;
   alt: string;
   slug: string;
   index: number;
+  standalone?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const lensRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const edgeRef = useRef<HTMLImageElement>(null);
+  const fluidCanvasRef = useRef<HTMLCanvasElement>(null);
   const fallbackPattern = FALLBACK_PATTERNS[slug.length % FALLBACK_PATTERNS.length];
 
   // Read once, synchronously during the first render (like the heroes read
@@ -97,8 +101,17 @@ export function ProjectCardCover({
     const frame = frameRef.current;
     const root = frame?.closest("a");
     if (!frame || !root) return;
+    if (standalone) return;
     return registerStageCard({ root, frame, image: imageRef.current, index });
-  }, [index]);
+  }, [index, standalone]);
+
+  useIsomorphicLayoutEffect(() => {
+    const frame = frameRef.current;
+    const image = imageRef.current;
+    const canvas = fluidCanvasRef.current;
+    if (!standalone || !frame || !image || !canvas) return;
+    return startFeaturedProjectFluid(frame, image, canvas);
+  }, [standalone]);
 
   // The landing card's failsafe (the overlay normally unhides it long
   // before this fires).
@@ -209,7 +222,7 @@ export function ProjectCardCover({
     // scroll) and once the list's reveal rise has ended.
     const check = () => {
       if (!armed || !inView || ownedByStage()) return;
-      if (gridRevealState.opacity < OPENING_MIN_REVEAL_OPACITY) return;
+      if (!standalone && gridRevealState.opacity < OPENING_MIN_REVEAL_OPACITY) return;
       const rect = frame.getBoundingClientRect();
       const onScreen = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
       if (onScreen < OPENING_VISIBLE_SHARE * rect.height) return;
@@ -254,7 +267,8 @@ export function ProjectCardCover({
       afterFade = gsap.delayedCall(REVEAL_FADE_SECONDS, check);
       afterRise = gsap.delayedCall(REVEAL_RISE_SECONDS, check);
     };
-    void waitForGridReveal().then(arm);
+    if (standalone) arm();
+    else void waitForGridReveal().then(arm);
 
     // The stage taking this card over, or handing it back (a lost context).
     const ownership = new MutationObserver(() => {
@@ -317,6 +331,7 @@ export function ProjectCardCover({
     // Camera focus: blur in fast, then pull focus back to sharp. Built per
     // enter from the current filter so re-hovering mid-blur stays smooth.
     const focusIn = () => {
+      if (standalone) return;
       gsap.killTweensOf(img, "filter");
       gsap
         .timeline()
@@ -440,7 +455,7 @@ export function ProjectCardCover({
       offReduced();
       stop();
     };
-  }, []);
+  }, [standalone]);
 
   return (
     <div
@@ -499,6 +514,13 @@ export function ProjectCardCover({
           />
         </div>
       )}
+      {standalone && coverUrl ? (
+        <canvas
+          ref={fluidCanvasRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300"
+        />
+      ) : null}
     </div>
   );
 }

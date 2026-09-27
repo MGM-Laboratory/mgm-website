@@ -62,7 +62,7 @@ export function Magnet({ step, index }: { step: ProcessMagnet; index: number }) 
           </div>
           <div className="relative" data-part="squash">
             <div className="relative [transform-style:preserve-3d]" data-part="flip">
-              <div className="flex items-center gap-4 [backface-visibility:hidden] sm:gap-5">
+              <div className="relative flex items-center gap-4 [backface-visibility:hidden] sm:gap-5">
                 <span className={cn(wordType, "text-foreground")}>{step.word}</span>
                 <span className="relative block shrink-0">
                   <span
@@ -83,6 +83,15 @@ export function Magnet({ step, index }: { step: ProcessMagnet; index: number }) 
                     </svg>
                   </span>
                 </span>
+                {index === 0 ? (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -top-8 left-0 rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-1 text-[0.6875rem] leading-none font-semibold tracking-wide text-foreground shadow-[var(--shadow-1)]"
+                  >
+                    <span className="hidden pointer-fine:inline">Drag me, just for fun</span>
+                    <span className="pointer-fine:hidden">Hold and move me, just for fun</span>
+                  </span>
+                ) : null}
               </div>
               {/* The back: how the lab does this step. Wider than most
                   fronts, so it floats centred over the magnet instead of

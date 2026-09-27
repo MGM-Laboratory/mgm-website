@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Hand, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 import { PROCESS_COPY, PROCESS_ROWS } from "@/data/process-magnets";
 
@@ -27,6 +27,13 @@ export function ProcessSection() {
       for (const el of root.querySelectorAll<HTMLElement>(".process-item")) el.style.opacity = "1";
     };
     let idle = 0;
+    let idleIsCallback = false;
+    const cancelPending = () => {
+      if (!idle) return;
+      if (idleIsCallback) window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+      idle = 0;
+    };
     let requested = false;
     const load = () => {
       if (requested) return;
@@ -38,10 +45,10 @@ export function ProcessSection() {
         idle = 0;
         start();
       };
-      idle =
-        typeof window.requestIdleCallback === "function"
-          ? window.requestIdleCallback(run, { timeout: 900 })
-          : window.setTimeout(run, 60);
+      idleIsCallback = typeof window.requestIdleCallback === "function";
+      idle = idleIsCallback
+        ? window.requestIdleCallback(run, { timeout: 900 })
+        : window.setTimeout(run, 60);
     };
     const start = () => {
       import("./magnet-board")
@@ -61,11 +68,7 @@ export function ProcessSection() {
     // magnets now and load straight away (the board then skips its throw).
     const onFocusIn = () => {
       if (requested && !idle) return;
-      if (idle) {
-        if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
-        window.clearTimeout(idle);
-        idle = 0;
-      }
+      cancelPending();
       requested = true;
       observer.disconnect();
       reveal();
@@ -83,10 +86,7 @@ export function ProcessSection() {
       cancelled = true;
       root.removeEventListener("focusin", onFocusIn);
       observer.disconnect();
-      if (idle) {
-        if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
-        window.clearTimeout(idle);
-      }
+      cancelPending();
       dispose?.();
     };
   }, []);
@@ -96,13 +96,11 @@ export function ProcessSection() {
       id="process"
       ref={rootRef}
       aria-labelledby="process-heading"
-      className="relative flex flex-col overflow-x-clip bg-[var(--surface-muted)] px-6 pt-16 pb-8 [--magnet-shadow:0.3] sm:min-h-[max(61rem,calc(100svh-4rem))] sm:px-10 sm:pt-20 sm:pb-12 lg:px-16 dark:[--magnet-shadow:0.7]"
+      className="relative flex flex-col overflow-x-clip bg-[var(--surface-muted)] px-6 pt-16 pb-8 [--magnet-shadow:0.3] sm:px-10 sm:pt-20 sm:pb-12 lg:px-16 dark:[--magnet-shadow:0.7]"
       data-magnet-board
     >
       <noscript>
-        <style>
-          {".reveal-hidden{opacity:1 !important}[data-magnet-hint]{display:none !important}"}
-        </style>
+        <style>{".reveal-hidden{opacity:1 !important}"}</style>
       </noscript>
 
       <h2
@@ -133,29 +131,7 @@ export function ProcessSection() {
         ))}
       </div>
 
-      {/* Open board: room to play below the poster. */}
-      <div aria-hidden className="min-h-36 flex-1" />
-
-      <div
-        className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4 sm:mt-8"
-        data-magnet-controls
-      >
-        <noscript>
-          <p className="max-w-xl text-sm leading-relaxed text-foreground/70">
-            {PROCESS_COPY.hintStatic}
-          </p>
-        </noscript>
-        <p
-          className="flex max-w-xl items-start gap-3 text-sm leading-relaxed text-foreground/70"
-          data-magnet-hint
-        >
-          <Hand aria-hidden className="mt-0.5 size-4 shrink-0" strokeWidth={2.25} />
-          <span>
-            {PROCESS_COPY.hint}{" "}
-            <span className="hidden pointer-fine:inline">{PROCESS_COPY.hintFine}</span>
-            <span className="pointer-fine:hidden">{PROCESS_COPY.hintTouch}</span>
-          </span>
-        </p>
+      <div className="mt-8 flex items-center sm:mt-10" data-magnet-controls>
         <span className="inline-flex" data-magnet-reset-wrap>
           <button
             className="invisible inline-flex h-10 items-center gap-2 rounded-full border border-foreground/15 px-4 text-sm font-medium text-foreground opacity-0 transition-colors hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"

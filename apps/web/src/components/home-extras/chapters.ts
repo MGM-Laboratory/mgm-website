@@ -19,9 +19,9 @@ export type HomeChapter = {
 
 export const HOME_CHAPTERS = {
   reel: { number: "03", label: "Meet the lab", tone: "red", shape: "triangle" },
-  competencies: { number: "04", label: "What we do", tone: "yellow", shape: "circle" },
-  trustedBy: { number: "05", label: "Who we build with", tone: "green", shape: "square" },
-  projects: { number: "06", label: "What we made", tone: "blue", shape: "triangle" },
+  projects: { number: "04", label: "What we made", tone: "blue", shape: "triangle" },
+  competencies: { number: "05", label: "What we do", tone: "yellow", shape: "circle" },
+  trustedBy: { number: "06", label: "Who we build with", tone: "green", shape: "square" },
   publications: { number: "07", label: "What we learned", tone: "red", shape: "plus" },
   articles: { number: "08", label: "What we wrote", tone: "yellow", shape: "square" },
   finale: { number: "09", label: "Your turn", tone: "blue", shape: "circle" },

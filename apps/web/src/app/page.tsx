@@ -8,7 +8,6 @@ import { FeaturedProjectsSection } from "@/components/sections/featured-projects
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { ReelSection } from "@/components/reel/reel-section";
 import { ReelPlayerHost } from "@/components/reel/player/reel-player-host";
-import { LabNotes } from "@/components/lab-notes/lab-notes";
 import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
 import { HomeFinale } from "@/components/home-extras/home-finale";
 import { publishedArticles } from "@/lib/article-cms";
@@ -43,15 +42,14 @@ export default async function Home() {
         <Hero />
         <ProcessSection />
         <ReelSection content={homeContent} />
+        <FeaturedProjectsSection records={projects} />
         <CoreCompetenciesSection />
         <TrustedBySection compact chapter={HOME_CHAPTERS.trustedBy} />
-        <FeaturedProjectsSection records={projects} />
         <PublicationsPreviewSection records={publications} />
         <ArticlesSection initialRecords={initialArticles} />
       </main>
       <CtaFooter lead={<HomeFinale />} />
       <ReelPlayerHost />
-      <LabNotes />
     </div>
   );
 }

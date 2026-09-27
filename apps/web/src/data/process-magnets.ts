@@ -103,13 +103,6 @@ export const PROCESS_MAGNETS: ProcessMagnet[] = PROCESS_ROWS.flat();
 export const PROCESS_COPY = {
   chapterNumber: "02",
   chapter: "How we think",
-  hint: "This is how we work. The order changes every day, so go ahead and move them.",
-  /** Without scripts nothing moves, so the hint only states the idea. */
-  hintStatic: "This is how we work. The order changes every day.",
-  /** Appended for a mouse or trackpad. */
-  hintFine: "Drag one anywhere, or click it to flip it over.",
-  /** Appended for touch screens. */
-  hintTouch: "Press and hold one to pick it up, or tap it to flip it over.",
   reset: "Put them back",
   /** Read after each magnet's word, as its accessible name. */
   instructions: "Press Enter to flip, arrow keys to move",
