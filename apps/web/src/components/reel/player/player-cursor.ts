@@ -78,15 +78,28 @@ const TONE_FALLBACK: Record<Tone, [number, number, number]> = {
 function parseHex(value: string): [number, number, number] | null {
   const hex = value.trim().replace("#", "");
   if (!/^[0-9a-f]{6}$/i.test(hex)) return null;
-  return [0, 2, 4].map((i) => Number.parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
+  return [
+    Number.parseInt(hex.slice(0, 2), 16),
+    Number.parseInt(hex.slice(2, 4), 16),
+    Number.parseInt(hex.slice(4, 6), 16),
+  ];
 }
 
 /** The brand accents, read from the site tokens (the player stage is always dark). */
 function readTones() {
   const style = getComputedStyle(document.documentElement);
-  const tones = {} as Record<Tone, [number, number, number]>;
+  const tones = new Map<Tone, [number, number, number]>();
   for (const tone of Object.keys(TONE_FALLBACK) as Tone[]) {
-    tones[tone] = parseHex(style.getPropertyValue(`--brand-${tone}`)) ?? TONE_FALLBACK[tone];
+    const fallback =
+      tone === "yellow"
+        ? TONE_FALLBACK.yellow
+        : tone === "blue"
+          ? TONE_FALLBACK.blue
+          : tone === "red"
+            ? TONE_FALLBACK.red
+            : TONE_FALLBACK.green;
+    const value = parseHex(style.getPropertyValue(`--brand-${tone}`)) ?? fallback;
+    tones.set(tone, value);
   }
   return tones;
 }
@@ -141,7 +154,7 @@ export class PlayerCursor {
 
   constructor(private readonly el: CursorElements) {
     this.roller = new LabelRoller(el.label);
-    this.color = [...this.tones.yellow];
+    this.color = [...(this.tones.get("yellow") ?? TONE_FALLBACK.yellow)];
     this.points = new Float32Array(this.shape("disc"));
     this.target = this.points;
     el.fill.setAttribute("d", outlinePath(this.points));
@@ -249,10 +262,14 @@ export class PlayerCursor {
     if (this.morphing) this.morph(dt, reduced);
 
     // Colour, eased in a quarter second (instant under reduced motion).
-    const tone = this.tones[look.tone];
-    for (let i = 0; i < 3; i++) {
-      this.color[i] = reduced ? tone[i] : damp(this.color[i], tone[i], 1e-7, dt);
-    }
+    const tone = this.tones.get(look.tone) ?? TONE_FALLBACK[look.tone];
+    this.color = reduced
+      ? [...tone]
+      : [
+          damp(this.color[0], tone[0], 1e-7, dt),
+          damp(this.color[1], tone[1], 1e-7, dt),
+          damp(this.color[2], tone[2], 1e-7, dt),
+        ];
     const fill = `rgb(${this.color.map((c) => Math.round(c)).join(",")})`;
 
     // The liquid: fills or drains the body, sloshing with sideways motion.
@@ -322,9 +339,11 @@ export class PlayerCursor {
     let half = 0;
     const p = this.points;
     for (let i = 0; i < p.length; i += 2) {
-      if (p[i + 1] < top) top = p[i + 1];
-      if (p[i + 1] > bottom) bottom = p[i + 1];
-      if (Math.abs(p[i]) > half) half = Math.abs(p[i]);
+      const x = p.at(i) ?? 0;
+      const y = p.at(i + 1) ?? 0;
+      if (y < top) top = y;
+      if (y > bottom) bottom = y;
+      if (Math.abs(x) > half) half = Math.abs(x);
     }
     return { top, bottom, half };
   }
@@ -345,12 +364,15 @@ export class PlayerCursor {
       let moving = false;
       for (let s = 0; s < steps; s++) {
         for (let i = 0; i < p.length; i++) {
-          v[i] += (k * (t[i] - p[i]) - c * v[i]) * h;
-          p[i] += v[i] * h;
+          const velocity = v.at(i) ?? 0;
+          const position = p.at(i) ?? 0;
+          const target = t.at(i) ?? 0;
+          v.set([velocity + (k * (target - position) - c * velocity) * h], i);
+          p.set([position + (velocity + (k * (target - position) - c * velocity) * h) * h], i);
         }
       }
       for (let i = 0; i < p.length; i++) {
-        if (Math.abs(v[i]) > 0.4 || Math.abs(t[i] - p[i]) > 0.05) {
+        if (Math.abs(v.at(i) ?? 0) > 0.4 || Math.abs((t.at(i) ?? 0) - (p.at(i) ?? 0)) > 0.05) {
           moving = true;
           break;
         }

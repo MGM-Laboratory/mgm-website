@@ -65,16 +65,15 @@ function buildRibbon() {
   const t = new Float32Array(count * 2);
   const ao = new Float32Array(count * 2);
   const position = new Float32Array(count * 6);
+  const sample = (values: Float32Array, index: number) => values.at(index) ?? 0;
   for (let i = 0; i < count; i += 1) {
     for (let k = 0; k < 2; k += 1) {
       const v = i * 2 + k;
-      center[v * 2] = line.x[i];
-      center[v * 2 + 1] = line.y[i];
-      normal[v * 2] = line.nx[i];
-      normal[v * 2 + 1] = line.ny[i];
-      side[v] = k === 0 ? -1 : 1;
-      t[v] = line.t[i];
-      ao[v] = line.ao[i];
+      center.set([sample(line.x, i), sample(line.y, i)], v * 2);
+      normal.set([sample(line.nx, i), sample(line.ny, i)], v * 2);
+      side.set([k === 0 ? -1 : 1], v);
+      t.set([sample(line.t, i)], v);
+      ao.set([sample(line.ao, i)], v);
     }
   }
   const index: number[] = [];
