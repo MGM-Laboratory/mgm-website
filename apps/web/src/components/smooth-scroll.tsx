@@ -6,8 +6,8 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 
+import { CursorFlow } from "@/components/cursor-distortion/cursor-flow";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
-import { InteractiveBackground } from "@/components/interactive-background";
 import { isArticlesPath } from "@/lib/article-transition";
 import { consumeScrollResetSkip, projectDetailSlug } from "@/lib/project-transition";
 
@@ -99,12 +99,12 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Project detail pages draw their own ambient layer (the topography
+      {/* The cursor flow behind the page. One stage for the whole visit:
+          project detail pages draw their own ambient layer (the topography
           canvas, which also reacts to the cursor), and the articles pages
-          live inside the library world (with cursor trails of its own): a
-          second cursor effect on top would fight them and ignores their
-          colours. */}
-      {isProjectDetail || isArticles ? null : <InteractiveBackground />}
+          live inside the library world (with cursor trails of its own), so
+          it steps aside there instead of fighting them. */}
+      <CursorFlow active={!isProjectDetail && !isArticles} />
       <div id="smooth-wrapper">
         {/* Offsets every page's content below the fixed SiteHeader — the
           header lives outside this wrapper (see layout.tsx) so it stays
