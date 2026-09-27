@@ -101,7 +101,8 @@ function shellSurface(content: Element, minWidth: number): Rgb | null {
   const contentHeight = content.getBoundingClientRect().height;
   const queue: Element[] = [content];
   for (let index = 0; index < queue.length && index < 60; index += 1) {
-    const element = queue[index];
+    const element = queue.at(index);
+    if (!element) continue;
     const surface = readSurface(element);
     if (!surface) continue;
     if (surface.picture) return null;
@@ -193,13 +194,13 @@ export class FlowSurfaces {
    * header reads the shell's colour where it looks through them.
    */
   scan(fromRetry = false): Rgb {
-    const html = document.documentElement;
+    const rootElement = document.documentElement;
     this.retries = fromRetry ? this.retries + 1 : 0;
     window.clearTimeout(this.timer);
     this.timer = 0;
     this.lastScan = performance.now();
     // The rule stays off while this reads the real colours.
-    html.setAttribute(SCAN, "");
+    rootElement.setAttribute(SCAN, "");
     const body = pageColor();
     const previous = new Set(document.querySelectorAll(`[${MARK}]`));
     const marked = new Set<Element>();
@@ -207,7 +208,7 @@ export class FlowSurfaces {
     let color = body;
     this.shell = null;
     const content = document.getElementById("smooth-content");
-    const minWidth = (html.clientWidth || window.innerWidth) * MIN_WIDTH_SHARE;
+    const minWidth = (rootElement.clientWidth || window.innerWidth) * MIN_WIDTH_SHARE;
     if (content) {
       const shell = shellSurface(content, minWidth);
       if (shell && !sameColor(shell, body)) {
@@ -216,7 +217,8 @@ export class FlowSurfaces {
       }
       const queue: Element[] = [content];
       for (let index = 0; index < queue.length && index < 600; index += 1) {
-        const element = queue[index];
+        const element = queue.at(index);
+        if (!element) continue;
         const surface = readSurface(element);
         if (!surface) continue;
         let seeThrough = !surface.picture;
@@ -242,7 +244,7 @@ export class FlowSurfaces {
     }
     for (const element of previous) if (!marked.has(element)) element.removeAttribute(MARK);
     for (const element of marked) if (!previous.has(element)) element.setAttribute(MARK, "");
-    html.removeAttribute(SCAN);
+    rootElement.removeAttribute(SCAN);
     // Hydration mutates nothing, so a surface left for it is retried on a timer.
     if (waiting && this.attached && this.retries < HYDRATION_RETRIES) {
       this.timer = window.setTimeout(() => {

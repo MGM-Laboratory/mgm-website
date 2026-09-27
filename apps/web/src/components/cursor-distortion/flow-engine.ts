@@ -379,7 +379,7 @@ export class FlowEngine implements GlHost {
     if (process.env.NODE_ENV !== "production") {
       console.debug(`[cursor-flow] warm frame ${perFrame.toFixed(2)} ms`);
     }
-    return !this.lost && perFrame < SLOW_PASS_MS;
+    return !this.renderer.getContext().isContextLost() && perFrame < SLOW_PASS_MS;
   }
 
   /** The page colour the stage clears to (sRGB bytes). */
@@ -468,7 +468,10 @@ export class FlowEngine implements GlHost {
   /** Development only: overrides the pass's look (tint, soft, step, phase) and redraws. */
   debugTune(values: Partial<Record<"uTint" | "uAbs" | "uPearl" | "uStep" | "uPhase", number>>) {
     for (const [name, value] of Object.entries(values)) {
-      if (typeof value === "number") this.compositeUniforms[name].value = value;
+      const uniform = Object.hasOwn(this.compositeUniforms, name)
+        ? (Reflect.get(this.compositeUniforms, name) as { value: number } | undefined)
+        : undefined;
+      if (uniform && typeof value === "number") uniform.value = value;
     }
     this.dirty = true;
     this.wake();
@@ -661,9 +664,9 @@ export class FlowEngine implements GlHost {
   // ------------------------------------------------------------- sizing
 
   private resize() {
-    const html = document.documentElement;
-    const width = Math.max(1, html.clientWidth || window.innerWidth);
-    const height = Math.max(1, html.clientHeight || window.innerHeight);
+    const rootElement = document.documentElement;
+    const width = Math.max(1, rootElement.clientWidth || window.innerWidth);
+    const height = Math.max(1, rootElement.clientHeight || window.innerHeight);
     let dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
     if (width * height * dpr * dpr > MAX_PIXELS) dpr = Math.sqrt(MAX_PIXELS / (width * height));
     this.lastDevicePixelRatio = window.devicePixelRatio;
@@ -808,7 +811,10 @@ export class FlowEngine implements GlHost {
   ) {
     if (values) {
       for (const [name, value] of Object.entries(values)) {
-        const uniform = material.uniforms[name];
+        const uniform = Object.hasOwn(material.uniforms, name)
+          ? (Reflect.get(material.uniforms, name) as { value: unknown } | undefined)
+          : undefined;
+        if (!uniform) continue;
         if (Array.isArray(value)) (uniform.value as Vector4).fromArray(value);
         else uniform.value = value;
       }
