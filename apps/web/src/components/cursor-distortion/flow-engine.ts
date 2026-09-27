@@ -153,6 +153,14 @@ function fieldTarget(width: number, height: number) {
 
 export class FlowEngine implements GlHost {
   readonly canvas: HTMLCanvasElement;
+  /**
+   * The canvas's fixed box. The canvas is not a direct child of <body> on
+   * purpose: page transitions that carry `body > canvas` along with the
+   * page (the articles portal drains the project covers that way) must
+   * leave this one alone. It is under the page, never over it, so the
+   * transition's own sheets cover it exactly as they cover the body.
+   */
+  private readonly layer: HTMLDivElement;
   readonly renderer: WebGLRenderer;
   readonly scene = new Scene();
   readonly camera = new OrthographicCamera(0, 1, 0, -1, -1000, 1000);
@@ -218,14 +226,12 @@ export class FlowEngine implements GlHost {
 
   constructor(options: FlowEngineOptions) {
     this.options = options;
-    this.canvas = document.createElement("canvas");
-    this.canvas.setAttribute("aria-hidden", "true");
-    this.canvas.dataset.cursorFlow = "";
-    Object.assign(this.canvas.style, {
+    this.layer = document.createElement("div");
+    this.layer.setAttribute("aria-hidden", "true");
+    this.layer.dataset.cursorFlowLayer = "";
+    Object.assign(this.layer.style, {
       position: "fixed",
       inset: "0",
-      width: "100%",
-      height: "100%",
       // Under every in-flow block of the page (a fixed element at z-index
       // 0 would paint over static content off the homepage), above the
       // root background the body's colour propagates to.
@@ -233,6 +239,14 @@ export class FlowEngine implements GlHost {
       pointerEvents: "none",
       display: "none",
     });
+    this.canvas = document.createElement("canvas");
+    this.canvas.dataset.cursorFlow = "";
+    Object.assign(this.canvas.style, {
+      display: "block",
+      width: "100%",
+      height: "100%",
+    });
+    this.layer.appendChild(this.canvas);
 
     this.renderer = new WebGLRenderer({
       canvas: this.canvas,
@@ -340,7 +354,7 @@ export class FlowEngine implements GlHost {
    */
   prepare(): boolean {
     if (this.lost) return false;
-    document.body.appendChild(this.canvas);
+    document.body.appendChild(this.layer);
     this.resize();
     // Warm every program, then time the heaviest frame (the stage pass).
     this.stageTarget = this.makeStageTarget();
@@ -390,7 +404,7 @@ export class FlowEngine implements GlHost {
     this.lastPointer.valid = false;
     this.brushValid = false;
     this.renderNow();
-    this.canvas.style.display = "block";
+    this.layer.style.display = "block";
     if (!this.visible) {
       this.visible = true;
       this.offs.push(
@@ -421,7 +435,7 @@ export class FlowEngine implements GlHost {
     this.visible = false;
     for (const off of this.offs.splice(0)) off();
     this.stop();
-    this.canvas.style.display = "none";
+    this.layer.style.display = "none";
     this.disposeStageTarget();
     this.owners.clear();
   }
@@ -508,7 +522,7 @@ export class FlowEngine implements GlHost {
     // Release the context now rather than whenever GC gets to it, so
     // repeated visits never pile contexts up.
     if (!lost) this.renderer.forceContextLoss();
-    this.canvas.remove();
+    this.layer.remove();
   }
 
   // ------------------------------------------------------------- the loop
