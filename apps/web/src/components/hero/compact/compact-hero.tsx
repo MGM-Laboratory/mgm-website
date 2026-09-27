@@ -54,6 +54,26 @@ function posterStyle(toy: Toy) {
   } as CSSProperties;
 }
 
+/** The phone icon rattles, as if it were the one being shaken. */
+function rattle(icon: SVGSVGElement | null, strong: boolean) {
+  if (!icon || !motionAllowed()) return;
+  const a = strong ? 16 : 9;
+  gsap.killTweensOf(icon);
+  gsap.fromTo(
+    icon,
+    { rotate: 0, x: 0 },
+    {
+      keyframes: {
+        rotate: [0, -a, a * 0.85, -a * 0.6, a * 0.35, 0],
+        x: [0, -1.5, 1.5, -1, 0.5, 0],
+      },
+      duration: strong ? 0.55 : 0.4,
+      ease: "none",
+      transformOrigin: "50% 50%",
+    },
+  );
+}
+
 function collectNodes(layer: HTMLElement) {
   const nodes = {} as Record<ToyId, ToyNodes>;
   for (const outer of layer.querySelectorAll<HTMLElement>("[data-toy]")) {
@@ -96,6 +116,7 @@ export function CompactHero() {
   const wordsRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
   const shakeRef = useRef<HTMLButtonElement>(null);
+  const shakeIconRef = useRef<SVGSVGElement>(null);
   const engineRef = useRef<Toybox | null>(null);
 
   const compact = useSyncExternalStore(
@@ -110,6 +131,7 @@ export function CompactHero() {
     const words = wordsRef.current;
     const layer = layerRef.current;
     const shakeButton = shakeRef.current;
+    const shakeIcon = shakeIconRef.current;
     if (!compact || !box || !words || !layer) return;
     const cta = box.querySelector<HTMLElement>(".compact-hero-cta");
 
@@ -218,6 +240,7 @@ export function CompactHero() {
       engineRef.current = null;
       splits.forEach((split) => split.revert());
       if (shakeButton) gsap.killTweensOf(shakeButton);
+      if (shakeIcon) gsap.killTweensOf(shakeIcon);
       delete box.dataset.toybox;
     };
   }, [compact, motionOk]);
@@ -264,13 +287,19 @@ export function CompactHero() {
         <button
           ref={shakeRef}
           type="button"
-          onClick={() => engineRef.current?.shake()}
+          onClick={() => {
+            engineRef.current?.shake();
+            rattle(shakeIconRef.current, true);
+          }}
+          onPointerEnter={(event) => {
+            if (event.pointerType !== "touch") rattle(shakeIconRef.current, false);
+          }}
           className={cn(
             styles.shake,
             "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]",
           )}
         >
-          <Vibrate aria-hidden className="size-4" strokeWidth={2.25} />
+          <Vibrate ref={shakeIconRef} aria-hidden className="size-4" strokeWidth={2.25} />
           <span className="max-[349px]:sr-only">Shake the box</span>
         </button>
       </div>
