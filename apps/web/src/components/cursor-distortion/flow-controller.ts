@@ -3,7 +3,11 @@ import type { FlowEngine, FlowFailure } from "@/components/cursor-distortion/flo
 import { FlowSurfaces, pageColor } from "@/components/cursor-distortion/flow-surfaces";
 import { isArticleTransitionBusy, onArticleTransitionChange } from "@/lib/article-transition";
 import { setGlHost } from "@/lib/gl-host";
-import { registerHeaderToneProvider, type HeaderToneProvider } from "@/lib/header-tone";
+import {
+  registerHeaderToneProvider,
+  requestHeaderToneSample,
+  type HeaderToneProvider,
+} from "@/lib/header-tone";
 import { probePoint } from "@/lib/header-tone-probe";
 import { finePointer } from "@/lib/motion/pointer";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
@@ -82,7 +86,15 @@ class FlowController {
   private state: "idle" | "loading" | "ready" | "off" = "idle";
   private engine: FlowEngine | null = null;
   private shown = false;
-  private readonly surfaces = new FlowSurfaces();
+  private readonly surfaces = new FlowSurfaces((color, shellChanged) => {
+    // A scan the controller did not ask for (new content, hydration, a
+    // resize) changed the page colour: repaint before the next frame.
+    if (this.shown && this.engine) {
+      this.engine.setBackground(color, isDark());
+      this.engine.renderNow();
+    }
+    if (shellChanged) requestHeaderToneSample();
+  });
   private readonly offs: Array<() => void> = [];
   private cancelIdle: (() => void) | null = null;
   private themeObserver: MutationObserver | null = null;

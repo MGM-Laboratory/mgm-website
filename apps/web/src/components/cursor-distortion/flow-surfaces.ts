@@ -38,6 +38,10 @@ const MIN_WIDTH_SHARE = 0.9;
 const SCAN_THROTTLE_MS = 250;
 /** A shell must be at least this share of the view tall to set the page colour. */
 const SHELL_HEIGHT_SHARE = 0.75;
+/** Without the footer inside it, a shell must be at least this share of the content. */
+const SHELL_CONTENT_SHARE = 0.9;
+/** Hydration retries give up after this many (about five seconds). */
+const HYDRATION_RETRIES = 12;
 /** A surface still waiting for hydration is looked at again this often. */
 const HYDRATION_RETRY_MS = 400;
 
@@ -86,11 +90,15 @@ function readSurface(element: Element): Surface | null {
 
 /**
  * The colour of the page's shell: the first opaque full-width box under
- * the content, when it fills most of the view. Null when that box is
- * smaller (a band, a hero of its own) or there is none.
+ * the content, when it holds the page (it contains the footer, or it is
+ * nearly as tall as the content) and fills most of the view. Null when
+ * that box is anything smaller (a coloured hero band, a section of its
+ * own) or there is none.
  */
 function shellSurface(content: Element, minWidth: number): Rgb | null {
   const minHeight = window.innerHeight * SHELL_HEIGHT_SHARE;
+  const footer = content.querySelector("footer");
+  const contentHeight = content.getBoundingClientRect().height;
   const queue: Element[] = [content];
   for (let index = 0; index < queue.length && index < 60; index += 1) {
     const element = queue[index];
@@ -99,8 +107,12 @@ function shellSurface(content: Element, minWidth: number): Rgb | null {
     if (surface.picture) return null;
     const { background } = surface;
     if (background && background.alpha > 0.01) {
-      const fills = element.getBoundingClientRect().height >= minHeight;
-      return background.alpha >= 0.99 && fills ? background.rgb : null;
+      if (background.alpha < 0.99 || element === content) return null;
+      const height = element.getBoundingClientRect().height;
+      const holdsPage =
+        (footer !== null && element.contains(footer)) ||
+        height >= contentHeight * SHELL_CONTENT_SHARE;
+      return holdsPage && height >= minHeight ? background.rgb : null;
     }
     for (const child of element.children) {
       if (child.getBoundingClientRect().width >= minWidth) queue.push(child);
@@ -115,6 +127,19 @@ export class FlowSurfaces {
   private timer = 0;
   private lastScan = 0;
   private shell: Rgb | null = null;
+  private retries = 0;
+  private reported: Rgb | null = null;
+  private reportedShell = false;
+  private readonly onColor: (color: Rgb, shellChanged: boolean) => void;
+
+  /**
+   * `onColor` hears every change of the page colour, whatever caused the
+   * scan (new content, a resize, hydration), so the stage never paints a
+   * stale colour under a cleared surface.
+   */
+  constructor(onColor: (color: Rgb, shellChanged: boolean) => void = () => {}) {
+    this.onColor = onColor;
+  }
 
   /** Marks the page and clears its surfaces. Returns the page colour it matched. */
   attach(): Rgb {
@@ -136,6 +161,9 @@ export class FlowSurfaces {
   /** Removes every marker: the page is exactly as it is without the stage. */
   detach() {
     this.attached = false;
+    this.reported = null;
+    this.reportedShell = false;
+    this.shell = null;
     this.observer?.disconnect();
     this.observer = null;
     window.clearTimeout(this.timer);
@@ -164,8 +192,9 @@ export class FlowSurfaces {
    * colour, the shell and its surfaces in that colour clear, and the
    * header reads the shell's colour where it looks through them.
    */
-  scan(): Rgb {
+  scan(fromRetry = false): Rgb {
     const html = document.documentElement;
+    this.retries = fromRetry ? this.retries + 1 : 0;
     window.clearTimeout(this.timer);
     this.timer = 0;
     this.lastScan = performance.now();
@@ -215,11 +244,17 @@ export class FlowSurfaces {
     for (const element of marked) if (!previous.has(element)) element.setAttribute(MARK, "");
     html.removeAttribute(SCAN);
     // Hydration mutates nothing, so a surface left for it is retried on a timer.
-    if (waiting && this.attached) {
+    if (waiting && this.attached && this.retries < HYDRATION_RETRIES) {
       this.timer = window.setTimeout(() => {
         this.timer = 0;
-        if (this.attached) this.scan();
+        if (this.attached) this.scan(true);
       }, HYDRATION_RETRY_MS);
+    }
+    const shellChanged = (this.shell !== null) !== this.reportedShell;
+    if (shellChanged || !this.reported || !sameColor(this.reported, color)) {
+      this.reported = color;
+      this.reportedShell = this.shell !== null;
+      if (this.attached) this.onColor(color, shellChanged);
     }
     return color;
   }
