@@ -168,6 +168,7 @@ class StyleWriter {
   }
 }
 
+// eslint-disable-next-line xss/no-mixed-html -- returns a boolean from an existing event target.
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
   return (
@@ -670,6 +671,7 @@ export class ReelController {
     // itself stands the snap down, and the smoother's scroll to the focused
     // element comes after this, so it arms whatever the progress is now
     // (the snap only moves while the morph is half done).
+    // eslint-disable-next-line xss/no-mixed-html -- event handler only updates animation state.
     const handleFocusIn = (event: FocusEvent) => {
       const el = event.target;
       if (!(el instanceof HTMLElement) || !el.matches(":focus-visible")) return;

@@ -144,6 +144,12 @@ export function LabNotes() {
     if (value) tl.pause();
     else tl.play();
   };
+  function releaseHold() {
+    setHold(false);
+  }
+  function engageHold() {
+    setHold(true);
+  }
 
   if (!mounted) return null;
 
@@ -162,18 +168,10 @@ export function LabNotes() {
           key={current.id + current.text}
           ref={cardRef}
           className="lab-note pointer-events-none invisible relative pointer-fine:pointer-events-auto flex items-start gap-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface-muted)] py-3 pr-10 pl-3 text-sm leading-snug text-foreground opacity-0 shadow-[var(--shadow-2)]"
-          onBlur={() => {
-            void setHold(false);
-          }}
-          onFocus={() => {
-            void setHold(true);
-          }}
-          onPointerEnter={() => {
-            void setHold(true);
-          }}
-          onPointerLeave={() => {
-            void setHold(false);
-          }}
+          onBlur={releaseHold}
+          onFocus={engageHold}
+          onPointerEnter={engageHold}
+          onPointerLeave={releaseHold}
         >
           <svg ref={shapeRef} aria-hidden className="mt-0.5 size-5 shrink-0" viewBox="0 0 24 24">
             <NoteShape shape={current.shape ?? "circle"} color={color} />

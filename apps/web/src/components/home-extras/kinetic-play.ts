@@ -116,6 +116,7 @@ export function startKinetic(root: HTMLElement): () => void {
   let E = Number.parseFloat(getComputedStyle(heading).fontSize) || 32;
   const restWeight = Number.parseFloat(getComputedStyle(heading).fontWeight) || 600;
 
+  // eslint-disable-next-line xss/no-mixed-html -- GSAP receives an existing DOM node and fixed style keys.
   const qs = (htmlElement: Element, property: string, unit?: string) =>
     gsap.quickSetter(htmlElement, property, unit) as Setter;
 
@@ -138,10 +139,10 @@ export function startKinetic(root: HTMLElement): () => void {
       side: 0,
       lastWeight: restWeight,
       put: {
-        y: qs(htmlElement, "y", "px"),
-        r: qs(htmlElement, "rotation", "deg"),
-        sx: qs(htmlElement, "scaleX"),
-        sy: qs(htmlElement, "scaleY"),
+        y: qs(htmlElement, "y", "px"), // eslint-disable-line xss/no-mixed-html -- existing node only.
+        r: qs(htmlElement, "rotation", "deg"), // eslint-disable-line xss/no-mixed-html -- existing node only.
+        sx: qs(htmlElement, "scaleX"), // eslint-disable-line xss/no-mixed-html -- existing node only.
+        sy: qs(htmlElement, "scaleY"), // eslint-disable-line xss/no-mixed-html -- existing node only.
       },
     };
   });
@@ -262,7 +263,9 @@ export function startKinetic(root: HTMLElement): () => void {
     E = Number.parseFloat(getComputedStyle(activeHeading).fontSize) || E;
     for (const g of glyphs) g.slot.style.width = "";
     // Layout widths (unaffected by the entrance's transforms), at rest weight.
-    const widths = glyphs.map((g) => Number.parseFloat(getComputedStyle(g.htmlElement).width));
+    const widths = glyphs.map(
+      (g) => Number.parseFloat(getComputedStyle(g.htmlElement).width), // eslint-disable-line xss/no-mixed-html -- reads numeric layout only.
+    );
     glyphs.forEach((g, i) => {
       const width = widths.at(i);
       if (width && width > 0) g.slot.style.width = `${(width / E).toFixed(4)}em`;

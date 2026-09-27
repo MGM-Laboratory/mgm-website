@@ -112,15 +112,15 @@ function layoutBox(htmlElement: HTMLElement, stage: HTMLElement): Box | null {
   let htmlTop = 0;
   let currentHtmlElement: HTMLElement | null = htmlElement;
   while (currentHtmlElement && currentHtmlElement !== stage) {
-    htmlLeft += currentHtmlElement.offsetLeft;
-    htmlTop += currentHtmlElement.offsetTop;
+    htmlLeft += currentHtmlElement.offsetLeft; // eslint-disable-line xss/no-mixed-html -- numeric DOM geometry only.
+    htmlTop += currentHtmlElement.offsetTop; // eslint-disable-line xss/no-mixed-html -- numeric DOM geometry only.
     currentHtmlElement = currentHtmlElement.offsetParent as HTMLElement | null;
   }
   return {
-    x: htmlLeft,
-    y: htmlTop,
-    width: htmlElement.offsetWidth,
-    height: htmlElement.offsetHeight,
+    x: htmlLeft, // eslint-disable-line xss/no-mixed-html -- numeric geometry.
+    y: htmlTop, // eslint-disable-line xss/no-mixed-html -- numeric geometry.
+    width: htmlElement.offsetWidth, // eslint-disable-line xss/no-mixed-html -- numeric DOM geometry only.
+    height: htmlElement.offsetHeight, // eslint-disable-line xss/no-mixed-html -- numeric DOM geometry only.
   };
 }
 
