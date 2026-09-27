@@ -50,10 +50,10 @@ import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";
  * `sin(velocity)` where the paint has faded. Scrolling carries the field
  * with the content and paints lightly under a still cursor.
  *
- * Every constant is lusion's 60 Hz per-frame value; each simulation step
- * scales them to its own length (`k^(dt*60)` for the decays, linearly for
- * the rest), so a 120 Hz screen shows the same trail as a 60 Hz one. The
- * 8-bit decay floor stays per step: scaling it would round to nothing.
+ * Every constant is lusion's 60 Hz per-frame value, and the simulation
+ * runs on a fixed 60 Hz step (see `simulate`), so a 120 Hz screen shows
+ * the same trail as a 60 Hz one. The composite runs on every display
+ * frame and follows scroll the field has not taken yet.
  *
  * Colour: display-referred throughout. The renderer's output colour space
  * is linear sRGB, which three.js reads as "no conversion", so a texture
@@ -84,6 +84,9 @@ const KEEP_VELOCITY = 0.975;
 const KEEP_SLOW = 0.95;
 const KEEP_FAST = 0.8;
 const INJECT_LEAK = 0.8;
+/** The simulation's fixed step, and the most steps one display frame may run. */
+const STEP_SECONDS = 1 / 60;
+const MAX_STEPS = 3;
 /** CSS px moved in one 60 Hz frame that reaches the full brush radius. */
 const RADIUS_RANGE = 100;
 /** Per-tap smear step: amount 3 / 4 x multiplier 5, in field texels per unit velocity. */
@@ -195,7 +198,12 @@ export class FlowEngine implements GlHost {
   private brush: Brush = { x: 0, y: 0, radius: 0, strength: 0 };
   private brushValid = false;
   private readonly inject = new Vector2();
+  /** The pointer where the last simulation step left it. */
   private lastPointer = { x: 0, y: 0, valid: false };
+  /** Display time owed to the fixed-step simulation (round and carry). */
+  private stepClock = 0;
+  /** Content movement (px) the simulation has not taken yet. */
+  private pendingScroll = 0;
   private lastStampAt = -Infinity;
   private content: HTMLElement | null = null;
   private lastTop: number | null = null;
@@ -263,16 +271,16 @@ export class FlowEngine implements GlHost {
       uFrom: { value: new Vector4() },
       uTo: { value: new Vector4() },
       uInject: { value: new Vector2() },
-      uKeep: { value: new Vector3() },
+      uKeep: { value: new Vector3(KEEP_VELOCITY, KEEP_SLOW, KEEP_FAST) },
       uAdvect: { value: PUSH },
       uWarpFreq: { value: WARP_FREQ },
       uWarpAmp: { value: WARP_AMP },
-      uGain: { value: 1 },
     });
     this.compositeUniforms = {
       tScene: { value: null },
       tField: { value: this.field.texture },
       uFieldTexel: { value: new Vector2(1, 1) },
+      uFieldShift: { value: new Vector2() },
       uViewport: { value: new Vector2(1, 1) },
       uBackground: { value: this.backgroundRaw },
       uStep: { value: SMEAR_STEP },
@@ -337,7 +345,7 @@ export class FlowEngine implements GlHost {
     // Warm every program, then time the heaviest frame (the stage pass).
     this.stageTarget = this.makeStageTarget();
     this.resetField();
-    this.simulateStep(1, 1 / 60, null, 0);
+    this.simulateStep(null, 0);
     this.renderComposite(true);
     this.renderComposite(false);
     const gl = this.renderer.getContext();
@@ -346,7 +354,7 @@ export class FlowEngine implements GlHost {
     const start = performance.now();
     const runs = 3;
     for (let run = 0; run < runs; run += 1) {
-      this.simulateStep(1, 1 / 60, null, 0);
+      this.simulateStep(null, 0);
       this.renderComposite(true);
       gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
     }
@@ -432,6 +440,8 @@ export class FlowEngine implements GlHost {
     this.inject.set(0, 0);
     this.brushValid = false;
     this.lastStampAt = -Infinity;
+    this.stepClock = 0;
+    this.pendingScroll = 0;
   }
 
   /** Development only: holds the paint where it is (for screenshots). */
@@ -569,6 +579,8 @@ export class FlowEngine implements GlHost {
       this.resetField();
       scroll = 0;
     }
+    // Collected until a simulation step takes it (a 120 Hz frame may run none).
+    this.pendingScroll += scroll;
 
     const state = pointer();
     const mouse = state.type === "mouse" || state.type === "pen";
@@ -584,13 +596,22 @@ export class FlowEngine implements GlHost {
     } else {
       this.lastPointer.valid = false;
     }
-    const stamping = canPaint && (moved || scroll !== 0);
+    const stamping = canPaint && (moved || this.pendingScroll !== 0);
     if (stamping) this.lastStampAt = now;
     // A frozen field (development screenshots) keeps showing as it is.
     const painting = this.frozen || now - this.lastStampAt < IDLE_AFTER_MS;
 
-    if (painting && !this.frozen) this.simulate(dt, state.x, state.y, stamping, scroll);
-    if (canPaint) this.lastPointer = { x: state.x, y: state.y, valid: true };
+    if (painting && !this.frozen) {
+      this.simulate(dt, state.x, state.y, stamping);
+    } else {
+      this.stepClock = 0;
+      this.pendingScroll = 0;
+    }
+    // Scroll the field has not taken yet still moves the trail with the content.
+    (this.compositeUniforms.uFieldShift.value as Vector2).set(
+      0,
+      this.pendingScroll / this.size.height,
+    );
 
     for (const listener of [...this.listeners]) listener(this.frame);
 
@@ -673,38 +694,38 @@ export class FlowEngine implements GlHost {
   // ------------------------------------------------------------- simulation
 
   /**
-   * Advances the field by `dt`. Steps are at most a 60 Hz frame long
-   * (a slow frame runs several, walking the pointer along its path), and
-   * every constant is scaled to its step.
+   * Advances the field on a fixed 60 Hz clock, whatever the display does:
+   * lusion's look is per frame (the brush radius, the injection, the
+   * advection and the 8-bit decay floor all count frames), so its 60 Hz
+   * trail is reproduced by running the same steps at the same rate. A
+   * 120 Hz screen runs a step every other frame; a slow frame runs up to
+   * three, walking the pointer along its path. Round and carry (not "while
+   * a full step is owed"), so vsync jitter at 60 Hz never alternates
+   * between zero and two steps.
    */
-  private simulate(dt: number, x: number, y: number, stamping: boolean, scroll: number) {
-    const steps = dt > 1 / 45 ? Math.min(3, Math.ceil(dt * 60 - 0.01)) : 1;
-    const stepDt = dt / steps;
-    const scale = stepDt * 60;
+  private simulate(dt: number, x: number, y: number, stamping: boolean) {
+    this.stepClock += dt;
+    const steps = Math.max(0, Math.min(MAX_STEPS, Math.round(this.stepClock * 60)));
+    this.stepClock = Math.max(-0.5 / 60, Math.min(0.5 / 60, this.stepClock - steps / 60));
+    if (steps === 0) return;
     const from = this.lastPointer.valid ? this.lastPointer : { x, y };
-    let jump = Math.hypot(x - from.x, y - from.y) > MAX_SEGMENT_PX;
+    const scroll = this.pendingScroll / steps;
+    this.pendingScroll = 0;
+    if (Math.hypot(x - from.x, y - from.y) > MAX_SEGMENT_PX) this.brushValid = false;
     for (let index = 1; index <= steps; index += 1) {
       const t = index / steps;
       const px = from.x + (x - from.x) * t;
       const py = from.y + (y - from.y) * t;
-      const moved = Math.hypot((x - from.x) / steps, (y - from.y) / steps + (3 * scroll) / steps);
-      if (jump) {
-        this.brushValid = false;
-        jump = false;
-      }
-      this.simulateStep(
-        scale,
-        stepDt,
-        stamping ? { x: px, y: py, moved, scroll: scroll / steps } : null,
-        scroll / steps,
-      );
+      // lusion's "distance moved": the pointer's own step plus three times the scroll.
+      const moved = Math.hypot((x - from.x) / steps, (y - from.y) / steps + 3 * scroll);
+      this.simulateStep(stamping ? { x: px, y: py, moved, scroll } : null, scroll);
     }
+    // The pointer is consumed only by a step that ran.
+    if (this.lastPointer.valid) this.lastPointer = { x, y, valid: true };
   }
 
-  /** One step of `scale` 60 Hz frames (`stepDt` seconds). */
+  /** One 60 Hz step of the field. */
   private simulateStep(
-    scale: number,
-    stepDt: number,
     stamp: { x: number; y: number; moved: number; scroll: number } | null,
     scroll: number,
   ) {
@@ -715,8 +736,7 @@ export class FlowEngine implements GlHost {
     const from = this.brush;
     let to: Brush;
     if (stamp) {
-      const perFrame = stamp.moved / Math.max(scale, 1e-3);
-      const radiusCss = Math.min(1, perFrame / RADIUS_RANGE) * Math.max(40, vw / 20);
+      const radiusCss = Math.min(1, stamp.moved / RADIUS_RANGE) * Math.max(40, vw / 20);
       // Field space: y up, in field pixels. lusion rides the brush point
       // half the scroll up, which draws the short comet a scroll paints.
       to = {
@@ -736,28 +756,19 @@ export class FlowEngine implements GlHost {
       this.brushValid = Boolean(stamp);
     }
 
-    // The injected velocity: a leaky integral of the brush's motion whose
-    // steady state (speed / 900 in field px) doesn't depend on the step.
-    const leak = Math.pow(INJECT_LEAK, scale);
-    const gain = (1 - leak) / (900 * stepDt);
+    // The injected velocity: a leaky integral of the brush's motion
+    // (lusion's `v * 0.8 + delta * dt * 0.8`, dt one 60 Hz step).
+    const gain = STEP_SECONDS * INJECT_LEAK;
     this.inject.set(
-      this.inject.x * leak + (to.x - from.x) * gain,
-      this.inject.y * leak + (to.y - from.y) * gain,
+      this.inject.x * INJECT_LEAK + (to.x - from.x) * gain,
+      this.inject.y * INJECT_LEAK + (to.y - from.y) * gain,
     );
 
     const u = this.sim.uniforms;
     (u.uFrom.value as Vector4).set(from.x, from.y, from.radius, from.strength);
     (u.uTo.value as Vector4).set(to.x, to.y, to.radius, to.strength);
-    (u.uInject.value as Vector2).set(this.inject.x * scale, this.inject.y * scale);
+    (u.uInject.value as Vector2).copy(this.inject);
     (u.uScroll.value as Vector2).set(0, scroll / vh);
-    (u.uKeep.value as Vector3).set(
-      Math.pow(KEEP_VELOCITY, scale),
-      Math.pow(KEEP_SLOW, scale),
-      Math.pow(KEEP_FAST, scale),
-    );
-    u.uAdvect.value = PUSH * scale;
-    u.uWarpAmp.value = WARP_AMP * scale;
-    u.uGain.value = Math.min(1, scale);
     u.tPrev.value = this.field.texture;
     u.tCoarse.value = this.coarse.texture;
     this.draw(this.sim, this.scratch);

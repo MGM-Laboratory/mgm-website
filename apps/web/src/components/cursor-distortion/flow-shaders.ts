@@ -106,8 +106,9 @@ vec3 gradientNoise(vec2 p) {
  * 3. Decay and injection. The weights always move by at least 1/255 when
  *    they move at all, so faded paint really reaches zero in 8 bits.
  *
- * The step constants (uKeep, uAdvect, uWarpAmp, uGain) arrive already
- * scaled to this step's length, so the look holds at any frame rate.
+ * One call is one 60 Hz frame of lusion's sim: the engine runs it on a
+ * fixed step, so the per-frame constants (uKeep, uAdvect, uWarpAmp) are
+ * used as they are.
  */
 export const SIM_FRAGMENT = /* glsl */ `
 precision highp float;
@@ -122,7 +123,6 @@ uniform vec3 uKeep;
 uniform float uAdvect;
 uniform float uWarpFreq;
 uniform float uWarpAmp;
-uniform float uGain;
 in vec2 vUv;
 out vec4 outColor;
 ${NOISE}
@@ -147,7 +147,7 @@ void main() {
   vec4 field = texture(tPrev, source + upstream * uTexel);
   vec2 velocity = field.xy - 0.5;
   vec2 dv = velocity * (uKeep.x - 1.0) + uInject * brush;
-  vec2 dw = field.zw * (uKeep.yz - 1.0) + radiusStrength.y * brush * uGain;
+  vec2 dw = field.zw * (uKeep.yz - 1.0) + radiusStrength.y * brush;
   dw = sign(dw) * max(abs(dw), vec2(0.004));
   outColor = clamp(vec4(velocity + dv + 0.5, field.zw + dw), 0.0, 1.0);
 }
@@ -175,6 +175,7 @@ precision highp float;
 uniform sampler2D tScene;
 uniform sampler2D tField;
 uniform vec2 uFieldTexel;
+uniform vec2 uFieldShift;
 uniform vec2 uViewport;
 uniform vec3 uBackground;
 uniform float uStep;
@@ -209,7 +210,7 @@ vec4 stage(vec2 uv) {
 }
 
 void main() {
-  vec4 field = texture(tField, vUv);
+  vec4 field = texture(tField, vUv - uFieldShift);
   float weight = 0.5 * (field.z + field.w);
   // Against the motion: each pixel shows what lies behind it on the stroke.
   vec2 velocity = (0.5 - field.xy - 0.001) * 2.0 * weight;
