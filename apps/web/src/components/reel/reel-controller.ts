@@ -580,6 +580,22 @@ export class ReelController {
       }),
     );
 
+    // Keyboard focus in the section finishes the morph toward what it
+    // focused: the play button pulls the big video into place, anything
+    // above it (the CTA) sends the picture back to the thumbnail. Tab
+    // itself stands the snap down, and the smoother's scroll to the focused
+    // element comes after this, so it arms whatever the progress is now
+    // (the snap only moves while the morph is half done).
+    const onFocusIn = (event: FocusEvent) => {
+      const el = event.target;
+      if (!(el instanceof HTMLElement) || !el.matches(":focus-visible")) return;
+      this.snapDir = el === this.el.watch ? 1 : -1;
+      this.armed = true;
+      this.lastInputAt = performance.now();
+    };
+    this.root.addEventListener("focusin", onFocusIn);
+    this.offs.push(() => this.root.removeEventListener("focusin", onFocusIn));
+
     const watch = this.el.watch;
     const target = this.el.hoverTarget;
     if (target) {
