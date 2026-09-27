@@ -103,6 +103,10 @@ export function startFeaturedProjectFluid(
     const rect = frame.getBoundingClientRect();
     x = event.clientX - rect.left;
     y = event.clientY - rect.top;
+    if (!inside) {
+      previousX = x;
+      previousY = y;
+    }
     const travel = Math.hypot(x - previousX, y - previousY);
     previousX = x;
     previousY = y;
