@@ -5,6 +5,7 @@ import { ArticleCover } from "@/components/articles/article-cover";
 
 import { articleCoverUrl, type CmsArticleRecord } from "@/lib/article-cms";
 import { useArticleRecords } from "@/hooks/use-article-records";
+import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
 import { ShowcaseSection } from "./showcase-section";
 
 const HOMEPAGE_LIMIT = 10;
@@ -16,11 +17,13 @@ export function ArticlesSection({ initialRecords = [] }: { initialRecords?: CmsA
   return (
     <ShowcaseSection
       compact
+      chapter={HOME_CHAPTERS.articles}
       id="articles"
-      title="Articles"
-      intro="Notes on research, design, and engineering from the lab."
+      title="Notes from the lab"
+      intro="Stories and notes on research, design, and engineering, written in plain words."
       seeMoreHref="/articles"
-      emptyMessage="No articles yet — the lab's first notes are on their way."
+      seeMoreLabel="All articles"
+      emptyMessage="No articles to show right now. New notes are on their way."
       count={shown.length}
     >
       {shown.map((record) => {
@@ -34,7 +37,7 @@ export function ArticlesSection({ initialRecords = [] }: { initialRecords?: CmsA
             >
               <ArticleCover src={cover} className="aspect-[4/3] rounded-xl" />
               {record.article.categories[0] ? (
-                <p className="mt-3 text-xs font-medium tracking-wide text-foreground/45 uppercase">
+                <p className="mt-3 text-xs font-medium tracking-wide text-foreground/60 uppercase">
                   {record.article.categories[0]}
                 </p>
               ) : null}
