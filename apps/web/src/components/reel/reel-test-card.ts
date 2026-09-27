@@ -178,7 +178,8 @@ export class ReelTestCard {
       ctx.stroke();
       for (let k = -1; k < cols; k += 1) {
         const index = (((k - first) % COLS) + COLS) % COLS;
-        const item = this.cells[r][index];
+        const item = this.cells.at(r)?.at(index);
+        if (!item) continue;
         const cx = (k + shift + 0.5) * cell;
         const cy = (r + 0.5) * cell;
         this.shape(ctx, item, cx, cy, cell * 0.34, item.turn + time * item.spin, brand, ink);
@@ -189,7 +190,9 @@ export class ReelTestCard {
     const bars = [brand[0], brand[1], brand[2], brand[3], ink, paper];
     const barWidth = w / bars.length;
     for (let i = 0; i < bars.length; i += 1) {
-      ctx.fillStyle = bars[i];
+      const bar = bars.at(i);
+      if (!bar) continue;
+      ctx.fillStyle = bar;
       ctx.fillRect(Math.floor(i * barWidth), fieldHeight, Math.ceil(barWidth) + 1, barsHeight);
     }
     ctx.strokeStyle = line;

@@ -81,6 +81,10 @@ function startTimeFor(request: ReelPlayerRequest) {
   return loopTime > 0 && loopTime < CONTINUE_WITHIN_SECONDS ? loopTime : 0;
 }
 
+function getFocusedElement() {
+  return document.activeElement instanceof HTMLElement ? document.activeElement : null;
+}
+
 /**
  * Everything that has to happen inside the click itself: the video starts
  * here, with sound, because this is the moment browsers allow it. The
@@ -326,7 +330,7 @@ export function ReelPlayerHost() {
       if (!src) return false;
       return openReelPlayer({
         startTime: 0,
-        returnFocus: document.activeElement as HTMLElement | null,
+        returnFocus: getFocusedElement(),
         ...options,
         src,
       });

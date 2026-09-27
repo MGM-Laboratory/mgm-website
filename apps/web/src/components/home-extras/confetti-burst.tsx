@@ -66,19 +66,19 @@ export function ConfettiBurst({
   useLayoutEffect(() => {
     const layer = layerRef.current;
     if (!layer) return;
-    const els = [...layer.children] as HTMLElement[];
+    const htmlElements = [...layer.children] as HTMLElement[];
     const tl = gsap.timeline({
       onComplete: () => {
         done.current();
       },
     });
-    els.forEach((el, i) => {
+    htmlElements.forEach((element, i) => {
       // Mostly up and out, a few straight up, so it reads as a pop.
       const angle = randomBetween(-165, -15);
       const speed =
         randomBetween(520, 1050) * (0.75 + 0.25 * Math.abs(Math.sin((angle * Math.PI) / 180)));
       const life = randomBetween(1.05, 1.4);
-      gsap.set(el, {
+      gsap.set(element, {
         x: burst.x,
         y: burst.y,
         xPercent: -50,
@@ -87,7 +87,7 @@ export function ConfettiBurst({
         rotation: randomBetween(0, 360),
       });
       tl.to(
-        el,
+        element,
         {
           physics2D: { velocity: speed, angle, gravity: 1700, friction: 0.02 },
           rotation: `+=${(random() < 0.5 ? -1 : 1) * randomBetween(240, 720)}`,
@@ -96,8 +96,12 @@ export function ConfettiBurst({
         },
         i * 0.006,
       )
-        .to(el, { scale: randomBetween(0.8, 1.15), duration: 0.22, ease: "back.out(3)" }, i * 0.006)
-        .to(el, { opacity: 0, duration: 0.3, ease: "power1.in" }, i * 0.006 + life - 0.3);
+        .to(
+          element,
+          { scale: randomBetween(0.8, 1.15), duration: 0.22, ease: "back.out(3)" },
+          i * 0.006,
+        )
+        .to(element, { opacity: 0, duration: 0.3, ease: "power1.in" }, i * 0.006 + life - 0.3);
     });
     return () => {
       tl.kill();

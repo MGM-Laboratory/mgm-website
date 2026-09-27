@@ -248,7 +248,8 @@ export function createPieces(stage: Stage): PiecesSystem {
   if (domeTop) gsap.set(domeTop, { svgOrigin: "0 0" });
   if (domeBottom) gsap.set(domeBottom, { svgOrigin: "0 100" });
   ["391 289", "253 490", "521 490"].forEach((origin, i) => {
-    if (shards[i]) gsap.set(shards[i], { svgOrigin: origin });
+    const shard = shards.at(i);
+    if (shard) gsap.set(shard, { svgOrigin: origin });
   });
 
   let doze = 0;
@@ -342,7 +343,8 @@ export function createPieces(stage: Stage): PiecesSystem {
   function explode(open: boolean, fast = false) {
     shards.forEach((shard, i) => {
       if (!shard) return;
-      const out = SHARD_OUT[i];
+      const out = SHARD_OUT.at(i);
+      if (!out) return;
       gsap.to(shard, {
         x: open ? out.x : 0,
         y: open ? out.y : 0,
@@ -515,10 +517,10 @@ export function createPieces(stage: Stage): PiecesSystem {
         redBits,
         { x: 0, y: 0, scale: 0.5, opacity: 1, rotation: 0 },
         {
-          x: (i: number) => dirs[i][0] * reach * randomBetween(0.85, 1.1),
-          y: (i: number) => dirs[i][1] * reach * randomBetween(0.85, 1.1),
+          x: (i: number) => (dirs.at(i)?.at(0) ?? 0) * reach * randomBetween(0.85, 1.1),
+          y: (i: number) => (dirs.at(i)?.at(1) ?? 0) * reach * randomBetween(0.85, 1.1),
           scale: 1,
-          rotation: (i: number) => dirs[i][0] * 90,
+          rotation: (i: number) => (dirs.at(i)?.at(0) ?? 0) * 90,
           duration: 0.42,
           ease: "power3.out",
         },

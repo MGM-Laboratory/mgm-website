@@ -56,8 +56,8 @@ export function LogoStage({ ref, className }: { ref?: Ref<LogoStageHandle>; clas
           shards,
           { x: 0, y: 0 },
           {
-            x: (i: number) => offsets[i]?.x ?? 0,
-            y: (i: number) => offsets[i]?.y ?? 0,
+            x: (i: number) => offsets.at(i)?.x ?? 0,
+            y: (i: number) => offsets.at(i)?.y ?? 0,
             duration: 0.35,
             ease: "power3.out",
           },

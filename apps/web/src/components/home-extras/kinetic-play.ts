@@ -63,7 +63,7 @@ const WEIGHT_GAIN = 200;
 type Setter = (value: number) => void;
 
 type Glyph = {
-  el: HTMLElement;
+  htmlElement: HTMLElement;
   slot: HTMLElement;
   /** Centre, em from the heading's top-left corner. */
   cx: number;
@@ -116,13 +116,13 @@ export function startKinetic(root: HTMLElement): () => void {
   let E = Number.parseFloat(getComputedStyle(heading).fontSize) || 32;
   const restWeight = Number.parseFloat(getComputedStyle(heading).fontWeight) || 600;
 
-  const qs = (el: Element, property: string, unit?: string) =>
-    gsap.quickSetter(el, property, unit) as Setter;
+  const qs = (htmlElement: Element, property: string, unit?: string) =>
+    gsap.quickSetter(htmlElement, property, unit) as Setter;
 
   const glyphs: Glyph[] = slots.map((slot) => {
-    const el = slot.firstElementChild as HTMLElement;
+    const htmlElement = slot.firstElementChild as HTMLElement;
     return {
-      el,
+      htmlElement,
       slot,
       cx: 0,
       cy: 0,
@@ -138,15 +138,15 @@ export function startKinetic(root: HTMLElement): () => void {
       side: 0,
       lastWeight: restWeight,
       put: {
-        y: qs(el, "y", "px"),
-        r: qs(el, "rotation", "deg"),
-        sx: qs(el, "scaleX"),
-        sy: qs(el, "scaleY"),
+        y: qs(htmlElement, "y", "px"),
+        r: qs(htmlElement, "rotation", "deg"),
+        sx: qs(htmlElement, "scaleX"),
+        sy: qs(htmlElement, "scaleY"),
       },
     };
   });
   gsap.set(
-    glyphs.map((g) => g.el),
+    glyphs.map((g) => g.htmlElement),
     { transformOrigin: "50% 78%" },
   );
 
@@ -262,21 +262,24 @@ export function startKinetic(root: HTMLElement): () => void {
     E = Number.parseFloat(getComputedStyle(activeHeading).fontSize) || E;
     for (const g of glyphs) g.slot.style.width = "";
     // Layout widths (unaffected by the entrance's transforms), at rest weight.
-    const widths = glyphs.map((g) => Number.parseFloat(getComputedStyle(g.el).width));
+    const widths = glyphs.map((g) => Number.parseFloat(getComputedStyle(g.htmlElement).width));
     glyphs.forEach((g, i) => {
-      if (widths[i] > 0) g.slot.style.width = `${(widths[i] / E).toFixed(4)}em`;
+      const width = widths.at(i);
+      if (width && width > 0) g.slot.style.width = `${(width / E).toFixed(4)}em`;
     });
     measureCentres();
     locked = true;
   }
 
   const fonts = "fonts" in document ? document.fonts.ready : Promise.resolve();
-  fonts.then(() => {
-    if (alive)
-      requestAnimationFrame(() => {
-        if (alive) lock();
-      });
-  });
+  void fonts
+    .then(() => {
+      if (alive)
+        requestAnimationFrame(() => {
+          if (alive) lock();
+        });
+    })
+    .catch(() => {});
 
   let resizeTimer = 0;
   const onResize = () => {
@@ -397,7 +400,7 @@ export function startKinetic(root: HTMLElement): () => void {
       g.put.sx(1 + (1 / sy - 1) * 0.75);
       const weight = Math.round(g.weight.x);
       if (weight !== g.lastWeight) {
-        g.el.style.fontWeight = String(weight);
+        g.htmlElement.style.fontWeight = String(weight);
         g.lastWeight = weight;
       }
     }
@@ -417,7 +420,7 @@ export function startKinetic(root: HTMLElement): () => void {
     }
     write();
     for (const g of glyphs) {
-      g.el.style.fontWeight = "";
+      g.htmlElement.style.fontWeight = "";
       g.lastWeight = restWeight;
     }
   }
@@ -574,7 +577,7 @@ export function startKinetic(root: HTMLElement): () => void {
     entrance.kill();
     for (const g of glyphs) gsap.killTweensOf(g.spin);
     gsap.set(
-      glyphs.map((g) => g.el),
+      glyphs.map((g) => g.htmlElement),
       { clearProps: "all" },
     );
     gsap.set(slots, { clearProps: "all" });

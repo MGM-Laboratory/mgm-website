@@ -15,7 +15,9 @@ test("magnets move with the keyboard, flip, persist and go back home", async ({ 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.evaluate(() => localStorage.removeItem("mgm:process-magnets:v1"));
+  await page.evaluate(() => {
+    localStorage.removeItem("mgm:process-magnets:v1");
+  });
 
   // "We." opens the first row on every viewport, so it always has room to
   // its right. Words further along can wrap differently with other fonts
@@ -62,7 +64,9 @@ test("magnets are thrown onto the board when it scrolls into view", async ({ pag
   // A native scroll: on "/" ScrollSmoother follows it, and its fixed
   // wrapper would swallow a scrollIntoView.
   await page.evaluate(() => {
-    const top = document.querySelector("#process")!.getBoundingClientRect().top + window.scrollY;
+    const process = document.querySelector("#process");
+    if (!process) throw new Error("Process section is missing");
+    const top = process.getBoundingClientRect().top + window.scrollY;
     window.scrollTo(0, top - 64);
   });
   for (let i = 0; i < 10; i++) {

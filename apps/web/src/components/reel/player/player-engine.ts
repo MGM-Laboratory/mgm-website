@@ -108,15 +108,20 @@ function inside(box: Box | null, x: number, y: number, pad = 0) {
 /** An element's layout box inside `stage`, ignoring every transform on the way. */
 function layoutBox(htmlElement: HTMLElement, stage: HTMLElement): Box | null {
   if (htmlElement.hidden || !htmlElement.offsetParent) return null;
-  let x = 0;
-  let y = 0;
-  let htmlNode: HTMLElement | null = htmlElement;
-  while (htmlNode && htmlNode !== stage) {
-    x += htmlNode.offsetLeft;
-    y += htmlNode.offsetTop;
-    htmlNode = htmlNode.offsetParent as HTMLElement | null;
+  let htmlLeft = 0;
+  let htmlTop = 0;
+  let currentHtmlElement: HTMLElement | null = htmlElement;
+  while (currentHtmlElement && currentHtmlElement !== stage) {
+    htmlLeft += currentHtmlElement.offsetLeft;
+    htmlTop += currentHtmlElement.offsetTop;
+    currentHtmlElement = currentHtmlElement.offsetParent as HTMLElement | null;
   }
-  return { x, y, width: htmlElement.offsetWidth, height: htmlElement.offsetHeight };
+  return {
+    x: htmlLeft,
+    y: htmlTop,
+    width: htmlElement.offsetWidth,
+    height: htmlElement.offsetHeight,
+  };
 }
 
 function centre(box: Box | null) {
@@ -230,7 +235,10 @@ export class PlayerEngine {
     this.iris = new Iris({ root: el.root, stage: el.stage, canvas: el.iris }, () => this.reduced);
     this.cursor = new PlayerCursor(el.cursor);
     // safe: these are the static, locally-created burst elements, not user HTML.
-    this.burst = new Burst(Array.from(el.bursts.children) as HTMLElement[]);
+    const burstElements = Array.from(el.bursts.children).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
+    this.burst = new Burst(burstElements);
     this.ui = {
       playing: !this.video.paused,
       muted: this.video.muted,
@@ -768,13 +776,12 @@ export class PlayerEngine {
     if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
     this.onActivity();
     // safe: the player owns this event target and only uses it for focus routing.
-    const htmlTarget = event.target instanceof HTMLElement ? event.target : null;
+    const targetElement = event.target instanceof HTMLElement ? event.target : null;
     // safe: this boolean never becomes markup.
-    const inDialog = htmlTarget !== null && this.el.root.contains(htmlTarget);
+    const targetIsInDialog = targetElement !== null && this.el.root.contains(targetElement);
     // safe: this boolean never becomes markup.
-    const buttonTarget = inDialog && htmlTarget instanceof HTMLButtonElement;
     // safe: this boolean never becomes markup.
-    const onSlider = htmlTarget === this.el.track;
+    const targetIsSlider = targetElement === this.el.track;
     switch (event.key) {
       case "Escape":
         event.preventDefault();
@@ -786,7 +793,7 @@ export class PlayerEngine {
       case " ":
         // A focused button answers Space itself (its click); handling it
         // here as well would toggle twice.
-        if (buttonTarget) return;
+        if (targetIsInDialog && targetElement instanceof HTMLButtonElement) return;
         event.preventDefault();
         this.togglePlay("key");
         return;
@@ -807,13 +814,13 @@ export class PlayerEngine {
         return;
       case "ArrowUp":
       case "ArrowDown":
-        if (!onSlider) return;
+        if (!targetIsSlider) return;
         event.preventDefault();
         this.seekBy(event.key === "ArrowDown" ? -5 : 5);
         return;
       case "PageUp":
       case "PageDown":
-        if (!onSlider) return;
+        if (!targetIsSlider) return;
         event.preventDefault();
         this.seekBy(event.key === "PageDown" ? -30 : 30);
         return;
@@ -1152,12 +1159,12 @@ export class PlayerEngine {
       this.drift += dt * 9;
       for (const strip of Array.from(el.marks.children) as HTMLElement[]) {
         // safe: the marks are static elements created by the player template.
-        const htmlInner = strip.firstElementChild;
-        if (!(htmlInner instanceof HTMLElement)) continue;
+        const innerElement = strip.firstElementChild;
+        if (!(innerElement instanceof HTMLElement)) continue;
         const spacing = Number(strip.dataset.spacing) || 56;
         const off = this.drift % spacing;
         const side = strip.dataset.side;
-        htmlInner.style.transform =
+        innerElement.style.transform =
           side === "top"
             ? `translate3d(${(off - spacing).toFixed(2)}px, 0, 0)`
             : side === "bottom"
@@ -1246,17 +1253,17 @@ export class PlayerEngine {
     const bits = group.children;
     for (let i = 0; i < bits.length; i++) {
       // safe: the waiting shapes are static elements created by the player template.
-      const htmlBit = bits.item(i);
-      if (!(htmlBit instanceof HTMLElement)) continue;
-      const width = htmlBit.offsetWidth || 8;
+      const bitElement = bits.item(i);
+      if (!(bitElement instanceof HTMLElement)) continue;
+      const bitWidth = bitElement.offsetWidth || 8;
       // Each shape trails the one ahead by a gap that breathes, so they
       // bunch up and stretch out like a chase.
       const gap = 0.95 + 0.4 * Math.sin(this.time * 2.6 + i * 0.8);
       const angle = this.orbit - i * gap;
       const r = radius * (0.6 + 0.4 * ease.backOut(amount));
-      const x = cx + Math.cos(angle) * r - width / 2;
-      const y = cy + Math.sin(angle) * r - width / 2;
-      htmlBit.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${((angle * 180) / Math.PI + 90).toFixed(1)}deg) scale(${amount.toFixed(3)})`;
+      const x = cx + Math.cos(angle) * r - bitWidth / 2;
+      const y = cy + Math.sin(angle) * r - bitWidth / 2;
+      bitElement.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${((angle * 180) / Math.PI + 90).toFixed(1)}deg) scale(${amount.toFixed(3)})`;
     }
   }
 

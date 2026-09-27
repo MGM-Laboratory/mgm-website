@@ -114,7 +114,8 @@ export function createMotifs(stage: Stage): MotifsSystem {
     if (!pool.length) return;
     const count = randomInt(5, 8);
     for (let i = 0; i < count; i++) {
-      const el = pool[next];
+      const el = pool.at(next);
+      if (!el) return;
       next = (next + 1) % pool.length;
       gsap.killTweensOf(el);
       const spin = randomBetween(-420, 420);
