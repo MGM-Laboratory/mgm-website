@@ -762,11 +762,22 @@ export class ReelController {
     this.ramp = 0;
   }
 
+  /**
+   * Keyboard focus on the play button holds it at full size while the snap
+   * pulls the film big. A scroll the visitor makes after that (wheel, keys,
+   * a finger, the scrollbar) hands the button back to the morph, so it
+   * shrinks away with the frame instead of floating over an empty page.
+   */
+  private releaseButtonFocus() {
+    this.buttonFocus = false;
+  }
+
   private onWheel(event: WheelEvent) {
     if (event.ctrlKey || !event.deltaY) return;
     this.snapDir = Math.sign(event.deltaY);
     this.armed = true;
     this.markInput();
+    this.releaseButtonFocus();
   }
 
   private onKey(event: KeyboardEvent) {
@@ -785,6 +796,7 @@ export class ReelController {
       this.snapDir = direction;
       this.armed = true;
       this.markInput();
+      this.releaseButtonFocus();
       return;
     }
     // Any other key (Tab moves focus, and focus may scroll): input, but it
@@ -806,6 +818,7 @@ export class ReelController {
     if (Math.abs(dy) > 0.5) {
       this.snapDir = Math.sign(dy);
       this.armed = true;
+      this.releaseButtonFocus();
     }
     this.markInput();
   }
@@ -836,6 +849,7 @@ export class ReelController {
       if (Math.abs(dy) > 0.5) {
         this.snapDir = Math.sign(dy);
         this.armed = true;
+        this.releaseButtonFocus();
       }
       this.markInput();
       return;
@@ -1180,6 +1194,12 @@ export class ReelController {
     // The button (or the caption): grows in over the last part of the
     // morph, a little bigger while hovered, squashed while pressed.
     const shown = this.buttonFocus ? 1 : btnR;
+    // Scrolled away from a focused button: let the focus go too, so it never
+    // sits on a button that has shrunk out of sight.
+    const watch = this.el.watch;
+    if (watch && !this.buttonFocus && btnR < 0.3 && document.activeElement === watch) {
+      watch.blur();
+    }
     const pressed = stepSpring(this.press, this.pressTarget, dt, 520, 22);
     const scale = expoInOut(shown) + 0.1 * expoInOut(this.hov3);
     const sx = scale * (1 + 0.08 * pressed);
