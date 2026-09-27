@@ -78,7 +78,7 @@ docs/                deep-dive documentation (read them)
 
 ## Pages (apps/web/src/app)
 
-`/` (hero, process magnets, reel, competencies, Trusted By, projects, publications, articles, footer finale) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services` · `/forms/[slug]` (public forms built in the admin). `/admin` is the internal, signed-session CMS workspace and is deliberately outside the public menu. Only `/media`, `/privacy-policy`, and `/terms-of-services` are bare `PageBand` stubs; every other public route is real and CMS-driven where applicable. Full inventory: `docs/project-overview.md`; CMS detail: `docs/cms-admin.md`.
+`/` (hero, process magnets, reel, featured projects, competencies, Trusted By, publications, articles, footer finale) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services` · `/forms/[slug]` (public forms built in the admin). `/admin` is the internal, signed-session CMS workspace and is deliberately outside the public menu. Only `/media`, `/privacy-policy`, and `/terms-of-services` are bare `PageBand` stubs; every other public route is real and CMS-driven where applicable. Full inventory: `docs/project-overview.md`; CMS detail: `docs/cms-admin.md`.
 
 ## CI/CD at a glance
 
