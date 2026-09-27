@@ -17,7 +17,12 @@ import { parseCssColor, type Rgb } from "@/lib/header-tone";
  * picture (the flow could not show through it anyway). The body keeps its
  * background: it paints the root canvas under the flow, so the header's
  * tone probe and every "what colour is the page" read still see the page
- * colour.
+ * colour. A page whose shell has a colour of its own (see `scan`) is the
+ * one exception: the stage paints the shell's colour, and the controller
+ * hands the header that colour for the points it sees through the shell.
+ *
+ * Only elements React has hydrated are marked: an attribute added to
+ * server HTML before its section hydrates is a hydration mismatch.
  *
  * Marked elements read transparent in computed style, so a rescan (theme
  * switch, new content, resize) sets `html[data-flow-scan]`, which turns
