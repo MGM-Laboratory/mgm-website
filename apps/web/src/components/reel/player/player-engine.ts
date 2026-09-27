@@ -106,17 +106,17 @@ function inside(box: Box | null, x: number, y: number, pad = 0) {
 }
 
 /** An element's layout box inside `stage`, ignoring every transform on the way. */
-function layoutBox(el: HTMLElement, stage: HTMLElement): Box | null {
-  if (el.hidden || !el.offsetParent) return null;
+function layoutBox(htmlElement: HTMLElement, stage: HTMLElement): Box | null {
+  if (htmlElement.hidden || !htmlElement.offsetParent) return null;
   let x = 0;
   let y = 0;
-  let node: HTMLElement | null = el;
-  while (node && node !== stage) {
-    x += node.offsetLeft;
-    y += node.offsetTop;
-    node = node.offsetParent as HTMLElement | null;
+  let htmlNode: HTMLElement | null = htmlElement;
+  while (htmlNode && htmlNode !== stage) {
+    x += htmlNode.offsetLeft;
+    y += htmlNode.offsetTop;
+    htmlNode = htmlNode.offsetParent as HTMLElement | null;
   }
-  return { x, y, width: el.offsetWidth, height: el.offsetHeight };
+  return { x, y, width: htmlElement.offsetWidth, height: htmlElement.offsetHeight };
 }
 
 function centre(box: Box | null) {
@@ -229,6 +229,7 @@ export class PlayerEngine {
     this.touch = !finePointer();
     this.iris = new Iris({ root: el.root, stage: el.stage, canvas: el.iris }, () => this.reduced);
     this.cursor = new PlayerCursor(el.cursor);
+    // safe: these are the static, locally-created burst elements, not user HTML.
     this.burst = new Burst(Array.from(el.bursts.children) as HTMLElement[]);
     this.ui = {
       playing: !this.video.paused,
@@ -415,7 +416,7 @@ export class PlayerEngine {
 
   private play() {
     const attempt = this.video.play();
-    attempt?.then(
+    attempt.then(
       () => {
         this.setUi({ refused: false });
       },
@@ -470,12 +471,12 @@ export class PlayerEngine {
   };
 
   private setUi(patch: Partial<PlayerUiState>) {
-    let changed = false;
-    for (const key of Object.keys(patch) as (keyof PlayerUiState)[]) {
-      if (this.ui[key] !== patch[key]) changed = true;
-    }
+    const next = { ...this.ui, ...patch };
+    const changed = Object.keys(patch).some(
+      (key) => !Object.is(Reflect.get(this.ui, key), Reflect.get(next, key)),
+    );
     if (!changed) return;
-    this.ui = { ...this.ui, ...patch };
+    this.ui = next;
     this.cb.onState(this.ui);
     if (this.ui.duration) {
       const { track } = this.el;
@@ -766,10 +767,14 @@ export class PlayerEngine {
     if (this.phase === "closing" || this.phase === "done") return;
     if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
     this.onActivity();
-    const target = event.target as HTMLElement | null;
-    const inDialog = !!target && this.el.root.contains(target);
-    const onButton = inDialog && target instanceof HTMLButtonElement;
-    const onSlider = target === this.el.track;
+    // safe: the player owns this event target and only uses it for focus routing.
+    const htmlTarget = event.target instanceof HTMLElement ? event.target : null;
+    // safe: this boolean never becomes markup.
+    const inDialog = htmlTarget !== null && this.el.root.contains(htmlTarget);
+    // safe: this boolean never becomes markup.
+    const buttonTarget = inDialog && htmlTarget instanceof HTMLButtonElement;
+    // safe: this boolean never becomes markup.
+    const onSlider = htmlTarget === this.el.track;
     switch (event.key) {
       case "Escape":
         event.preventDefault();
@@ -781,7 +786,7 @@ export class PlayerEngine {
       case " ":
         // A focused button answers Space itself (its click); handling it
         // here as well would toggle twice.
-        if (onButton) return;
+        if (buttonTarget) return;
         event.preventDefault();
         this.togglePlay("key");
         return;
@@ -833,7 +838,8 @@ export class PlayerEngine {
   private trapFocus(event: KeyboardEvent) {
     const items = this.focusables();
     if (!items.length) return;
-    const index = items.indexOf(document.activeElement as HTMLElement);
+    const activeElement = document.activeElement;
+    const index = items.findIndex((item) => item === activeElement);
     const next = event.shiftKey
       ? index <= 0
         ? items.length - 1
@@ -842,7 +848,7 @@ export class PlayerEngine {
         ? 0
         : index + 1;
     event.preventDefault();
-    items[next].focus();
+    items.at(next)?.focus();
   }
 
   private onFocusIn = (event: FocusEvent) => {
@@ -1145,12 +1151,13 @@ export class PlayerEngine {
     if (this.bars.length && !this.reduced) {
       this.drift += dt * 9;
       for (const strip of Array.from(el.marks.children) as HTMLElement[]) {
-        const inner = strip.firstElementChild as HTMLElement | null;
-        if (!inner) continue;
+        // safe: the marks are static elements created by the player template.
+        const htmlInner = strip.firstElementChild;
+        if (!(htmlInner instanceof HTMLElement)) continue;
         const spacing = Number(strip.dataset.spacing) || 56;
         const off = this.drift % spacing;
         const side = strip.dataset.side;
-        inner.style.transform =
+        htmlInner.style.transform =
           side === "top"
             ? `translate3d(${(off - spacing).toFixed(2)}px, 0, 0)`
             : side === "bottom"
@@ -1238,16 +1245,18 @@ export class PlayerEngine {
     if (amount < 0.001) return;
     const bits = group.children;
     for (let i = 0; i < bits.length; i++) {
-      const bit = bits[i] as HTMLElement;
-      const size = bit.offsetWidth || 8;
+      // safe: the waiting shapes are static elements created by the player template.
+      const htmlBit = bits.item(i);
+      if (!(htmlBit instanceof HTMLElement)) continue;
+      const width = htmlBit.offsetWidth || 8;
       // Each shape trails the one ahead by a gap that breathes, so they
       // bunch up and stretch out like a chase.
       const gap = 0.95 + 0.4 * Math.sin(this.time * 2.6 + i * 0.8);
       const angle = this.orbit - i * gap;
       const r = radius * (0.6 + 0.4 * ease.backOut(amount));
-      const x = cx + Math.cos(angle) * r - size / 2;
-      const y = cy + Math.sin(angle) * r - size / 2;
-      bit.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${((angle * 180) / Math.PI + 90).toFixed(1)}deg) scale(${amount.toFixed(3)})`;
+      const x = cx + Math.cos(angle) * r - width / 2;
+      const y = cy + Math.sin(angle) * r - width / 2;
+      htmlBit.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${((angle * 180) / Math.PI + 90).toFixed(1)}deg) scale(${amount.toFixed(3)})`;
     }
   }
 

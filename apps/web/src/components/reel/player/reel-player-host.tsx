@@ -108,10 +108,10 @@ function createSession(request: ReelPlayerRequest): PlayerSession {
   // no autoplay: the player opens paused on its big Play button.
   let playAttempt: Promise<void> | null = null;
   const activation = navigator.userActivation;
-  if (!activation || activation.isActive) {
+  if (activation.isActive) {
     // A refused play() rejects its promise; it never throws.
-    playAttempt = video.play() ?? null;
-    playAttempt?.catch(() => {});
+    playAttempt = video.play();
+    playAttempt.catch(() => {});
   }
   const at = pointer();
   return {

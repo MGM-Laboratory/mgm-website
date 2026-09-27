@@ -248,7 +248,7 @@ export function ProjectCardCover({
       }
       observer = new IntersectionObserver(
         (entries) => {
-          const entry = entries[entries.length - 1];
+          const entry = entries.at(-1);
           if (!entry) return;
           inView = entry.isIntersecting;
           if (ownedByStage()) {

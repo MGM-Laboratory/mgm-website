@@ -159,7 +159,7 @@ export function createLogoEngine(host: HTMLElement, options: Options): LogoEngin
     const centre = new Vector3();
     geometry.boundingBox?.getCenter(centre);
     const material = new MeshPhysicalMaterial({
-      color: new Color(options.colors[i] ?? "#3A6DC5"),
+      color: new Color(options.colors.at(i) ?? "#3A6DC5"),
       roughness: 0.42,
       metalness: 0,
       clearcoat: 0.4,
@@ -227,9 +227,11 @@ export function createLogoEngine(host: HTMLElement, options: Options): LogoEngin
     c: number,
     dt: number,
   ) => {
-    const value = s[key] ?? 0;
+    const value = key === "x" ? (s.x ?? 0) : (s.y ?? 0);
     s.v += (k * (target - value) - c * s.v) * dt;
-    s[key] = value + s.v * dt;
+    const next = value + s.v * dt;
+    if (key === "x") s.x = next;
+    else s.y = next;
   };
 
   function step(dt: number) {
@@ -331,7 +333,7 @@ export function createLogoEngine(host: HTMLElement, options: Options): LogoEngin
     dragging = true;
     spin.speed = 0;
     canvas.style.cursor = "grabbing";
-    canvas.setPointerCapture?.(event.pointerId);
+    canvas.setPointerCapture(event.pointerId);
   };
   const onMove = (event: PointerEvent) => {
     if (!dragging) return;
@@ -427,7 +429,7 @@ export function createLogoEngine(host: HTMLElement, options: Options): LogoEngin
       shadowMap.dispose();
       env.dispose();
       pmrem.dispose();
-      room.dispose?.();
+      room.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
       canvas.remove();
