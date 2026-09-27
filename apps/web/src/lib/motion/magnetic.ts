@@ -34,13 +34,17 @@ export function attachMagnetic(el: HTMLElement, options: MagneticOptions = {}) {
   const toY = gsap.quickTo(el, "y", { duration, ease: "elastic.out(1, 0.55)" });
   let engaged = false;
   // The element's own box without the pull's offset, so the pull doesn't
-  // chase itself. Re-measured on scroll and resize (cheap: one rect).
+  // chase itself. Measured at most once a frame: under ScrollSmoother the
+  // content keeps gliding after the native scroll events stop, so a box
+  // cached until the next scroll event would go stale mid-glide.
   let box: DOMRect | null = null;
+  let measuredAt = -Infinity;
   const measure = () => {
     const rect = el.getBoundingClientRect();
     const dx = Number(gsap.getProperty(el, "x")) || 0;
     const dy = Number(gsap.getProperty(el, "y")) || 0;
     box = new DOMRect(rect.x - dx, rect.y - dy, rect.width, rect.height);
+    measuredAt = performance.now();
   };
   const invalidate = () => {
     box = null;
@@ -51,7 +55,7 @@ export function attachMagnetic(el: HTMLElement, options: MagneticOptions = {}) {
       if (engaged) release();
       return;
     }
-    if (!box) measure();
+    if (!box || performance.now() - measuredAt > 16) measure();
     const b = box!;
     const cx = b.x + b.width / 2;
     const cy = b.y + b.height / 2;
