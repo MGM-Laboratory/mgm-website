@@ -206,15 +206,15 @@ export function createToybox(options: ToyboxOptions): Toybox {
     glyphs = [];
     chars.forEach((list, word) => {
       list.forEach((el, index) => {
-        const text = el.textContent ?? "";
+        const text = el.textContent;
         if (!text.trim()) return;
         let left = el.offsetLeft;
         let top = el.offsetTop;
-        let parent = el.offsetParent as HTMLElement | null;
-        while (parent && parent !== words && parent !== box) {
-          left += parent.offsetLeft;
-          top += parent.offsetTop;
-          parent = parent.offsetParent as HTMLElement | null;
+        let ancestor = el.offsetParent;
+        while (ancestor instanceof HTMLElement && ancestor !== words && ancestor !== box) {
+          left += ancestor.offsetLeft;
+          top += ancestor.offsetTop;
+          ancestor = ancestor.offsetParent;
         }
         left += originX;
         top += originY;
@@ -235,7 +235,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
     // Punctuation sits low; give it the x-height of its neighbours so a shape
     // can't wedge into the notch above a comma.
     for (const glyph of glyphs) {
-      const text = chars[glyph.word]?.[glyph.index]?.textContent ?? "";
+      const text = chars.at(glyph.word)?.at(glyph.index)?.textContent ?? "";
       if (/^[,.]$/.test(text)) glyph.y0 = Math.min(glyph.y0, glyph.y1 - size * 0.52);
     }
     // Close the small gaps between letters and between the words on a line,
@@ -243,8 +243,9 @@ export function createToybox(options: ToyboxOptions): Toybox {
     const bridges: Glyph[] = [];
     const sorted = [...glyphs].sort((a, b) => a.y1 - b.y1 || a.x0 - b.x0);
     for (let i = 1; i < sorted.length; i++) {
-      const left = sorted[i - 1];
-      const right = sorted[i];
+      const left = sorted.at(i - 1);
+      const right = sorted.at(i);
+      if (!left || !right) continue;
       if (Math.abs(left.y1 - right.y1) > 1) continue;
       const gap = right.x0 - left.x1;
       if (gap <= 0 || gap > size * 0.5) continue;
@@ -490,7 +491,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
         fx.squash(live.nodes.squash, amount, vertical ? "y" : "x", origin);
         const glyph = glyphOf.get(pair.bodyA.id) ?? glyphOf.get(pair.bodyB.id);
         if (glyph) {
-          const char = chars[glyph.word]?.[glyph.index];
+          const char = chars.at(glyph.word)?.at(glyph.index);
           if (char) fx.dip(char, amount, size);
         }
       }
@@ -655,8 +656,9 @@ export function createToybox(options: ToyboxOptions): Toybox {
   }
 
   function liveFrom(target: EventTarget | null) {
-    const el = (target as HTMLElement | null)?.closest?.("[data-toy]") as HTMLElement | null;
-    const id = el?.dataset.toy as ToyId | undefined;
+    if (!(target instanceof Element)) return undefined;
+    const toyElement = target.closest<HTMLElement>("[data-toy]");
+    const id = toyElement?.dataset.toy as ToyId | undefined;
     const live = id ? liveOf.get(id) : undefined;
     return live?.inWorld ? live : undefined;
   }
@@ -676,7 +678,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
     const live = liveFrom(event.target);
     if (!live) return;
     event.preventDefault();
-    (event.target as HTMLElement).setPointerCapture?.(event.pointerId);
+    if (event.target instanceof Element) event.target.setPointerCapture(event.pointerId);
     press = {
       live,
       pointerId: event.pointerId,
@@ -721,7 +723,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
       cancelTouch();
       return;
     }
-    const point = event.changedTouches[0];
+    const point = event.changedTouches.item(0);
     const live = liveFrom(event.target);
     if (!point || !live) return;
     const track: TouchTrack = {
@@ -738,7 +740,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
       track.state = "held";
       startGrab(live, track.x0, track.y0);
       fx.lift(live.nodes.lift, 2);
-      navigator.vibrate?.(8);
+      if (typeof navigator.vibrate === "function") navigator.vibrate(8);
     }, HOLD_MS);
     touch = track;
     fx.press(live.nodes.squash, true);
@@ -746,7 +748,10 @@ export function createToybox(options: ToyboxOptions): Toybox {
 
   function findTouch(list: TouchList) {
     if (!touch) return null;
-    for (let i = 0; i < list.length; i++) if (list[i].identifier === touch.id) return list[i];
+    for (let i = 0; i < list.length; i++) {
+      const point = list.item(i);
+      if (point?.identifier === touch.id) return point;
+    }
     return null;
   }
 
@@ -866,7 +871,8 @@ export function createToybox(options: ToyboxOptions): Toybox {
   // A cursor running over the words bobs each letter it touches.
   const onLetterOver = (event: PointerEvent) => {
     if (event.pointerType === "touch" || grab) return;
-    const char = (event.target as HTMLElement).closest?.(".toybox-char") as HTMLElement | null;
+    const char =
+      event.target instanceof Element ? event.target.closest<HTMLElement>(".toybox-char") : null;
     if (char) fx.bob(char, size);
   };
   words.addEventListener("pointerover", onLetterOver);
@@ -875,9 +881,10 @@ export function createToybox(options: ToyboxOptions): Toybox {
   const wordOff: (() => void)[] = [];
   wordEls.forEach((wordEl, word) => {
     const onClick = (event: MouseEvent) => {
-      const list = chars[word] ?? [];
-      const hitChar = (event.target as HTMLElement).closest?.("div");
-      const from = Math.max(0, list.indexOf(hitChar as HTMLElement));
+      const list = chars.at(word) ?? [];
+      const hitChar =
+        event.target instanceof Element ? event.target.closest<HTMLElement>("div") : null;
+      const from = Math.max(0, hitChar ? list.indexOf(hitChar) : -1);
       fx.ripple(list, from, size);
       const mine = glyphs.filter((glyph) => glyph.word === word);
       if (!mine.length) return;
@@ -999,10 +1006,12 @@ export function createToybox(options: ToyboxOptions): Toybox {
   }
 
   const syncPaused = () => {
-    setPaused(!visible || document.hidden);
+    const shouldPause = !visible || document.hidden;
+    setPaused(shouldPause);
+    return !shouldPause;
   };
-  const observer = new IntersectionObserver(([entry]) => {
-    visible = entry?.isIntersecting ?? true;
+  const observer = new IntersectionObserver((entries) => {
+    visible = entries.at(0)?.isIntersecting ?? true;
     // The entrance plays out even if the visitor scrolls away mid-drop.
     if (entranceDone) syncPaused();
   });
@@ -1117,20 +1126,21 @@ export function createToybox(options: ToyboxOptions): Toybox {
   resizer.observe(box);
   resizer.observe(words);
 
+  const dropsForLayout = () => (layout === "wide" ? DROPS.wide : DROPS.stack);
+
   function finishEntrance() {
     if (entranceDone) return;
     entranceDone = true;
     entrance = null;
     // Anything the timeline didn't get to (a very slow device) drops now.
-    for (const drop_ of DROPS[layout]) drop(drop_.id, drop_.x);
-    syncPaused();
-    if (!paused) startSensors();
+    for (const drop_ of dropsForLayout()) drop(drop_.id, drop_.x);
+    if (syncPaused()) startSensors();
     onReveal();
   }
 
   if (options.entrance === "drop") {
     const tl = gsap.timeline({ onComplete: finishEntrance });
-    for (const item of DROPS[layout])
+    for (const item of dropsForLayout())
       tl.add(() => {
         drop(item.id, item.x);
       }, item.at * 0.55);
@@ -1144,7 +1154,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
       fx.ripple(media, 0, size);
       if (media[3]) fx.coin(media[3]);
     }, 0);
-    for (const item of DROPS[layout])
+    for (const item of dropsForLayout())
       tl.add(() => {
         drop(item.id, item.x);
       }, item.at);
@@ -1162,12 +1172,14 @@ export function createToybox(options: ToyboxOptions): Toybox {
     // Arriving from another page, or already scrolled past: settle the same
     // drop unseen, then show the pile at rest.
     silent = true;
-    const schedule = DROPS[layout];
+    const schedule = dropsForLayout();
     let next = 0;
     for (let i = 0; i < 900; i++) {
       const now = (i * STEP) / 1000;
-      while (next < schedule.length && schedule[next].at <= now) {
-        drop(schedule[next].id, schedule[next].x);
+      while (next < schedule.length) {
+        const item = schedule.at(next);
+        if (!item || item.at > now) break;
+        drop(item.id, item.x);
         next++;
       }
       Engine.update(engine, STEP);
@@ -1176,8 +1188,7 @@ export function createToybox(options: ToyboxOptions): Toybox {
     silent = false;
     for (const live of lives) if (live.inWorld) write(live);
     stop();
-    syncPaused();
-    if (!paused) startSensors();
+    if (syncPaused()) startSensors();
   }
 
   if (dev) {
