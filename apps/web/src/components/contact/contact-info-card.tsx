@@ -6,12 +6,7 @@ import { Copy, Mail, MapPin, Navigation, Plus, Send } from "lucide-react";
 import type { ContactSettings } from "@repo/shared";
 import { toast } from "sonner";
 
-import {
-  DiscordGlyph,
-  InstagramGlyph,
-  LinkedinGlyph,
-  type GlyphProps,
-} from "@/components/social-icons";
+import { InstagramGlyph, LinkedinGlyph, type GlyphProps } from "@/components/social-icons";
 import { NAV_SOCIALS } from "@/data/nav";
 import { useDismissableOpen } from "@/hooks/use-dismissable-open";
 import { cn } from "@/lib/utils";
@@ -138,7 +133,6 @@ function RevealPopover({
 }
 
 const SOCIAL_GLYPHS: Record<string, React.ComponentType<GlyphProps>> = {
-  Discord: DiscordGlyph,
   Instagram: InstagramGlyph,
   LinkedIn: LinkedinGlyph,
 };
