@@ -13,7 +13,7 @@ import { HomeFinale } from "@/components/home-extras/home-finale";
 import { publishedArticles } from "@/lib/article-cms";
 import { ensureArticleFeed } from "@/lib/article-cms-seed";
 import { fetchHomeContent } from "@/lib/home-cms-server";
-import { featuredProjects, type CmsProjectRecord } from "@/lib/project-cms";
+import { featuredProjects, publishedProjects, type CmsProjectRecord } from "@/lib/project-cms";
 import { fetchProjectFeed } from "@/lib/project-cms-server";
 import { publishedPublications, type CmsPublicationRecord } from "@/lib/publication-cms";
 import { ensurePublicationFeed } from "@/lib/publication-cms-seed";
@@ -23,18 +23,20 @@ const HOMEPAGE_PREVIEW_LIMIT = 10;
 export default async function Home() {
   // Only the newest ten records of each kind render on the homepage, so the
   // server fetches the light feed and trims it before it reaches the client.
-  const [initialArticles, projects, publications, homeContent] = await Promise.all([
+  const [initialArticles, projectFeed, publications, homeContent] = await Promise.all([
     ensureArticleFeed()
       .then((records) => publishedArticles(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
       .catch(() => [] as Awaited<ReturnType<typeof ensureArticleFeed>>),
-    fetchProjectFeed()
-      .then((records) => featuredProjects(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
-      .catch(() => [] as CmsProjectRecord[]),
+    fetchProjectFeed().catch(() => [] as CmsProjectRecord[]),
     ensurePublicationFeed()
       .then((records) => publishedPublications(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
       .catch(() => [] as CmsPublicationRecord[]),
     fetchHomeContent(),
   ]);
+  const projects = featuredProjects(projectFeed).slice(0, HOMEPAGE_PREVIEW_LIMIT);
+  const unfeaturedCount = publishedProjects(projectFeed).filter(
+    (record) => !record.project.featured,
+  ).length;
 
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">
@@ -42,7 +44,7 @@ export default async function Home() {
         <Hero />
         <ProcessSection />
         <ReelSection content={homeContent} />
-        <FeaturedProjectsSection records={projects} />
+        <FeaturedProjectsSection records={projects} unfeaturedCount={unfeaturedCount} />
         <CoreCompetenciesSection />
         <TrustedBySection compact chapter={HOME_CHAPTERS.trustedBy} />
         <PublicationsPreviewSection records={publications} />
