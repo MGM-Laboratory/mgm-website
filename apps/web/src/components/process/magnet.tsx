@@ -83,10 +83,10 @@ export function Magnet({ step, index }: { step: ProcessMagnet; index: number }) 
                     </svg>
                   </span>
                 </span>
-                {index === 0 ? (
+                {step.word === "Design." ? (
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute -top-8 left-0 rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-1 text-[0.6875rem] leading-none font-semibold tracking-wide text-foreground shadow-[var(--shadow-1)]"
+                    className="pointer-events-none absolute -top-8 left-0 rounded-full border border-[var(--line-strong)] bg-background px-3 py-1 text-[0.6875rem] leading-none font-semibold tracking-wide text-foreground shadow-[var(--shadow-1)] max-sm:-top-[1.375rem]"
                   >
                     <span className="hidden pointer-fine:inline">Drag me, just for fun</span>
                     <span className="pointer-fine:hidden">Hold and move me, just for fun</span>

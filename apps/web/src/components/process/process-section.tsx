@@ -96,7 +96,7 @@ export function ProcessSection() {
       id="process"
       ref={rootRef}
       aria-labelledby="process-heading"
-      className="relative flex flex-col overflow-x-clip bg-[var(--surface-muted)] px-6 pt-16 pb-8 [--magnet-shadow:0.3] sm:px-10 sm:pt-20 sm:pb-12 lg:px-16 dark:[--magnet-shadow:0.7]"
+      className="relative flex flex-col overflow-x-clip bg-[var(--surface-muted)] px-3 pt-16 pb-8 [--magnet-shadow:0.3] max-[359px]:px-2 sm:px-10 sm:pt-20 sm:pb-12 lg:px-16 dark:[--magnet-shadow:0.7]"
       data-magnet-board
     >
       <noscript>
@@ -112,11 +112,14 @@ export function ProcessSection() {
         {PROCESS_COPY.chapter}
       </h2>
 
-      <div className="flex max-w-5xl flex-col gap-10 sm:gap-14" data-magnet-rows>
+      <div
+        className="flex max-w-5xl flex-wrap gap-x-2 gap-y-6 sm:flex-col sm:gap-14"
+        data-magnet-rows
+      >
         {PROCESS_ROWS.map((row, ri) => (
           <div
             key={ri}
-            className="process-row flex flex-wrap items-center gap-x-12 gap-y-10 sm:gap-x-16 sm:gap-y-14"
+            className="process-row contents sm:flex sm:flex-wrap sm:items-center sm:gap-x-16 sm:gap-y-14"
           >
             {row.map((step) => (
               <Magnet
