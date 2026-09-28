@@ -90,6 +90,6 @@ Each row: number + label + trailing arrow. On hover: an `ItemFill` sweep (accent
 
 ## Sizing (the no-scroll guarantee)
 
-**Hard requirement from the owner: the menu must never scroll.** The seven direct links fill the space above the bottom block. The font-size anchor on the `<nav>` is `text-[clamp(1.5rem,5dvh,3.25rem)]` (slightly smaller below `lg`); the row spacing grows with the available height. Bottom block: `clamp(0.7rem,1.7dvh,0.95rem)`.
+**Hard requirement from the owner: the menu must never scroll.** The seven direct links fill at most `52dvh`, with the remaining space shared above and below the list. The font-size anchor on the `<nav>` is `text-[clamp(1.375rem,4dvh,2.5rem)]` (slightly smaller below `lg`); rows share the capped height evenly. Bottom block: `clamp(0.7rem,1.7dvh,0.95rem)`.
 
 When changing sizes: verify across viewports (1280×800, 1440×900, 1280×600, mobile 390×844), checking no scrollbar appears and the bottom block stays visible. Extreme-landscape and ~600px-tall cases may fall back to `overflow-y-auto`. The gap between icons and text is `0.7em`.

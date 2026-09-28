@@ -594,7 +594,7 @@ export function NavMenu() {
             Menu
           </p>
 
-          <nav className="mt-[1.25dvh] flex min-h-0 flex-1 flex-col text-[clamp(1.5rem,5dvh,3.25rem)] max-lg:text-[clamp(1.5rem,4.6dvh,2.75rem)]">
+          <nav className="mt-auto flex min-h-0 max-h-[52dvh] flex-1 flex-col text-[clamp(1.375rem,4dvh,2.5rem)] max-lg:text-[clamp(1.375rem,3.8dvh,2.375rem)]">
             {NAV_ITEMS.map((item, i) => {
               const accentVar = toneColor(item.accent);
               const accentStyle = { "--nav-item-accent": accentVar } as CSSProperties;
