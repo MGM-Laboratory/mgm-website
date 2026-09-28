@@ -23,20 +23,23 @@ const HOMEPAGE_PREVIEW_LIMIT = 10;
 export default async function Home() {
   // Only the newest ten records of each kind render on the homepage, so the
   // server fetches the light feed and trims it before it reaches the client.
-  const [initialArticles, projectFeed, publications, homeContent] = await Promise.all([
+  const [initialArticles, projectData, publications, homeContent] = await Promise.all([
     ensureArticleFeed()
       .then((records) => publishedArticles(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
       .catch(() => [] as Awaited<ReturnType<typeof ensureArticleFeed>>),
-    fetchProjectFeed().catch(() => [] as CmsProjectRecord[]),
+    fetchProjectFeed()
+      .then((records) => ({
+        projects: featuredProjects(records).slice(0, HOMEPAGE_PREVIEW_LIMIT),
+        unfeaturedCount: publishedProjects(records).filter((record) => !record.project.featured)
+          .length,
+      }))
+      .catch(() => ({ projects: [] as CmsProjectRecord[], unfeaturedCount: 0 })),
     ensurePublicationFeed()
       .then((records) => publishedPublications(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
       .catch(() => [] as CmsPublicationRecord[]),
     fetchHomeContent(),
   ]);
-  const projects = featuredProjects(projectFeed).slice(0, HOMEPAGE_PREVIEW_LIMIT);
-  const unfeaturedCount = publishedProjects(projectFeed).filter(
-    (record) => !record.project.featured,
-  ).length;
+  const { projects, unfeaturedCount } = projectData;
 
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-1 flex-col">
