@@ -53,14 +53,14 @@ Geist Sans / Geist Mono / Hanken Grotesk via `next/font` in `layout.tsx` (variab
 - `apps/web/public/logo/`: department logos (`curriculum.svg`, `hr.svg`, `infra.svg`, `media.svg`, `pr.svg`, `rnd.svg`). ⚠️ **This directory is currently untracked** (`?? apps/web/public/logo/` in git status); it was deliberately left alone during past work. If a change should ship these, confirm with the owner first.
 - Note: DESIGN_SYSTEM.md's relative paths (`./logo.svg`, `./patterns`) resolve to `apps/web/public/`.
 
-## Motif system (Core Competencies + nav bento)
+## Motif system (Core Competencies and preserved menu tiles)
 
 `components/sections/competency-motif.tsx` exports the geometric shapes used across cards and menu tiles. Two consumers with different styling:
 
 - `CompetencyCardShape`: full-card background motif on competency card fronts (clipped by the card's rounded edge; it is **scale-animated only, never rotated**, because its cut corners/ring gap would swing to broken-looking positions).
 - `CompetencyMotifShape`: small watermark motifs, `stroke` prop for translucent white (`rgba(255,255,255,0.32)` / `0.16`) on colored fills.
 
-Nav bento tiles pair each item with a `motif` (`ring | bracket | cross | chevron`) and/or a `pattern` tile (`PatternKind`) plus a `tone` (`PatternTone` = one of the 4 brand colors). The Focus dropdown's four tiles mirror the homepage competency cards' motifs and colors (Game & New Media = chevron/green, Website = ring/blue, Mobile = bracket/red, HCI/UX = cross/yellow) for continuity.
+Nav bento tiles pair each item with a `motif` (`ring | bracket | cross | chevron`) and/or a `pattern` tile (`PatternKind`) plus a `tone` (`PatternTone` = one of the 4 brand colors). The preserved Focus tiles mirror the homepage competency cards' motifs and colors (Game & New Media = chevron/green, Website = ring/blue, Mobile = bracket/red, HCI/UX = cross/yellow) for continuity.
 
 ## Responsive conventions
 
@@ -83,4 +83,4 @@ The articles library around them has its own world tokens for both schemes (`com
 
 ## Social glyphs
 
-`components/social-icons.tsx`: hand-drawn glyphs (Instagram, LinkedIn, GitHub, WhatsApp, Discord), all `currentColor` so they adapt to theme text color. Each accepts a `ref` (React 19 ref-as-prop) so the nav can run GSAP hover timelines on the SVG element itself. The current menu selects Instagram, LinkedIn, and Discord through `data/nav.ts`.
+`components/social-icons.tsx`: hand-drawn glyphs (Instagram, LinkedIn, GitHub, WhatsApp), all `currentColor` so they adapt to theme text color. Each accepts a `ref` (React 19 ref-as-prop) so the nav can run GSAP hover timelines on the SVG element itself. The current menu selects Instagram and LinkedIn through `data/nav.ts`.

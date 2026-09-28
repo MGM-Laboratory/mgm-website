@@ -1,5 +1,4 @@
 import {
-  DiscordLogoIcon,
   GithubLogoIcon,
   InstagramLogoIcon,
   LinkedinLogoIcon,
@@ -19,4 +18,3 @@ export const InstagramGlyph = glyph(InstagramLogoIcon);
 export const LinkedinGlyph = glyph(LinkedinLogoIcon);
 export const GithubGlyph = glyph(GithubLogoIcon);
 export const WhatsappGlyph = glyph(WhatsappLogoIcon);
-export const DiscordGlyph = glyph(DiscordLogoIcon);

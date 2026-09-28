@@ -9,7 +9,8 @@ import type { CmsProjectRecord } from "@/lib/project-cms";
 /** The same project cards used by /projects, limited to the CMS featured set. */
 export function FeaturedProjectsSection({
   records,
-}: Readonly<{ records: readonly CmsProjectRecord[] }>) {
+  unfeaturedCount,
+}: Readonly<{ records: readonly CmsProjectRecord[]; unfeaturedCount: number }>) {
   if (records.length === 0) return null;
 
   return (
@@ -39,6 +40,13 @@ export function FeaturedProjectsSection({
             <ProjectCard key={record.slug} record={record} index={index} standalone />
           ))}
         </div>
+        {unfeaturedCount > 0 ? (
+          <div className="mt-16 flex justify-center sm:mt-20">
+            <SeeMoreLink href="/projects">
+              See {unfeaturedCount} more {unfeaturedCount === 1 ? "project" : "projects"}
+            </SeeMoreLink>
+          </div>
+        ) : null}
       </div>
     </section>
   );

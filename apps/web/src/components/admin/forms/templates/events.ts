@@ -503,7 +503,7 @@ export const EVENT_TEMPLATES: FormTemplate[] = [
         {
           id: "ending_default",
           title: "See you at the jam",
-          body: rt("We'll email the schedule and the Discord invite a week before the kickoff."),
+          body: rt("We'll email the schedule a week before the kickoff."),
         },
         {
           id: "ending_solo",

@@ -16,12 +16,7 @@ import { ChevronDown, ArrowUpRight } from "lucide-react";
 
 import { CONTACT_EMAIL, LEGAL_LINKS, NAV_ITEMS, NAV_SOCIALS } from "@/data/nav";
 import { toneColor } from "@/components/process/pattern-tile";
-import {
-  DiscordGlyph,
-  InstagramGlyph,
-  LinkedinGlyph,
-  type GlyphProps,
-} from "@/components/social-icons";
+import { InstagramGlyph, LinkedinGlyph, type GlyphProps } from "@/components/social-icons";
 import { LogoMark as ShardLogo } from "@/components/hero/shapes";
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock";
 import { EmailReveal } from "./email-reveal";
@@ -31,7 +26,6 @@ import { WorkBento } from "./work-bento";
 const SOCIAL_ICONS: Record<string, ComponentType<GlyphProps>> = {
   Instagram: InstagramGlyph,
   LinkedIn: LinkedinGlyph,
-  Discord: DiscordGlyph,
 };
 
 function reducedMotion() {
@@ -600,15 +594,7 @@ export function NavMenu() {
             Menu
           </p>
 
-          {/* Every item's font-size, gap, and padding below is in `em` off
-              this one viewport-height-driven clamp, so the whole list scales
-              as one unit — on a short viewport it shrinks enough that all
-              eight items plus socials and the legal row fit with no scroll,
-              instead of overflowing at a fixed size. The `max-lg` clamp is the
-              larger mobile anchor: it is deliberately bigger than the desktop
-              one, and the tighter panel/bottom-block spacing around it is what
-              keeps the no-scroll guarantee on phones. */}
-          <nav className="mt-[1.25dvh] flex flex-col text-[clamp(1rem,2.7dvh,1.75rem)] max-lg:text-[clamp(1.125rem,3.4dvh,2rem)]">
+          <nav className="mt-auto flex min-h-0 max-h-[52dvh] flex-1 flex-col text-[clamp(1.375rem,4dvh,2.5rem)] max-lg:text-[clamp(1.375rem,3.8dvh,2.375rem)]">
             {NAV_ITEMS.map((item, i) => {
               const accentVar = toneColor(item.accent);
               const accentStyle = { "--nav-item-accent": accentVar } as CSSProperties;
@@ -618,7 +604,7 @@ export function NavMenu() {
                   ref={(el) => {
                     itemRefs.current[i] = el;
                   }}
-                  className="border-b border-[var(--line)] last:border-b-0"
+                  className="flex min-h-0 flex-1 items-center border-b border-[var(--line)] last:border-b-0"
                 >
                   {item.kind === "link" ? (
                     <Link

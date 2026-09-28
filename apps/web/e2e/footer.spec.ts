@@ -3,7 +3,6 @@ import { expect, test } from "@playwright/test";
 const SOCIAL_LINKS = [
   { label: "Instagram", href: "https://www.instagram.com/labmgmfilkomub/" },
   { label: "LinkedIn", href: "https://www.linkedin.com/company/mgmlab" },
-  { label: "Discord", href: "https://discord.gg/h7PTA7XCq4" },
 ];
 
 test.describe("footer", () => {

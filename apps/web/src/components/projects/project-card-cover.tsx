@@ -18,7 +18,6 @@ import {
 import { peekProjectReturn } from "@/lib/project-transition";
 import { waitForGridReveal } from "@/lib/projects-intro";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
-import { startFeaturedProjectFluid } from "./featured-project-fluid";
 
 // SSR runs useEffect; the browser prefers useLayoutEffect so hover wiring
 // happens before first paint.
@@ -85,7 +84,6 @@ export function ProjectCardCover({
   const lensRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const edgeRef = useRef<HTMLImageElement>(null);
-  const fluidCanvasRef = useRef<HTMLCanvasElement>(null);
   const fallbackPattern = FALLBACK_PATTERNS[slug.length % FALLBACK_PATTERNS.length];
 
   // Read once, synchronously during the first render (like the heroes read
@@ -104,14 +102,6 @@ export function ProjectCardCover({
     if (standalone) return;
     return registerStageCard({ root, frame, image: imageRef.current, index });
   }, [index, standalone]);
-
-  useIsomorphicLayoutEffect(() => {
-    const frame = frameRef.current;
-    const image = imageRef.current;
-    const canvas = fluidCanvasRef.current;
-    if (!standalone || !frame || !image || !canvas) return;
-    return startFeaturedProjectFluid(frame, image, canvas);
-  }, [standalone]);
 
   // The landing card's failsafe (the overlay normally unhides it long
   // before this fires).
@@ -333,7 +323,6 @@ export function ProjectCardCover({
     // Camera focus: blur in fast, then pull focus back to sharp. Built per
     // enter from the current filter so re-hovering mid-blur stays smooth.
     const focusIn = () => {
-      if (standalone) return;
       gsap.killTweensOf(img, "filter");
       gsap
         .timeline()
@@ -457,7 +446,7 @@ export function ProjectCardCover({
       offReduced();
       stop();
     };
-  }, [standalone]);
+  }, []);
 
   return (
     <div
@@ -516,13 +505,6 @@ export function ProjectCardCover({
           />
         </div>
       )}
-      {standalone && coverUrl ? (
-        <canvas
-          ref={fluidCanvasRef}
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-0 transition-opacity duration-300"
-        />
-      ) : null}
     </div>
   );
 }

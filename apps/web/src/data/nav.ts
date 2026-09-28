@@ -22,33 +22,10 @@ export type NavItem =
 export const NAV_ITEMS: (NavItem & { accent: PatternTone })[] = [
   { kind: "link", label: "Home", href: "/", accent: "blue" },
   { kind: "link", label: "About Us", href: "/about", accent: "red" },
-  {
-    kind: "dropdown",
-    label: "Focus",
-    accent: "yellow",
-    // Colors/motifs match the homepage's Core Competencies cards exactly —
-    // Focus names the same four areas.
-    items: [
-      { label: "Game & New Media", href: "/game", color: "green", motif: "chevron" },
-      { label: "Website", href: "/website", color: "blue", motif: "ring" },
-      { label: "Mobile", href: "/mobile", color: "red", motif: "bracket" },
-      { label: "HCI/UX", href: "/ux", color: "yellow", motif: "cross" },
-    ],
-  },
-  {
-    kind: "dropdown",
-    label: "Our Work",
-    accent: "green",
-    items: [
-      { label: "Projects", href: "/projects", color: "blue", pattern: "fans" },
-      { label: "Publications", href: "/publications", color: "green", pattern: "leaves" },
-      { label: "Research", href: "/research", color: "red", pattern: "circle" },
-    ],
-  },
+  { kind: "link", label: "Projects", href: "/projects", accent: "blue" },
+  { kind: "link", label: "Publications", href: "/publications", accent: "green" },
   { kind: "link", label: "Member", href: "/member", accent: "blue" },
   { kind: "link", label: "Articles", href: "/articles", accent: "red" },
-  { kind: "link", label: "Events", href: "/events", accent: "green" },
-  { kind: "link", label: "Careers", href: "/careers", accent: "yellow" },
   { kind: "link", label: "Contact", href: "/contact", accent: "green" },
 ];
 
@@ -58,7 +35,6 @@ export const CONTACT_EMAIL = "hi@labmgm.org";
 export const NAV_SOCIALS: NavLink[] = [
   { label: "Instagram", href: "https://www.instagram.com/labmgmfilkomub/" },
   { label: "LinkedIn", href: "https://www.linkedin.com/company/mgmlab" },
-  { label: "Discord", href: "https://discord.gg/h7PTA7XCq4" },
 ];
 
 export const LEGAL_LINKS: NavLink[] = [

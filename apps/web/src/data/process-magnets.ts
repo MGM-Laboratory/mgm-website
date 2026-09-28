@@ -15,6 +15,7 @@ export type ProcessMagnet = {
   kind: PatternKind;
   bg: PatternTone;
   fg: PatternTone;
+  showHint?: boolean;
 };
 
 export const PROCESS_ROWS: ProcessMagnet[][] = [
@@ -51,6 +52,7 @@ export const PROCESS_ROWS: ProcessMagnet[][] = [
     },
     {
       word: "Design.",
+      showHint: true,
       back: "We shape how it looks and feels for the people who use it.",
       kind: "leaves",
       bg: "green",
