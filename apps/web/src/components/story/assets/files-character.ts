@@ -29,7 +29,7 @@ export const CHARACTER_FILES: StoryFile[] = [
   },
   {
     url: "/story/v1/character/stand.glb",
-    bytes: 118732,
+    bytes: 118728,
     kind: "gltf",
     group: "character",
     tiers: ["high", "medium", "low"],
