@@ -22,6 +22,12 @@
 
 export type BootState = Readonly<{
   story: "gl" | "dom";
+  /**
+   * Whether `story` was decided here. The probe runs only on a hard load of
+   * `/`; a visit that starts elsewhere decides when the homepage first
+   * mounts (`decideStoryMode`).
+   */
+  storyDecided: boolean;
   loader: boolean;
   /** A loader already finished in this tab (the fast path). */
   repeat: boolean;
@@ -31,11 +37,17 @@ export type BootState = Readonly<{
 export const LOADER_KEY = "mgm:loader";
 export const STORY_KEY = "mgm:story";
 
-export const BOOT_SCRIPT = `(function(){var d=document.documentElement,w=window,b={story:"dom",loader:false,repeat:false,vh:w.innerHeight};try{var q=w.location.search,p=w.location.pathname,s=null;try{s=w.sessionStorage}catch(e){}if(s){b.repeat=s.getItem("${LOADER_KEY}")==="1"}d.style.setProperty("--story-vh",b.vh+"px");var calm=w.matchMedia("(prefers-reduced-motion: no-preference)").matches;if(p==="/"&&calm&&!/[?&]nostory(=|&|$)/.test(q)&&!(s&&s.getItem("${STORY_KEY}")==="dom")){try{var c=document.createElement("canvas"),g=c.getContext("webgl2",{failIfMajorPerformanceCaveat:true});if(g){var x=g.getExtension("WEBGL_debug_renderer_info"),r=x?String(g.getParameter(x.UNMASKED_RENDERER_WEBGL)):"";if(!/swiftshader|llvmpipe|softpipe|software|basic render|mesa offscreen/i.test(r))b.story="gl";var l=g.getExtension("WEBGL_lose_context");if(l)l.loseContext()}}catch(e){}}var ex=/^\\/(admin|forms|s)(\\/|$)/.test(p);b.loader=!ex&&(/[?&]loader=1(&|$)/.test(q)||!navigator.webdriver)}catch(e){}d.setAttribute("data-story-mode",b.story);d.setAttribute("data-loader",b.loader?"active":"done");w.__mgmBoot=b})()`;
+export const BOOT_SCRIPT = `(function(){var d=document.documentElement,w=window,b={story:"dom",storyDecided:false,loader:false,repeat:false,vh:w.innerHeight};try{var q=w.location.search,p=w.location.pathname,s=null;try{s=w.sessionStorage}catch(e){}if(s){b.repeat=s.getItem("${LOADER_KEY}")==="1"}d.style.setProperty("--story-vh",b.vh+"px");var calm=w.matchMedia("(prefers-reduced-motion: no-preference)").matches;if(p==="/")b.storyDecided=true;if(p==="/"&&calm&&!/[?&]nostory(=|&|$)/.test(q)&&!(s&&s.getItem("${STORY_KEY}")==="dom")){try{var c=document.createElement("canvas"),g=c.getContext("webgl2",{failIfMajorPerformanceCaveat:true});if(g){var x=g.getExtension("WEBGL_debug_renderer_info"),r=x?String(g.getParameter(x.UNMASKED_RENDERER_WEBGL)):"";if(!/swiftshader|llvmpipe|softpipe|software|basic render|mesa offscreen/i.test(r))b.story="gl";var l=g.getExtension("WEBGL_lose_context");if(l)l.loseContext()}}catch(e){}}var ex=/^\\/(admin|forms|s)(\\/|$)/.test(p);b.loader=!ex&&(/[?&]loader=1(&|$)/.test(q)||!navigator.webdriver)}catch(e){}d.setAttribute("data-story-mode",b.story);d.setAttribute("data-loader",b.loader?"active":"done");w.__mgmBoot=b})()`;
 
 type BootWindow = Window & { __mgmBoot?: BootState };
 
-const FALLBACK: BootState = { story: "dom", loader: false, repeat: false, vh: 800 };
+const FALLBACK: BootState = {
+  story: "dom",
+  storyDecided: false,
+  loader: false,
+  repeat: false,
+  vh: 800,
+};
 
 /** The boot decisions (the storybook and no loader when the script did not run). */
 export function readBoot(): BootState {

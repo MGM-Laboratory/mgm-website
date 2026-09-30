@@ -3,13 +3,14 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 
-import { readBoot, reapplyBoot, updateBoot } from "@/components/loader/boot";
+import { STORY_KEY, readBoot, reapplyBoot, updateBoot } from "@/components/loader/boot";
+import { hardwareWebGL2 } from "@/components/reel/gl/webgl-probe";
 import { StoryOverlay } from "@/components/story/story-overlay";
 // Types only: the engine and three.js stay in the dynamic import.
 import type { StoryOverlayStore } from "@/components/story/engine/overlay-store";
 import type { StoryEngine } from "@/components/story/engine/story-engine";
 import { actOf, TIMELINE } from "@/components/story/engine/timeline";
-import { onReducedMotion } from "@/lib/reduced-motion";
+import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 
 /**
  * Starts and stops the WebGL story for the mounted homepage. Renders only a
@@ -28,6 +29,26 @@ import { onReducedMotion } from "@/lib/reduced-motion";
  */
 
 const START_FAILSAFE_MS = 6000;
+
+/**
+ * The boot script probes only on a hard load of `/`. A visit that started on
+ * another page decides here, with the same gates, the first time the
+ * homepage mounts (in a layout effect, so the section never paints twice).
+ */
+function decideStoryMode() {
+  const boot = readBoot();
+  if (boot.storyDecided) return boot.story;
+  let off = false;
+  try {
+    off = window.sessionStorage.getItem(STORY_KEY) === "dom";
+  } catch {
+    // No storage: decide on the device alone.
+  }
+  const nostory = new URLSearchParams(window.location.search).has("nostory");
+  const story = !off && !nostory && motionAllowed() && hardwareWebGL2() ? "gl" : "dom";
+  updateBoot({ story, storyDecided: true });
+  return story;
+}
 
 /** The storybook's place for story position `t`. */
 function storybookAnchor(section: HTMLElement, t: number): HTMLElement | null {
@@ -78,7 +99,7 @@ export function StoryHost() {
     reapplyBoot();
     const section = markerRef.current?.closest<HTMLElement>("[data-story-section]");
     const host = section?.querySelector<HTMLElement>("[data-story-layer-host]");
-    if (!section || !host || readBoot().story !== "gl") return;
+    if (!section || !host || decideStoryMode() !== "gl") return;
 
     let disposed = false;
     let engine: StoryEngine | null = null;
