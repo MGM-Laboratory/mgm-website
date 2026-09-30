@@ -9,6 +9,8 @@ import { ArticlesPortal } from "@/components/transition/articles-portal";
 import { ProjectTransition } from "@/components/transition/project-transition";
 import { RouteTransition } from "@/components/transition/route-transition";
 import { AppBootTracker } from "@/components/app-boot-tracker";
+import { BootScript } from "@/components/loader/boot-script";
+import { SiteLoader } from "@/components/loader/site-loader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,9 +40,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${hanken.variable} h-full antialiased`}
     >
+      <head>
+        {/* Before the first paint: the story's version and the loader (components/loader/boot.ts). */}
+        <BootScript />
+      </head>
       <body className="flex min-h-full flex-col">
         <Providers>
           <AppBootTracker />
+          <SiteLoader />
           <RouteTransition />
           <ProjectTransition />
           <ArticlesPortal />
