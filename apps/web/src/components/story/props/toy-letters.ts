@@ -137,6 +137,18 @@ export function letterDrop(progress: number, height: number): { y: number; squas
   return { y: 0, squash: 1 - rest * 0.03 * Math.sin(rest * Math.PI * 3) };
 }
 
+/** Hands the main thread back between build steps (not throttled like a timer in a hidden tab). */
+function yieldToMain(): Promise<void> {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(0);
+  });
+}
+
 type FontJson = FontData & {
   kern?: Record<string, number>;
   glyphs: Record<string, { ha: number }>;
@@ -201,29 +213,45 @@ export async function loadToyLetters(
   let colourIndex = 0;
   const rowWidths: number[] = [];
 
+  // Build each distinct glyph once (the phrase repeats most of its letters), yielding to the
+  // main thread between glyphs so the build never holds a long task.
+  const cache = new Map<string, { geometry: BufferGeometry; box: Box3 }>();
+  const distinct = [...new Set(lines.join(""))].filter((char) => char.trim() !== "");
+  for (const char of distinct) {
+    const raw = new TextGeometry(char, {
+      font,
+      size,
+      depth: depth - bevel * 2,
+      curveSegments,
+      bevelEnabled: true,
+      bevelThickness: bevel,
+      bevelSize: bevel * 0.8,
+      bevelOffset: -bevel * 0.8,
+      bevelSegments,
+    });
+    raw.computeBoundingBox();
+    const box = raw.boundingBox?.clone() ?? new Box3();
+    // Pivot = the middle of the glyph's base: every letter sits on its own lowest point.
+    raw.translate(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
+    raw.deleteAttribute("uv");
+    // Smooth bevels, crisp edges between the face and the bevel.
+    const geometry = toCreasedNormals(raw, Math.PI / 5);
+    if (geometry !== raw) raw.dispose();
+    cache.set(char, { geometry, box });
+    await yieldToMain();
+  }
+
   lines.forEach((text, line) => {
     const chars = [...text];
     let x = 0;
-    const placed: { char: string; x: number; geometry: BufferGeometry; box: Box3 }[] = [];
+    const placed: { char: string; x: number; box: Box3; geometry: BufferGeometry }[] = [];
     chars.forEach((char, i) => {
       const next = chars.at(i + 1);
       const advance =
         (advanceOf.get(char) ?? 0) * unit + (next ? (kern.get(char + next) ?? 0) * unit : 0);
-      if (char.trim() !== "") {
-        const geometry = new TextGeometry(char, {
-          font,
-          size,
-          depth: depth - bevel * 2,
-          curveSegments,
-          bevelEnabled: true,
-          bevelThickness: bevel,
-          bevelSize: bevel * 0.8,
-          bevelOffset: -bevel * 0.8,
-          bevelSegments,
-        });
-        geometry.computeBoundingBox();
-        const box = geometry.boundingBox?.clone() ?? new Box3();
-        placed.push({ char, x, geometry, box });
+      const glyph = cache.get(char);
+      if (glyph) {
+        placed.push({ char, x, box: glyph.box, geometry: glyph.geometry });
         x += advance + capHeight * tracking;
       } else {
         x += advance;
@@ -232,24 +260,17 @@ export async function loadToyLetters(
     rowWidths.push(x);
     const offset = -x / 2;
     for (const item of placed) {
-      // Pivot = the middle of the glyph's base: every letter sits on its own lowest point.
       const cx = (item.box.min.x + item.box.max.x) / 2;
-      const cz = (item.box.min.z + item.box.max.z) / 2;
-      const base = item.box.min.y;
-      item.geometry.translate(-cx, -base, -cz);
-      item.geometry.deleteAttribute("uv");
-      // Smooth bevels, crisp edges between the face and the bevel.
-      const creased = toCreasedNormals(item.geometry, Math.PI / 5);
-      if (creased !== item.geometry) item.geometry.dispose();
+      const instance = item.geometry.clone();
       const index = letters.length;
-      const count = creased.getAttribute("position").count;
-      creased.setAttribute("aLetter", new BufferAttribute(new Float32Array(count).fill(index), 1));
+      const count = instance.getAttribute("position").count;
+      instance.setAttribute("aLetter", new BufferAttribute(new Float32Array(count).fill(index), 1));
       const colour = new Color(colours.at(colourIndex % colours.length) ?? BRAND.blue);
       colourIndex += 1;
       const rgb = new Float32Array(count * 3);
       for (let v = 0; v < count; v++) rgb.set([colour.r, colour.g, colour.b], v * 3);
-      creased.setAttribute("color", new BufferAttribute(rgb, 3));
-      glyphs.push(creased);
+      instance.setAttribute("color", new BufferAttribute(rgb, 3));
+      glyphs.push(instance);
       const home = new Vector3(offset + item.x + cx, 0, -line * rowGap);
       const sizeVec = new Vector3(
         item.box.max.x - item.box.min.x,
@@ -275,6 +296,7 @@ export async function loadToyLetters(
       });
     }
   });
+  for (const glyph of cache.values()) glyph.geometry.dispose();
 
   // mergeGeometries returns null when the attributes disagree (its typings do not say so).
   const merged = mergeGeometries(glyphs, false) as BufferGeometry | null;
