@@ -138,8 +138,8 @@ export function CtaFooter({ lead }: { lead?: ReactNode } = {}) {
     const track = wordmarkTrackRef.current;
     if (!track || reducedMotion()) return;
     const measure = () => {
-      const secondCopy = track.children[1] as HTMLElement | undefined;
-      return secondCopy ? secondCopy.offsetLeft : track.scrollWidth / 2;
+      const second = track.children.item(1);
+      return second instanceof HTMLElement ? second.offsetLeft : track.scrollWidth / 2;
     };
     let shiftPx = measure();
     const setX = gsap.quickSetter(track, "x", "px") as (value: number) => void;

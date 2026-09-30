@@ -61,7 +61,9 @@ function FlowingItem({ competency }: { competency: Competency }) {
     };
     calculateRepetitions();
     window.addEventListener("resize", calculateRepetitions);
-    return () => window.removeEventListener("resize", calculateRepetitions);
+    return () => {
+      window.removeEventListener("resize", calculateRepetitions);
+    };
   }, []);
 
   useEffect(() => {
@@ -129,8 +131,12 @@ function FlowingItem({ competency }: { competency: Competency }) {
         )}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
-        onFocus={() => reveal("top")}
-        onBlur={() => hide("top")}
+        onFocus={() => {
+          reveal("top");
+        }}
+        onBlur={() => {
+          hide("top");
+        }}
       >
         {competency.title}
       </Link>

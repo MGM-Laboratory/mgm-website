@@ -7,8 +7,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 function refuseWebGL() {
   const refuses = (type: string) => /^(webgl2?|experimental-webgl)$/.test(type);
-  for (const target of [HTMLCanvasElement, globalThis.OffscreenCanvas]) {
-    if (!target) continue;
+  const patchHtmlCanvas = (target?: typeof HTMLCanvasElement | typeof OffscreenCanvas) => {
+    if (!target) return;
     const original = target.prototype.getContext as (...args: unknown[]) => unknown;
     Object.defineProperty(target.prototype, "getContext", {
       configurable: true,
@@ -16,7 +16,9 @@ function refuseWebGL() {
         return refuses(type) ? null : original.call(this, type, ...rest);
       },
     });
-  }
+  };
+  patchHtmlCanvas(/*safe*/ HTMLCanvasElement);
+  patchHtmlCanvas(/*safe*/ globalThis.OffscreenCanvas);
 }
 
 const CARDS = [
@@ -27,8 +29,8 @@ const CARDS = [
 ];
 
 async function expectStorybook(page: Page) {
-  const html = page.locator("html");
-  await expect(html).toHaveAttribute("data-story-mode", "dom");
+  const root = page.locator("html");
+  await expect(root).toHaveAttribute("data-story-mode", "dom");
   const story = page.locator("#story");
   const book = story.locator("[data-storybook]");
   await expect(book).toBeVisible();

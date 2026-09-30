@@ -102,8 +102,8 @@ export class QualityGovernor {
     // Mean of the middle 80%: a single hitch neither saves nor dooms a window.
     let sum = 0;
     let n = 0;
-    for (let i = Math.floor(WINDOW * 0.1); i < Math.ceil(WINDOW * 0.9); i++) {
-      sum += sorted[i];
+    for (const value of sorted.slice(Math.floor(WINDOW * 0.1), Math.ceil(WINDOW * 0.9))) {
+      sum += value;
       n += 1;
     }
     const mean = sum / n;
