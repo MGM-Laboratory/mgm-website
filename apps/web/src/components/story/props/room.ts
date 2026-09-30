@@ -53,11 +53,23 @@ import type { StoryLoaderLike, StoryTier } from "../assets/types";
  *
  * Usage:
  *   const room = await loadRoom(assets, tier);
- *   rootScene.add(room.root);
+ *   rootScene.add(room.root);     // before the first compile: the rig's lights count
  *   await room.prepare(renderer); // in the loader, before compiling: the env map
- *   room.setGrade("dark");       // or "light"; amount blends from the other grade
- *   room.setPhase("land");       // visibility by story phase
- *   room.lamps(0 .. 1);          // warm-up; floor lamps lead, the pendant follows
+ *   room.setGrade("dark");        // or "light"; amount blends from the other grade
+ *   room.setPhase("land");        // visibility by story phase
+ *   room.lamps(0 .. 1);           // warm-up; floor lamps lead, the pendant follows
+ *
+ * Rules the stage has to keep:
+ * - The scene's light count is part of every lit material's program in three.js,
+ *   the room's included: an act that adds or removes a light (or hides one)
+ *   recompiles them all. Create every story light up front and fade it instead.
+ * - The first frame after compiling still builds GPU pipelines (about 200 ms on
+ *   a cold cache), so the loader renders one warm-up frame of the room.
+ * - The glTF loader needs KTX2 (`KHR_texture_basisu` is required) and meshopt.
+ * - The grades were tuned under AgX tone mapping at exposure 1. Under ACES the
+ *   same values read with more contrast and deeper shadows.
+ * - Baked surfaces receive no three.js shadows: contact shadows for the box and
+ *   the figure are the acts' (a soft blob on the table top).
  */
 
 export type RoomScheme = "light" | "dark";
@@ -203,6 +215,10 @@ export type StoryRoom = {
    * (0 = off, 1 = a bright screen at night; flicker it for a power-on).
    */
   tvGlow(color: ColorRepresentation, intensity: number): void;
+  /**
+   * Frees the GPU memory of everything the room used, the cached glTF's geometry
+   * and textures included (three.js uploads them again if the room is rebuilt).
+   */
   dispose(): void;
 };
 
