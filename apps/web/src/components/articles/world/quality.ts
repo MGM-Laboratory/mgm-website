@@ -27,8 +27,6 @@ export const QUALITY_LADDER: readonly QualityLevel[] = [
   { tier: "low", pixelRatio: 0.85 },
 ];
 
-const START_INDEX: Record<QualityTier, number> = { high: 0, medium: 2, low: 4 };
-
 /** Frames to skip after a start or a change (compiles, uploads, the lens settle). */
 const GRACE_SECONDS = 1.1;
 /** Frames per judgement (about 1.5 s at 60 fps). */
@@ -42,6 +40,7 @@ const SETTLED_AFTER = 2;
 const STALL_MS = 250;
 
 export class QualityGovernor {
+  private readonly ladder: readonly QualityLevel[];
   private index: number;
   private grace = GRACE_SECONDS;
   private readonly samples = new Float32Array(WINDOW);
@@ -52,14 +51,20 @@ export class QualityGovernor {
   constructor(
     initial: QualityTier,
     private readonly onChange: (level: QualityLevel) => void,
-    options: { locked?: boolean } = {},
+    options: { locked?: boolean; ladder?: readonly QualityLevel[] } = {},
   ) {
-    this.index = START_INDEX[initial];
+    // Another stage (the homepage story) may walk its own ladder; it starts
+    // at the first level of the initial tier, as the world's does.
+    this.ladder = options.ladder ?? QUALITY_LADDER;
+    this.index = Math.max(
+      0,
+      this.ladder.findIndex((level) => level.tier === initial),
+    );
     this.done = options.locked ?? false;
   }
 
   get level(): QualityLevel {
-    return QUALITY_LADDER[this.index];
+    return this.ladder.at(this.index) ?? QUALITY_LADDER[0];
   }
 
   get settled() {
@@ -110,7 +115,7 @@ export class QualityGovernor {
     }
     this.good = 0;
     const steps = mean > VERY_SLOW_MS ? 2 : 1;
-    const next = Math.min(QUALITY_LADDER.length - 1, this.index + steps);
+    const next = Math.min(this.ladder.length - 1, this.index + steps);
     if (next === this.index) {
       this.done = true;
       return;
@@ -118,7 +123,7 @@ export class QualityGovernor {
     this.index = next;
     this.grace = GRACE_SECONDS;
     this.onChange(this.level);
-    if (this.index === QUALITY_LADDER.length - 1) this.done = true;
+    if (this.index === this.ladder.length - 1) this.done = true;
   }
 }
 
