@@ -1,0 +1,404 @@
+{
+  "version": 1,
+  "units": "metres, Y up, the room glTF frame (floor at y = 0)",
+  "table": {
+    "centre": [0.1773, 0.4215, -0.8048],
+    "topY": 0.4215,
+    "size": [0.94, 0.94],
+    "corners": {
+      "nw": [-0.3223, 0.4215, -1.3003],
+      "ne": [0.6224, 0.4215, -1.2583],
+      "se": [0.6715, 0.4215, -0.3337],
+      "sw": [-0.2627, 0.4215, -0.3264]
+    }
+  },
+  "boxSpot": {
+    "position": [0.4675, 0.4216, -0.4335],
+    "yawDeg": 10
+  },
+  "figureSpot": {
+    "position": [0.527, 0.4216, -0.6035],
+    "standRadius": 0.039
+  },
+  "letters": {
+    "direction": [0, 0, -1],
+    "capHeight": 0.022,
+    "lines": [
+      {
+        "text": "We tell stories",
+        "start": [0.544, 0.4215, -0.68],
+        "end": [0.544, 0.4215, -0.8869],
+        "length": 0.2069,
+        "checkedFree": true
+      },
+      {
+        "text": "through interactive media.",
+        "start": [0.5899, 0.4215, -0.6664],
+        "end": [0.5899, 0.4215, -1.0421],
+        "length": 0.3757,
+        "checkedFree": true
+      }
+    ]
+  },
+  "cardStage": {
+    "centre": [0.4675, 1.22, -0.4335],
+    "camera": {
+      "position": [1.2675, 1.22, -0.4335],
+      "target": [0.4675, 1.22, -0.4335],
+      "fov": {
+        "landscape": 14,
+        "portrait": 30
+      }
+    }
+  },
+  "crane": {
+    "from": [1.3, 1.25, -0.44],
+    "to": [1.292, 0.6584, -0.493],
+    "clearance": 0.578,
+    "nearest": "room_atlasD_lamps",
+    "stageClearance": 0.656
+  },
+  "shots": {
+    "a_start": {
+      "position": [1.428, 1.4914, -0.374],
+      "target": [0.4675, 1.0494, -0.459],
+      "fov": {
+        "landscape": 34,
+        "portrait": 58
+      }
+    },
+    "a_land": {
+      "position": [1.292, 0.6584, -0.493],
+      "target": [-0.34, 0.5989, -0.5695],
+      "fov": {
+        "landscape": 34,
+        "portrait": 58
+      }
+    },
+    "b_mcu": {
+      "position": [0.9265, 0.5479, -0.476],
+      "target": [0.5015, 0.5309, -0.527],
+      "fov": {
+        "landscape": 32,
+        "portrait": 56
+      }
+    },
+    "c_start": {
+      "position": [1.19, 0.5224, -0.391],
+      "target": [0.17, 0.7264, -0.578],
+      "fov": {
+        "landscape": 42,
+        "portrait": 66
+      }
+    },
+    "c_end": {
+      "position": [1.054, 0.7604, -0.459],
+      "target": [-0.51, 0.8114, -0.612],
+      "fov": {
+        "landscape": 42,
+        "portrait": 66
+      }
+    },
+    "d_start": {
+      "position": [0.629, 0.9134, -0.578],
+      "target": [-1.7844, 0.8675, -0.6324],
+      "fov": {
+        "landscape": 40,
+        "portrait": 50
+      }
+    },
+    "d_mid": {
+      "position": [-0.17, 0.8879, -0.6035],
+      "target": [-1.7844, 0.8675, -0.6324],
+      "fov": {
+        "landscape": 40,
+        "portrait": 50
+      }
+    },
+    "d_fill": {
+      "position": [-1.0487, 0.8679, -0.6181],
+      "target": [-1.7844, 0.8675, -0.6324],
+      "fov": {
+        "landscape": 40,
+        "portrait": 50
+      }
+    }
+  },
+  "tv": {
+    "centre": [-1.7844, 0.8675, -0.6324],
+    "normal": [0.99981, 0.00048, 0.01941],
+    "size": [0.9522, 0.5508],
+    "corners": {
+      "tl": [-1.7938, 1.1429, -0.1564],
+      "tr": [-1.7753, 1.1429, -1.1084],
+      "br": [-1.775, 0.5921, -1.1084],
+      "bl": [-1.7935, 0.5921, -0.1564]
+    },
+    "fill": {
+      "landscape": {
+        "fov": 40,
+        "distance": 0.7358
+      },
+      "portrait": {
+        "fov": 50,
+        "distance": 0.5906
+      }
+    }
+  },
+  "lamps": {
+    "pendant": {
+      "bulb": [0.947, 1.79, -0.52],
+      "glow": {
+        "centre": [0.947, 1.768, -0.52],
+        "radius": 0.172,
+        "normal": [0, -1, 0]
+      }
+    },
+    "arc": {
+      "bulb": [-1.25, 1.4, -1.795],
+      "glow": {
+        "centre": [-1.25, 1.2935, -1.795],
+        "radius": 0.184,
+        "normal": [0, -1, 0]
+      }
+    },
+    "tripod": {
+      "bulb": [-1.689, 1.3, 0.595],
+      "glow": {
+        "centre": [-1.689, 1.0935, 0.595],
+        "radius": 0.232,
+        "normal": [0, -1, 0]
+      }
+    }
+  },
+  "window": {
+    "centre": [0.13, 1.25, -3.37],
+    "normal": [0, 0, 1],
+    "size": [2.76, 2.85]
+  },
+  "probe": [0.3, 0.78, -0.62],
+  "lightmaps": [
+    {
+      "group": "furniture",
+      "layer": "pendant",
+      "k": 1.51982
+    },
+    {
+      "group": "furniture",
+      "layer": "practical",
+      "k": 9.50521
+    },
+    {
+      "group": "furniture",
+      "layer": "sky",
+      "k": 2.7487
+    },
+    {
+      "group": "shell",
+      "layer": "pendant",
+      "k": 0.9037
+    },
+    {
+      "group": "shell",
+      "layer": "practical",
+      "k": 2.49219
+    },
+    {
+      "group": "shell",
+      "layer": "sky",
+      "k": 3.24447
+    },
+    {
+      "group": "table",
+      "layer": "pendant",
+      "k": 1.81928
+    },
+    {
+      "group": "table",
+      "layer": "practical",
+      "k": 1.11339
+    },
+    {
+      "group": "table",
+      "layer": "sky",
+      "k": 1.19086
+    }
+  ],
+  "phases": [
+    {
+      "phase": "hidden",
+      "nodes": []
+    },
+    {
+      "phase": "crane",
+      "nodes": [
+        "coffee_table_cup_saucer",
+        "coffee_table_magazine",
+        "coffee_table_pot_A",
+        "coffee_table_pot_B",
+        "coffee_table_pot_C",
+        "coffee_table_top",
+        "room_atlasA_sofa_table",
+        "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
+        "room_atlasD_lamps",
+        "room_concrete_walls",
+        "room_dark_panel",
+        "room_floor_polished",
+        "room_lamp_glow",
+        "room_rug",
+        "tv_body",
+        "tv_screen"
+      ]
+    },
+    {
+      "phase": "land",
+      "nodes": [
+        "coffee_table_cup_saucer",
+        "coffee_table_magazine",
+        "coffee_table_pot_A",
+        "coffee_table_pot_B",
+        "coffee_table_pot_C",
+        "coffee_table_top",
+        "room_atlasA_sofa_table",
+        "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
+        "room_atlasD_lamps",
+        "room_concrete_walls",
+        "room_dark_panel",
+        "room_floor_polished",
+        "room_lamp_glow",
+        "room_rug",
+        "tv_body",
+        "tv_screen"
+      ]
+    },
+    {
+      "phase": "table",
+      "nodes": [
+        "coffee_table_cup_saucer",
+        "coffee_table_magazine",
+        "coffee_table_pot_A",
+        "coffee_table_pot_B",
+        "coffee_table_pot_C",
+        "coffee_table_top",
+        "room_atlasA_sofa_table",
+        "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
+        "room_atlasD_lamps",
+        "room_ceiling_concrete",
+        "room_concrete_walls",
+        "room_dark_panel",
+        "room_floor_polished",
+        "room_lamp_glow",
+        "room_metal_pipes",
+        "room_rug",
+        "room_steel_window_frame",
+        "shell_east",
+        "shell_ne_block",
+        "shell_south",
+        "tv_body",
+        "tv_screen",
+        "window_sky"
+      ]
+    },
+    {
+      "phase": "takeoff",
+      "nodes": [
+        "coffee_table_cup_saucer",
+        "coffee_table_magazine",
+        "coffee_table_pot_A",
+        "coffee_table_pot_B",
+        "coffee_table_pot_C",
+        "coffee_table_top",
+        "room_atlasA_sofa_table",
+        "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
+        "room_atlasD_lamps",
+        "room_ceiling_concrete",
+        "room_concrete_walls",
+        "room_dark_panel",
+        "room_floor_polished",
+        "room_lamp_glow",
+        "room_metal_pipes",
+        "room_rug",
+        "room_steel_window_frame",
+        "shell_east",
+        "shell_ne_block",
+        "shell_south",
+        "tv_body",
+        "tv_screen",
+        "window_sky"
+      ]
+    },
+    {
+      "phase": "chase",
+      "nodes": [
+        "coffee_table_cup_saucer",
+        "coffee_table_magazine",
+        "coffee_table_pot_A",
+        "coffee_table_pot_B",
+        "coffee_table_pot_C",
+        "coffee_table_top",
+        "room_atlasA_sofa_table",
+        "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
+        "room_atlasD_lamps",
+        "room_ceiling_concrete",
+        "room_concrete_walls",
+        "room_dark_panel",
+        "room_floor_polished",
+        "room_lamp_glow",
+        "room_metal_pipes",
+        "room_rug",
+        "tv_body",
+        "tv_screen"
+      ]
+    },
+    {
+      "phase": "screen",
+      "nodes": [
+        "room_atlasB_tv_cabinet",
+        "room_atlasD_lamps",
+        "room_concrete_walls",
+        "room_floor_polished",
+        "room_lamp_glow",
+        "tv_body",
+        "tv_screen"
+      ]
+    },
+    {
+      "phase": "fill",
+      "nodes": ["tv_screen"]
+    },
+    {
+      "phase": "all",
+      "nodes": [
+        "coffee_table_cup_saucer",
+        "coffee_table_magazine",
+        "coffee_table_pot_A",
+        "coffee_table_pot_B",
+        "coffee_table_pot_C",
+        "coffee_table_top",
+        "room_atlasA_sofa_table",
+        "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
+        "room_atlasD_lamps",
+        "room_ceiling_concrete",
+        "room_concrete_walls",
+        "room_dark_panel",
+        "room_floor_polished",
+        "room_lamp_glow",
+        "room_metal_pipes",
+        "room_rug",
+        "room_steel_window_frame",
+        "shell_east",
+        "shell_ne_block",
+        "shell_south",
+        "tv_body",
+        "tv_screen",
+        "window_sky"
+      ]
+    }
+  ]
+}
