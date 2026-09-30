@@ -220,6 +220,8 @@ export class StoryDirector {
   private settledFor = 0;
   /** The rest an advance in flight is heading for (latched, so landing on it never retargets). */
   private target: RestPoint | null = null;
+  /** The skip control asked to set off from where it put the page, even from a rest. */
+  private launch = false;
   private lastRenderAt = 0;
   private fpsFrames = 0;
   private fpsSince = 0;
@@ -404,6 +406,13 @@ export class StoryDirector {
     const velocity = dt > 0 ? (t - this.t) / dt : 0;
     this.velocity = Number.isFinite(velocity) ? damp(this.velocity, velocity, 18, dt) : 0;
     this.t = t;
+    // `?story=<beat>:<p>`: the first frame jumps there, wherever the page opened.
+    if (this.jumpOnStart) {
+      const { beat, p } = this.jumpOnStart;
+      this.jumpOnStart = null;
+      this.jump(beat, p);
+      return;
+    }
     const near =
       rect.y < height * (1 + NEAR_MARGIN) && rect.y + rect.height > -height * NEAR_MARGIN;
     if (!near) {
@@ -411,11 +420,6 @@ export class StoryDirector {
       return;
     }
     this.awake = true;
-    if (this.jumpOnStart) {
-      const { beat, p } = this.jumpOnStart;
-      this.jumpOnStart = null;
-      this.jump(beat, p);
-    }
 
     const held = this.intent.held || this.pointer.down;
     this.freeze = damp(this.freeze, held ? 1 : 0, 10, dt);
@@ -613,7 +617,8 @@ export class StoryDirector {
     const { docTop } = this.scrollState();
     this.write(docTop + t * this.vh);
     this.stopAdvance();
-    if (arm) this.intent.arm(arm);
+    this.launch = arm !== undefined;
+    if (arm) this.intent.launch(arm);
     else this.intent.disarm();
   }
 
@@ -638,6 +643,8 @@ export class StoryDirector {
       !isScrollLocked() &&
       !isReelPlayerOpen() &&
       this.vh > 0;
+    // Real input always wins over a launch from the skip control.
+    if (input) this.launch = false;
     if (!enabled || input) {
       this.stopAdvance();
       return;
@@ -659,8 +666,8 @@ export class StoryDirector {
       }
       this.settledFor += dt;
       if (this.settledFor < SETTLE_SECONDS) return;
-      // Parked on a rest already: nothing to finish.
-      if (TIMELINE.rests.some((rest) => Math.abs(rest.t - t) < REST_TOLERANCE)) {
+      // Parked on a rest already: nothing to finish (unless the skip control set off from it).
+      if (!this.launch && TIMELINE.rests.some((rest) => Math.abs(rest.t - t) < REST_TOLERANCE)) {
         intent.disarm();
         this.stopAdvance();
         return;
@@ -674,6 +681,7 @@ export class StoryDirector {
       return;
     }
     this.autoAdvancing = true;
+    this.launch = false;
     this.target = rest;
     this.ramp = Math.min(1, this.ramp + dt / RAMP_SECONDS);
     const remaining = Math.abs(rest.t - t);

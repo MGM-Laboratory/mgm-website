@@ -178,6 +178,15 @@ export class ScrollIntent {
     this.mark();
   }
 
+  /**
+   * Arms toward `direction` for a control the visitor pressed (skip, watch
+   * again) without counting as scroll input, so the advance sets off at once.
+   */
+  launch(direction: 1 | -1) {
+    this.direction = direction;
+    this.armed = true;
+  }
+
   /** Stands auto-advance down until the next real input. */
   disarm() {
     this.armed = false;
