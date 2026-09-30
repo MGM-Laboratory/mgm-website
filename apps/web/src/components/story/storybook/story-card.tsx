@@ -48,10 +48,10 @@ export function StoryCard({ card }: Readonly<{ card: StoryCardData }>) {
           </svg>
         </div>
         <div className="story-card-copy">
-          <h3 className="font-display text-[clamp(1.35rem,2.1vw,1.9rem)] leading-none font-semibold tracking-tight text-[#0e1116]">
+          <h3 className="story-card-title font-display leading-none font-semibold tracking-tight text-[#0e1116]">
             {card.title}
           </h3>
-          <p className="mt-2 text-[0.8125rem] leading-snug text-[#3b4150]">{card.line}</p>
+          <p className="story-card-line text-[#3b4150]">{card.line}</p>
         </div>
       </div>
     </Link>

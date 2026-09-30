@@ -119,6 +119,8 @@ html[data-story-mode="gl"] [data-storybook] {
 
 .story-card {
   --story-accent: var(--brand-blue);
+  /* The card scales like a real one: type and spacing follow its width. */
+  container-type: inline-size;
   perspective: 900px;
 }
 
@@ -140,7 +142,7 @@ html[data-story-mode="gl"] [data-storybook] {
   display: flex;
   flex-direction: column;
   aspect-ratio: 63 / 88;
-  padding: 11% 11% 12%;
+  padding: 11cqw 10cqw 12cqw;
   overflow: hidden;
   border: 1px solid rgb(14 17 22 / 0.16);
   border-radius: 1.1rem;
@@ -184,43 +186,56 @@ html[data-story-mode="gl"] [data-storybook] {
   gap: 0.3rem;
   color: #0e1116;
   font-family: var(--font-display);
-  font-size: clamp(0.7rem, 0.9vw, 0.85rem);
+  font-size: clamp(0.625rem, 5.2cqw, 0.9rem);
   font-weight: 600;
   line-height: 1;
 }
 
 .story-card-index-top {
-  top: 0.8rem;
-  left: 0.85rem;
+  top: 4.6cqw;
+  left: 4.8cqw;
 }
 
 .story-card-index-bottom {
-  right: 0.85rem;
-  bottom: 0.8rem;
+  right: 4.8cqw;
+  bottom: 4.6cqw;
   rotate: 180deg;
 }
 
 .story-card-pip {
-  width: 0.45rem;
-  height: 0.45rem;
+  width: clamp(0.35rem, 2.6cqw, 0.5rem);
+  height: clamp(0.35rem, 2.6cqw, 0.5rem);
   border-radius: 999px;
   background: var(--story-accent);
 }
 
+/* The major visual: the top half of the card. */
 .story-card-visual {
-  height: 50%;
-  padding: 4% 6% 8%;
+  flex: none;
+  height: 44%;
+  padding: 0 4cqw 6cqw;
 }
 
+/* Title and line start right under the visual, so all four titles align. */
 .story-card-copy {
-  margin-top: auto;
+  padding-right: 6cqw;
+}
+
+.story-card-title {
+  font-size: clamp(1.05rem, 12cqw, 2rem);
+}
+
+.story-card-line {
+  margin-top: 3cqw;
+  font-size: clamp(0.75rem, 6.6cqw, 0.9375rem);
+  line-height: 1.38;
 }
 
 .story-card-copy::before {
   display: block;
-  width: 1.75rem;
+  width: 11cqw;
   height: 3px;
-  margin-bottom: 0.85rem;
+  margin-bottom: 5cqw;
   content: "";
   border-radius: 2px;
   background: var(--story-accent);
