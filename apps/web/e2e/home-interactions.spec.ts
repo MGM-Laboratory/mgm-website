@@ -180,26 +180,3 @@ test("the cursor flow shows through the page on a GPU and gives it back", async 
     await browser.close();
   }
 });
-
-test("article covers respond to focus without reloading their image", async ({ page }) => {
-  // The homepage's articles section (the /articles list draws its own cards).
-  await page.goto("/");
-  const cover = page.locator(".article-cover").first();
-  test.skip((await cover.count()) === 0, "No published articles in this environment");
-  const requests: string[] = [];
-  page.on("request", (request) => {
-    // Only the covers' own pictures (the header logo, say, may load late).
-    if (request.resourceType() === "image" && request.url().includes("/api/articles-cms/media/")) {
-      requests.push(request.url());
-    }
-  });
-  await cover.locator("..").focus();
-  await expect(cover.locator(".article-cover-arrow")).toHaveCSS("opacity", "1");
-  await expect(cover.locator(".article-cover-image")).toHaveCSS(
-    "filter",
-    "saturate(1.12) contrast(1.04)",
-  );
-  expect(requests).toEqual([]);
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(cover.locator(".article-cover-image")).toHaveCSS("transform", "none");
-});

@@ -1,0 +1,263 @@
+/*
+ * The homepage story (components/story, docs/homepage-story.md).
+ *
+ * Both versions are in the server HTML. The boot script sets
+ * html[data-story-mode] before the first paint: "gl" shows the WebGL
+ * shell, anything else (no JavaScript, reduced motion, no WebGL, a
+ * fallback) keeps the storybook. The section and everything around the
+ * canvas stays transparent, so the canvas behind it shows through.
+ */
+
+.story-section {
+  position: relative;
+}
+
+[data-story-gl] {
+  display: none;
+}
+
+html[data-story-mode="gl"] [data-story-gl] {
+  display: block;
+}
+
+html[data-story-mode="gl"] [data-storybook] {
+  display: none;
+}
+
+/* The stage's canvas lives here (an empty element React never renders into). */
+[data-story-layer-host] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+/* ------------------------------------------------------------ typography */
+
+.story-title {
+  font-size: clamp(3.25rem, 13.5vw, 15rem);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+}
+
+.story-description {
+  font-size: clamp(1.0625rem, 1.45vw, 1.375rem);
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* ------------------------------------------------------------ the entrance */
+
+.story-intro {
+  /* The title's measured width (story-host.tsx); the fallback is its typical width. */
+  --story-box-w: calc(var(--story-title-w, clamp(3.25rem, 13.5vw, 15rem) * 5.9) * 0.8);
+  --story-box-h: calc(var(--story-box-w) * 1.41102);
+  --story-box-peek: calc(var(--story-box-h) * 0.2);
+  position: relative;
+  height: var(--story-vh, 100vh);
+}
+
+.story-intro-copy {
+  position: absolute;
+  inset: 4rem 0 var(--story-box-peek) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.5rem 1.5rem;
+}
+
+/* The card box's front face: the GL box is glued to this rect. */
+.story-box {
+  position: absolute;
+  left: calc(50% - var(--story-box-w) / 2);
+  top: calc(100% - var(--story-box-peek));
+  width: var(--story-box-w);
+  height: var(--story-box-h);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------ the finale */
+
+.story-finale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.story-finale-screen {
+  height: var(--story-vh, 100vh);
+}
+
+/* The character stands in the top of the screen, the words below her. */
+.story-finale-gl {
+  height: 100%;
+  justify-content: flex-end;
+  padding: 0 1.5rem clamp(3.5rem, 13vh, 9rem);
+}
+
+.story-finale-book {
+  padding-bottom: 6rem;
+}
+
+.story-finale-art {
+  width: clamp(8.5rem, 17vw, 12rem);
+  aspect-ratio: 1;
+  margin-bottom: 2rem;
+}
+
+/* ------------------------------------------------------------ storybook cards */
+
+.story-card {
+  --story-accent: var(--brand-blue);
+  perspective: 900px;
+}
+
+.story-card[data-accent="red"] {
+  --story-accent: var(--brand-red);
+}
+
+.story-card[data-accent="green"] {
+  --story-accent: var(--brand-green);
+}
+
+.story-card[data-accent="yellow"] {
+  --story-accent: var(--brand-yellow);
+}
+
+/* A real playing card: white in both schemes, a thin ink border, corner indices. */
+.story-card-face {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 63 / 88;
+  padding: 11% 11% 12%;
+  overflow: hidden;
+  border: 1px solid rgb(14 17 22 / 0.16);
+  border-radius: 1.1rem;
+  background: #ffffff;
+  box-shadow: var(--shadow-2);
+  transform-origin: 50% 70%;
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dark .story-card-face {
+  border-color: rgb(255 255 255 / 0.1);
+  box-shadow: 0 24px 60px -28px rgb(0 0 0 / 0.8);
+}
+
+/* A glint that crosses the face on hover. */
+.story-card-face::after {
+  position: absolute;
+  inset: -40% -60%;
+  content: "";
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    rgb(255 255 255 / 0.65) 50%,
+    transparent 58%
+  );
+  opacity: 0;
+  pointer-events: none;
+  translate: -40% 0;
+  transition:
+    translate 0.9s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.4s;
+}
+
+.story-card-index {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  color: #0e1116;
+  font-family: var(--font-display);
+  font-size: clamp(0.7rem, 0.9vw, 0.85rem);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.story-card-index-top {
+  top: 0.8rem;
+  left: 0.85rem;
+}
+
+.story-card-index-bottom {
+  right: 0.85rem;
+  bottom: 0.8rem;
+  rotate: 180deg;
+}
+
+.story-card-pip {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--story-accent);
+}
+
+.story-card-visual {
+  height: 50%;
+  padding: 4% 6% 8%;
+}
+
+.story-card-copy {
+  margin-top: auto;
+}
+
+.story-card-copy::before {
+  display: block;
+  width: 1.75rem;
+  height: 3px;
+  margin-bottom: 0.85rem;
+  content: "";
+  border-radius: 2px;
+  background: var(--story-accent);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .story-card:hover .story-card-face,
+  .story-card:focus-visible .story-card-face {
+    transform: translateY(-8px) rotateY(-10deg) rotateX(5deg);
+    box-shadow: var(--shadow-3);
+  }
+
+  .story-card:hover .story-card-face::after,
+  .story-card:focus-visible .story-card-face::after {
+    opacity: 1;
+    translate: 40% 0;
+  }
+}
+
+/* ------------------------------------------------------------ storybook panels */
+
+.story-panel {
+  --panel-tone: var(--brand-blue);
+}
+
+.story-panel-art {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--panel-tone) 12%, var(--background));
+}
+
+.story-panel-art[data-panel="table"],
+.story-panel-art[data-panel="spark"] {
+  --panel-tone: var(--brand-yellow);
+}
+
+.story-panel-art[data-panel="toy"],
+.story-panel-art[data-panel="fall"] {
+  --panel-tone: var(--brand-red);
+}
+
+.story-panel-art[data-panel="worlds"] {
+  --panel-tone: var(--brand-green);
+}
