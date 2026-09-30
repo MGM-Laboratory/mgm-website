@@ -13,13 +13,28 @@ import { useSyncExternalStore } from "react";
 
 const holders = new Map<string, string>();
 const listeners = new Set<() => void>();
-let snapshot: ThemeLockState = { locked: false, reason: null };
+let snapshot: ThemeLockState = { locked: false, reason: null, theme: null };
 
-export type ThemeLockState = Readonly<{ locked: boolean; reason: string | null }>;
+/**
+ * `theme` is the scheme on screen when the lock was first taken ("light" or
+ * "dark"). The theme provider forces it while the lock holds, so an OS
+ * switch cannot flip the page either.
+ */
+export type ThemeLockState = Readonly<{
+  locked: boolean;
+  reason: string | null;
+  theme: "light" | "dark" | null;
+}>;
+
+function currentScheme(): "light" | "dark" {
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
 
 function publish() {
   const reasons = [...holders.values()];
-  snapshot = { locked: reasons.length > 0, reason: reasons.at(-1) ?? null };
+  const locked = reasons.length > 0;
+  const theme = locked ? (snapshot.theme ?? currentScheme()) : null;
+  snapshot = { locked, reason: reasons.at(-1) ?? null, theme };
   for (const listener of [...listeners]) listener();
 }
 
@@ -32,7 +47,9 @@ export function acquireThemeLock(owner: string, reason: string) {
   const had = holders.get(owner);
   holders.set(owner, reason);
   if (had !== reason) publish();
-  return () => releaseThemeLock(owner);
+  return () => {
+    releaseThemeLock(owner);
+  };
 }
 
 export function releaseThemeLock(owner: string) {
@@ -50,7 +67,7 @@ function subscribe(listener: () => void) {
   };
 }
 
-const unlocked: ThemeLockState = { locked: false, reason: null };
+const unlocked: ThemeLockState = { locked: false, reason: null, theme: null };
 
 /** The live lock state; the server and the first client render read it as unlocked. */
 export function useThemeLock(): ThemeLockState {
