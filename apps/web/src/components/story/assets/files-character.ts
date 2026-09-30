@@ -8,7 +8,7 @@ import type { StoryFile } from "./types";
 export const CHARACTER_FILES: StoryFile[] = [
   {
     url: "/story/v1/character/godette.glb",
-    bytes: 436200,
+    bytes: 438140,
     kind: "gltf",
     group: "character",
     tiers: ["high", "medium", "low"],
@@ -36,21 +36,21 @@ export const CHARACTER_FILES: StoryFile[] = [
   },
   {
     url: "/story/v1/character/clips-room.glb",
-    bytes: 336044,
+    bytes: 335976,
     kind: "gltf",
     group: "character",
     tiers: ["high", "medium", "low"],
   },
   {
     url: "/story/v1/character/clips-flight.glb",
-    bytes: 326568,
+    bytes: 325120,
     kind: "gltf",
     group: "character",
     tiers: ["high", "medium", "low"],
   },
   {
     url: "/story/v1/character/clips-finale.glb",
-    bytes: 442556,
+    bytes: 442844,
     kind: "gltf",
     group: "character",
     tiers: ["high", "medium", "low"],
