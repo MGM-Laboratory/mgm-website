@@ -189,13 +189,16 @@ export type StoryRoom = {
   readonly nodes: ReadonlyMap<string, Mesh>;
   /** The TV screen quad. UV (0, 0) is its top left: sample a render target with `1.0 - vUv.y`. */
   readonly screen: Mesh;
-  /** The room's reflection map (PMREM), null until `prepare()`. Props may use it as their envMap. */
+  /**
+   * The room's reflection map (PMREM), null until `prepare()`. Props may use it as their envMap;
+   * every `prepare()` makes a new one and disposes the old, so read it again after each call.
+   */
   readonly envMap: Texture | null;
   /**
    * Uploads textures and captures `envMap` from the table (six renders of the
    * room). Await it once during the loader, before compiling the story's
    * programs, and again after a grade change if the reflections should follow.
-   * The meshes leave `root` while it runs.
+   * Order in the loader: `root` in the scene, `await prepare()`, compile, one warm-up frame.
    */
   prepare(renderer: WebGLRenderer): Promise<void>;
   /** `amount` blends from the other scheme's grade (0) to this one (1). */
@@ -998,30 +1001,47 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
     },
     async prepare(renderer) {
       for (const t of textures) renderer.initTexture(t);
-      const wasPhase = phase;
-      phase = "all";
-      applyPhase();
-      // Capture from the table in a scene of its own (an object has one parent). The capture
-      // renders into linear half-float targets, a program variant of its own: compile it
-      // asynchronously first so a cold shader cache does not stall the loading screen.
+      // The capture renders the room from the table in a scene of its own (an object has one
+      // parent) into linear half-float targets, a program variant of its own. compileAsync builds
+      // those programs synchronously inside the call and only polls afterwards, so the shared state
+      // (the render target, the meshes' parent, the phase) is put back before the wait: anything
+      // that renders meanwhile (the loader, another prop's warm-up) sees the room as it was.
       const capture = new Scene();
-      capture.add(meshesGroup);
       const probeTarget = new WebGLRenderTarget(4, 4, { type: HalfFloatType });
       const previous = renderer.getRenderTarget();
+      const takeRoom = () => {
+        const was = phase;
+        phase = "all";
+        applyPhase();
+        capture.add(meshesGroup);
+        return () => {
+          root.add(meshesGroup);
+          phase = was;
+          applyPhase();
+        };
+      };
+      let compiled: Promise<unknown> = Promise.resolve();
+      let giveBack = takeRoom();
       renderer.setRenderTarget(probeTarget);
       try {
-        await renderer.compileAsync(capture, new PerspectiveCamera(90, 1, 0.04, 20));
+        compiled = renderer.compileAsync(capture, new PerspectiveCamera(90, 1, 0.04, 20));
       } finally {
         renderer.setRenderTarget(previous);
+        giveBack();
+      }
+      try {
+        await compiled;
+      } finally {
         probeTarget.dispose();
       }
+      giveBack = takeRoom();
       const pmrem = new PMREMGenerator(renderer);
       const target = pmrem.fromScene(capture, 0, 0.04, 20, {
         size: low ? 64 : 128,
         position: v3(anchors.probe),
       });
       pmrem.dispose();
-      root.add(meshesGroup);
+      giveBack();
       if (envTarget) envTarget.dispose();
       envTarget = target;
       envMap = target.texture;
@@ -1029,8 +1049,6 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
         m.envMap = target.texture;
         m.needsUpdate = true;
       }
-      phase = wasPhase;
-      applyPhase();
     },
     setGrade(scheme, amount = 1) {
       const t = clamp01(amount);
