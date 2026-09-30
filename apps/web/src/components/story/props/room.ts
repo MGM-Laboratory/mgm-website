@@ -9,6 +9,8 @@ import {
   HemisphereLight,
   Mesh,
   MeshStandardMaterial,
+  HalfFloatType,
+  PerspectiveCamera,
   PMREMGenerator,
   PointLight,
   Scene,
@@ -16,6 +18,7 @@ import {
   SpotLight,
   Vector2,
   Vector3,
+  WebGLRenderTarget,
 } from "three";
 import type {
   ColorRepresentation,
@@ -25,7 +28,6 @@ import type {
   Texture,
   WebGLProgramParametersWithUniforms,
   WebGLRenderer,
-  WebGLRenderTarget,
 } from "three";
 
 import { ROOM_BASE_URL } from "../assets/files-room";
@@ -52,7 +54,7 @@ import type { StoryLoaderLike, StoryTier } from "../assets/types";
  * Usage:
  *   const room = await loadRoom(assets, tier);
  *   rootScene.add(room.root);
- *   room.prepare(renderer);      // before renderer.compile(): captures the env map
+ *   await room.prepare(renderer); // in the loader, before compiling: the env map
  *   room.setGrade("dark");       // or "light"; amount blends from the other grade
  *   room.setPhase("land");       // visibility by story phase
  *   room.lamps(0 .. 1);          // warm-up; floor lamps lead, the pendant follows
@@ -179,10 +181,11 @@ export type StoryRoom = {
   readonly envMap: Texture | null;
   /**
    * Uploads textures and captures `envMap` from the table (six renders of the
-   * room). Call once before compiling, and again after a grade change if the
-   * reflections should follow it.
+   * room). Await it once during the loader, before compiling the story's
+   * programs, and again after a grade change if the reflections should follow.
+   * The meshes leave `root` while it runs.
    */
-  prepare(renderer: WebGLRenderer): void;
+  prepare(renderer: WebGLRenderer): Promise<void>;
   /** `amount` blends from the other scheme's grade (0) to this one (1). */
   setGrade(scheme: RoomScheme, amount?: number): void;
   setPhase(phase: RoomPhase): void;
@@ -732,9 +735,12 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
   const envMaterials: MeshStandardMaterial[] = [];
   let skyMesh: Mesh | null = null;
   let screen: Mesh | null = null;
+  // The loader may hand the same parsed glTF to every call (the story's cache does), so build
+  // from a clone: it shares geometry and textures, and the cached scene stays whole.
+  const source = gltf.scene.clone(true);
   const found: Mesh[] = [];
-  gltf.scene.updateMatrixWorld(true);
-  gltf.scene.traverse((o) => {
+  source.updateMatrixWorld(true);
+  source.traverse((o) => {
     if (isMesh(o)) found.push(o);
   });
   const sources = new Set<Material>();
@@ -974,14 +980,25 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
     get envMap() {
       return envMap;
     },
-    prepare(renderer) {
+    async prepare(renderer) {
       for (const t of textures) renderer.initTexture(t);
       const wasPhase = phase;
       phase = "all";
       applyPhase();
-      // Capture from the table in a scene of its own (an object has one parent), then put the meshes back.
+      // Capture from the table in a scene of its own (an object has one parent). The capture
+      // renders into linear half-float targets, a program variant of its own: compile it
+      // asynchronously first so a cold shader cache does not stall the loading screen.
       const capture = new Scene();
       capture.add(meshesGroup);
+      const probeTarget = new WebGLRenderTarget(4, 4, { type: HalfFloatType });
+      const previous = renderer.getRenderTarget();
+      renderer.setRenderTarget(probeTarget);
+      try {
+        await renderer.compileAsync(capture, new PerspectiveCamera(90, 1, 0.04, 20));
+      } finally {
+        renderer.setRenderTarget(previous);
+        probeTarget.dispose();
+      }
       const pmrem = new PMREMGenerator(renderer);
       const target = pmrem.fromScene(capture, 0, 0.04, 20, {
         size: low ? 64 : 128,
