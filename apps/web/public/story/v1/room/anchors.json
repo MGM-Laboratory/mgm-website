@@ -22,20 +22,20 @@
   },
   "letters": {
     "direction": [0, 0, -1],
-    "capHeight": 0.022,
+    "capHeight": 0.03,
     "lines": [
       {
         "text": "We tell stories",
-        "start": [0.544, 0.4215, -0.68],
-        "end": [0.544, 0.4215, -0.8869],
-        "length": 0.2069,
+        "start": [0.5525, 0.4215, -0.68],
+        "end": [0.5525, 0.4215, -0.9621],
+        "length": 0.2821,
         "checkedFree": true
       },
       {
         "text": "through interactive media.",
-        "start": [0.5899, 0.4215, -0.6664],
-        "end": [0.5899, 0.4215, -1.0421],
-        "length": 0.3757,
+        "start": [0.6001, 0.4215, -0.6664],
+        "end": [0.6001, 0.4215, -1.1788],
+        "length": 0.5124,
         "checkedFree": true
       }
     ]
@@ -242,13 +242,20 @@
         "room_atlasB_tv_cabinet",
         "room_atlasC_plants",
         "room_atlasD_lamps",
+        "room_ceiling_concrete",
         "room_concrete_walls",
         "room_dark_panel",
         "room_floor_polished",
         "room_lamp_glow",
+        "room_metal_pipes",
         "room_rug",
+        "room_steel_window_frame",
+        "shell_east",
+        "shell_ne_block",
+        "shell_south",
         "tv_body",
-        "tv_screen"
+        "tv_screen",
+        "window_sky"
       ]
     },
     {

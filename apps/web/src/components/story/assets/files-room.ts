@@ -14,7 +14,7 @@ export const ROOM_BASE_URL = "/story/v1/room/";
 export const ROOM_FILES: StoryFile[] = [
   {
     url: "/story/v1/room/anchors.json",
-    bytes: 9136,
+    bytes: 9326,
     kind: "json",
     group: "room",
     tiers: ["high", "medium", "low"],
