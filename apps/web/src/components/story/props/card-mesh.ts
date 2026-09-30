@@ -382,7 +382,10 @@ export type CardSwarm = {
 export type HeroCard = {
   readonly mesh: Mesh;
   readonly material: MeshStandardMaterial;
-  /** A live front (CanvasTexture or render target); null shows the generic printed face. */
+  /**
+   * A live front (a CanvasTexture drawn at CARD_W : CARD_H, or a render target texture); null
+   * shows the generic printed face. Either flipY setting works; colour textures should be sRGB.
+   */
   setFront(texture: Texture | null): void;
   setBend(curl: number, flex?: number): void;
   setGlint(position: number, strength: number, width?: number): void;
@@ -495,7 +498,9 @@ async function buildKit(assets: StoryLoaderLike, tier: StoryTier): Promise<CardK
       setFront(texture) {
         uniforms.uFront.value = texture;
         uniforms.uFrontMode.value = texture ? 1 : 0;
-        uniforms.uFrontFlipY.value = texture?.flipY ? 1 : 0;
+        // A canvas uploaded with flipY, or a render target (drawn bottom up), reads v upward.
+        uniforms.uFrontFlipY.value =
+          texture && (texture.flipY || texture.isRenderTargetTexture) ? 1 : 0;
       },
       setBend(curl, flex = 0) {
         uniforms.uBend.value.set(curl, flex);

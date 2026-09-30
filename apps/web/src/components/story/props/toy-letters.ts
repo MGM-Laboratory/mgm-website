@@ -101,6 +101,7 @@ export type ToyLetters = {
   update(dt: number): void;
   /** The letter under a ray (world space), or -1. */
   hit(raycaster: Raycaster): number;
+  /** Changes the program (envMap define): call it before the stage compiles. */
   setEnvironment(texture: Texture | null, intensity?: number): void;
   dispose(): void;
 };

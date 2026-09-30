@@ -50,6 +50,8 @@ export type MagicTrail = {
   clear(): void;
   setWidth(width: number): void;
   setIntensity(intensity: number): void;
+  /** Shows the ribbon for a compile pass (hidden objects are not compiled), then restores. */
+  warm(on: boolean): void;
   setColours(head: number, tail: number): void;
   dispose(): void;
 };
@@ -207,6 +209,9 @@ export function createMagicTrail(options: MagicTrailOptions = {}): MagicTrail {
     setIntensity(intensity) {
       uniforms.uIntensity.value = intensity;
       mesh.visible = intensity > 0.001;
+    },
+    warm(on) {
+      mesh.visible = on || uniforms.uIntensity.value > 0.001;
     },
     setColours(head, tail) {
       uniforms.uHead.value.setHex(head);

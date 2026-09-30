@@ -144,7 +144,10 @@ export type DeckBox = {
   dropPose(progress: number, target?: Object3D): void;
   /** The baked fall at `seconds` from the release. */
   dropAt(seconds: number, target?: Object3D): void;
+  /** Changes the programs (envMap define): call it before the stage compiles. */
   setEnvironment(texture: Texture | null, intensity?: number): void;
+  /** Shows the glow meshes for a compile pass (hidden objects are not compiled), then restores. */
+  warm(on: boolean): void;
   /** Clock-driven life (the rays' flicker). Never changes the story state. */
   update(time: number): void;
   dispose(): void;
@@ -780,6 +783,12 @@ export async function loadDeckBox(
         material.envMapIntensity = intensity;
         material.needsUpdate = true;
       }
+    },
+    warm(on) {
+      const lit = on || glowUniforms.uGlowAmount.value > 0.002;
+      rays.visible = lit;
+      halo.visible = lit;
+      stack.visible = on || stack.scale.x > 0.0011;
     },
     update(time) {
       glowUniforms.uTime.value = time;

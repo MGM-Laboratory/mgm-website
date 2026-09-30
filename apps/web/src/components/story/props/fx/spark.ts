@@ -42,6 +42,8 @@ export type Spark = {
   readonly trail: MagicTrail | null;
   setIntensity(amount: number): void;
   setSize(size: number): void;
+  /** Shows everything for a compile pass (hidden objects are not compiled), then restores. */
+  warm(on: boolean): void;
   /** Clock life: twinkle, spin, trail. Set `position` first. */
   update(time: number): void;
   dispose(): void;
@@ -128,6 +130,10 @@ export function createSpark(options: SparkOptions = {}): Spark {
       uniforms.uIntensity.value = intensity;
       star.visible = intensity > 0.001;
       trail?.setIntensity(intensity);
+    },
+    warm(on) {
+      star.visible = on || intensity > 0.001;
+      trail?.warm(on);
     },
     setSize(size) {
       uniforms.uSize.value = size * 2.4;
