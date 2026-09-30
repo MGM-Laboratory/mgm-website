@@ -94,7 +94,7 @@ export type GodetteFlight = Readonly<{
   velocity?: Vec3Like;
   /** Extra roll into a turn, radians (+ banks to her right). */
   bank?: number;
-  /** Extra nose-up pitch, radians. */
+  /** Extra pitch about her left axis, radians, the same sign as the pivot's prone pitch (+ tips her forward). */
   pitch?: number;
   /** 0..1: how much flight sway and wind play on top of the clip. */
   amount?: number;
@@ -786,6 +786,9 @@ export async function loadGodette(
   const tmpV2 = new Vector3();
   const tmpV3 = new Vector3();
   const tmpQ = new Quaternion();
+  const swayAxis = new Vector3();
+  const swayRoll = new Quaternion();
+  const swayRest = new Quaternion();
   const tmpE = new Euler();
   const tmpM = new Matrix4();
   const socketOffset = new Vector3();
@@ -1156,11 +1159,11 @@ export async function loadGodette(
     const hide = context === "toy" ? 0.45 : 1;
     const s = Math.sin(phase) * breath * hide;
     const hitch = context === "toy" ? Math.max(0, Math.sin(phase * 0.5 + 1)) ** 8 * 0.6 : 0;
-    const a = MathUtils.degToRad(1.1) * (s + hitch);
+    const a = MathUtils.degToRad(1.9) * (s + hitch);
     rotLocal("Spine_2", -a * 0.4, 0, 0);
     rotLocal("Ribcage", -a * 0.6, 0, 0);
-    rotLocal("Clavic_L", 0, 0, a * 0.5);
-    rotLocal("Clavic_R", 0, 0, -a * 0.5);
+    rotLocal("Clavic_L", 0, 0, a * 0.7);
+    rotLocal("Clavic_R", 0, 0, -a * 0.7);
   };
 
   const updateTremble = () => {
@@ -1191,14 +1194,25 @@ export async function loadGodette(
         spin = MathUtils.smootherstep(k, 0, 1) * Math.PI * 2;
       else jolt = Math.sin(k * Math.PI) * Math.exp(-3 * k) * r.jolt;
     }
-    sway.rotation.set(
-      pitch.x + a * 0.05 * wobble(t * 0.7, 1) + jolt * 0.05,
-      a * 0.04 * wobble(t * 0.5, 2),
-      -bank.x + a * 0.07 * wobble(t * 0.6, 3) + spin + jolt * 0.03 * Math.sin(t * 40),
+    // roll about the way she is travelling: her front when upright, her head when the pivot lays her prone
+    const along = MathUtils.clamp(pivot.rotation.x, 0, Math.PI / 2);
+    swayAxis.set(0, Math.sin(along), Math.cos(along));
+    swayRoll.setFromAxisAngle(
+      swayAxis,
+      bank.x + a * 0.07 * wobble(t * 0.6, 3) + spin + jolt * 0.03 * Math.sin(t * 40),
     );
+    swayRest.setFromEuler(
+      tmpE.set(
+        pitch.x + a * 0.05 * wobble(t * 0.7, 1) + jolt * 0.05,
+        a * 0.04 * wobble(t * 0.5, 2),
+        0,
+        "XYZ",
+      ),
+    );
+    sway.quaternion.copy(swayRoll).multiply(swayRest);
     sway.position.set(0, a * 0.03 * Math.sin(t * 1.4) + jolt * 0.012, 0);
     // the upper body leans into the bank more than the hips
-    if (a > 0.001) rotLocal("Spine_1", 0, 0, -bank.x * 0.25 * a);
+    if (a > 0.001) rotLocal("Spine_1", 0, 0, bank.x * 0.25 * a);
   };
 
   const updateHair = (dt: number) => {
