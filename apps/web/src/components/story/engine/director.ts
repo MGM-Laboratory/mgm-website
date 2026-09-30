@@ -41,6 +41,7 @@ import {
   beatProgress,
   nextRest,
   speedAt,
+  type RestPoint,
 } from "@/components/story/engine/timeline";
 import { isReelPlayerOpen } from "@/lib/reel-player";
 import { isScrollLocked } from "@/lib/scroll-lock";
@@ -217,6 +218,8 @@ export class StoryDirector {
   private themeHeld = false;
   private ramp = 0;
   private settledFor = 0;
+  /** The rest an advance in flight is heading for (latched, so landing on it never retargets). */
+  private target: RestPoint | null = null;
   private lastRenderAt = 0;
   private fpsFrames = 0;
   private fpsSince = 0;
@@ -618,6 +621,7 @@ export class StoryDirector {
     this.autoAdvancing = false;
     this.ramp = 0;
     this.settledFor = 0;
+    this.target = null;
   }
 
   private advance(dt: number) {
@@ -663,13 +667,14 @@ export class StoryDirector {
       }
     }
     const direction = intent.direction;
-    const rest = nextRest(t, direction);
+    const rest = this.target ?? nextRest(t, direction);
     if (!rest || rest.t < range.start || rest.t > range.end) {
       intent.disarm();
       this.stopAdvance();
       return;
     }
     this.autoAdvancing = true;
+    this.target = rest;
     this.ramp = Math.min(1, this.ramp + dt / RAMP_SECONDS);
     const remaining = Math.abs(rest.t - t);
     const landing = Math.min(1, 0.12 + remaining / 0.3);
