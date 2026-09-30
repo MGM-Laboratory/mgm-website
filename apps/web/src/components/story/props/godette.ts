@@ -1,5 +1,6 @@
 import {
   AdditiveBlending,
+  AnimationClip,
   AnimationMixer,
   CapsuleGeometry,
   CircleGeometry,
@@ -20,7 +21,6 @@ import {
   SphereGeometry,
   Vector3,
   type AnimationAction,
-  type AnimationClip,
   type Bone,
   type BufferGeometry,
   type Camera,
@@ -441,6 +441,26 @@ function faceCue(spec: GodetteClipSpec, t: number): readonly [GodetteFace, numbe
 /* ------------------------------------------------------------------------ */
 
 /**
+ * The story's asset cache parses each file once per visit and hands the same objects to every caller, so a
+ * second load (a rebuilt stage, a lost context) sees the bones where the last session left them. The first load
+ * records every bone's bind transform here; every load starts by putting them back.
+ */
+const BIND_POSE = new WeakMap<Bone, Readonly<{ p: Vector3; q: Quaternion; s: Vector3 }>>();
+
+function restoreBindPose(bones: readonly Bone[]) {
+  for (const b of bones) {
+    const saved = BIND_POSE.get(b);
+    if (saved) {
+      b.position.copy(saved.p);
+      b.quaternion.copy(saved.q);
+      b.scale.copy(saved.s);
+    } else {
+      BIND_POSE.set(b, { p: b.position.clone(), q: b.quaternion.clone(), s: b.scale.clone() });
+    }
+  }
+}
+
+/**
  * A bone the procedural layer offsets. `base` is the value the mixer left on it last frame. The mixer only
  * writes a bone when its mixed value changes, so each frame starts by putting `base` back (never the rest
  * pose, or a held clip pose would be lost), then evaluates, then records the new base before the offsets.
@@ -470,12 +490,21 @@ export async function loadGodette(
   const base = options.base ?? GODETTE_BASE;
   const tier = options.tier ?? "high";
   const groups = options.groups ?? GROUPS;
+  const textureFiles =
+    tier === "high"
+      ? ["godette-2k.ktx2", "godette-1k.ktx2"]
+      : ["godette-1k.ktx2", "godette-2k.ktx2"];
+  const loadTexture = async (): Promise<Texture> => {
+    try {
+      return await assets.texture(base + textureFiles[0], { srgb: true, flipY: false });
+    } catch {
+      // the loader preloads one texture per tier; an act that passed another tier still gets a face
+      return await assets.texture(base + textureFiles[1], { srgb: true, flipY: false });
+    }
+  };
   const [gltf, texture, standGltf, ...clipGltfs] = await Promise.all([
     assets.gltf(base + "godette.glb"),
-    assets.texture(base + (tier === "high" ? "godette-2k.ktx2" : "godette-1k.ktx2"), {
-      srgb: true,
-      flipY: false,
-    }),
+    loadTexture(),
     assets.gltf(base + "stand.glb"),
     ...groups.map((g) => assets.gltf(base + "clips-" + g + ".glb")),
   ]);
@@ -486,6 +515,7 @@ export async function loadGodette(
   });
   const mesh = skinnedMeshes.at(0);
   if (!mesh) throw new Error("godette.glb has no skinned mesh");
+  restoreBindPose(mesh.skeleton.bones);
   const bones = new Map<string, Bone>();
   for (const b of mesh.skeleton.bones) bones.set(b.name, b);
   const bone = (name: string): Bone => {
@@ -495,9 +525,10 @@ export async function loadGodette(
   };
 
   const geometry: BufferGeometry = mesh.geometry;
-  const hair = geometry.getAttribute("_hair");
-  geometry.setAttribute("hairMask", hair);
-  geometry.deleteAttribute("_hair");
+  if (geometry.hasAttribute("_hair")) {
+    geometry.setAttribute("hairMask", geometry.getAttribute("_hair"));
+    geometry.deleteAttribute("_hair");
+  }
 
   const uniforms: BodyUniforms = {
     uHairOffset: { value: new Vector3() },
@@ -664,15 +695,21 @@ export async function loadGodette(
       const spec = SPEC.get(clip.name as GodetteClip);
       if (!spec || body.has(spec.name as GodetteClip)) continue;
       const name = spec.name as GodetteClip;
+      let playable = clip;
       if (spec.rootMotion) {
         const track = clip.tracks.find((t) => t.name === "Root.position");
         if (track) {
+          // the root's travel is read by rootMotion(); the mixer plays a copy without it (the cached clip stays whole)
           rootTracks.set(name, track.InterpolantFactoryMethodLinear());
-          clip.tracks = clip.tracks.filter((t) => t !== track);
+          playable = new AnimationClip(
+            clip.name,
+            clip.duration,
+            clip.tracks.filter((t) => t !== track),
+          );
         }
       }
       durations.set(name, clip.duration);
-      body.set(name, prime(clip, spec.loop));
+      body.set(name, prime(playable, spec.loop));
     }
   };
   for (const g of clipGltfs) addBodyClips(g.animations);
@@ -1428,6 +1465,10 @@ export async function loadGodette(
       mixer.stopAllAction();
       for (const clip of clipsOwned) mixer.uncacheClip(clip);
       mixer.uncacheRoot(gltf.scene);
+      for (const m of proxies) m.removeFromParent();
+      gltf.scene.removeFromParent();
+      standGltf.scene.removeFromParent();
+      restoreBindPose(mesh.skeleton.bones);
       root.removeFromParent();
       shadow.removeFromParent();
       stand.removeFromParent();
