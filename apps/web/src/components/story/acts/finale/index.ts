@@ -110,9 +110,10 @@ class FinalePlaceholder implements StoryAct {
     // A static medium shot, straight on, eye level (portrait keeps her larger).
     const { camera } = ctx.stage;
     const portrait = ctx.size.portrait;
-    const eye = new Vector3(HOME.x + (portrait ? 0 : 0.55), 0.75, HOME.z + (portrait ? 3.1 : 3.4));
-    const look = new Vector3(HOME.x + (portrait ? 0 : 0.55), 0.62, HOME.z);
-    aim(camera, eye, look, portrait ? 42 : 30);
+    // She stands in the top of the frame; the finale's words sit below her.
+    const eye = new Vector3(HOME.x, 0.75, HOME.z + (portrait ? 3.4 : 3.6));
+    const look = new Vector3(HOME.x, portrait ? -0.05 : 0.24, HOME.z);
+    aim(camera, eye, look, portrait ? 46 : 34);
 
     const label = this.label;
     if (label) {
