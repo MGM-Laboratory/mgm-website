@@ -5,7 +5,6 @@ import {
   CircleGeometry,
   Color,
   Euler,
-  FrontSide,
   Group,
   LoopOnce,
   LoopRepeat,
@@ -13,6 +12,7 @@ import {
   Matrix4,
   Mesh,
   MeshBasicMaterial,
+  PlaneGeometry,
   MeshStandardMaterial,
   Quaternion,
   ShaderMaterial,
@@ -23,6 +23,9 @@ import {
   type AnimationClip,
   type Bone,
   type BufferGeometry,
+  type Camera,
+  type Scene,
+  type WebGLRenderer,
   type Interpolant,
   type Material,
   type Object3D,
@@ -44,7 +47,7 @@ export type { GodetteClip, GodetteClipGroup, GodetteClipSpec, GodetteFace };
 
 /**
  * Godette, the story's toy who learns to fly. One skinned mesh (one draw
- * call, two with the glow aura), baked body clips in three act files, face
+ * call, two with the glow halo), baked body clips in three act files, face
  * and lid poses, and a procedural layer on top: blink, gaze, head look,
  * breathing, nervous tremble, flight sway, hair and backpack follow-through,
  * the glow, and hover or click reactions.
@@ -151,10 +154,17 @@ export interface Godette {
   setAutoIdle(seconds: number | null): void;
   react(kind: GodetteReaction): boolean;
   blink(double?: boolean): void;
+  /** Multiplies the blink rate (1 default, 0 stops the automatic blinks; blink() still works). */
+  setBlinkRate(rate: number): void;
   socket(name: GodetteSocket, target?: Vector3): Vector3;
   attach(name: GodetteSocket, object: Object3D): void;
   rootMotion(clip: GodetteClip, time: number, target?: Vector3): Vector3;
   update(dt: number): void;
+  /**
+   * Compile every program she can show (the halo, the shadow and the stand included) against `scene`'s
+   * lights, so nothing compiles on first sight. Call it once her scene is lit, during the loader.
+   */
+  compile(renderer: WebGLRenderer, camera: Camera, scene: Scene): Promise<void>;
   dispose(): void;
 }
 
@@ -281,7 +291,7 @@ const BODY_FRAGMENT_LIGHT = /* glsl */ `
   float nv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
   float fres = pow(1.0 - nv, uRimPower);
   totalEmissiveRadiance += uRimColor * (fres * uRim);
-  totalEmissiveRadiance += uGlowColor * uGlow * (fres * 1.5 + 0.06);
+  totalEmissiveRadiance += uGlowColor * uGlow * (fres * fres * 1.1 + 0.035);
   totalEmissiveRadiance += diffuseColor.rgb * uLift;
 }
 `;
@@ -309,57 +319,48 @@ function bodyMaterial(map: Texture, uniforms: BodyUniforms): MeshStandardMateria
   return material;
 }
 
-function auraMaterial(uniforms: BodyUniforms, width: { value: number }): ShaderMaterial {
+/** A soft halo behind her: a quad turned to the camera in the vertex shader, sized in world units. */
+function haloMaterial(uniforms: BodyUniforms, size: { value: number }): ShaderMaterial {
   return new ShaderMaterial({
-    name: "godette-aura",
+    name: "godette-halo",
     uniforms: {
-      uHairOffset: uniforms.uHairOffset,
-      uHairFlutter: uniforms.uHairFlutter,
-      uTime: uniforms.uTime,
       uGlowColor: uniforms.uGlowColor,
       uGlow: uniforms.uGlow,
-      uWidth: width,
+      uTime: uniforms.uTime,
+      uSize: size,
     },
     vertexShader: /* glsl */ `
-      #include <common>
-      #include <skinning_pars_vertex>
-      attribute float hairMask;
-      uniform vec3 uHairOffset;
-      uniform float uHairFlutter;
-      uniform float uTime;
-      uniform float uWidth;
-      varying vec3 vN;
-      varying vec3 vV;
+      uniform float uSize;
+      varying vec2 vUv;
       void main() {
-        #include <beginnormal_vertex>
-        #include <skinbase_vertex>
-        #include <skinnormal_vertex>
-        #include <begin_vertex>
-        #include <skinning_vertex>
-        ${HAIR_VERTEX}
-        transformed += normalize(objectNormal) * uWidth;
-        vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
-        vN = normalize(normalMatrix * objectNormal);
-        vV = -mvPosition.xyz;
-        gl_Position = projectionMatrix * mvPosition;
+        vUv = uv;
+        vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        mv.xy += position.xy * uSize;
+        gl_Position = projectionMatrix * mv;
       }
     `,
     fragmentShader: /* glsl */ `
       uniform vec3 uGlowColor;
       uniform float uGlow;
-      varying vec3 vN;
-      varying vec3 vV;
+      uniform float uTime;
+      varying vec2 vUv;
       void main() {
-        float nv = abs(dot(normalize(vN), normalize(vV)));
-        float f = pow(1.0 - nv, 2.2);
-        vec3 core = mix(uGlowColor, vec3(1.0), 0.35 * f);
-        gl_FragColor = vec4(core * f * uGlow, 1.0);
+        vec2 p = vUv - 0.5;
+        float r = length(p) * 2.0;
+        float a = atan(p.y, p.x);
+        float rays = 0.85 + 0.15 * sin(a * 4.0 + uTime * 0.8) * sin(a * 7.0 - uTime * 1.3);
+        float soft = exp(-r * r * 5.5) * rays;
+        float core = exp(-r * r * 26.0);
+        vec3 col = mix(uGlowColor, vec3(1.0), 0.55 * core);
+        float k = uGlow * (soft * 0.42 + core * 0.3);
+        gl_FragColor = vec4(col * k, 1.0);
       }
     `,
     transparent: true,
     depthWrite: false,
+    depthTest: true,
     blending: AdditiveBlending,
-    side: FrontSide,
+    toneMapped: false,
   });
 }
 
@@ -518,18 +519,14 @@ export async function loadGodette(
   mesh.castShadow = false;
   mesh.receiveShadow = false;
 
-  const auraWidth = { value: 0.012 };
-  const auraMat = auraMaterial(uniforms, auraWidth);
-  const aura = new SkinnedMesh(geometry, auraMat);
-  aura.name = "godette-aura";
-  aura.bind(mesh.skeleton, mesh.bindMatrix);
-  aura.frustumCulled = false;
-  aura.visible = false;
-  aura.renderOrder = 2;
-  mesh.parent?.add(aura);
-  aura.position.copy(mesh.position);
-  aura.quaternion.copy(mesh.quaternion);
-  aura.scale.copy(mesh.scale);
+  const haloSize = { value: 2.2 };
+  const haloMat = haloMaterial(uniforms, haloSize);
+  const haloGeo = new PlaneGeometry(1, 1);
+  const halo = new Mesh(haloGeo, haloMat);
+  halo.name = "godette-halo";
+  halo.frustumCulled = false;
+  halo.visible = false;
+  halo.renderOrder = -1;
 
   // hierarchy: root (feet) -> pivot (centre) -> sway (procedural) -> offset -> glTF scene
   const root = new Group();
@@ -544,6 +541,8 @@ export async function loadGodette(
   sway.add(offset);
   offset.add(gltf.scene);
   root.scale.setScalar(GODETTE_TABLE_SCALE);
+  bone("Ribcage").add(halo);
+  halo.position.set(0, 0.05, -0.12);
 
   const stand = new Group();
   stand.name = "godette-stand";
@@ -722,6 +721,7 @@ export async function loadGodette(
   let microPitch = 0;
   let nextMicro = 0.4;
 
+  let blinkRate = 1;
   let blinkT = -1;
   let blinkDouble = false;
   let nextBlink = randomBetween(1.2, 3);
@@ -968,23 +968,26 @@ export async function loadGodette(
   };
 
   const blinkAmount = (dt: number): number => {
-    const rate = MathUtils.lerp(1, 3.2, nervous);
+    const rate = MathUtils.lerp(1, 2.6, nervous) * blinkRate;
     nextBlink -= dt * rate;
     if (nextBlink <= 0 && blinkT < 0) {
       blinkT = 0;
-      blinkDouble = random() < 0.18 + 0.3 * nervous;
+      blinkDouble = random() < 0.16 + 0.14 * nervous;
       nextBlink = randomBetween(2, 5.5);
     }
     if (blinkT < 0) return 0;
     blinkT += dt;
-    // close 0.07 s, hold 0.03 s, open 0.12 s; a double blink repeats once
-    const one = 0.22;
+    // close 0.07 s, hold 0.03 s, open 0.12 s; nervous blinks are quicker; a double blink repeats once
+    const q = MathUtils.lerp(1, 0.62, nervous);
+    const close = 0.07 * q;
+    const hold = close + 0.03 * q;
+    const one = hold + 0.12 * q;
     const total = blinkDouble ? one * 2 : one;
     const t = blinkT % one;
     let b: number;
-    if (t < 0.07) b = t / 0.07;
-    else if (t < 0.1) b = 1;
-    else b = 1 - (t - 0.1) / 0.12;
+    if (t < close) b = t / close;
+    else if (t < hold) b = 1;
+    else b = 1 - (t - hold) / (one - hold);
     if (blinkT >= total) {
       blinkT = -1;
       return 0;
@@ -1280,8 +1283,8 @@ export async function loadGodette(
 
     glowShown = damp(glowShown, glow, 18, dt);
     uniforms.uGlow.value = glowShown;
-    aura.visible = glowShown > 0.004;
-    auraWidth.value = 0.01 + 0.006 * glowShown;
+    halo.visible = glowShown > 0.004;
+    haloSize.value = (1.9 + 0.5 * glowShown) * root.scale.x;
     updateShadow();
   };
 
@@ -1293,6 +1296,7 @@ export async function loadGodette(
     const def = SOCKETS.get(name);
     if (!def) return target.set(0, 0, 0);
     const b = bone(def.bone);
+    b.updateWorldMatrix(true, false);
     socketOffset.set(def.offset[0], def.offset[1], def.offset[2]);
     return target.copy(socketOffset).applyMatrix4(b.matrixWorld);
   };
@@ -1385,6 +1389,9 @@ export async function loadGodette(
     },
     react,
     blink,
+    setBlinkRate(rate) {
+      blinkRate = Math.max(0, rate);
+    },
     socket,
     attach(name, object) {
       const def = SOCKETS.get(name);
@@ -1402,6 +1409,21 @@ export async function loadGodette(
       return target.set(x, y, z);
     },
     update,
+    async compile(renderer, camera, scene) {
+      const was = [halo.visible, shadow.visible];
+      halo.visible = true;
+      shadow.visible = true;
+      const holder = new Group();
+      const parents = [shadow.parent, stand.parent];
+      holder.add(shadow, stand);
+      await renderer.compileAsync(root, camera, scene);
+      await renderer.compileAsync(holder, camera, scene);
+      holder.remove(shadow, stand);
+      if (parents[0]) parents[0].add(shadow);
+      if (parents[1]) parents[1].add(stand);
+      halo.visible = was[0];
+      shadow.visible = was[1];
+    },
     dispose() {
       mixer.stopAllAction();
       for (const clip of clipsOwned) mixer.uncacheClip(clip);
@@ -1409,8 +1431,9 @@ export async function loadGodette(
       root.removeFromParent();
       shadow.removeFromParent();
       stand.removeFromParent();
-      aura.removeFromParent();
-      const mats = new Set<Material>([material, auraMat, shadowMat, proxyMat]);
+      halo.removeFromParent();
+      haloGeo.dispose();
+      const mats = new Set<Material>([material, haloMat, shadowMat, proxyMat]);
       stand.traverse((o) => {
         if (o instanceof Mesh) {
           (o.geometry as BufferGeometry).dispose();
