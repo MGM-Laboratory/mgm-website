@@ -32,7 +32,34 @@ import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
  * - What stops it for good: reduced motion switched on, a lost context,
  *   a renderer too slow to keep up. The page goes back to its CSS
  *   backgrounds and the canvas is removed.
+ * - Yielding: a full-screen stage that covers the page (the homepage story)
+ *   asks it to step aside with `setFlowYield(owner, true)`. It then stops
+ *   drawing and hides its layer, but keeps its host registered and its
+ *   surfaces marked, so the reel keeps its host and no second context
+ *   starts; it resumes with a frame already drawn.
  */
+
+const yieldOwners = new Set<string>();
+const yieldListeners = new Set<() => void>();
+
+/** Asks the flow to step aside (`on`) or come back, on behalf of `owner` (owner-counted). */
+export function setFlowYield(owner: string, on: boolean) {
+  if (yieldOwners.has(owner) === on) return;
+  if (on) yieldOwners.add(owner);
+  else yieldOwners.delete(owner);
+  for (const listener of [...yieldListeners]) listener();
+}
+
+export function isFlowYielded() {
+  return yieldOwners.size > 0;
+}
+
+function onFlowYieldChange(listener: () => void) {
+  yieldListeners.add(listener);
+  return () => {
+    yieldListeners.delete(listener);
+  };
+}
 
 const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render|mesa offscreen/i;
 
@@ -116,6 +143,9 @@ class FlowController {
       }),
       onArticleTransitionChange(() => {
         this.apply();
+      }),
+      onFlowYieldChange(() => {
+        if (this.shown) this.engine?.suspend(isFlowYielded());
       }),
     );
     const onMove = (event: PointerEvent) => {
@@ -219,6 +249,7 @@ class FlowController {
     this.shown = true;
     // One task: the canvas has its first frame before any surface clears.
     engine.setBackground(pageColor(), isDark());
+    engine.suspend(isFlowYielded());
     engine.show();
     const color = this.surfaces.attach();
     engine.setBackground(color, isDark());

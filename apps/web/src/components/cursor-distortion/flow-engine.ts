@@ -224,6 +224,8 @@ export class FlowEngine implements GlHost {
   private slowGrace = 1;
   private lastTickAt = 0;
   private lastDevicePixelRatio = 0;
+  /** Stepped aside for another full-screen stage (see `suspend`). */
+  private suspended = false;
 
   constructor(options: FlowEngineOptions) {
     this.options = options;
@@ -235,8 +237,10 @@ export class FlowEngine implements GlHost {
       inset: "0",
       // Under every in-flow block of the page (a fixed element at z-index
       // 0 would paint over static content off the homepage), above the
-      // root background the body's colour propagates to.
-      zIndex: "-1",
+      // root background the body's colour propagates to. -2 so the
+      // homepage story's canvas (-1) always paints above it, whatever
+      // order the two layers joined the page in.
+      zIndex: "-2",
       pointerEvents: "none",
       display: "none",
     });
@@ -405,7 +409,7 @@ export class FlowEngine implements GlHost {
     this.lastPointer.valid = false;
     this.brushValid = false;
     this.renderNow();
-    this.layer.style.display = "block";
+    this.layer.style.display = this.suspended ? "none" : "block";
     if (!this.visible) {
       this.visible = true;
       this.offs.push(
@@ -430,6 +434,28 @@ export class FlowEngine implements GlHost {
     }
   }
 
+  /**
+   * Steps aside without letting go (the controller's flow yield): no frames
+   * and the layer hidden, while the host stays registered and the surfaces
+   * stay marked, so nothing else on the page notices. Resuming draws a frame
+   * synchronously, before the layer shows again.
+   */
+  suspend(on: boolean) {
+    if (this.suspended === on) return;
+    this.suspended = on;
+    if (!this.visible) return;
+    if (on) {
+      this.stop();
+      this.layer.style.display = "none";
+      return;
+    }
+    this.lastTop = null;
+    this.lastPointer.valid = false;
+    this.renderNow();
+    this.layer.style.display = "block";
+    this.wake();
+  }
+
   /** Hides the canvas and stops every frame; the big buffers are released until the next show. */
   hide() {
     if (!this.visible) return;
@@ -443,7 +469,7 @@ export class FlowEngine implements GlHost {
 
   /** Draws the current state now (a theme switch, a resize): the next paint shows it. */
   renderNow() {
-    if (this.disposed || this.lost) return;
+    if (this.disposed || this.lost || this.suspended) return;
     this.render(performance.now() - this.lastStampAt < IDLE_AFTER_MS);
   }
 
@@ -532,7 +558,7 @@ export class FlowEngine implements GlHost {
   // ------------------------------------------------------------- the loop
 
   private readonly wake = () => {
-    if (!this.visible || this.disposed || this.lost || this.offTick) return;
+    if (!this.visible || this.suspended || this.disposed || this.lost || this.offTick) return;
     this.stillFrames = 0;
     this.offTick = addFrameCallback("render", this.tick);
   };
@@ -579,7 +605,7 @@ export class FlowEngine implements GlHost {
   }
 
   private readonly tick = (_time: number, dt: number) => {
-    if (!this.visible || this.lost) return;
+    if (!this.visible || this.lost || this.suspended) return;
     if (window.devicePixelRatio !== this.lastDevicePixelRatio) this.onResize();
     const now = performance.now();
     const interval = this.lastTickAt ? now - this.lastTickAt : 0;
