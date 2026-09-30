@@ -82,7 +82,7 @@ test.describe("homepage story", () => {
     await context.close();
   });
 
-  test("the loader is skipped under automation", async ({ page }) => {
+  test("the loader is skipped when navigator.webdriver is set", async ({ page }) => {
     await page.goto("/about");
     await expect(page.locator("html")).toHaveAttribute("data-loader", "done");
     await expect(page.locator("[data-site-loader]")).toHaveCount(0);

@@ -207,7 +207,7 @@ class LoaderCore {
     this.afterDone();
   }
 
-  /** The menu's routes, fully prefetched once the browser is idle (never under automation). */
+  /** The menu's routes, fully prefetched once the browser is idle (never under `navigator.webdriver`). */
   private afterDone() {
     const prefetch = this.prefetch;
     if (!prefetch || navigator.webdriver) return;
