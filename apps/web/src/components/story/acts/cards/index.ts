@@ -7,6 +7,7 @@ import {
   InstancedMesh,
   MathUtils,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
   PlaneGeometry,
@@ -28,6 +29,7 @@ import {
   expoOut,
   fit,
   mix,
+  saturate,
   span,
   stepSpring,
   type ActState,
@@ -136,7 +138,12 @@ class CardsPlaceholder implements StoryAct {
     });
     this.textures.push(front);
     const blue = new MeshStandardMaterial({ color: 0x3a6dc5, roughness: 0.55 });
-    const faceMaterial = new MeshStandardMaterial({ map: front, roughness: 0.5 });
+    const glueCheck =
+      process.env.NODE_ENV !== "production" &&
+      new URLSearchParams(window.location.search).has("storyglue");
+    const faceMaterial = glueCheck
+      ? new MeshBasicMaterial({ color: 0x00ff00, toneMapped: false })
+      : new MeshStandardMaterial({ map: front, roughness: 0.5 });
     this.materials.push(blue, faceMaterial);
     const boxGeometry = new BoxGeometry(depth, height, width);
     this.geometries.push(boxGeometry);
@@ -254,16 +261,19 @@ class CardsPlaceholder implements StoryAct {
     const rise = state.beat("c-rise");
     if (rise < 1) {
       this.gluedPose(ctx, glued);
-      const p = backOut(expoOut(rise), 0.9);
+      // Leaves the placeholder with no jump: the ease starts at rest.
+      const p = backOut(cubicInOut(rise), 0.6);
       box.position.copy(glued).lerp(rest, Math.min(1.05, p));
       box.rotation.set(0, Math.sin(Math.min(1, rise) * Math.PI) * 0.55, 0);
     } else {
       box.position.copy(rest);
       box.rotation.set(0, 0, 0);
     }
-    const breathe = Math.sin(life * 1.6) * 0.0012;
-    box.position.y += breathe + this.hop[0] * 0.02;
-    const hoverScale = 1 + this.hover * 0.04;
+    // Life only once the box has left the placeholder: while glued it must match the DOM exactly.
+    const alive = saturate(t * 4);
+    const breathe = Math.sin(life * 1.6) * 0.0012 * alive;
+    box.position.y += breathe + this.hop[0] * 0.02 * alive;
+    const hoverScale = 1 + this.hover * 0.04 * alive;
     box.scale.setScalar(
       hoverScale * (1 + state.beat("c-open") * 0.08 * (1 - state.beat("c-gather"))),
     );

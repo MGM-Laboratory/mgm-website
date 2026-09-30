@@ -79,6 +79,12 @@ html[data-story-mode="gl"] [data-storybook] {
   pointer-events: none;
 }
 
+/* Development glue check (?storyglue): the placeholder's edge, to compare with the GL face. */
+[data-story-glue] .story-box {
+  outline: 1px solid #ff00ff;
+  outline-offset: -1px;
+}
+
 /* ------------------------------------------------------------ the finale */
 
 .story-finale {

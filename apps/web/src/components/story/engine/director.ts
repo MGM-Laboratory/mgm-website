@@ -740,6 +740,8 @@ export class StoryDirector {
       }
     }
     this.overlay.setDebug(params.has("storydebug"));
+    // Glue check: the box placeholder gets a 1 px outline (story.css) to measure against the GL face.
+    if (params.has("storyglue")) this.section?.setAttribute("data-story-glue", "");
     Object.assign(window, {
       __story: {
         director: this,
