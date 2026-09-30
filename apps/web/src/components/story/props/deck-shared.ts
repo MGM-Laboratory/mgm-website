@@ -155,8 +155,16 @@ float printLine = 0.0;
 ${PRINT_GLSL}
 `;
 
+// The inside of the box is uncoated board: matte, no varnish (so the navy stays navy in the light).
 const PRINT_ROUGHNESS = /* glsl */ `
 roughnessFactor = mix(uRough.x, uRough.y, printLine) + (printGrain(gl_FragCoord.xy + vPrintLocal.xy * 4000.0) - 0.5) * 0.06;
+roughnessFactor = mix(roughnessFactor, 0.86, step(0.75, vPrintMask.x));
+`;
+
+const PRINT_COAT = /* glsl */ `
+#ifdef USE_CLEARCOAT
+material.clearcoat *= 1.0 - step(0.75, vPrintMask.x);
+#endif
 `;
 
 // Raised linework: the line mask as a height field perturbing the normal (three's bump maths),
@@ -185,7 +193,7 @@ const PRINT_OUTPUT = /* glsl */ `
   outgoingLight += sheen * band * uGlint.z * (1.0 - vPrintMask.x);
   float reach = length(vPrintLocal - uGlowOrigin) / uGlowReach;
   float inside = step(0.75, vPrintMask.x);
-  outgoingLight += (diffuseColor.rgb * 1.4 + 0.02) * uGlowColor * uGlow * inside * exp(-reach * reach);
+  outgoingLight += diffuseColor.rgb * 1.6 * uGlowColor * uGlow * inside * exp(-reach * reach);
 }
 ${shaderChunk("opaque_fragment")}
 `;
@@ -216,6 +224,7 @@ export function applyPrintPatch(
       ],
       ["after", "roughnessmap_fragment", PRINT_ROUGHNESS],
       ["after", "normal_fragment_maps", PRINT_EMBOSS],
+      ["after", "lights_physical_fragment", PRINT_COAT],
       ["replace", "opaque_fragment", PRINT_OUTPUT],
     ]);
   };

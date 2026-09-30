@@ -320,7 +320,7 @@ void main() {
   float across = 1.0 - abs(vRayUv.x * 2.0 - 1.0);
   float along = vRayUv.y;
   float a = pow(across, 2.2) * pow(1.0 - along, 1.6) * smoothstep(0.0, 0.06, along);
-  gl_FragColor = vec4(uGlowTint * a * uGlowAmount * vRayFlicker * 0.32, 1.0);
+  gl_FragColor = vec4(uGlowTint * a * uGlowAmount * vRayFlicker * 0.26, 1.0);
 }
 `;
 
@@ -330,7 +330,7 @@ uniform vec3 uGlowTint;
 varying vec2 vQuad;
 void main() {
   float r = length(vQuad * vec2(1.0, 1.7));
-  float a = exp(-r * r * 6.0) * 0.28 + exp(-r * r * 48.0) * 0.3;
+  float a = exp(-r * r * 7.0) * 0.16 + exp(-r * r * 60.0) * 0.2;
   vec3 col = mix(uGlowTint, vec3(1.0, 0.95, 0.84), exp(-r * r * 30.0));
   gl_FragColor = vec4(col * a * uGlowAmount, 1.0);
 }
