@@ -48,6 +48,7 @@ import { placeCamera, sideFor, solveShot, type Shot } from "./framing";
 import {
   AmbientStars,
   StarBursts,
+  drawBlush,
   drawBrushPuffs,
   drawDizzy,
   drawImpact,
@@ -170,6 +171,8 @@ class FinaleAct implements StoryAct {
   private readonly tmp = new Vector3();
   private readonly tmp2 = new Vector3();
   private readonly head = new Vector3();
+  private readonly eyes = new Vector3();
+  private blush = 0;
   private readonly contact = new Vector3();
 
   async init(ctx: StoryContext) {
@@ -385,6 +388,10 @@ class FinaleAct implements StoryAct {
       colors,
       Math.sin(this.life * 1.7) * 0.6,
     );
+    // shy while the pointer is on her: a blush rises, and fades slowly once it leaves
+    godette.socket("eyes", this.eyes);
+    this.blush = damp(this.blush, plan.hover ? 1 : 0, plan.hover ? 3.2 : 1.4, dt);
+    drawBlush(sprites, this.head, this.eyes, stage.camera, this.blush, colors);
     const ambient = this.ambientIn.update(titleOn && life && !this.still, ctx.clock.dt, 0.7, 1.4);
     this.ambient.draw(
       sprites,
@@ -595,6 +602,7 @@ class FinaleAct implements StoryAct {
     this.waveClock = -1;
     this.lastLife = null;
     this.lifeFade = 0;
+    this.blush = 0;
     this.byeClock = 0;
     this.special = null;
     this.glance = null;

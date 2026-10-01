@@ -27,6 +27,8 @@ export type FinaleColors = Readonly<{
   dust: number;
   faint: number;
   brand: readonly number[];
+  /** Her blush (a warm pink from the brand red). */
+  blush: number;
   light: boolean;
 }>;
 
@@ -47,6 +49,7 @@ export function finaleColors(palette: StoryPalette): FinaleColors {
     dust: light ? mixHex(palette.page, palette.ink, 0.085) : mixHex(palette.page, 0xffffff, 0.12),
     faint: light ? mixHex(palette.page, palette.ink, 0.5) : mixHex(palette.page, 0xffffff, 0.62),
     brand: [palette.yellow, palette.blue, palette.red, palette.green],
+    blush: mixHex(palette.red, 0xffc4cc, 0.45),
     light,
   };
 }
@@ -268,6 +271,55 @@ export function drawDizzy(
 }
 
 /* ------------------------------------------------------------------ life fx */
+
+const faceZ = new Vector3();
+const faceX = new Vector3();
+const faceY = new Vector3();
+const cheek = new Vector3();
+const cheekNormal = new Vector3();
+const toEye = new Vector3();
+const WORLD_UP = new Vector3(0, 1, 0);
+/** The eyes socket sits this far below the head socket's line of sight (radians). */
+const SOCKET_TILT = Math.atan2(0.055, 0.1);
+
+/**
+ * Her blush when she is shy: two soft pink glows on her cheeks, placed from
+ * where her face points (the head and eyes sockets, so they follow every
+ * turn and duck of the head), fading as a cheek turns away from the camera.
+ */
+export function drawBlush(
+  sprites: SpriteBatch,
+  head: Readonly<Vector3>,
+  eyes: Readonly<Vector3>,
+  camera: PerspectiveCamera,
+  amount: number,
+  colors: FinaleColors,
+) {
+  if (amount <= 0.01) return;
+  // the line from the head socket to the eyes points forward and a little down: lift it level
+  faceZ.copy(eyes).sub(head).normalize();
+  faceX.crossVectors(WORLD_UP, faceZ);
+  if (faceX.lengthSq() < 1e-6) return;
+  faceX.normalize();
+  faceZ.applyAxisAngle(faceX, -SOCKET_TILT);
+  faceY.crossVectors(faceZ, faceX).normalize();
+  for (const side of [-1, 1]) {
+    cheek
+      .copy(eyes)
+      .addScaledVector(faceX, side * 0.056)
+      .addScaledVector(faceY, -0.04)
+      .addScaledVector(faceZ, -0.012);
+    cheekNormal
+      .copy(faceZ)
+      .addScaledVector(faceX, side * 0.75)
+      .normalize();
+    toEye.copy(camera.position).sub(cheek).normalize();
+    const facing = saturate((cheekNormal.dot(toEye) - 0.1) / 0.5);
+    if (facing <= 0) continue;
+    cheek.addScaledVector(toEye, 0.02);
+    sprites.push(cheek, 0.062, "soft", colors.blush, 0.55 * amount * facing);
+  }
+}
 
 type AmbientStar = {
   u: number;

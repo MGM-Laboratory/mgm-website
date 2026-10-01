@@ -21,9 +21,9 @@ import {
  * written into one of them by the act each frame, so the whole act costs
  * Godette plus two draw calls:
  *
- * - `SpriteBatch`: camera-facing sprites in four shapes: the card back's
- *   compass star, its small constellation star, a soft disc (dust puffs)
- *   and a thin ring.
+ * - `SpriteBatch`: camera-facing sprites in five shapes: the card back's
+ *   compass star, its small constellation star, a flat disc (dust puffs),
+ *   a thin ring and a soft glow (her blush).
  * - `StrokeBatch`: camera-facing ribbons with round caps (speed lines, the
  *   constellation links of the dizzy ring, impact dashes).
  *
@@ -34,13 +34,14 @@ import {
  * `push*()` adds an instance, `end()` uploads what changed.
  */
 
-export type SpriteShape = "compass" | "twinkle" | "disc" | "ring";
+export type SpriteShape = "compass" | "twinkle" | "disc" | "ring" | "soft";
 
 const SHAPE_INDEX: ReadonlyMap<SpriteShape, number> = new Map([
   ["compass", 0],
   ["twinkle", 1],
   ["disc", 2],
   ["ring", 3],
+  ["soft", 4],
 ]);
 
 const SPRITE_VERTEX = /* glsl */ `
@@ -82,8 +83,11 @@ void main() {
   } else if (vShape < 2.5) {
     // a flat cartoon puff with a crisp edge (overlapping puffs merge into one cloud)
     a = 1.0 - smoothstep(0.9 - aa, 0.9 + aa, r);
-  } else {
+  } else if (vShape < 3.5) {
     a = smoothstep(0.8 - aa, 0.8 + aa, r) * (1.0 - smoothstep(0.96 - aa, 0.96 + aa, r));
+  } else {
+    // a soft round glow that fades out well inside the quad (a blush)
+    a = exp(-r * r * 3.4) * (1.0 - smoothstep(0.7, 1.0, r));
   }
   a *= vAlpha;
   if (a <= 0.003) discard;
