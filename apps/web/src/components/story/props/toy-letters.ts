@@ -43,9 +43,9 @@ import {
  * the point that touches the table.
  *
  * Scrubbed motion (drops) is written by the act into `letter.position`,
- * `quaternion` and `scale`, then `commit()`. The clock-driven life
- * (`poke`, `hop`, run by `update(dt)`) rides on top and never changes the
- * act's values.
+ * `quaternion`, `scale` and `squash`, then `commit()`. The clock-driven
+ * life (`poke`, `hop`, run by `update(dt)`) rides on top and never changes
+ * the act's values.
  *
  * Size: the phrase fits `maxWidth` (default 34 cm, the two-line strip the
  * room research validated on the coffee table, research/room.md 2.4). At
@@ -93,6 +93,8 @@ export type ToyLetter = {
   readonly position: Vector3;
   readonly quaternion: Quaternion;
   scale: number;
+  /** Vertical squash about the base, 1 none (volume kept), for `letterDrop`'s impacts. */
+  squash: number;
 };
 
 export type ToyLetters = {
@@ -123,35 +125,69 @@ export type ToyLetters = {
 
 /**
  * A drop onto the table with two bounces, as a pure function of progress:
- * height above the rest pose (metres) and a squash factor (1 = none).
+ * height above the rest pose (metres) and a vertical squash (1 = none).
  * `progress` 0 is the release at `height`, 1 is settled.
+ *
+ * Every landing is a short contact on the table: the letter squashes and
+ * springs back while its base stays down, so the squash never pops and
+ * never shows in the air. In the air it stretches a little with its speed.
+ * Both curves are continuous across every boundary.
  */
 export function letterDrop(progress: number, height: number): { y: number; squash: number } {
   const p = Math.max(0, Math.min(1, progress));
-  // A fall, then bounces to 30% and 9% of the height, all under one gravity: a segment's time
-  // goes with the square root of its height.
-  const fall = Math.sqrt(height);
-  const bounce1 = 2 * Math.sqrt(height * 0.3);
-  const bounce2 = 2 * Math.sqrt(height * 0.09);
-  const settle = (fall + bounce1 + bounce2) * 0.12;
-  let t = p * (fall + bounce1 + bounce2 + settle);
-  if (t < fall) {
-    const k = t / fall;
-    return { y: height * (1 - k * k), squash: 1 };
+  const segments = DROP_SEGMENTS;
+  let t = p * DROP_TOTAL;
+  const stretch = (speed: number) => 1 + DROP_STRETCH * speed;
+  for (const seg of segments) {
+    if (t > seg.duration && seg !== segments.at(-1)) {
+      t -= seg.duration;
+      continue;
+    }
+    const u = Math.min(1, t / seg.duration);
+    switch (seg.kind) {
+      case "fall":
+        return { y: height * (1 - u * u), squash: stretch(u) };
+      case "arc": {
+        const k = u * 2 - 1;
+        return { y: height * seg.peak * (1 - k * k), squash: stretch(seg.speed * Math.abs(k)) };
+      }
+      case "contact": {
+        const carry = DROP_STRETCH * (seg.speedIn * (1 - u) * (1 - u) + seg.speedOut * u * u);
+        return { y: 0, squash: 1 - seg.amount * Math.sin(Math.PI * u) + carry };
+      }
+      case "settle":
+        return { y: 0, squash: 1 + 0.03 * (1 - u) * Math.sin(3 * Math.PI * u) };
+    }
   }
-  t -= fall;
-  const arc = (duration: number, peak: number, squash: number) => {
-    const k = (t / duration) * 2 - 1;
-    const impact = Math.max(0, 1 - (t / duration) * 8) + Math.max(0, 1 - (1 - t / duration) * 8);
-    return { y: peak * (1 - k * k), squash: 1 - impact * squash };
-  };
-  if (t < bounce1) return arc(bounce1, height * 0.3, 0.14);
-  t -= bounce1;
-  if (t < bounce2) return arc(bounce2, height * 0.09, 0.06);
-  t -= bounce2;
-  const rest = Math.max(0, 1 - t / settle);
-  return { y: 0, squash: 1 - rest * 0.03 * Math.sin(rest * Math.PI * 3) };
+  return { y: 0, squash: 1 };
 }
+
+type DropSegment =
+  | { kind: "fall"; duration: number }
+  | { kind: "arc"; duration: number; peak: number; speed: number }
+  | { kind: "contact"; duration: number; amount: number; speedIn: number; speedOut: number }
+  | { kind: "settle"; duration: number };
+
+const DROP_STRETCH = 0.06;
+/**
+ * Durations in units of the fall's time, one gravity throughout (an arc's
+ * time goes with the square root of its height); speeds are shares of the
+ * first impact's.
+ */
+const DROP_SEGMENTS: readonly DropSegment[] = (() => {
+  const v1 = Math.sqrt(0.3);
+  const v2 = 0.3;
+  return [
+    { kind: "fall", duration: 1 },
+    { kind: "contact", duration: 0.12, amount: 0.16, speedIn: 1, speedOut: v1 },
+    { kind: "arc", duration: 2 * v1, peak: 0.3, speed: v1 },
+    { kind: "contact", duration: 0.08, amount: 0.09, speedIn: v1, speedOut: v2 },
+    { kind: "arc", duration: 2 * v2, peak: 0.09, speed: v2 },
+    { kind: "contact", duration: 0.06, amount: 0.045, speedIn: v2, speedOut: 0 },
+    { kind: "settle", duration: 0.3 },
+  ];
+})();
+const DROP_TOTAL = DROP_SEGMENTS.reduce((sum, seg) => sum + seg.duration, 0);
 
 /** Hands the main thread back between build steps (not throttled like a timer in a hidden tab). */
 function yieldToMain(): Promise<void> {
@@ -369,6 +405,7 @@ export async function loadToyLetters(
         position: home.clone(),
         quaternion: new Quaternion(),
         scale: 1,
+        squash: 1,
       });
       await slice();
     }
@@ -444,8 +481,9 @@ export async function loadToyLetters(
       const o = letter.index * 12;
       data.set([letter.position.x, letter.position.y + lift, letter.position.z, letter.scale], o);
       data.set([turn.x, turn.y, turn.z, turn.w], o + 4);
-      const stretch = 1 / Math.sqrt(squashY);
-      data.set([stretch, squashY, stretch, 1], o + 8);
+      const squash = squashY * Math.max(0.05, letter.squash);
+      const stretch = 1 / Math.sqrt(squash);
+      data.set([stretch, squash, stretch, 1], o + 8);
     }
     poseTexture.needsUpdate = true;
   };
@@ -470,6 +508,7 @@ export async function loadToyLetters(
         letter.position.copy(letter.home);
         letter.quaternion.identity();
         letter.scale = 1;
+        letter.squash = 1;
       }
       commit();
     },
