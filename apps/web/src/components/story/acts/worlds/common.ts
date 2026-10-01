@@ -127,6 +127,39 @@ export function createPose(): FlightPose {
   };
 }
 
+/**
+ * Puts every field back to its default (in place). The act calls it before a
+ * frame's choreography, so a setting one world or crossing makes (a loop's up
+ * vector, a look target) can never leak into the next after a jump.
+ */
+export function resetPose(pose: FlightPose) {
+  const fresh = createPose();
+  pose.position.copy(fresh.position);
+  pose.heading.copy(fresh.heading);
+  pose.velocity.copy(fresh.velocity);
+  pose.pitch = fresh.pitch;
+  pose.roll = fresh.roll;
+  pose.yaw = fresh.yaw;
+  pose.spin = fresh.spin;
+  pose.bank = fresh.bank;
+  pose.lean = fresh.lean;
+  pose.sway = fresh.sway;
+  pose.layers = [];
+  pose.face = fresh.face;
+  pose.faceWeight = fresh.faceWeight;
+  pose.glow = fresh.glow;
+  pose.glowColor = fresh.glowColor;
+  pose.rim = fresh.rim;
+  pose.rimColor = fresh.rimColor;
+  pose.lift = fresh.lift;
+  pose.look = null;
+  pose.lookWeight = 0;
+  pose.nervous = 0;
+  pose.visible = true;
+  pose.up = null;
+  return pose;
+}
+
 /** A camera for one frame: where it is, what it looks at, lens and life. */
 export type CameraShot = {
   position: Vector3;

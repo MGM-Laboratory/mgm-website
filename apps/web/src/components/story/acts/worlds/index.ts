@@ -34,6 +34,7 @@ import {
   lin01,
   mixPose,
   mixShot,
+  resetPose,
   scaledSize,
   yieldToMain,
   type CameraShot,
@@ -382,6 +383,7 @@ class WorldsAct implements StoryAct {
     // A jump (the End key, a restored position, a scripted jump) starts her trail afresh.
     if (state.arrived || Math.abs(state.t - this.lastT) > 0.3) this.flight?.trail.clear();
     this.lastT = state.t;
+    resetPose(this.pose);
     const r = route(state.t);
     // Life runs at the world's rate (a speed ramp, the hang time), in the last input direction.
     let rate = 1;
@@ -596,7 +598,7 @@ class WorldsAct implements StoryAct {
     });
     if (this.portalHer(p)) {
       // She is through: she flies on in the next world, seen through the star.
-      riftChoreo(p, spec, this.poseB, this.shotB, this.life.time, world.key, next.key);
+      riftChoreo(p, spec, resetPose(this.poseB), this.shotB, this.life.time, world.key, next.key);
       transformPose(this.poseB, null, next.entry);
       this.fly(ctx, next.scene, this.poseB);
     }
@@ -612,7 +614,7 @@ class WorldsAct implements StoryAct {
 
   /** Her style turns from the crossing's into the world's own over the first moments. */
   private blendArrival(ctx: StoryContext, world: World, index: number, T: number) {
-    const a = this.poseB;
+    const a = resetPose(this.poseB);
     const s = this.shotB;
     if (index === 0) {
       holeChoreo(1, ctx.size.aspect, a, s, this.life.time);
@@ -635,7 +637,7 @@ class WorldsAct implements StoryAct {
     const spec = RIFTS.at(index);
     const next = this.worlds.at(index + 1);
     if (!spec || !next || !world.exit) return;
-    riftChoreo(0, spec, this.poseB, this.shotB, this.life.time, world.key, next.key);
+    riftChoreo(0, spec, resetPose(this.poseB), this.shotB, this.life.time, world.key, next.key);
     transformPose(this.poseB, this.shotB, world.exit);
     const w = ease01(T, world.length - EXIT_BLEND, world.length);
     mixPose(this.pose, this.pose, this.poseB, w);
