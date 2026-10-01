@@ -43,6 +43,13 @@ export const SHOT_LAND = {
   fovPortraitDeg: 58,
 } as const;
 
+/**
+ * The room's lamp level (`StoryRoom.lamps`, 0 to 1) at the hand-off from the
+ * card act's drop to the room act (`c-drop` 1 = `r-land` 0): the card act's
+ * warm-up ends here and the room act's starts here, so the light never pops.
+ */
+export const LAMPS_AT_LAND = 0.7;
+
 /** Real sizes, metres. */
 export const SIZES = {
   box: { width: 0.0635, height: 0.0896, depth: 0.0206 },

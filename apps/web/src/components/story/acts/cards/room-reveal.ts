@@ -6,6 +6,7 @@ import {
   type ActState,
   type StoryContext,
 } from "@/components/story/engine/act";
+import { LAMPS_AT_LAND } from "@/components/story/engine/frame";
 import type { DeckBox } from "@/components/story/props/deck-box";
 import type { RoomPhase, StoryRoom } from "@/components/story/props/room";
 import type { StudioLights } from "@/components/story/acts/cards/lighting";
@@ -72,6 +73,9 @@ export class RoomReveal {
   /** Every frame the act is active (the room act takes over at `r-land`). */
   update(ctx: StoryContext, state: ActState) {
     const drop = state.beat("c-drop");
+    // In the drop the room act is near and writes its own defaults to the room before this runs
+    // (every frame), so every setting is written again here, changed or not.
+    if (drop > 0) this.invalidate();
     const scheme = ctx.palette.scheme;
     const pointer = ctx.pointer;
     const gone = this.page.update(ctx.size, drop, FALL_ORIGIN, scheme, ctx.palette.page, {
@@ -89,11 +93,12 @@ export class RoomReveal {
       else ctx.stage.backdrop.set({ paint: 0, reveal: 0 });
       return;
     }
-    // The room is all there behind the tiles; the lamps warm up as the page falls away.
+    // The room is all there behind the tiles; the lamps warm up as the page falls away, to the
+    // level the room act starts from at `r-land`.
     const presence = smoothstep(0.05, 0.6, drop);
     this.setPhase("crane");
     this.setGrade(scheme);
-    this.setLamps(0.35 + 0.65 * smoothstep(0.05, 0.55, drop));
+    this.setLamps(LAMPS_AT_LAND * (0.5 + 0.5 * smoothstep(0.05, 0.55, drop)));
     this.setPresence(presence);
     this.studio.set(1 - presence, scheme);
     // The reflections: the studio's, dipping out, then the room's, rising in.
@@ -109,11 +114,12 @@ export class RoomReveal {
 
   /** `r-land` (near, before the room act's own update): the room as the drop left it. */
   landed(ctx: StoryContext) {
+    this.invalidate();
     this.page.mesh.visible = false;
     this.setBoxOrder(0);
     this.setPhase("land");
     this.setGrade(ctx.palette.scheme);
-    this.setLamps(1);
+    this.setLamps(LAMPS_AT_LAND);
     this.setPresence(1);
     this.studio.set(0, ctx.palette.scheme);
   }
