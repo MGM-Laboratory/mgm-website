@@ -27,8 +27,6 @@ export const QUALITY_LADDER: readonly QualityLevel[] = [
   { tier: "low", pixelRatio: 0.85 },
 ];
 
-const START_INDEX: Record<QualityTier, number> = { high: 0, medium: 2, low: 4 };
-
 /** Frames to skip after a start or a change (compiles, uploads, the lens settle). */
 const GRACE_SECONDS = 1.1;
 /** Frames per judgement (about 1.5 s at 60 fps). */
@@ -42,6 +40,7 @@ const SETTLED_AFTER = 2;
 const STALL_MS = 250;
 
 export class QualityGovernor {
+  private readonly ladder: readonly QualityLevel[];
   private index: number;
   private grace = GRACE_SECONDS;
   private readonly samples = new Float32Array(WINDOW);
@@ -52,14 +51,20 @@ export class QualityGovernor {
   constructor(
     initial: QualityTier,
     private readonly onChange: (level: QualityLevel) => void,
-    options: { locked?: boolean } = {},
+    options: { locked?: boolean; ladder?: readonly QualityLevel[] } = {},
   ) {
-    this.index = START_INDEX[initial];
+    // Another stage (the homepage story) may walk its own ladder; it starts
+    // at the first level of the initial tier, as the world's does.
+    this.ladder = options.ladder ?? QUALITY_LADDER;
+    this.index = Math.max(
+      0,
+      this.ladder.findIndex((level) => level.tier === initial),
+    );
     this.done = options.locked ?? false;
   }
 
   get level(): QualityLevel {
-    return QUALITY_LADDER[this.index];
+    return this.ladder.at(this.index) ?? QUALITY_LADDER[0];
   }
 
   get settled() {
@@ -97,8 +102,8 @@ export class QualityGovernor {
     // Mean of the middle 80%: a single hitch neither saves nor dooms a window.
     let sum = 0;
     let n = 0;
-    for (let i = Math.floor(WINDOW * 0.1); i < Math.ceil(WINDOW * 0.9); i++) {
-      sum += sorted[i];
+    for (const value of sorted.slice(Math.floor(WINDOW * 0.1), Math.ceil(WINDOW * 0.9))) {
+      sum += value;
       n += 1;
     }
     const mean = sum / n;
@@ -110,7 +115,7 @@ export class QualityGovernor {
     }
     this.good = 0;
     const steps = mean > VERY_SLOW_MS ? 2 : 1;
-    const next = Math.min(QUALITY_LADDER.length - 1, this.index + steps);
+    const next = Math.min(this.ladder.length - 1, this.index + steps);
     if (next === this.index) {
       this.done = true;
       return;
@@ -118,7 +123,7 @@ export class QualityGovernor {
     this.index = next;
     this.grace = GRACE_SECONDS;
     this.onChange(this.level);
-    if (this.index === QUALITY_LADDER.length - 1) this.done = true;
+    if (this.index === this.ladder.length - 1) this.done = true;
   }
 }
 
@@ -142,14 +147,33 @@ const HOPELESS_STALL_MS = 3000;
  * frames is still past `HOPELESS_MS` after the start, `onHopeless` runs
  * (once): the host hands the visit to the DOM list, as it does for a lost
  * context.
+ *
+ * Another stage may judge by its own limit (`thresholdMs`, read at each
+ * judgement): the homepage story gives up on sustained frames over 50 ms
+ * once its governor has nothing lower left to try.
  */
+export type HopelessOptions = {
+  /** The median frame time (ms) past which the renderer is hopeless; HOPELESS_MS when unset. */
+  thresholdMs?: () => number;
+};
+
 export class HopelessWatch {
   private grace = HOPELESS_GRACE_SECONDS;
   private readonly samples: number[] = [];
   private span = 0;
   private fired = false;
 
-  constructor(private readonly onHopeless: () => void) {}
+  constructor(
+    private readonly onHopeless: () => void,
+    private readonly options: HopelessOptions = {},
+  ) {}
+
+  /** Drops the frames so far and waits a moment (after a quality change, whose first frames compile). */
+  rest(seconds = 1) {
+    this.samples.length = 0;
+    this.span = 0;
+    this.grace = Math.max(this.grace, seconds);
+  }
 
   /** One rendered frame: `ms` since the previous one. */
   sample(ms: number) {
@@ -168,7 +192,7 @@ export class HopelessWatch {
     const median = [...this.samples].sort((a, b) => a - b)[count >> 1];
     this.samples.length = 0;
     this.span = 0;
-    if (median > HOPELESS_MS) {
+    if (median > (this.options.thresholdMs?.() ?? HOPELESS_MS)) {
       this.fired = true;
       this.onHopeless();
     }

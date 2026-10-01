@@ -10,10 +10,8 @@ import { CompetencyMotifShape } from "@/components/sections/competency-motif";
 import { RevealSection } from "./reveal-section";
 import styles from "./flowing-competencies.module.css";
 
-// The same four brand colors CoreCompetenciesSection already assigns per
-// competency (see components/sections/core-competencies.tsx CARD_BG) — kept
-// in sync here rather than shared, since one is a Tailwind class map and this
-// one needs raw values for inline canvas-less style props.
+// The four brand colors each competency carries (data/competencies.ts), as
+// raw values for inline canvas-less style props.
 const ITEM_FILL: Record<CompetencyColor, string> = {
   blue: "var(--brand-blue)",
   red: "var(--brand-red)",
@@ -63,7 +61,9 @@ function FlowingItem({ competency }: { competency: Competency }) {
     };
     calculateRepetitions();
     window.addEventListener("resize", calculateRepetitions);
-    return () => window.removeEventListener("resize", calculateRepetitions);
+    return () => {
+      window.removeEventListener("resize", calculateRepetitions);
+    };
   }, []);
 
   useEffect(() => {
@@ -131,8 +131,12 @@ function FlowingItem({ competency }: { competency: Competency }) {
         )}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
-        onFocus={() => reveal("top")}
-        onBlur={() => hide("top")}
+        onFocus={() => {
+          reveal("top");
+        }}
+        onBlur={() => {
+          hide("top");
+        }}
       >
         {competency.title}
       </Link>

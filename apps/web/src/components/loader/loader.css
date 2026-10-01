@@ -1,0 +1,68 @@
+/*
+ * The site loader (components/loader). Shown only while the boot script (or
+ * the core) says html[data-loader="active"]: no JavaScript, a client
+ * navigation or a finished load all leave it hidden. It never touches
+ * html { overflow }.
+ */
+
+.site-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  color: var(--foreground);
+  opacity: 1;
+  overscroll-behavior: contain;
+  transition: opacity 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html[data-loader="active"] .site-loader {
+  display: flex;
+}
+
+.site-loader[data-phase="leaving"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.site-loader-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.site-loader-bar {
+  transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-loader-star {
+    animation: site-loader-spin 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+}
+
+@keyframes site-loader-spin {
+  0% {
+    rotate: 0deg;
+    scale: 1;
+  }
+
+  50% {
+    rotate: 45deg;
+    scale: 0.86;
+  }
+
+  100% {
+    rotate: 90deg;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-loader {
+    transition: none;
+  }
+}
