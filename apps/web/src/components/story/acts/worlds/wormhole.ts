@@ -32,7 +32,6 @@ import {
   createDisplayTarget,
   createScreenPass,
   ease01,
-  lin01,
   type CameraShot,
   type FlightPose,
 } from "./common";
@@ -339,12 +338,18 @@ export function holeChoreo(
     (54 - startFov) * ease01(p, 0.02, 0.4) +
     10 * ease01(p, 0.45, HOLE_THROAT) -
     14 * out;
-  // Ahead of the camera: far and low at first (the TV's last frame), then
-  // closer, then the arrival chase every world starts from.
+  // She bursts in from just under the lens (out of frame on the first frame, which is the TV's
+  // last picture), rises into view and pulls ahead, then comes back closer for the throat, then
+  // the arrival chase every world starts from.
+  const burst = ease01(p, 0, 0.16);
   const gap =
-    p < HOLE_THROAT ? 26 - 14 * ease01(p, 0, HOLE_THROAT) : 12 + (ARRIVAL_CHASE.back - 12) * out;
+    p < HOLE_THROAT
+      ? 4 + 20 * burst - 10 * ease01(p, 0.16, HOLE_THROAT)
+      : 14 + (ARRIVAL_CHASE.back - 14) * out;
   const tanV = Math.tan((shot.fov * Math.PI) / 360);
-  const drop = (0.12 * gap * tanV + 1.0) * (1 - out) + ARRIVAL_CHASE.up * out;
+  // Her centre's height on screen (NDC): well below the frame at first, then a little low.
+  const screenY = -2.3 + (2.3 - 0.12) * ease01(p, 0, 0.13);
+  const drop = (-screenY * gap * tanV + 1.0) * (1 - out) + ARRIVAL_CHASE.up * out;
   const weave = 1.2 * Math.sin(time * 0.9) * ease01(p, 0.05, 0.3) * (1 - out);
   pose.position.set(shot.position.x * 0.4 * (1 - out) + weave, shot.position.y - drop, s - gap);
   const farTarget = new Vector3(pose.position.x * 0.6, shot.position.y - drop * 0.4, s - gap * 4);
@@ -375,7 +380,8 @@ export function holeChoreo(
   ];
   pose.face = p < 0.4 ? "determined" : "big_smile";
   pose.faceWeight = 1;
-  pose.glow = 1.15;
+  // Her glow comes up as she rises into frame (the TV's last picture has none of her).
+  pose.glow = 1.15 * ease01(p, 0.005, 0.05);
   pose.glowColor = 0xf7bf33;
   pose.rim = 1.6;
   pose.rimColor = 0xffe6a6;
@@ -548,7 +554,10 @@ export function createTvFeed(
   return feed;
 }
 
-/** A small helper for callers: 0..1 into the dive's flash at the very start (the pop-in of her figure). */
-export function holeEntryFlash(p: number) {
-  return 0.06 * (1 - lin01(p, 0, 0.04));
+/**
+ * How much of the act's own look is on in `w-hole` (0 on the first frame, which must be the TV's
+ * last picture: the table act ends its dive with every effect off).
+ */
+export function holeLookIn(p: number) {
+  return ease01(p, 0, 0.08);
 }

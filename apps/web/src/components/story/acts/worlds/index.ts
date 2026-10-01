@@ -61,7 +61,7 @@ import {
   WormholePass,
   createTvFeed,
   holeChoreo,
-  holeEntryFlash,
+  holeLookIn,
   holeStreak,
 } from "./wormhole";
 
@@ -184,6 +184,7 @@ class WorldsAct implements StoryAct {
   private trailScene: Scene | null = null;
   private lastScene: Scene | null = null;
   private hoverAt = -10;
+  private lastT = 0;
   private feed: ReturnType<typeof createTvFeed> | null = null;
   private quality: StoryContext["tier"] = "high";
   /** Start and wall time of each piece of `init`, ms (read by verification scripts through the dev handle). */
@@ -378,6 +379,9 @@ class WorldsAct implements StoryAct {
     const rift = this.rift;
     if (!flight || !hole || !rift) return;
     if (state.arrived) this.rig.reset();
+    // A jump (the End key, a restored position, a scripted jump) starts her trail afresh.
+    if (state.arrived || Math.abs(state.t - this.lastT) > 0.3) this.flight?.trail.clear();
+    this.lastT = state.t;
     const r = route(state.t);
     // Life runs at the world's rate (a speed ramp, the hang time), in the last input direction.
     let rate = 1;
@@ -403,16 +407,17 @@ class WorldsAct implements StoryAct {
       this.holeRig.key.target.updateMatrixWorld();
       ctx.setHeaderTone("dark");
       const freeze = ctx.director.freeze;
+      // The first frame is the TV's last picture (no effects); the act's look eases in after it.
+      const lookIn = holeLookIn(r.p);
       ctx.stage.post.set({
         bloom:
-          0.18 +
-          0.32 * ease01(r.p, 0.02, 0.14) +
+          (0.18 + 0.32 * ease01(r.p, 0.02, 0.14)) * lookIn +
           freeze * (0.16 + 0.07 * Math.sin(life.time * 2.4)),
         bloomThreshold: 0.64,
         bloomRadius: 0.42,
-        vignette: 0.45 + 0.12 * freeze,
-        grain: 0.22,
-        flash: Math.max(holeEntryFlash(r.p), throatFlash(r.p)),
+        vignette: 0.45 * lookIn + 0.12 * freeze,
+        grain: 0.22 * lookIn,
+        flash: throatFlash(r.p),
         flashColor: 0xfff4dc,
       });
       this.hud.update(ctx, null, 0);
