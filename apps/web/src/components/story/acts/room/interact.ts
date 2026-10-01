@@ -153,7 +153,7 @@ type Prop = {
  * middle of its base, rolling onto the rim it tips toward) and the TV (the
  * body and the screen together, about the body's base). Only the nodes the
  * room lets an act move (`room.handles`) take part, so on the low tier,
- * where the table's props are merged into the table, nothing rocks.
+ * where the table's props and the TV's body are merged, nothing rocks.
  */
 export class RoomProps {
   private readonly props: Prop[] = [];
@@ -211,9 +211,13 @@ export class RoomProps {
     return true;
   }
 
-  /** A knock on the TV (`strength` 1 is a good smack). */
+  /**
+   * A knock on the TV (`strength` 1 is a good smack). Only with its body: where the room merged the
+   * set into one mesh (the low tier keeps only the screen as a handle) the screen would rock alone
+   * inside a bezel that stays put, so the set takes the knock without moving.
+   */
   knockTv(strength: number) {
-    if (!this.tvBody && !this.tvScreen) return;
+    if (!this.tvBody) return;
     this.tv.kick(MathUtils.degToRad(14) * strength * (this.tv.velocity >= 0 ? 1 : -1));
   }
 
@@ -261,8 +265,8 @@ export class RoomProps {
   private placeTv(angle: number) {
     const body = this.tvBody;
     const screen = this.tvScreen;
-    if (!body && !screen) return;
-    const pivot = body ? this.tvBodyHome : this.tvScreenHome;
+    if (!body) return;
+    const pivot = this.tvBodyHome;
     this.q.setFromAxisAngle(this.tvAxis, angle);
     if (body) body.quaternion.copy(this.q);
     if (screen) {
