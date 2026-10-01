@@ -62,8 +62,17 @@ const MIST_FRAGMENT = /* glsl */ `
 gl_FragColor.rgb = mix(gl_FragColor.rgb, uMistColor, clamp(vMist, 0.0, 1.0));
 `;
 
-/** Chains the mist onto a card material's own shader patch (and gives the program its own key). */
-function addMist(material: MeshStandardMaterial, swarm: boolean, uniforms: MistUniforms) {
+/**
+ * Chains the mist onto a card material's own shader patch (and gives the
+ * program its own key). `compiled` receives the program's uniforms, so the
+ * act can reach the card's own (the paper's lift on the hero fronts).
+ */
+function addMist(
+  material: MeshStandardMaterial,
+  swarm: boolean,
+  uniforms: MistUniforms,
+  compiled?: (shader: WebGLProgramParametersWithUniforms) => void,
+) {
   const original = material.onBeforeCompile.bind(material);
   const key = material.customProgramCacheKey();
   material.onBeforeCompile = (
@@ -71,6 +80,7 @@ function addMist(material: MeshStandardMaterial, swarm: boolean, uniforms: MistU
     renderer: WebGLRenderer,
   ) => {
     original(shader, renderer);
+    compiled?.(shader);
     shader.uniforms.uMistColor = uniforms.uMistColor;
     shader.uniforms.uMist = uniforms.uMist;
     shader.vertexShader = patchShader(shader.vertexShader, [
@@ -98,6 +108,13 @@ export type HeroSlot = {
   readonly card: HeroCard;
   readonly mist: MistUniforms;
 };
+
+/**
+ * Extra light on the printed fronts (the card material's `uPaperLift`), so
+ * the white card reads as white paper in the studio light, at or above the
+ * page, in both schemes. Its default is tuned for the generic face.
+ */
+const HERO_PAPER_LIFT = 0.55;
 
 export class DeckView {
   readonly swarm: CardSwarm;
@@ -128,7 +145,10 @@ export class DeckView {
     for (let k = 0; k < 4; k += 1) {
       const card = kit.createHeroCard(null);
       const mist: MistUniforms = { uMistColor: { value: this.pageColour }, uMist: { value: 0 } };
-      addMist(card.material, false, mist);
+      addMist(card.material, false, mist, (shader) => {
+        const lift = shader.uniforms.uPaperLift as { value: number } | undefined;
+        if (lift) lift.value = HERO_PAPER_LIFT;
+      });
       card.mesh.name = `cards-hero-${k}`;
       stage.add(card.mesh);
       this.heroes.push({ card, mist });

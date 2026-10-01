@@ -35,7 +35,7 @@ import {
 
 const UNIT_W = 1000;
 const UNIT_H = Math.round((1000 * 1078) / 641);
-const PAPER = "#fbfaf7";
+const PAPER = "#fefefd";
 const INK = "#0e1116";
 const INK_2 = "#3b4150";
 const INK_3 = "#6b7280";
@@ -267,13 +267,8 @@ export class CardFront {
     this.measure(g);
     const wake = this.wake;
 
-    // Paper, and a faint warm vignette so the card reads as stock, not a screen.
+    // Paper (the card's grain and sheen come from its material).
     g.fillStyle = PAPER;
-    g.fillRect(0, 0, UNIT_W, UNIT_H);
-    const paper = g.createRadialGradient(500, 700, 200, 500, 840, 1100);
-    paper.addColorStop(0, "rgba(255,255,255,0)");
-    paper.addColorStop(1, "rgba(120,100,70,0.05)");
-    g.fillStyle = paper;
     g.fillRect(0, 0, UNIT_W, UNIT_H);
 
     // The border: a thin ink line, and a hairline in the accent that draws itself as it wakes.
@@ -487,7 +482,25 @@ function roundRect(
   g.roundRect(x, y, Math.max(0, w), h, Math.min(r, w / 2, h / 2));
 }
 
+/**
+ * Wraps `text` into as few lines as fit `width`, then balances them: the
+ * narrowest width that keeps that many lines, so no word is left alone on
+ * the last line.
+ */
 function wrap(g: CanvasRenderingContext2D, text: string, width: number) {
+  const lines = greedyWrap(g, text, width);
+  if (lines.length < 2) return lines;
+  let lo = width * 0.5;
+  let hi = width;
+  for (let i = 0; i < 14; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (greedyWrap(g, text, mid).length > lines.length) lo = mid;
+    else hi = mid;
+  }
+  return greedyWrap(g, text, hi);
+}
+
+function greedyWrap(g: CanvasRenderingContext2D, text: string, width: number) {
   const words = text.split(" ");
   const lines: string[] = [];
   let line = "";
