@@ -352,7 +352,10 @@ export function holeChoreo(
   const drop = (-screenY * gap * tanV + 1.0) * (1 - out) + ARRIVAL_CHASE.up * out;
   const weave = 1.2 * Math.sin(time * 0.9) * ease01(p, 0.05, 0.3) * (1 - out);
   pose.position.set(shot.position.x * 0.4 * (1 - out) + weave, shot.position.y - drop, s - gap);
-  const farTarget = new Vector3(pose.position.x * 0.6, shot.position.y - drop * 0.4, s - gap * 4);
+  // The aim starts straight down the axis, as the feed camera looks (the TV's last picture), and
+  // leans toward her as she rises into frame.
+  const lean = 0.4 * ease01(p, 0, 0.13);
+  const farTarget = new Vector3(pose.position.x * 0.6, shot.position.y - drop * lean, s - gap * 4);
   const chaseTarget = new Vector3(
     pose.position.x,
     pose.position.y + ARRIVAL_CHASE.lift,
@@ -392,10 +395,12 @@ export function holeChoreo(
   pose.visible = true;
 }
 
-/** The speed cue for the stars, 0..~0.25. */
+/** The speed cue for the stars, 0..~0.25 (none on the first frame, like the feed's). */
 export function holeStreak(p: number) {
   return (
-    Math.min(0.28, holeSpeed(p) / 9000) * (1 - ease01(p, HOLE_THROAT - 0.02, HOLE_THROAT + 0.04))
+    Math.min(0.28, holeSpeed(p) / 9000) *
+    holeLookIn(p) *
+    (1 - ease01(p, HOLE_THROAT - 0.02, HOLE_THROAT + 0.04))
   );
 }
 
