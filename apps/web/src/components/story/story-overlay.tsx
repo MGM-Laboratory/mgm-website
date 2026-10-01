@@ -48,7 +48,7 @@ function tabbables(scope: ParentNode) {
  */
 function useStoryTabOrder(root: HTMLElement) {
   useLayoutEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
+    const handleHtmlTab = (event: KeyboardEvent) => {
       if (event.key !== "Tab" || event.defaultPrevented) return;
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const section = document.querySelector<HTMLElement>("[data-story-section]");
@@ -78,9 +78,9 @@ function useStoryTabOrder(root: HTMLElement) {
       event.preventDefault();
       target.focus();
     };
-    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("keydown", /*safe*/ handleHtmlTab, true);
     return () => {
-      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("keydown", /*safe*/ handleHtmlTab, true);
     };
   }, [root]);
 }
