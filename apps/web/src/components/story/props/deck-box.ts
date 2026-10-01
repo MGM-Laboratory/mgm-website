@@ -11,6 +11,7 @@ import {
   Mesh,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  NormalBlending,
   PlaneGeometry,
   Quaternion,
   SRGBColorSpace,
@@ -155,6 +156,11 @@ export type DeckBox = {
   setStack(fill: number): void;
   /** Warm light inside the open box and the rays out of it (0..1). */
   setGlow(amount: number): void;
+  /**
+   * The page behind the box (default dark): over the light page the rays
+   * and the halo lay a warm haze instead of adding light. No recompile.
+   */
+  setGlowPage(page: "light" | "dark"): void;
   /**
    * A glint band sweeping the box: `phase` 0 enters at the bottom left (seen
    * from the front), 1 leaves at the top right. Brightest on the linework.
@@ -322,6 +328,8 @@ attribute vec4 aRay;
 uniform float uTime;
 varying vec2 vRayUv;
 varying float vRayFlicker;
+varying float vRayFacing;
+varying float vRayHeight;
 void main() {
   vRayUv = uv;
   float yaw = aRay.x + uTime * 0.12 * (aRay.w - 0.5);
@@ -329,35 +337,57 @@ void main() {
   float s = sin(yaw);
   vec3 p = vec3(position.x * aRay.y, position.y * aRay.z, 0.0);
   p = vec3(c * p.x, p.y, -s * p.x);
+  vRayHeight = p.y;
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  // A ray seen edge on is a hard bright line: fade each one by how squarely it faces the eye.
+  vec3 n = normalize(normalMatrix * vec3(s, 0.0, c));
+  vRayFacing = abs(dot(n, normalize(-mv.xyz)));
   vRayFlicker = 0.72 + 0.28 * sin(uTime * (1.3 + aRay.w * 1.7) + aRay.x * 3.0);
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  gl_Position = projectionMatrix * mv;
 }
 `;
 
+// Over the dark page the glow adds light (additive); over the light page it would vanish, so it
+// lays a warm amber haze instead (normal blending), like the fx do.
 const RAYS_FRAGMENT = /* glsl */ `
 uniform float uGlowAmount;
-uniform vec3 uGlowTint;
+uniform vec3 uRayTint;
+uniform float uOnLight;
+uniform float uRayFloor;
 varying vec2 vRayUv;
 varying float vRayFlicker;
+varying float vRayFacing;
+varying float vRayHeight;
 void main() {
   float across = 1.0 - abs(vRayUv.x * 2.0 - 1.0);
   float along = vRayUv.y;
-  float a = pow(across, 2.2) * pow(1.0 - along, 1.6) * smoothstep(0.0, 0.06, along);
-  gl_FragColor = vec4(uGlowTint * a * uGlowAmount * vRayFlicker * 0.26, 1.0);
+  // The column rises from behind the open lid's top edge: across the lid it would wash its
+  // print (warm light added over navy reads pink). The halo carries the light at the opening.
+  float a = pow(across, 2.2) * pow(1.0 - along, 1.6);
+  a *= smoothstep(uRayFloor * 0.75, uRayFloor * 1.05 + 0.004, vRayHeight);
+  a *= smoothstep(0.12, 0.8, vRayFacing) * uGlowAmount * vRayFlicker;
+  gl_FragColor = mix(vec4(uRayTint * a * 0.3, 1.0), vec4(uRayTint, a * 0.34), uOnLight);
 }
 `;
 
 const HALO_FRAGMENT = /* glsl */ `
 uniform float uGlowAmount;
-uniform vec3 uGlowTint;
+uniform vec3 uRayTint;
+uniform float uOnLight;
 varying vec2 vQuad;
 void main() {
-  float r = length(vQuad * vec2(1.0, 1.7));
-  float a = exp(-r * r * 7.0) * 0.16 + exp(-r * r * 60.0) * 0.2;
-  vec3 col = mix(uGlowTint, vec3(1.0, 0.95, 0.84), exp(-r * r * 30.0));
-  gl_FragColor = vec4(col * a * uGlowAmount, 1.0);
+  // A flat seam of light along the opening: light leaking out, not a disc over the lid's print.
+  float r = length(vQuad * vec2(1.0, 2.8));
+  float a = exp(-r * r * 7.0) * 0.14 + exp(-r * r * 60.0) * 0.16;
+  vec3 core = mix(vec3(1.0, 0.86, 0.62), uRayTint, uOnLight * 0.6);
+  vec3 col = mix(uRayTint, core, exp(-r * r * 30.0));
+  gl_FragColor = mix(vec4(col * a * uGlowAmount, 1.0), vec4(col, a * uGlowAmount * 1.6), uOnLight);
 }
 `;
+
+/** The glow's light: a soft warm white over the dark page, a warm amber haze over the light page. */
+const RAY_TINT_DARK = 0xffe3bd;
+const RAY_TINT_LIGHT = 0xe39a2c;
 
 // ---------------------------------------------------------------------------------------- loader
 
@@ -597,6 +627,7 @@ export async function loadDeckBox(
   dynGeometry.setAttribute("uv", new BufferAttribute(dynUv, 2));
   dynGeometry.setAttribute("aMask", new BufferAttribute(dynMask, 4));
 
+  const rayFloor = { value: 0 };
   // Pose state: what the act asks for, and what the hinge solver makes of it.
   let lidOpen = 0;
   let flapOpen = 0;
@@ -643,6 +674,11 @@ export async function loadDeckBox(
     });
     dynPosAttr.needsUpdate = true;
     dynNrmAttr.needsUpdate = true;
+    // The open lid's top edge above the rim, where the glow's rays may start.
+    let top = H / 2;
+    const end = offsets.at(4) ?? 0;
+    for (let i = 0; i < end; i++) top = Math.max(top, dynPos[i * 3 + 1] ?? 0);
+    rayFloor.value = top - H / 2;
   };
 
   // Fold quads: orient each against its intended normal once, in the closed pose.
@@ -725,7 +761,9 @@ export async function loadDeckBox(
   const glowUniforms = {
     uTime: { value: 0 },
     uGlowAmount: { value: 0 },
-    uGlowTint: { value: new Color(BRAND.warm) },
+    uRayTint: { value: new Color(RAY_TINT_DARK) },
+    uOnLight: { value: 0 },
+    uRayFloor: rayFloor,
     uSize: { value: W * 1.1 },
     uSpin: { value: 0 },
   };
@@ -743,7 +781,7 @@ export async function loadDeckBox(
     toneMapped: false,
   });
   const halo = new Mesh(new PlaneGeometry(1, 1), haloMaterial);
-  halo.position.set(0, H / 2 + 0.004, 0);
+  halo.position.set(0, H / 2 + 0.0015, 0);
   halo.renderOrder = 2;
   halo.frustumCulled = false;
   halo.visible = false;
@@ -793,6 +831,14 @@ export async function loadDeckBox(
       glowUniforms.uGlowAmount.value = g;
       rays.visible = g > 0.002;
       halo.visible = g > 0.002;
+    },
+    setGlowPage(page) {
+      const light = page === "light";
+      glowUniforms.uOnLight.value = light ? 1 : 0;
+      glowUniforms.uRayTint.value.setHex(light ? RAY_TINT_LIGHT : RAY_TINT_DARK);
+      const blending = light ? NormalBlending : AdditiveBlending;
+      (rays.material as ShaderMaterial).blending = blending;
+      haloMaterial.blending = blending;
     },
     setGlint(phase, strength = 1) {
       // The band runs along (0, 0.8, -0.6): bottom left to top right seen from the front.
