@@ -1,4 +1,10 @@
-import { Vector3, type Group, type Intersection, type Object3D } from "three";
+import {
+  Vector3,
+  type Group,
+  type Intersection,
+  type Object3D,
+  type PerspectiveCamera,
+} from "three";
 
 import {
   cubicInOut,
@@ -9,6 +15,7 @@ import {
   type StoryHotspot,
   type StoryPointerEvent,
   type StoryRect,
+  type StorySize,
 } from "@/components/story/engine/act";
 import { projectPoint } from "@/components/story/engine/dom-glue";
 import { CARD_H, CARD_W } from "@/components/story/props/card-mesh";
@@ -81,6 +88,9 @@ export class CardPlay {
   private readonly dimK = new Float32Array(4);
   private readonly ready = new Uint8Array(4);
   private readonly rects: (StoryRect | null)[] = [null, null, null, null];
+  /** Each card control's rect this frame (null: hidden). */
+  private readonly cardRects: (StoryRect | null)[] = [null, null, null, null];
+
   private readonly facePointer = [0, 1, 2, 3].map(() => ({ x: 0, y: 0 }));
   private hovered = -1;
   private hit: Intersection | null = null;
@@ -138,7 +148,7 @@ export class CardPlay {
       const copy = STORY_CARD_PLAY[card.id];
       this.cards.push(
         ctx.overlay.hotspot({
-          id: `cards-card-${card.id}`,
+          id: cardSpotId(k),
           label: copy.look,
           onActivate: () => {
             if (this.focus === k) this.close(false);
@@ -147,7 +157,7 @@ export class CardPlay {
         }),
       );
       this.links.push(
-        ctx.overlay.hotspot({ id: `cards-link-${card.id}`, label: copy.link, href: card.href }),
+        ctx.overlay.hotspot({ id: linkSpotId(k), label: copy.link, href: card.href }),
       );
     });
   }
@@ -327,24 +337,9 @@ export class CardPlay {
       let rect: StoryRect | null = null;
       if (this.ready.at(k) === 1 && mesh.visible) {
         mesh.updateMatrixWorld();
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-        for (let i = 0; i < 4; i += 1) {
-          corner.set((i & 1 ? 0.5 : -0.5) * CARD_W, (i & 2 ? 0.5 : -0.5) * CARD_H, 0);
-          corner.applyMatrix4(mesh.matrixWorld);
-          projectPoint(corner, camera, size, point);
-          minX = Math.min(minX, point.x);
-          minY = Math.min(minY, point.y);
-          maxX = Math.max(maxX, point.x);
-          maxY = Math.max(maxY, point.y);
-        }
-        rect = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+        rect = projectQuad(mesh, CARD_W, CARD_H, camera, size);
       }
       this.rects.splice(k, 1, rect);
-      const shown = rect && (this.focus < 0 || this.focus === k) ? rect : null;
-      this.cards.at(k)?.place(shown);
     });
 
     // The pill under the card in a closer look.
@@ -384,29 +379,26 @@ export class CardPlay {
       mesh.scale.set(h * pop, h * pop, 1);
       mesh.material.opacity = saturate(this.pillShown);
     }
-    for (let j = 0; j < 4; j += 1) {
-      const linkJ = this.links.at(j);
-      if (!linkJ) continue;
-      if (j !== k || this.pillShown < 0.6) {
-        linkJ.place(null);
-        continue;
-      }
+    let linkRect: StoryRect | null = null;
+    if (link && this.pillShown >= 0.6) {
       mesh.updateMatrixWorld();
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-      for (let i = 0; i < 4; i += 1) {
-        corner.set((i & 1 ? 0.5 : -0.5) * PILL_ASPECT, i & 2 ? 0.5 : -0.5, 0);
-        corner.applyMatrix4(mesh.matrixWorld);
-        projectPoint(corner, camera, size, point);
-        minX = Math.min(minX, point.x);
-        minY = Math.min(minY, point.y);
-        maxX = Math.max(maxX, point.x);
-        maxY = Math.max(maxY, point.y);
-      }
-      linkJ.place({ x: minX, y: minY, width: maxX - minX, height: maxY - minY });
+      linkRect = projectQuad(mesh, PILL_ASPECT, 1, camera, size);
     }
+
+    // What shows this frame: each card's control over it (only the looked-at one in a closer
+    // look), and the looked-at card's link over its pill.
+    for (let j = 0; j < 4; j += 1) {
+      const rect = this.rects.at(j) ?? null;
+      this.cardRects.splice(j, 1, rect && (this.focus < 0 || this.focus === j) ? rect : null);
+    }
+    // (A control that hides with the focus on it hands the next Tab on from its place: the
+    // overlay's tab order remembers it, see story-overlay.tsx.)
+    this.cards.forEach((spot, j) => {
+      spot.place(this.cardRects.at(j) ?? null);
+    });
+    this.links.forEach((spot, j) => {
+      spot.place(j === k ? linkRect : null);
+    });
   }
 
   /** The card under the pointer (for the cursor), or -1. */
@@ -454,4 +446,37 @@ export class CardPlay {
     this.links = [];
     this.pill.dispose();
   }
+}
+
+/** Card k's control over it, and the link under it in a closer look (overlay hotspot ids). */
+function cardSpotId(k: number) {
+  return `cards-card-${STORY_CARDS.at(k)?.id ?? String(k)}`;
+}
+
+function linkSpotId(k: number) {
+  return `cards-link-${STORY_CARDS.at(k)?.id ?? String(k)}`;
+}
+
+/** A quad's (width x height, centred, in its own plane) bounding rect on screen, canvas CSS px. */
+function projectQuad(
+  mesh: Object3D,
+  width: number,
+  height: number,
+  camera: PerspectiveCamera,
+  size: StorySize,
+): StoryRect {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < 4; i += 1) {
+    corner.set((i & 1 ? 0.5 : -0.5) * width, (i & 2 ? 0.5 : -0.5) * height, 0);
+    corner.applyMatrix4(mesh.matrixWorld);
+    projectPoint(corner, camera, size, point);
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }

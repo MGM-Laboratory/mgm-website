@@ -45,28 +45,60 @@ function tabbables(scope: ParentNode) {
  * them, from their last one into the section (and on into the page after
  * it), and the same backward with Shift+Tab. Without visible controls,
  * nothing changes.
+ *
+ * A control the story hides while it has the focus (a card going back into
+ * the deck as the page scrolls on) drops the focus to the page body, and the
+ * browser would take the next Tab from the top of the page. So the last
+ * overlay control that had the focus is remembered, and a Tab from the body
+ * carries on from where it was. Focus is not moved when a control hides: a
+ * focus change would stand the story's auto-advance down mid-scroll. A
+ * pointer press, or focus anywhere else, forgets it.
  */
 function useStoryTabOrder(root: HTMLElement) {
   useLayoutEffect(() => {
+    let lastControl: HTMLElement | null = null;
+    const handleHtmlFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      lastControl = target instanceof HTMLElement && root.contains(target) ? target : null;
+    };
+    const handleHtmlPointerDown = () => {
+      lastControl = null;
+    };
     const handleHtmlTab = (event: KeyboardEvent) => {
       if (event.key !== "Tab" || event.defaultPrevented) return;
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const section = document.querySelector<HTMLElement>("[data-story-section]");
+      if (!section) return;
       const controls = tabbables(root);
       const first = controls.at(0);
       const last = controls.at(-1);
-      if (!section || !first || !last) return;
-      const active = document.activeElement;
+      const focused = document.activeElement;
+      const dropped =
+        (!focused || focused === document.body) && lastControl && root.contains(lastControl)
+          ? lastControl
+          : null;
+      const active = dropped ?? focused;
       if (!(active instanceof HTMLElement) || active === document.body) return;
       const page = tabbables(document.body).filter((element) => !root.contains(element));
       const before = (element: Element) =>
         !section.contains(element) &&
         Boolean(section.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_PRECEDING);
+      const pageAfter = () => page.find((element) => !before(element));
+      const pageBefore = () => page.filter(before).at(-1);
       let target: HTMLElement | undefined;
-      if (root.contains(active)) {
-        if (!event.shiftKey && active === last) target = page.find((element) => !before(element));
-        else if (event.shiftKey && active === first) target = page.filter(before).at(-1);
-      } else {
+      if (dropped && !controls.includes(dropped)) {
+        // Its control went away: the next one after where it was, or on into the page.
+        const follows = (element: Element) =>
+          Boolean(dropped.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING);
+        target = event.shiftKey
+          ? (controls.filter((element) => !follows(element)).at(-1) ?? pageBefore())
+          : (controls.find(follows) ?? pageAfter());
+      } else if (root.contains(active)) {
+        const index = controls.indexOf(active);
+        if (!event.shiftKey && active === last) target = pageAfter();
+        else if (event.shiftKey && active === first) target = pageBefore();
+        else if (dropped) target = controls.at(event.shiftKey ? index - 1 : index + 1);
+      } else if (first && last) {
         const index = page.indexOf(active);
         if (index < 0) return;
         const neighbour = page.at(event.shiftKey ? index - 1 : index + 1);
@@ -78,8 +110,12 @@ function useStoryTabOrder(root: HTMLElement) {
       event.preventDefault();
       target.focus();
     };
+    document.addEventListener("focusin", /*safe*/ handleHtmlFocusIn, true);
+    document.addEventListener("pointerdown", /*safe*/ handleHtmlPointerDown, true);
     document.addEventListener("keydown", /*safe*/ handleHtmlTab, true);
     return () => {
+      document.removeEventListener("focusin", /*safe*/ handleHtmlFocusIn, true);
+      document.removeEventListener("pointerdown", /*safe*/ handleHtmlPointerDown, true);
       document.removeEventListener("keydown", /*safe*/ handleHtmlTab, true);
     };
   }, [root]);
