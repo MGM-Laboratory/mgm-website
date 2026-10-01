@@ -68,6 +68,8 @@ export class CardPlay {
   readonly pill = new CardPill();
   /** The card in a closer look, or -1. */
   focus = -1;
+  /** A closer look opened (the act cheers it). */
+  onOpen: (k: number) => void = () => {};
   private readonly springs: CardSprings[] = [0, 1, 2, 3].map(() => ({
     hover: [0, 0],
     lift: [0, 0],
@@ -156,6 +158,7 @@ export class CardPlay {
     this.focusT = this.t;
     this.focusStart = this.time;
     this.twirlCard = -1;
+    this.onOpen(k);
   }
 
   /** Back to the row. With `restore`, the keyboard focus goes back to the card's control. */

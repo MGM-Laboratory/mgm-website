@@ -1,4 +1,4 @@
-import { Group, MeshStandardMaterial } from "three";
+import { Group, MeshStandardMaterial, Vector3 } from "three";
 
 import {
   type ActState,
@@ -26,6 +26,7 @@ import { HeroCards } from "@/components/story/acts/cards/hero-cards";
 import { Threads } from "@/components/story/acts/cards/threads";
 import { CardPlay } from "@/components/story/acts/cards/card-play";
 import { Entrance } from "@/components/story/acts/cards/entrance";
+import { Sparkles } from "@/components/story/acts/cards/sparkles";
 import type { StreamExtent } from "@/components/story/acts/cards/deck-motion";
 import { swarmCountFor } from "@/components/story/props/card-mesh";
 import { smoothstep, window4 } from "@/components/story/engine/act";
@@ -34,6 +35,7 @@ import {
   STAGE_ORIGIN,
   STAGE_YAW,
   stageView,
+  worldToStage,
   type StageView,
 } from "@/components/story/acts/cards/stage-space";
 
@@ -79,6 +81,10 @@ class CardsAct implements StoryAct {
   private threads: Threads | null = null;
   private play: CardPlay | null = null;
   private readonly entrance = new Entrance();
+  private sparkles: Sparkles | null = null;
+  /** The box's mouth from its centre, in the stage frame (at its rest pose). */
+  private readonly boxTop = new Vector3();
+  private readonly cheerAt = new Vector3();
   /** A screen without hover (a phone or a tablet): the hints speak of taps. */
   private touch = false;
   private readonly stream: StreamExtent = { head: 0, tail: 0, back: false, on: 0 };
@@ -132,6 +138,13 @@ class CardsAct implements StoryAct {
     this.heroes = heroes;
     const play = new CardPlay(this.stage, deck, heroes);
     this.play = play;
+    const sparkles = new Sparkles(this.stage, ctx.tier);
+    this.sparkles = sparkles;
+    play.onOpen = () => {
+      sparkles.cheer(
+        this.cheerAt.copy(this.layout.focus.position).setZ(this.layout.focus.position.z + 0.02),
+      );
+    };
     // Compile the live fronts too (a hero with a front texture is the same program as without).
     deck.heroes.forEach((hero, k) => {
       hero.card.setFront(heroes.fronts.at(k)?.texture ?? null);
@@ -144,8 +157,10 @@ class CardsAct implements StoryAct {
     this.threads.warm(true);
     this.pageFall.warm(true);
     play.warm(true);
+    sparkles.warm(true);
     await ctx.stage.compile();
     play.warm(false);
+    sparkles.warm(false);
     box.warm(false);
     deck.warm(false);
     this.threads.warm(false);
@@ -198,6 +213,16 @@ class CardsAct implements StoryAct {
       play?.update(ctx, this.beats, state.t, state.velocity);
       heroes?.update(ctx, this.beats, this.layout, state.velocity);
       play?.place(ctx, this.layout, this.view);
+      if (box) this.boxTop.set(0, box.dims.H / 2 + 0.008, 0).applyMatrix4(this.layout.boxToStage);
+      this.sparkles?.update(
+        ctx,
+        this.beats,
+        this.layout,
+        deck.heroPoses,
+        director.frame.position,
+        this.boxTop,
+        state.velocity,
+      );
       const threads = this.threads;
       if (threads && heroes) {
         heroes.life.forEach((life, k) => {
@@ -243,6 +268,7 @@ class CardsAct implements StoryAct {
     }
     if (event.type === "tap" && hit) {
       director.poke(ctx.clock.time);
+      this.sparkles?.hop(worldToStage(director.frame.position, this.cheerAt).add(this.boxTop));
       return true;
     }
     return false;
@@ -264,6 +290,7 @@ class CardsAct implements StoryAct {
   sleep(ctx: StoryContext) {
     this.stage.visible = false;
     this.play?.sleep();
+    this.sparkles?.sleep();
     this.entrance.left(ctx.director.t);
     this.reveal?.sleep(ctx);
     if (this.boxDirector) this.boxDirector.hovered = false;
@@ -279,6 +306,8 @@ class CardsAct implements StoryAct {
     this.threads = null;
     this.play?.dispose();
     this.play = null;
+    this.sparkles?.dispose();
+    this.sparkles = null;
     this.entrance.reset();
     this.pageFall.dispose();
     this.studio?.dispose();
