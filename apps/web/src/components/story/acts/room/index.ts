@@ -15,6 +15,7 @@ import {
   type Mesh,
   type Object3D,
   type PerspectiveCamera,
+  type ShaderMaterial,
 } from "three";
 
 import { STORY_TABLE } from "@/data/story";
@@ -130,7 +131,7 @@ class RoomAct implements StoryAct {
   private burst: SparkleBurst | null = null;
   private cheer: SparkleBurst | null = null;
   private readonly group = new Group();
-  private readonly shadows = new ContactShadows(2 + LETTER_COUNT_MAX);
+  private readonly shadows = new ContactShadows(3 + LETTER_COUNT_MAX);
   private motes: DustMotes | null = null;
   private readonly puff = new DustPuff(90);
   private readonly pool = new LightPool(SPARK_COLOUR);
@@ -160,6 +161,7 @@ class RoomAct implements StoryAct {
   private tvBlip = -1;
   private tvTap: { x: number; y: number; seconds: number } | null = null;
   private hoverBox = false;
+  private boxRays: Object3D | null = null;
   /** What a finger last brushed (touch has no hover), and the clock times its answers last until. */
   private brushed: string | null = null;
   private boxTouchedUntil = 0;
@@ -645,7 +647,7 @@ class RoomAct implements StoryAct {
     this.directSpark(ctx, state, toy, box, sparkAt, sparkOn);
 
     // --- the letters
-    const shown = letters.pose(t, this.letterTiming, this.shadows, 2);
+    const shown = letters.pose(t, this.letterTiming, this.shadows, 3);
     letters.toy.group.visible = shown > 0;
     const settled = t >= this.letterTiming.to;
     letters.life(
@@ -656,6 +658,7 @@ class RoomAct implements StoryAct {
     );
     this.writeBoxShadow(room, 1);
     this.writeStandShadow(room, 1);
+    this.writeHerShadow(ctx);
     this.shadows.commit();
 
     // --- the camera
@@ -706,10 +709,11 @@ class RoomAct implements StoryAct {
   ) {
     toy.onStand(ctx, 1, false);
     if (this.box) this.showPeekCard(this.box, true);
-    letters.pose(-1, this.letterTiming, this.shadows, 2);
+    letters.pose(-1, this.letterTiming, this.shadows, 3);
     letters.toy.group.visible = false;
     this.writeBoxShadow(room, smoothstep(0.85, 1, state.beat("c-drop")));
     this.writeStandShadow(room, 1);
+    this.writeHerShadow(ctx);
     this.shadows.commit();
     this.puff.points.visible = false;
     this.pool.mesh.visible = false;
@@ -792,6 +796,12 @@ class RoomAct implements StoryAct {
     // The warm glow inside as the spark leaves; it dies away once she is off the table.
     const after = 1 - smoothstep(0, 0.45, state.beat("r-dragged"));
     box.setGlow(0.5 * bump(sp, 0.02, 0.12, 0.3, 0.6) + 0.12 * smoothstep(0.1, 0.3, sp) * after);
+    // On the low tier the halo alone carries the light at the opening (from the table's height the rays,
+    // a draw of their own, barely show): they stay off the draw list. setGlow shows them again each call.
+    if (ctx.tier === "low") {
+      this.boxRays ??= box.root.getObjectByName("box-rays") ?? null;
+      if (this.boxRays) this.boxRays.visible = false;
+    }
     box.setGlowPage("dark");
     box.setGlint(0, 0);
     box.update(ctx.clock.time);
@@ -1006,6 +1016,28 @@ class RoomAct implements StoryAct {
     slot.yaw = MathUtils.degToRad(room.anchors.boxSpot.yawDeg);
     slot.opacity = 0.62 * opacity * (1 - 0.55 * this.boxAir);
     slot.round = 0;
+  }
+
+  /**
+   * Her soft shadow on the table or the stand. Her runtime draws it as a mesh
+   * of its own; on the low tier, where every draw counts, the act copies it
+   * into one of its instanced contact shadows instead (the same disc, the
+   * same place, size and strength) and hides her mesh. Call after her update.
+   */
+  private writeHerShadow(ctx: StoryContext) {
+    const slot = this.shadows.slots.at(2);
+    const shadow = this.godette?.shadow;
+    if (!slot || !shadow) return;
+    slot.opacity = 0;
+    if (ctx.tier !== "low" || !shadow.visible) return;
+    const opacity = (shadow.material as ShaderMaterial).uniforms.uOpacity?.value;
+    slot.position.copy(shadow.position);
+    slot.width = shadow.scale.x;
+    slot.depth = shadow.scale.x;
+    slot.yaw = 0;
+    slot.opacity = typeof opacity === "number" ? opacity * 0.9 : 0;
+    slot.round = 1;
+    shadow.visible = false;
   }
 
   private writeStandShadow(room: StoryRoom, opacity: number) {
