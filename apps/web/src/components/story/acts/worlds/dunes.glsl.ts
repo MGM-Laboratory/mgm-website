@@ -198,9 +198,16 @@ void main() {
   vec3 n = normalize(vNormal);
   vec3 view = vWorld - uCamPos;
   if (dot(n, view) > 0.0) n = -n;
-  float lit = smoothstep(-0.02, 0.06, dot(n, normalize(uSun)));
-  vec3 col = vColour * mix(0.58, 1.0, lit);
+  float ndl = dot(n, normalize(uSun));
+  float lit = smoothstep(-0.02, 0.06, ndl);
+  // Two tones with a hard terminator; the lit tone turns a little toward the sun, so a round
+  // form still reads round.
+  vec3 col = vColour * mix(0.58, mix(0.88, 1.0, max(ndl, 0.0)), lit);
   col += uSkyFill * 0.1 * max(n.y, 0.0);
+  // Paper white keeps its form: the brightest tones roll off before they clip (and before the
+  // bloom finds them); the brand colours are far below it and keep their values.
+  float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  col *= 1.0 - 0.27 * smoothstep(0.62, 1.0, lum);
   // Where it meets the sand, a dark foot.
   col *= 0.72 + 0.28 * smoothstep(0.0, 2.2, vWorld.y);
   float dist = length(view);
