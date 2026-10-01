@@ -122,21 +122,12 @@ export function StoryOverlay({ store }: Readonly<{ store: StoryOverlayStore }>) 
           },
         };
         return spot.href ? (
-          <Link
-            key={spot.id}
-            href={spot.href}
-            ref={(element) => {
-              store.bindHotspot(spot.id, element);
-            }}
-            {...common}
-          />
+          <Link key={spot.id} href={spot.href} ref={store.refFor(spot.id)} {...common} />
         ) : (
           <button
             key={spot.id}
             type="button"
-            ref={(element) => {
-              store.bindHotspot(spot.id, element);
-            }}
+            ref={store.refFor(spot.id)}
             onClick={() => {
               store.activate(spot.id);
             }}

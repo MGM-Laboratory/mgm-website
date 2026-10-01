@@ -70,6 +70,18 @@ class Hotspot implements StoryHotspot {
     element.style.height = `${rect.height}px`;
   }
 
+  /**
+   * A new element (or none) for this hotspot. It starts hidden and unplaced,
+   * so the act's next `place()` both shows it and writes its box.
+   */
+  bind(element: HTMLElement | null) {
+    if (element === this.element) return;
+    this.element = element;
+    this.shown = false;
+    this.key = "";
+    if (element) element.hidden = true;
+  }
+
   dispose() {
     this.drop(this.spec.id);
   }
@@ -79,6 +91,8 @@ export class StoryOverlayStore implements StoryOverlay {
   private snapshot: OverlaySnapshot = EMPTY;
   private readonly listeners = new Set<() => void>();
   private readonly spots = new Map<string, Hotspot>();
+  /** One ref callback per hotspot id, so a re-render never re-binds (and hides) its element. */
+  private readonly refs = new Map<string, (element: HTMLElement | null) => void>();
   private pendingHint: string | null = null;
   private pendingHud: string | null = null;
   private originX = 0;
@@ -160,6 +174,7 @@ export class StoryOverlayStore implements StoryOverlay {
       () => ({ x: this.originX, y: this.originY }),
       (id) => {
         this.spots.delete(id);
+        this.refs.delete(id);
         this.publish({ hotspots: [...this.spots.values()].map((one) => one.spec) });
       },
     );
@@ -170,10 +185,19 @@ export class StoryOverlayStore implements StoryOverlay {
 
   /** The overlay registers each hotspot's element (a React ref callback). */
   bindHotspot(id: string, element: HTMLElement | null) {
-    const spot = this.spots.get(id);
-    if (!spot) return;
-    spot.element = element;
-    if (element) element.hidden = true;
+    this.spots.get(id)?.bind(element);
+  }
+
+  /** The stable ref callback for hotspot `id` (React calls it on mount and unmount only). */
+  refFor(id: string) {
+    let ref = this.refs.get(id);
+    if (!ref) {
+      ref = (element: HTMLElement | null) => {
+        this.bindHotspot(id, element);
+      };
+      this.refs.set(id, ref);
+    }
+    return ref;
   }
 
   hotspotState(id: string, state: { hovered?: boolean; focused?: boolean }) {
