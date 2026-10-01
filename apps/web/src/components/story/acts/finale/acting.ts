@@ -19,7 +19,8 @@ import type { GodetteBodyLayer } from "@/components/story/props/godette";
 
 /** Phases on the acting clock, seconds. */
 export const PHASE = (() => {
-  const fallEnd = 0.4;
+  // the drop through the frame after the cut: about half a second, at about real time
+  const fallEnd = 0.46;
   const landRate = 1.15;
   const landEnd = fallEnd + 1.6 / landRate;
   const dizzyRate = 1.6;
@@ -56,7 +57,7 @@ export const WAVE_LIFE_T = WAVE.start + WAVE.vh * 0.3;
 /** [t, A] knots, ascending. */
 const KNOTS: readonly (readonly [number, number])[] = [
   [CUT.start, 0],
-  [CUT.end, 0.32],
+  [CUT.end, 0.2],
   [LAND.end, PHASE.dizzyEnd],
   [STAND.end, PHASE.dustEnd],
   [WAVE_LIFE_T, PHASE.waveInEnd],
@@ -86,10 +87,15 @@ function smooth(a: number, b: number, x: number) {
   return k * k * (3 - 2 * k);
 }
 
-/** Root height above the floor while she falls in (metres, life size). */
-export const FALL_FROM = 3.6;
-const GRAVITY = 9.81;
-/** She arrives already falling fast: the start speed that lands her at `fallEnd`. */
+/**
+ * Root height above the floor at the cut (metres, life size): the cut opens
+ * on her already in the frame, her flailing hands at its top edge, so her
+ * "oh no" reads before she drops.
+ */
+export const FALL_FROM = 1.15;
+/** A cartoon gravity (a little gentler than the real one), so the drop reads. */
+const GRAVITY = 7.5;
+/** She arrives already falling: the start speed that lands her at `fallEnd`. */
 const FALL_V0 = (FALL_FROM - 0.5 * GRAVITY * PHASE.fallEnd ** 2) / PHASE.fallEnd;
 
 /** Root height at acting time `A`. */
@@ -118,7 +124,8 @@ export function impulse(A: number, at: number, frequency = 7, decay = 9) {
  * volume).
  */
 export function squash(A: number) {
-  const stretch = A < PHASE.fallEnd ? 0.05 * smooth(0, 0.15, A) : 0;
+  // stretched by the speed, most just before the floor
+  const stretch = A < PHASE.fallEnd ? 0.03 + 0.055 * smooth(0.05, PHASE.fallEnd, A) : 0;
   const feet = -0.05 * Math.max(0, impulse(A, PHASE.fallEnd, 6, 14));
   const bottom = -0.085 * Math.max(-0.5, impulse(A, PHASE.bottomHit, 4.5, 8));
   return 1 + stretch + feet + bottom;
@@ -172,18 +179,22 @@ export function storyLayers(A: number): GodetteBodyLayer[] {
 
 /**
  * How much of her the framing has to hold at `A`: the subject's height
- * above the floor (metres, with headroom) and half its width. She falls
- * through a wide frame, the camera eases in on her dizzy sit, then rises
- * with her as she stands.
+ * above the floor (metres, with headroom) and half its width. She drops
+ * through a tall frame, the camera punches in on the bump, eases in on her
+ * dizzy sit, then rises with her as she stands (the split layout's medium
+ * shot, the closest of all, comes after, in the act).
  */
 export function framingAt(A: number) {
   const P = PHASE;
+  const drop = 3.25;
   const wide = 2.25;
   const close = 1.4;
   const standing = 2.12;
+  const punch = smooth(P.fallEnd - 0.03, P.bottomHit + 0.14, A);
   const pushIn = smooth(P.bottomHit + 0.15, P.bottomHit + 1.1, A);
+  const landed = drop + (wide - drop) * punch;
   const rise = smooth(P.dizzyEnd + 0.1, P.standEnd - 0.1, A);
-  const height = (wide + (close - wide) * pushIn) * (1 - rise) + standing * rise;
+  const height = (landed + (close - landed) * pushIn) * (1 - rise) + standing * rise;
   // sitting turned, her legs reach out to one side: hold them, and centre on her, not her feet
   const halfWidth = 0.95 + (0.55 - 0.95) * rise;
   const centreX = -0.13 * (1 - rise);

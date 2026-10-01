@@ -94,6 +94,8 @@ const WAVE_SECONDS = 1.333 * 2 + 0.2;
 const MEDIUM_CUT = 0.56;
 /** Beside the words she turns this far toward them (radians, toward screen right). */
 const PRESENT_YAW = 0.2;
+/** The goodbye starts this far into `f-out` (vh): any nudge down the page, not a resting rounding error. */
+const BYE_FROM = 0.006;
 /** Quick clicks in a row that make her spin until she is dizzy. */
 const SPIN_CLICKS = 5;
 /** How long her last pose of the terminal life takes to melt into the story's, scrolling back. */
@@ -399,8 +401,9 @@ class FinaleAct implements StoryAct {
     });
     godette.setShadow({
       y: 0,
-      opacity: (light ? 0.34 : 0.62) * smooth(3.4, 0.3, rootY),
-      size: 0.85,
+      // the shadow grows and darkens as she nears the floor (the first sign of the bump)
+      opacity: (light ? 0.34 : 0.62) * smooth(1.7, 0.05, rootY),
+      size: 0.85 * (0.62 + 0.38 * smooth(1.5, 0, rootY)),
     });
 
     const plan = this.planLife(ctx, state, A, godette, life);
@@ -554,8 +557,13 @@ class FinaleAct implements StoryAct {
     this.interactive = w > 0.4 && !this.still;
 
     // ---- goodbye as the footer comes
-    const byeOn = state.t > OUT.start + OUT.vh * 0.08 && intoIdle >= 1;
-    const bye = this.bye.update(byeOn, dt, 2.4, 2);
+    // From the first nudge down the page, while her head is still clear of the header.
+    const byeOn = state.t > OUT.start + BYE_FROM && w > 0.3;
+    if (byeOn && this.bye.value === 0) {
+      // still in her hello wave: the goodbye picks it up where it is (no second phase)
+      this.byeClock = intoIdle < 0.5 ? waveTime : 0;
+    }
+    const bye = this.bye.update(byeOn, dt, 4, 2);
     if (bye > 0) {
       this.byeClock = byeOn ? this.byeClock + dt : this.byeClock;
       const b = bye * bye * (3 - 2 * bye);
