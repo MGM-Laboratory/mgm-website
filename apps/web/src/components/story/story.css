@@ -307,16 +307,34 @@ html[data-story-mode="gl"]
 }
 
 /*
- * The identical clone that rolls in from below, only while a letter rolls.
- * A pseudo-element, so the title copies, reads and indexes once. The block
- * sets --roll-step (the letter's ink height plus a hair) and clips the mask
- * to that ink for the roll.
+ * While a letter rolls, its own glyph hides (it keeps the layout and the
+ * text) and two copies roll in its window: the letter leaving (::before)
+ * and its clone arriving from below (::after), each fading on its own, so
+ * the middle of a roll never shows two hard half letters. Pseudo-elements,
+ * so the title copies, reads and indexes once. The block sets --roll-step
+ * (the letter's ink height plus a hair), --roll-out and --roll-in, and clips
+ * the mask to that ink for the roll.
  */
+.story-finale-roll[data-rolling] {
+  -webkit-text-fill-color: transparent;
+}
+
+.story-finale-roll[data-rolling]::before,
 .story-finale-roll[data-rolling]::after {
   content: attr(data-char);
   position: absolute;
-  top: var(--roll-step);
   left: 0;
+  -webkit-text-fill-color: currentColor;
+}
+
+.story-finale-roll[data-rolling]::before {
+  top: 0;
+  opacity: var(--roll-out, 1);
+}
+
+.story-finale-roll[data-rolling]::after {
+  top: var(--roll-step);
+  opacity: var(--roll-in, 1);
 }
 
 .story-finale-pen {

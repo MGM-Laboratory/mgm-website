@@ -19,8 +19,9 @@ import { cn } from "@/lib/utils";
  * letters); the storybook ends on it too.
  *
  * The words are server HTML, letter by letter (each letter in a mask; the
- * idle roll's clone under it is a CSS `::after`, so the sentence copies and
- * reads once), with the plain sentence for screen readers. After hydration:
+ * idle roll's two copies are CSS `::before` and `::after`, so the sentence
+ * copies and reads once), with the plain sentence for screen readers. After
+ * hydration:
  *
  * - In the WebGL story the letters rise out of their masks when the act
  *   latches the title on (`finaleSignal`), and sink back if the visitor
@@ -29,7 +30,8 @@ import { cn } from "@/lib/utils";
  *   view.
  * - Then one random letter rolls over every 2 s inside a window cut to its
  *   own ink (so a lowercase letter never floats through the empty ascender
- *   space and nothing spills onto a second line), a pen stroke underlines
+ *   space and nothing spills onto a second line), the leaving letter and its
+ *   arriving clone fading across each other, a pen stroke underlines
  *   the words on hover (it skips the descenders), and the action pulls
  *   toward the pointer and throws little stars.
  *
@@ -46,6 +48,15 @@ const NO_ROLL = new Set([...DESCENDERS, ".", "'", "\u2019", "!", "?", ":", ";"])
 /** Room around a rolling letter's ink inside its window, and between it and its clone, em. */
 const ROLL_MARGIN = 0.05;
 const ROLL_GAP = 0.06;
+/** One roll: quick in the middle and soft at both ends (no long settle with the clone a hair low). */
+const ROLL_SECONDS = 0.7;
+const ROLL_EASE = "power2.inOut";
+
+/** 0 below `a`, 1 above `b`, a smooth step between. */
+function ramp(a: number, b: number, x: number) {
+  const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+}
 
 type RollWindow = { top: number; bottom: number; step: number };
 
@@ -200,6 +211,8 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
       const mask = el.closest<HTMLElement>("[data-finale-char]");
       if (mask) mask.style.clipPath = "";
       el.style.removeProperty("--roll-step");
+      el.style.removeProperty("--roll-out");
+      el.style.removeProperty("--roll-in");
       delete el.dataset.rolling;
     };
     const settleRolls = () => {
@@ -275,18 +288,28 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
       if (!mask || !measure) return;
       const win = rollWindow(el.dataset.char ?? "", mask, measure, getComputedStyle(title));
       if (!win) return;
-      el.style.setProperty("--roll-step", `${win.step.toFixed(2)}px`);
+      const step = win.step;
+      el.style.setProperty("--roll-step", `${step.toFixed(2)}px`);
+      el.style.setProperty("--roll-out", "1");
+      el.style.setProperty("--roll-in", "0");
       el.dataset.rolling = "";
       mask.style.clipPath = `inset(${win.top.toFixed(2)}px 0 ${win.bottom.toFixed(2)}px 0)`;
       gsap.fromTo(
         el,
         { y: 0 },
         {
-          y: -win.step,
-          duration: 0.9,
-          ease: EASE,
+          y: -step,
+          duration: ROLL_SECONDS,
+          ease: ROLL_EASE,
           overwrite: true,
           immediateRender: false,
+          onUpdate: () => {
+            // how far it has rolled: the leaving letter fades over the first half of the way,
+            // the clone arrives over the second
+            const k = -Number(gsap.getProperty(el, "y")) / step;
+            el.style.setProperty("--roll-out", (1 - ramp(0.08, 0.5, k)).toFixed(3));
+            el.style.setProperty("--roll-in", ramp(0.35, 0.8, k).toFixed(3));
+          },
           onComplete: () => {
             // the clone sits exactly where the letter was: swap back without a visible change
             gsap.set(el, { y: 0 });
