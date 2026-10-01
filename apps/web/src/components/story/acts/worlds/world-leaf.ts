@@ -906,11 +906,13 @@ export class LeafWorld extends World {
     } else {
       pose.up = null;
     }
-    // Focus: on her, except in the loop shot, where it racks from the drop to her.
+    // Focus: on her, except in the loop shot, where it racks from the drop to her. It stays on her
+    // while the lens moves in behind the drop, finds the drop as the lens settles, and racks to her
+    // as she enters the loop, so she is soft only while the drop holds the eye.
     const dHer = shot.position.distanceTo(this.a.copy(this.her).addScaledVector(UP, 1));
-    const rack = ease01(T, m.loop + 0.12, m.loop + 0.42);
+    const rack = ease01(T, m.loop + 0.12, m.loop + 0.32);
     const lockedOff =
-      ease01(T, m.loop - 0.42, m.loop - 0.12) * (1 - ease01(T, m.loopEnd + 0.05, m.loopEnd + 0.25));
+      ease01(T, m.loop - 0.08, m.loop + 0.06) * (1 - ease01(T, m.loopEnd + 0.05, m.loopEnd + 0.25));
     const dDrop = shot.position.distanceTo(DROP.at);
     this.focus = dHer + (dDrop + (dHer - dDrop) * rack - dHer) * lockedOff;
     this.aperture = 9 + 13 * lockedOff + 4 * spin;
