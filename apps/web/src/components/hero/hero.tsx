@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { setupParallax } from "@/lib/parallax";
+import { whenLoaderRevealed } from "@/components/loader/loader-core";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
 import { SITE_HEADER_HEIGHT } from "@/components/site-header";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
@@ -772,6 +773,15 @@ export function Hero() {
                   currentGameSplit,
                   currentMobileSplit,
                 );
+                // On a first visit the site loader still covers the page: the
+                // entrance holds on its first frame until the loader opens. A
+                // resize across the compact breakpoint reverts this context
+                // first, and a killed timeline must stay dead.
+                let alive = true;
+                tl.pause();
+                void whenLoaderRevealed().then(() => {
+                  if (alive) tl.play();
+                });
                 tl.eventCallback("onComplete", () => {
                   startIdle();
                   reveal(true);
@@ -793,6 +803,8 @@ export function Hero() {
                 }
 
                 return () => {
+                  alive = false;
+                  tl.eventCallback("onComplete", null);
                   tl.kill();
                   stopIdle();
                 };

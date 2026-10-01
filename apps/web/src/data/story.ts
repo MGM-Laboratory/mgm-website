@@ -147,7 +147,9 @@ export const STORY_PANELS: readonly StoryPanel[] = [
 export const STORY_FINALE = {
   title: "Let's work together.",
   line: "Bring us an idea. We will build the world around it.",
-  action: { label: "Get in touch", href: "/contact" },
+  action: { label: "Start a project", href: "/contact" },
+  /** The button over her in the WebGL story (keyboard and screen readers): she answers it. */
+  hello: "Say hello",
   /** Alt text of the waving still in the storybook. */
   alt: "The figure standing on a plain background, waving hello.",
 } as const;
@@ -160,10 +162,85 @@ export const STORY_CONTROLS = {
   waiting: "Shuffling the deck",
 } as const;
 
-/** The site loader's words. The loader's own design adds its status lines. */
+/**
+ * The site loader's words ("The deal": progress is counted in cards, 52 of
+ * them). The status line changes every 2.5 s and walks each list in a new
+ * order on every visit, so a line never comes back too soon.
+ */
 export const LOADER_COPY = {
   label: "Loading the site",
   started: "Loading the site.",
   ready: "The site is ready.",
-  statuses: ["Shuffling the deck.", "Warming up the lamps.", "Waking up a very small hero."],
+  /** Under the counter: progress is counted in cards. */
+  counter: "cards dealt",
+  /** Any page. */
+  statuses: [
+    "Shuffling the deck.",
+    "Counting the cards. Twice.",
+    "Squaring the corners.",
+    "Drawing the box.",
+    "Folding along the dotted lines.",
+    "Picking a good card for you.",
+    "Hiding an ace.",
+    "Cutting the deck.",
+    "Practising a small trick.",
+    "Checking every corner.",
+    "Sorting the suits.",
+    "Giving the jokers the day off.",
+    "Warming up our hands.",
+    "Asking the deck to behave.",
+    "Counting all 52 cards.",
+    "Smoothing out the creases.",
+  ],
+  /** While the homepage story's scenes download. */
+  story: [
+    "Dusting the living room.",
+    "Waking up a very small hero.",
+    "Tuning the TV.",
+    "Polishing five worlds.",
+    "Teaching a toy to fly.",
+    "Hanging the stars.",
+    "Fluffing the cushions.",
+    "Finding the remote.",
+    "Charging a very small star.",
+    "Drawing five maps.",
+  ],
+  /** While the story's scenes are built and warmed up. */
+  build: [
+    "Setting up the living room.",
+    "Warming up the lamps.",
+    "Rehearsing the tricks.",
+    "Lighting the stage.",
+    "Moving the coffee table a little.",
+    "Checking the TV is plugged in.",
+  ],
+  /** When no card has been dealt for a while. */
+  stalled: [
+    "Still shuffling. It is a big deck.",
+    "One card is being shy.",
+    "Your connection is taking a breath.",
+    "Good things take a moment.",
+    "Almost. Cutting the deck.",
+    "This card is stuck. Wiggling it loose.",
+    "Thank you for waiting with us.",
+  ],
+  /** A reload in the same tab that has to wait a moment for the story (the box is already shut). */
+  again: [
+    "Welcome back.",
+    "Good to see you again.",
+    "Back for another look?",
+    "The deck is right where you left it.",
+  ],
+  /** A dealt card, tapped and turned over. */
+  pick: "Is this your card?",
+  /** All 52 dealt: the net folds into its box. */
+  done: "There you go.",
+  /** The loader gave up waiting: the page opens and the rest keeps loading. */
+  rest: "The rest is on its way.",
+  /** The drawing's title block. */
+  sheet: {
+    title: "Deck box 01",
+    size: "63.5 x 89.6 x 20.6 mm",
+    maker: "MGM Laboratory",
+  },
 } as const;

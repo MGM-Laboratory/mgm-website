@@ -44,7 +44,7 @@ async function expectStorybook(page: Page) {
   }
   await expect(book.locator("[data-storybook-panel]")).toHaveCount(6);
   await expect(book.getByRole("heading", { level: 2, name: "Let's work together." })).toBeVisible();
-  await expect(book.getByRole("link", { name: /get in touch/i })).toHaveAttribute(
+  await expect(book.getByRole("link", { name: /start a project/i })).toHaveAttribute(
     "href",
     "/contact",
   );
