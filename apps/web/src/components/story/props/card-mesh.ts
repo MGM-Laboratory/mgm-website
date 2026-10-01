@@ -417,6 +417,11 @@ export function loadCards(assets: StoryLoaderLike, tier: StoryTier): Promise<Car
   if (cached) return cached;
   const made = buildKit(assets, tier);
   byTier.set(tier, made);
+  // A failed build (a texture that would not transcode) is not kept: the next call tries again.
+  const forget = byTier;
+  made.catch(() => {
+    if (forget.get(tier) === made) forget.delete(tier);
+  });
   return made;
 }
 
@@ -425,7 +430,8 @@ async function buildKit(assets: StoryLoaderLike, tier: StoryTier): Promise<CardK
   back.colorSpace = SRGBColorSpace;
   back.anisotropy = 4;
   const geometry = createCardGeometry(tier);
-  const owned: { dispose(): void }[] = [];
+  // Live swarms and heroes, so `kit.dispose()` frees what the acts forgot; each leaves on its own dispose.
+  const owned = new Set<{ dispose(): void }>();
 
   const createSwarm = (count = swarmCountFor(tier)): CardSwarm => {
     const capacity = SWARM_CAPACITY;
@@ -478,12 +484,13 @@ async function buildKit(assets: StoryLoaderLike, tier: StoryTier): Promise<CardK
         uniforms.uCardGlint.value.set(position, width, strength);
       },
       dispose() {
+        owned.delete(swarm);
         swarmGeometry.dispose();
         material.dispose();
         mesh.dispose();
       },
     };
-    owned.push(swarm);
+    owned.add(swarm);
     return swarm;
   };
 
@@ -509,12 +516,15 @@ async function buildKit(assets: StoryLoaderLike, tier: StoryTier): Promise<CardK
         uniforms.uCardGlint.value.set(position, width, strength);
       },
       dispose() {
+        owned.delete(hero);
+        // Drop the live front too, so a disposed hero never keeps an act's canvas reachable.
+        uniforms.uFront.value = null;
         material.dispose();
       },
     };
     hero.setFront(front);
     uniforms.uSeed.value = 0.5;
-    owned.push(hero);
+    owned.add(hero);
     return hero;
   };
 
@@ -525,8 +535,8 @@ async function buildKit(assets: StoryLoaderLike, tier: StoryTier): Promise<CardK
     createSwarm,
     createHeroCard,
     dispose() {
-      for (const item of owned) item.dispose();
-      owned.length = 0;
+      for (const item of [...owned]) item.dispose();
+      owned.clear();
       geometry.dispose();
     },
   };
