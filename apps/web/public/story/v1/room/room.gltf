@@ -2451,14 +2451,11 @@
     { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 10 } } },
     { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 9 } } },
     { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 11 } } },
-    { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 13 } } },
     { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 12 } } },
-    { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 15 } } },
     { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 14 } } },
-    { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 16 } } },
-    { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 17 } } },
-    { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 18 } } },
-    { "sampler": 1, "extensions": { "KHR_texture_basisu": { "source": 19 } } }
+    { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 13 } } },
+    { "sampler": 0, "extensions": { "KHR_texture_basisu": { "source": 15 } } },
+    { "sampler": 1, "extensions": { "KHR_texture_basisu": { "source": 16 } } }
   ],
   "images": [
     { "name": "atlas-a-normal", "mimeType": "image/ktx2", "uri": "tex/atlas-a-normal.ktx2" },
@@ -2473,13 +2470,10 @@
     { "name": "atlas-d-normal", "mimeType": "image/ktx2", "uri": "tex/atlas-d-normal.ktx2" },
     { "name": "atlas-d-color", "mimeType": "image/ktx2", "uri": "tex/atlas-d-color.ktx2" },
     { "name": "atlas-d-orm", "mimeType": "image/ktx2", "uri": "tex/atlas-d-orm.ktx2" },
-    { "name": "ceiling-normal", "mimeType": "image/ktx2", "uri": "tex/ceiling-normal.ktx2" },
     { "name": "ceiling-color", "mimeType": "image/ktx2", "uri": "tex/ceiling-color.ktx2" },
     { "name": "walls-normal", "mimeType": "image/ktx2", "uri": "tex/walls-normal.ktx2" },
     { "name": "walls-color", "mimeType": "image/ktx2", "uri": "tex/walls-color.ktx2" },
     { "name": "dark-panel-color", "mimeType": "image/ktx2", "uri": "tex/dark-panel-color.ktx2" },
-    { "name": "floor-normal", "mimeType": "image/ktx2", "uri": "tex/floor-normal.ktx2" },
-    { "name": "rug-normal", "mimeType": "image/ktx2", "uri": "tex/rug-normal.ktx2" },
     { "name": "window-color", "mimeType": "image/ktx2", "uri": "tex/window-color.ktx2" }
   ],
   "buffers": [
@@ -2525,24 +2519,23 @@
     },
     {
       "name": "ceiling_concrete",
-      "pbrMetallicRoughness": { "metallicFactor": 0, "baseColorTexture": { "index": 12 } },
-      "normalTexture": { "index": 13, "scale": 0.4999999701976776 }
+      "pbrMetallicRoughness": { "metallicFactor": 0, "baseColorTexture": { "index": 12 } }
     },
     {
       "name": "concrete_walls",
       "pbrMetallicRoughness": {
         "roughnessFactor": 0.5,
         "metallicFactor": 0,
-        "baseColorTexture": { "index": 14 }
+        "baseColorTexture": { "index": 13 }
       },
-      "normalTexture": { "index": 15, "scale": 1.1999999284744263 }
+      "normalTexture": { "index": 14, "scale": 1.1999999284744263 }
     },
     {
       "name": "dark_panel",
       "pbrMetallicRoughness": {
         "roughnessFactor": 0.5,
         "metallicFactor": 0,
-        "baseColorTexture": { "index": 16 }
+        "baseColorTexture": { "index": 15 }
       }
     },
     {
@@ -2551,8 +2544,7 @@
         "baseColorFactor": [0.2609133720397949, 0.2609133720397949, 0.2609133720397949, 1],
         "roughnessFactor": 0.3499999940395355,
         "metallicFactor": 0
-      },
-      "normalTexture": { "index": 17, "scale": 0.19999998807907104 }
+      }
     },
     {
       "name": "metal_pipes",
@@ -2566,8 +2558,7 @@
       "pbrMetallicRoughness": {
         "baseColorFactor": [0.21171391010284424, 0.21171391010284424, 0.21171391010284424, 1],
         "metallicFactor": 0
-      },
-      "normalTexture": { "index": 18, "scale": 0.20000004768371582 }
+      }
     },
     {
       "name": "steel_window_frame",
@@ -2592,7 +2583,7 @@
       "pbrMetallicRoughness": {
         "roughnessFactor": 0.5,
         "metallicFactor": 0,
-        "baseColorTexture": { "index": 19 }
+        "baseColorTexture": { "index": 16 }
       }
     }
   ],
