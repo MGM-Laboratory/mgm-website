@@ -78,9 +78,6 @@ export class BoxDirector {
   /** The latched tease played on this pass: the scrubbed one stays out until the pass ends. */
   private teaseConsumed = false;
   private readonly random = seededRandom(0x5eed);
-  private readonly sparkle = new OneShot();
-  /** The time a sparkle burst should fire at the lid, or -1 (the act reads it). */
-  lidBurst = -1;
   /** The box is under the pointer this frame (set by the act from a raycast). */
   hovered = false;
 
@@ -160,7 +157,6 @@ export class BoxDirector {
     const glow =
       fit(open, 0.42, 0.75, 0, 1) * (1 - smoothstep(0.3, 0.9, state.beat("c-spring"))) +
       0.35 * window4(state.beat("c-gather"), 0.25, 0.4, 0.7, 0.86);
-    if (this.sparkle.cross(open, 0.55, state.velocity, 4)) this.lidBurst = time;
 
     // ------------------------------------------------------------ life (clock), all 0 by the drop
     const restWindow = window4(t, -0.05, 0.85, state.range.start + 1.05, state.range.start + 1.2);
