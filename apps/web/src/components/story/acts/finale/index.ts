@@ -112,7 +112,7 @@ const SPIN_CLICKS = 5;
 /** How long her last pose of the terminal life takes to melt into the story's, scrolling back. */
 const LIFE_FADE_SECONDS = 0.35;
 
-type Special = { kind: "hero" | "spin"; t: number };
+type Special = { kind: "hero" | "spin" | "greet"; t: number };
 type Glance = { point: Vector3; until: number; face: GodetteFace | null; faceUntil: number };
 type Part = "head" | "body" | "legs" | "arms" | "hands" | null;
 
@@ -231,9 +231,16 @@ class FinaleAct implements StoryAct {
   private readonly head = new Vector3();
   private readonly eyes = new Vector3();
   private blush = 0;
+  /** Her idle settle (weight shifts) and hands on hips, eased. */
+  private readonly idleIn = new Latch();
+  private readonly hips = new Latch();
+  private nextHips = 12;
+  private hipsUntil = -1;
   /** The spin's arms-out share and its stagger step (metres sideways), this frame. */
   private spinning = 0;
   private stagger = 0;
+  /** When the visitor went away (the pointer left the page, the tab hid), ms. */
+  private awayAt: number | null = null;
   /** Her magic's rim on the light page, eased (0..1). */
   private magic = 0;
   private readonly contact = new Vector3();
@@ -246,6 +253,7 @@ class FinaleAct implements StoryAct {
   async init(ctx: StoryContext) {
     this.ctx = ctx;
     document.fonts.addEventListener("loadingdone", this.onFonts);
+    document.addEventListener("visibilitychange", this.onVisibility);
     // Development only: `?storystill` renders her as a cut-out for the storybook's stills
     // (transparent backdrop, the wave held, eyes on us).
     this.still =
@@ -638,7 +646,7 @@ class FinaleAct implements StoryAct {
         }
         if (e > 0.5) face = "big_smile";
         if (special.t > 2.6) this.special = null;
-      } else {
+      } else if (special.kind === "spin") {
         const st = special.t;
         // a wind-up the other way, two eased turns with her arms out and a lean, a little past
         // and back, a stagger step and a wobble, then the stars
@@ -659,6 +667,13 @@ class FinaleAct implements StoryAct {
         if (st > 0.24 && st < 1.45) face = "laugh";
         else if (st >= 1.45 && st < 3.1) face = "dizzy";
         if (st > 3.5) this.special = null;
+      } else {
+        // hello again (the visitor came back): a small wave, then back to her idle
+        const e = smooth(0, 0.28, special.t) * (1 - smooth(1.55, 2.0, special.t));
+        layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - e) }));
+        layers.push({ clip: "wave_loop", weight: e, time: special.t + 0.2 });
+        if (e > 0.4) face = "big_smile";
+        if (special.t > 2.0) this.special = null;
       }
     }
     if (this.special?.kind !== "spin") {
@@ -679,9 +694,32 @@ class FinaleAct implements StoryAct {
       }
     }
 
-    // ---- where she looks: the cursor, what was clicked, the action, or us
+    // ---- idle life: her weight shifts from foot to foot, and now and then she puts her hands
+    // on her hips for a while, sure of herself
     const pointer = ctx.pointer;
     const pointerActive = pointer.inside && this.life - this.pointerSeenAt < 3.5 && !this.still;
+    const calm = intoIdle >= 1 && !this.special && this.hoverGrace <= 0 && bye <= 0 && !this.still;
+    const settle = this.idleIn.update(calm, dt, 0.6, 1.5);
+    roll += settle * (0.03 * Math.sin(this.life * 0.78) + 0.01 * Math.sin(this.life * 1.93 + 1.1));
+    if (calm && this.life > this.nextHips && this.hipsUntil < this.life) {
+      this.hipsUntil = this.life + randomBetween(4, 6.5);
+      this.nextHips = this.hipsUntil + randomBetween(11, 18);
+    }
+    const hips = this.hips.update(calm && this.life < this.hipsUntil, dt, 1.4, 1.6);
+    if (hips > 0) {
+      const h = smooth(0, 1, hips) * 0.85;
+      layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - h) }));
+      layers.push({ clip: "dust_off", weight: h, time: 1.8 - 1e-3 });
+    }
+    // a title letter rolled: when nobody is pointing, she may glance at it
+    const rolled = finaleSignal.takeRoll();
+    if (rolled && calm && !pointerActive && random() < 0.5) {
+      if (this.viewportPoint(ctx, rolled.x, rolled.y, this.tmp)) {
+        this.setGlance(this.tmp.clone(), 0.9, null, 0);
+      }
+    }
+
+    // ---- where she looks: the cursor, what was clicked, the action, or us
     const hovered = finaleSignal.hovered;
     if (hovered === "action" && this.actionPoint(ctx, this.tmp)) {
       lookPoint = this.look.copy(this.tmp);
@@ -790,6 +828,10 @@ class FinaleAct implements StoryAct {
     this.hoverGrace = 0;
     this.spinning = 0;
     this.stagger = 0;
+    this.hips.value = 0;
+    this.idleIn.value = 0;
+    this.hipsUntil = -1;
+    this.nextHips = this.life + 12;
     this.bursts.clear();
     this.titleOn = false;
   }
@@ -858,7 +900,16 @@ class FinaleAct implements StoryAct {
 
   pointer(ctx: StoryContext, event: StoryPointerEvent) {
     const godette = this.godette;
-    if (!godette || event.type !== "tap") return false;
+    if (!godette) return false;
+    if (event.type === "leave") {
+      this.awayAt ??= performance.now();
+      return false;
+    }
+    if (event.type === "move") {
+      this.welcomeBack();
+      return false;
+    }
+    if (event.type !== "tap") return false;
     const part = this.partUnder(event.raycast(godette.hitProxy));
     if (this.interactive) {
       if (part) this.clickHer(part);
@@ -876,6 +927,20 @@ class FinaleAct implements StoryAct {
     }
     return true;
   }
+
+  /** The visitor is back (the pointer, or the tab): after 5 s away she waves hello again. */
+  private welcomeBack() {
+    const away = this.awayAt;
+    this.awayAt = null;
+    if (away === null || performance.now() - away < 5000) return;
+    if (!this.interactive || this.special || this.bye.value > 0) return;
+    this.special = { kind: "greet", t: 0 };
+  }
+
+  private readonly onVisibility = () => {
+    if (document.hidden) this.awayAt ??= performance.now();
+    else this.welcomeBack();
+  };
 
   private partUnder(hits: readonly { object: Object3D }[]): Part {
     const hit = hits.at(0);
@@ -1117,6 +1182,7 @@ class FinaleAct implements StoryAct {
 
   dispose() {
     document.fonts.removeEventListener("loadingdone", this.onFonts);
+    document.removeEventListener("visibilitychange", this.onVisibility);
     this.hideHello();
     this.helloEl = null;
     finaleSignal.setTitle(false);
