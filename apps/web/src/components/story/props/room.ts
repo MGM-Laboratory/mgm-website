@@ -76,16 +76,22 @@ import type { StoryLoaderLike, StoryTier } from "../assets/types";
 export type RoomScheme = "light" | "dark";
 
 /**
- * Visibility sets by story phase, from a sweep of every story camera with
- * mouse-parallax jitter in both aspects (anchors.json `phases`).
+ * Visibility sets by story phase (anchors.json `phases`), from an ID-render sweep of every story
+ * camera at every aspect from 390x844 to 2560x1080 (with the spine's FOV blend), plus a union with
+ * the earlier sets where a path is shared. A set is valid for its camera moves with mouse parallax
+ * of up to 6 cm across and 4 cm up or down, the aim moving along or held on the target (10 cm and
+ * 6.8 cm for `table` and `takeoff`, which keep every node for whip pans). `letters` and `closeup`
+ * also allow pans of 8 degrees in yaw and 5 in pitch, with a FOV up to 4 and 6 degrees wider.
  * - `hidden`: the card act (the page backdrop covers the room). Rig lights off.
  * - `crane`: the drop from the card stage down to `a_land`.
  * - `land`: `a_land`, and the moves from it to `b_letters` and `b_mcu` (and between those two).
  * - `letters`: the `b_letters` hold, where the toy letters are read.
- * - `table`: the close-up (`b_mcu`) and the break-free beats.
+ * - `closeup`: the `b_mcu` hold, Godette's close-up.
+ * - `table`: from `b_mcu` or `b_letters` to `c_start`, the spark and the drag (whip pans).
  * - `takeoff`: `c_start` to `c_end`, the drag and the learning flight.
- * - `chase`: `d_start` to `d_mid`, over her shoulder toward the TV.
- * - `screen`: `d_mid` to the fill distance, only the TV wall is left.
+ * - `chase`: `c_end` to `d_start` to `d_mid`, over her shoulder toward the TV. At `c_end` both
+ *   `takeoff` and `chase` hold; switch once the camera leaves it.
+ * - `screen`: `d_mid` to the fill distance at the frame's aspect, with a FOV up to 10 degrees wider.
  * - `fill`: the camera at or inside `screenFillDistance()`; only `tv_screen` draws.
  * - `all`: everything (debug, env capture).
  */
@@ -94,6 +100,7 @@ export type RoomPhase =
   | "crane"
   | "land"
   | "letters"
+  | "closeup"
   | "table"
   | "takeoff"
   | "chase"

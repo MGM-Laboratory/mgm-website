@@ -284,6 +284,7 @@
         "room_floor_polished",
         "room_lamp_glow",
         "room_rug",
+        "room_steel_window_frame",
         "shell_south",
         "tv_body",
         "tv_screen"
@@ -306,6 +307,30 @@
         "room_dark_panel",
         "room_floor_polished",
         "room_rug",
+        "tv_body",
+        "tv_screen"
+      ]
+    },
+    {
+      "phase": "closeup",
+      "nodes": [
+        "coffee_table_cup_saucer",
+        "coffee_table_magazine",
+        "coffee_table_pot_A",
+        "coffee_table_pot_B",
+        "coffee_table_pot_C",
+        "coffee_table_top",
+        "room_atlasA_sofa_table",
+        "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
+        "room_atlasD_lamps",
+        "room_concrete_walls",
+        "room_dark_panel",
+        "room_floor_polished",
+        "room_lamp_glow",
+        "room_rug",
+        "room_steel_window_frame",
+        "shell_south",
         "tv_body",
         "tv_screen"
       ]
@@ -388,6 +413,8 @@
         "room_lamp_glow",
         "room_metal_pipes",
         "room_rug",
+        "room_steel_window_frame",
+        "shell_south",
         "tv_body",
         "tv_screen"
       ]
@@ -395,9 +422,12 @@
     {
       "phase": "screen",
       "nodes": [
+        "room_atlasA_sofa_table",
         "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
         "room_atlasD_lamps",
         "room_concrete_walls",
+        "room_dark_panel",
         "room_floor_polished",
         "room_lamp_glow",
         "tv_body",
