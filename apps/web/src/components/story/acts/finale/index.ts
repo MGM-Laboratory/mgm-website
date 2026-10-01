@@ -158,7 +158,12 @@ class FinaleAct implements StoryAct {
   private lastPointer = { x: 9, y: 9 };
   private interactive = false;
   /** Her last pose in the terminal life, melted into the story's when the visitor scrolls back. */
-  private lastLife: { layers: GodetteBodyLayer[]; spin: number; roll: number } | null = null;
+  private lastLife: {
+    layers: GodetteBodyLayer[];
+    spin: number;
+    roll: number;
+    glow: number;
+  } | null = null;
   private lifeFade = 0;
   /** The auto idle last given to her (undefined: not yet this run). */
   private autoIdle: number | null | undefined = undefined;
@@ -469,6 +474,7 @@ class FinaleAct implements StoryAct {
           ...from.layers.map((layer) => ({ ...layer, weight: layer.weight * k })),
         ];
         spin = from.spin * k;
+        glow = Math.max(glow, from.glow * k);
         roll += from.roll * k;
         if (this.lifeFade <= 0) this.lastLife = null;
       }
@@ -581,7 +587,7 @@ class FinaleAct implements StoryAct {
     // a pressed action: a happy hop on the way out
     if (finaleSignal.pressedSince() < 0.05) godette.react("click");
 
-    this.lastLife = { layers, spin, roll };
+    this.lastLife = { layers, spin, roll, glow };
     this.lifeFade = 1;
     return { layers, face, lookPoint, lookWeight, glow, spin, roll, dizzy, autoIdle, hover };
   }
@@ -844,6 +850,15 @@ class FinaleAct implements StoryAct {
     finaleSignal.setTitle(false);
     finaleSignal.setHover(null);
     this.resetLife();
+    // What only this act turns on goes off with it ("Watch again" replays the same Godette).
+    // Her place, scale and pivot are left alone: every act that takes her sets them each frame.
+    const godette = this.godette;
+    if (godette) {
+      godette.setAutoIdle(null);
+      godette.setShadow(null);
+      godette.setGlow(0);
+    }
+    this.autoIdle = undefined;
   }
 
   dispose() {

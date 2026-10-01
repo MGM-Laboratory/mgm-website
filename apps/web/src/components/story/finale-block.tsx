@@ -309,6 +309,8 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
 
     return () => {
       for (const off of cleanups.splice(0)) off();
+      // leaving the page under a hovered title or action fires no pointerleave
+      finaleSignal.setHover(null);
       tl.kill();
       gsap.set([...rises, ...rolls, ...lineWords, ...(actionEl ? [actionEl] : [])], {
         clearProps: "all",
