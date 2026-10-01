@@ -1,6 +1,7 @@
 import {
   Box3,
   BufferAttribute,
+  BufferGeometry,
   Color,
   DataTexture,
   FloatType,
@@ -13,14 +14,13 @@ import {
   RGBAFormat,
   Ray,
   Vector3,
-  type BufferGeometry,
   type Raycaster,
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from "three";
 import { Font, type FontData } from "three/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
-import { mergeGeometries, toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import type { StoryLoaderLike, StoryTier } from "@/components/story/assets/types";
 import {
@@ -46,18 +46,31 @@ import {
  * `quaternion` and `scale`, then `commit()`. The clock-driven life
  * (`poke`, `hop`, run by `update(dt)`) rides on top and never changes the
  * act's values.
+ *
+ * Size: the phrase fits `maxWidth` (default 34 cm, the two-line strip the
+ * room research validated on the coffee table, research/room.md 2.4). At
+ * that width the capitals are about 1.8 cm tall, not the 3 cm first
+ * planned: a 3 cm cap makes the longer line 57 cm wide, wider than the
+ * table's free strip and the toy close-up's frame.
  */
 
 export const TOY_LETTERS_URL = `${LETTERS_BASE_URL}toy-letters.typeface.json`;
 export const TOY_PHRASE: readonly string[] = ["We tell stories", "through interactive media."];
+/** The widest validated strip for the letters on the coffee table (metres). */
+export const TOY_LETTERS_MAX_WIDTH = 0.34;
 
 const LETTER_COLOURS: readonly number[] = [BRAND.blue, BRAND.yellow, BRAND.red, BRAND.green];
 
 export type ToyLettersOptions = {
   tier: StoryTier;
   lines?: readonly string[];
-  /** Height of a capital, metres (the W is 3 cm by default). */
+  /** Height of a capital, metres (3 cm unless `maxWidth` asks for less). */
   capHeight?: number;
+  /**
+   * The widest line's length limit, metres (default TOY_LETTERS_MAX_WIDTH):
+   * the cap height shrinks so the phrase fits. Infinity keeps `capHeight`.
+   */
+  maxWidth?: number;
   /** Extrusion depth, metres. */
   depth?: number;
   /** Distance between rows (line 2 stands behind line 1), metres. */
@@ -86,6 +99,8 @@ export type ToyLetters = {
   readonly group: Group;
   readonly mesh: Mesh;
   readonly letters: readonly ToyLetter[];
+  /** The cap height used (after the width fit), metres. */
+  readonly capHeight: number;
   /** Phrase extents on the table (x span, z span), metres. */
   readonly width: number;
   readonly depth: number;
@@ -176,22 +191,42 @@ transformed = letterRotate(letterTurn, transformed * letterSquash.xyz * letterMo
 
 type Reaction = { wobble: number; wobbleVel: number; axis: number; hopT: number; hopH: number };
 
+/**
+ * Glyphs are built in millimetres and scaled down after the crease pass:
+ * three's `toCreasedNormals` welds vertices on a 0.01 unit grid, which in
+ * metres would weld whole letters into a few cells (slow, and smeared
+ * normals).
+ */
+const BUILD_SCALE = 1000;
+/** The longest stretch of build work between two yields to the main thread (ms). */
+const SLICE_MS = 6;
+
+/** Yields to the main thread once `budget` ms of work have passed since the last yield. */
+function createSlicer(budget: number) {
+  let since = performance.now();
+  return async () => {
+    if (performance.now() - since < budget) return;
+    await yieldToMain();
+    since = performance.now();
+  };
+}
+
 export async function loadToyLetters(
   assets: StoryLoaderLike,
   options: ToyLettersOptions,
 ): Promise<ToyLetters> {
   const json = await assets.json<FontJson>(TOY_LETTERS_URL);
+  const slice = createSlicer(SLICE_MS);
   const font = new Font(json);
   const lines = options.lines ?? TOY_PHRASE;
-  const capHeight = options.capHeight ?? 0.03;
-  const depth = options.depth ?? capHeight * 0.4;
-  const rowGap = options.rowGap ?? capHeight * 1.5;
   const tracking = options.tracking ?? 0.08;
   const colours = options.colours ?? LETTER_COLOURS;
   const curveSegments = tierPick(options.tier, 5, 4, 3);
-  const bevelSegments = tierPick(options.tier, 2, 2, 1);
+  const bevelSegments = tierPick(options.tier, 2, 1, 1);
+  const kern = new Map(Object.entries(json.kern ?? {}));
+  const advanceOf = new Map(Object.entries(json.glyphs).map(([ch, g]) => [ch, g.ha]));
 
-  // Scale the typeface so a capital W is `capHeight` tall.
+  // Font units per cap height: a capital W is the cap height.
   const probe = new TextGeometry("W", {
     font,
     size: 1,
@@ -202,32 +237,62 @@ export async function loadToyLetters(
   probe.computeBoundingBox();
   const wHeight = probe.boundingBox ? probe.boundingBox.max.y - probe.boundingBox.min.y : 0.7;
   probe.dispose();
+  const perCap = 1 / (wHeight * json.resolution);
+
+  // Lay every line out at a cap height of 1 (advances, kerning and tracking all scale with it),
+  // then fit the widest line to `maxWidth`.
+  const missing = new Set<string>();
+  const layouts = lines.map((text) => {
+    const chars = [...text];
+    const placed: { char: string; x: number }[] = [];
+    let x = 0;
+    let right = 0;
+    chars.forEach((char, i) => {
+      const ha = advanceOf.get(char);
+      if (ha === undefined) {
+        missing.add(char);
+        return;
+      }
+      const next = chars.at(i + 1);
+      const advance = (ha + (next ? (kern.get(char + next) ?? 0) : 0)) * perCap;
+      if (char.trim() === "") {
+        x += advance;
+        return;
+      }
+      placed.push({ char, x });
+      right = x + advance;
+      x = right + tracking;
+    });
+    return { placed, width: right };
+  });
+  if (missing.size > 0 && process.env.NODE_ENV !== "production") {
+    console.warn(
+      `[toy-letters] no glyph for ${[...missing].map((c) => JSON.stringify(c)).join(", ")}`,
+    );
+  }
+  const widest = Math.max(1e-6, ...layouts.map((layout) => layout.width));
+  const capHeight = Math.min(
+    options.capHeight ?? 0.03,
+    (options.maxWidth ?? TOY_LETTERS_MAX_WIDTH) / widest,
+  );
+  const depth = options.depth ?? capHeight * 0.4;
+  const rowGap = options.rowGap ?? capHeight * 1.5;
   const size = capHeight / wHeight;
-  const unit = size / json.resolution;
   const bevel = capHeight * 0.06;
+  const k = BUILD_SCALE;
 
-  const glyphs: BufferGeometry[] = [];
-  const letters: ToyLetter[] = [];
-  const bounds: Box3[] = [];
-  const kern = new Map(Object.entries(json.kern ?? {}));
-  const advanceOf = new Map(Object.entries(json.glyphs).map(([ch, g]) => [ch, g.ha]));
-  let colourIndex = 0;
-  const rowWidths: number[] = [];
-
-  // Build each distinct glyph once (the phrase repeats most of its letters), yielding to the
-  // main thread between glyphs so the build never holds a long task.
+  // Build each distinct glyph once (the phrase repeats most of its letters), in short slices.
   const cache = new Map<string, { geometry: BufferGeometry; box: Box3 }>();
-  const distinct = [...new Set(lines.join(""))].filter((char) => char.trim() !== "");
-  for (const char of distinct) {
+  for (const char of new Set(layouts.flatMap((layout) => layout.placed.map((item) => item.char)))) {
     const raw = new TextGeometry(char, {
       font,
-      size,
-      depth: depth - bevel * 2,
+      size: size * k,
+      depth: (depth - bevel * 2) * k,
       curveSegments,
       bevelEnabled: true,
-      bevelThickness: bevel,
-      bevelSize: bevel * 0.8,
-      bevelOffset: -bevel * 0.8,
+      bevelThickness: bevel * k,
+      bevelSize: bevel * 0.8 * k,
+      bevelOffset: -bevel * 0.8 * k,
       bevelSegments,
     });
     raw.computeBoundingBox();
@@ -238,45 +303,55 @@ export async function loadToyLetters(
     // Smooth bevels, crisp edges between the face and the bevel.
     const geometry = toCreasedNormals(raw, Math.PI / 5);
     if (geometry !== raw) raw.dispose();
+    geometry.scale(1 / k, 1 / k, 1 / k);
+    box.min.divideScalar(k);
+    box.max.divideScalar(k);
     cache.set(char, { geometry, box });
-    await yieldToMain();
+    await slice();
   }
 
-  lines.forEach((text, line) => {
-    const chars = [...text];
-    let x = 0;
-    const placed: { char: string; x: number; box: Box3; geometry: BufferGeometry }[] = [];
-    chars.forEach((char, i) => {
-      const next = chars.at(i + 1);
-      const advance =
-        (advanceOf.get(char) ?? 0) * unit + (next ? (kern.get(char + next) ?? 0) * unit : 0);
-      const glyph = cache.get(char);
-      if (glyph) {
-        placed.push({ char, x, box: glyph.box, geometry: glyph.geometry });
-        x += advance + capHeight * tracking;
-      } else {
-        x += advance;
-      }
-    });
-    rowWidths.push(x);
-    const offset = -x / 2;
-    for (const item of placed) {
-      const cx = (item.box.min.x + item.box.max.x) / 2;
-      const instance = item.geometry.clone();
+  // One buffer for the phrase, written glyph by glyph (no clones, no merge pass).
+  let total = 0;
+  for (const layout of layouts) {
+    for (const item of layout.placed)
+      total += cache.get(item.char)?.geometry.getAttribute("position").count ?? 0;
+  }
+  const positions = new Float32Array(total * 3);
+  const normals = new Float32Array(total * 3);
+  const colourData = new Float32Array(total * 3);
+  const letterIds = new Float32Array(total);
+  const letters: ToyLetter[] = [];
+  const bounds: Box3[] = [];
+  let written = 0;
+  let colourIndex = 0;
+  for (const [line, layout] of layouts.entries()) {
+    const offset = (-layout.width * capHeight) / 2;
+    for (const item of layout.placed) {
+      const glyph = cache.get(item.char);
+      if (!glyph) continue;
+      const position = glyph.geometry.getAttribute("position");
+      const normal = glyph.geometry.getAttribute("normal");
+      const count = position.count;
+      positions.set(position.array, written * 3);
+      normals.set(normal.array, written * 3);
       const index = letters.length;
-      const count = instance.getAttribute("position").count;
-      instance.setAttribute("aLetter", new BufferAttribute(new Float32Array(count).fill(index), 1));
+      letterIds.fill(index, written, written + count);
       const colour = new Color(colours.at(colourIndex % colours.length) ?? BRAND.blue);
       colourIndex += 1;
-      const rgb = new Float32Array(count * 3);
-      for (let v = 0; v < count; v++) rgb.set([colour.r, colour.g, colour.b], v * 3);
-      instance.setAttribute("color", new BufferAttribute(rgb, 3));
-      glyphs.push(instance);
-      const home = new Vector3(offset + item.x + cx, 0, -line * rowGap);
+      for (let v = written; v < written + count; v++) {
+        colourData[v * 3] = colour.r;
+        colourData[v * 3 + 1] = colour.g;
+        colourData[v * 3 + 2] = colour.b;
+      }
+      written += count;
+      const { box } = glyph;
+      const left = item.x * capHeight;
+      // The glyph's own left bearing: its box starts where the outline does, not at the pen.
+      const home = new Vector3(offset + left + (box.min.x + box.max.x) / 2, 0, -line * rowGap);
       const sizeVec = new Vector3(
-        item.box.max.x - item.box.min.x,
-        item.box.max.y - item.box.min.y,
-        item.box.max.z - item.box.min.z,
+        box.max.x - box.min.x,
+        box.max.y - box.min.y,
+        box.max.z - box.min.z,
       );
       bounds.push(
         new Box3(
@@ -295,14 +370,15 @@ export async function loadToyLetters(
         quaternion: new Quaternion(),
         scale: 1,
       });
+      await slice();
     }
-  });
+  }
   for (const glyph of cache.values()) glyph.geometry.dispose();
-
-  // mergeGeometries returns null when the attributes disagree (its typings do not say so).
-  const merged = mergeGeometries(glyphs, false) as BufferGeometry | null;
-  for (const g of glyphs) g.dispose();
-  if (!merged) throw new Error("toy letters: could not merge the glyphs");
+  const merged = new BufferGeometry();
+  merged.setAttribute("position", new BufferAttribute(positions, 3));
+  merged.setAttribute("normal", new BufferAttribute(normals, 3));
+  merged.setAttribute("color", new BufferAttribute(colourData, 3));
+  merged.setAttribute("aLetter", new BufferAttribute(letterIds, 1));
 
   // Three texels per letter: position + scale, rotation, squash (x, y, z).
   const count = letters.length;
@@ -385,7 +461,8 @@ export async function loadToyLetters(
     group,
     mesh,
     letters,
-    width: Math.max(...rowWidths),
+    capHeight,
+    width: widest * capHeight,
     depth: (lines.length - 1) * rowGap + depth,
     commit,
     reset() {
