@@ -85,6 +85,11 @@ html[data-story-mode="gl"] [data-storybook] {
   outline-offset: -1px;
 }
 
+/* The link under a card in its closer look is a pill: its focus ring follows it. */
+[data-hotspot^="cards-link-"] {
+  border-radius: 999px;
+}
+
 /* ------------------------------------------------------------ the finale */
 
 .story-finale {

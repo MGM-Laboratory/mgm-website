@@ -21,8 +21,69 @@ import { STORY_CONTROLS } from "@/data/story";
  * - the dev HUD (`?storydebug`, development builds only).
  *
  * It mounts just before `#smooth-wrapper`, outside the transformed page (a
- * fixed box inside it would scroll away), and early in the tab order.
+ * fixed box inside it would scroll away); `useStoryTabOrder` puts its
+ * controls where the story section is in the tab order.
  */
+
+const TABBABLE =
+  'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"]';
+
+/** Elements Tab can reach under `scope`, in document order (visible, enabled, not inert). */
+function tabbables(scope: ParentNode) {
+  return Array.from(scope.querySelectorAll<HTMLElement>(TABBABLE)).filter((element) => {
+    if (element.tabIndex < 0 || element.closest("[hidden], [inert]")) return false;
+    if ((element as HTMLButtonElement).disabled) return false;
+    return element.getClientRects().length > 0;
+  });
+}
+
+/**
+ * Tab order: the overlay is mounted before `#smooth-wrapper` (a fixed box
+ * inside the transformed page would scroll away), but its controls belong
+ * where the story is. This moves Tab across that seam as if they sat at the
+ * start of the story section: from the last control before the section into
+ * them, from their last one into the section (and on into the page after
+ * it), and the same backward with Shift+Tab. Without visible controls,
+ * nothing changes.
+ */
+function useStoryTabOrder(root: HTMLElement) {
+  useLayoutEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || event.defaultPrevented) return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const section = document.querySelector<HTMLElement>("[data-story-section]");
+      const controls = tabbables(root);
+      const first = controls.at(0);
+      const last = controls.at(-1);
+      if (!section || !first || !last) return;
+      const active = document.activeElement;
+      if (!(active instanceof HTMLElement) || active === document.body) return;
+      const page = tabbables(document.body).filter((element) => !root.contains(element));
+      const before = (element: Element) =>
+        !section.contains(element) &&
+        Boolean(section.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_PRECEDING);
+      let target: HTMLElement | undefined;
+      if (root.contains(active)) {
+        if (!event.shiftKey && active === last) target = page.find((element) => !before(element));
+        else if (event.shiftKey && active === first) target = page.filter(before).at(-1);
+      } else {
+        const index = page.indexOf(active);
+        if (index < 0) return;
+        const neighbour = page.at(event.shiftKey ? index - 1 : index + 1);
+        if (!event.shiftKey && before(active) && (!neighbour || !before(neighbour))) target = first;
+        else if (event.shiftKey && !before(active) && (!neighbour || before(neighbour)))
+          target = last;
+      }
+      if (!target) return;
+      event.preventDefault();
+      target.focus();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [root]);
+}
 
 /** The overlay's own root (only ever rendered on the client, once the engine runs). */
 function useOverlayRoot() {
@@ -49,6 +110,7 @@ export function StoryOverlay({ store }: Readonly<{ store: StoryOverlayStore }>) 
     store.getServerSnapshot,
   );
   const root = useOverlayRoot();
+  useStoryTabOrder(root);
   const dark = snapshot.tone === "dark";
   const skip = snapshot.skip;
 
@@ -104,6 +166,7 @@ export function StoryOverlay({ store }: Readonly<{ store: StoryOverlayStore }>) 
 
       {snapshot.hotspots.map((spot) => {
         const common = {
+          "data-hotspot": spot.id,
           "aria-label": spot.label,
           title: spot.label,
           className:
