@@ -28,7 +28,6 @@ import { random, randomBetween } from "@/lib/random";
 
 import {
   PHASE,
-  WAVE_LIFE_T,
   actingTime,
   bodyYaw,
   cameraJolt,
@@ -94,6 +93,11 @@ const WAVE_SECONDS = 1.333 * 2 + 0.2;
 const MEDIUM_CUT = 0.56;
 /** Beside the words she turns this far toward them (radians, toward screen right). */
 const PRESENT_YAW = 0.2;
+/** Behind the scroll by more than this (acting seconds), her acting jumps to it: a jump, not a scroll. */
+const CHASE_SNAP = 6;
+/** The medium shot comes in over these acting times (the same as `f-wave`'s scroll, hands off). */
+const CLOSE_FROM_A = actingTime(WAVE.start - 0.15);
+const CLOSE_TO_A = actingTime(WAVE.end);
 /** The goodbye starts this far into `f-out` (vh): any nudge down the page, not a resting rounding error. */
 const BYE_FROM = 0.006;
 /** Quick clicks in a row that make her spin until she is dizzy. */
@@ -203,6 +207,8 @@ class FinaleAct implements StoryAct {
     glow: number;
   } | null = null;
   private lifeFade = 0;
+  /** The acting time on screen: it chases the scroll's (`actingTime`) at a capped rate. */
+  private shownA = 0;
   /** This act had her on the last frame (false: a fresh run starts on the next active frame). */
   private wasActive = false;
   /** The auto idle last given to her (undefined: not yet this run). */
@@ -309,7 +315,8 @@ class FinaleAct implements StoryAct {
     const dt = ctx.clock.storyDt;
     this.life += dt;
     const t = state.t;
-    const A = actingTime(t);
+    // Her acting follows the scroll, at a watchable pace: a quick scroll still plays the gag.
+    const A = this.chaseActing(actingTime(t), fresh, dt);
 
     // She is ours now: into this scene, every setting this act's.
     // Whatever the act before left on her (the table's behind layer, hidden at the end of a
@@ -328,16 +335,18 @@ class FinaleAct implements StoryAct {
     // ---------------------------------------------------------------- camera
     this.measureLayout(ctx);
     const framing = framingAt(A);
-    const life = A >= PHASE.waveInEnd || t >= WAVE_LIFE_T;
+    const life = A >= PHASE.waveInEnd;
     const landscape = ctx.size.aspect >= 1;
     const height = framing.height * (landscape ? 1 : 0.9);
     // Beside the words (the split layout) the camera comes in on her as they arrive: from the
     // whole figure of the landing to a medium shot cut above her knees (the floor goes below the
     // frame), while she steps aside to the left part of the frame. Under the words (portrait)
     // she stands on them, whole, where she is.
-    const close = this.split && !this.still ? smoother(WAVE.start - 0.15, WAVE.end, t) : 0;
+    // She steps aside with the words (the scroll); the camera comes in once she is up (her acting).
+    const shift = this.split && !this.still ? smoother(WAVE.start - 0.15, WAVE.end, t) : 0;
+    const close = Math.min(shift, smoother(CLOSE_FROM_A, CLOSE_TO_A, A));
     this.close = close;
-    this.xFrac = 0.5 + (this.splitX - 0.5) * close;
+    this.xFrac = 0.5 + (this.splitX - 0.5) * shift;
     const cut = MEDIUM_CUT / height;
     const closeFloor = (1 - cut * this.topY) / (1 - cut);
     solveShot(
@@ -422,7 +431,8 @@ class FinaleAct implements StoryAct {
     godette.update(dt);
 
     // ---------------------------------------------------------------- the title
-    const titleOn = t >= TITLE_T;
+    // the title waits for her hello (a quick scroll gets there before she does)
+    const titleOn = t >= TITLE_T && A >= PHASE.waveInEnd - 0.25;
     if (titleOn && !this.titleOn && state.direction > 0 && life) {
       // the letters rise under her feet (or beside her): she glances at them
       const point = new Vector3(0, 0.05, 1.1);
@@ -667,6 +677,29 @@ class FinaleAct implements StoryAct {
     return { layers, face, lookPoint, lookWeight, glow, spin, roll, dizzy, autoIdle, hover };
   }
 
+  /**
+   * The shown acting time for `target` (the scroll's). Forward it runs at
+   * most about 1.5x real time while it is close, faster as it falls behind;
+   * backward about twice that. A fresh run or a jump (a big gap) shows the
+   * scroll's moment at once, so any position is right on its first frame;
+   * at rest it always settles on the same pose for the same scroll.
+   */
+  private chaseActing(target: number, fresh: boolean, dt: number) {
+    const gap = target - this.shownA;
+    if (fresh || Math.abs(gap) > CHASE_SNAP) {
+      this.shownA = target;
+      return target;
+    }
+    if (gap > 0) {
+      const rate = 1.5 + Math.max(0, gap - 3) * 1.5;
+      this.shownA = Math.min(target, this.shownA + rate * dt);
+    } else {
+      const rate = 3 + Math.max(0, -gap - 1) * 3;
+      this.shownA = Math.max(target, this.shownA - rate * dt);
+    }
+    return this.shownA;
+  }
+
   private setGlance(
     point: Vector3,
     seconds: number,
@@ -773,8 +806,7 @@ class FinaleAct implements StoryAct {
       return true;
     }
     // Before the wave: she is busy getting up, but she notices
-    const A = actingTime(ctx.director.t);
-    if (A < PHASE.bottomHit + 0.3) return false;
+    if (this.shownA < PHASE.bottomHit + 0.3) return false;
     if (part) {
       this.pokedAt = this.life;
       this.bursts.fire(godette.socket("head", this.tmp2), this.life, 0.7);
