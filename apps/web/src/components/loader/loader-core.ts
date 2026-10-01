@@ -173,7 +173,7 @@ class LoaderCore {
   readonly revealing = () => {
     if (this.revealed) return;
     this.revealed = true;
-    if (coverMarked) markRouteRevealDone();
+    if (coverMarked) markRouteRevealDone("loader");
     for (const resolve of [...this.revealWaiters]) resolve();
     this.revealWaiters.clear();
   };
@@ -311,7 +311,7 @@ class LoaderCore {
  * can ask (`waitForRouteReveal`); released when the view starts its reveal.
  */
 const coverMarked = typeof window !== "undefined" && readBoot().loader;
-if (coverMarked) markRouteCoverStarted();
+if (coverMarked) markRouteCoverStarted("loader");
 
 export const siteLoader = new LoaderCore();
 
