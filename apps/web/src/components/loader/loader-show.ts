@@ -37,6 +37,8 @@ const CARDS = 52;
 const FAN_SPAN = 150;
 const FLIGHT_MS = 400;
 const STALL_MS = 1600;
+/** How often the dealt cards riffle while a stall lasts. */
+const RIPPLE_MS = 3000;
 const STATUS_MS = 2500;
 const QUARTER = 13;
 /** How far the lid closes while someone inside peeks out (90 is shut), and its tuck flap's angle then. */
@@ -139,6 +141,7 @@ export class LoaderShow {
   private shownValue = 0;
   private printed = 0;
   private stalled = false;
+  private lastRipple = 0;
   private craft = -1;
   private wobble: Animation | null = null;
   private statusIndex = 0;
@@ -496,6 +499,7 @@ export class LoaderShow {
   // Waiting ---------------------------------------------------------------
 
   private checkStall() {
+    if (this.stalled && now() - this.lastRipple > RIPPLE_MS) this.ripple();
     if (this.dealt >= CARDS || this.stalled) return;
     if (now() - Math.max(this.lastLaunchAt, this.drawDoneAt - 400) < STALL_MS) return;
     this.stalled = true;
@@ -514,7 +518,25 @@ export class LoaderShow {
       { duration: 1700, iterations: Infinity, easing: "ease-in-out", fill: "none" },
     );
     this.root.dataset.stalled = "";
+    this.lastRipple = now();
     this.changeStatus(this.bags.stalled.next(this.statusLine));
+  }
+
+  /** While nothing arrives, the dealt cards riffle now and then (the last one keeps its wobble). */
+  private ripple() {
+    this.lastRipple = now();
+    const landed = this.cards.filter((card) => card.landsAt <= this.lastRipple).slice(0, -1);
+    landed.forEach((card, i) => {
+      this.animate(
+        card.lift,
+        [
+          { transform: "translateY(0) rotate(0deg)" },
+          { transform: "translateY(-7px) rotate(-2.5deg)", offset: 0.4 },
+          { transform: "translateY(0) rotate(0deg)" },
+        ],
+        { duration: 420, delay: i * 24, easing: EASE, fill: "none" },
+      );
+    });
   }
 
   private endStall() {
@@ -679,6 +701,8 @@ export class LoaderShow {
       for (const panel of PANELS) {
         if (panel.print === group) this.panels.get(panel.id)?.classList.add("ld-inked");
       }
+      this.root.querySelector(`[data-swatch="${group - 1}"]`)?.setAttribute("data-on", "");
+      if (group === 4) this.root.querySelector(`[data-swatch="4"]`)?.setAttribute("data-on", "");
     }
     const index = Math.floor(state.elapsed / STATUS_MS);
     const status = this.q("status");
