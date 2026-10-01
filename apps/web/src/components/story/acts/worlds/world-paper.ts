@@ -261,7 +261,7 @@ void main() {
   vec3 r = reflect(view, n);
   float spec = pow(max(dot(r, sd), 0.0), 70.0);
   float fres = pow(1.0 - abs(dot(n, -view)), 4.0);
-  col = mix(col, paperSky(r, uTime), 0.06 + 0.32 * fres);
+  col = mix(col, paperSky(r, uTime), 0.05 + 0.24 * fres);
   col += uPaperSun * spec * 1.1;
   float dist = length(vWorld - uCamPos);
   float fog = 1.0 - exp(-dist * 0.0019);

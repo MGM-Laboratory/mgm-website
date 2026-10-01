@@ -27,9 +27,9 @@ const float PAPER_SUN_R = 0.078;
 // The sky's gradient alone (no sun): also the haze the sea fades into.
 vec3 paperSkyBase(vec3 d) {
   float y = d.y;
-  vec3 col = mix(uPaperHorizon, uPaperLow, smoothstep(0.0, 0.09, y));
-  col = mix(col, uPaperSky, smoothstep(0.05, 0.3, y));
-  return mix(col, uPaperZenith, smoothstep(0.3, 0.95, y));
+  vec3 col = mix(uPaperHorizon, uPaperLow, smoothstep(0.0, 0.07, y));
+  col = mix(col, uPaperSky, smoothstep(0.04, 0.22, y));
+  return mix(col, uPaperZenith, smoothstep(0.24, 0.9, y));
 }
 
 vec3 paperSky(vec3 d, float time) {
@@ -60,10 +60,11 @@ vec3 paperSky(vec3 d, float time) {
   return col;
 }
 
-// The haze over the sea: the horizon's colour far away, bluer looking down.
+// The haze over the sea: the horizon's colour far away, a deep blue looking down.
 vec3 paperHaze(vec3 d) {
   vec3 horizon = paperSkyBase(normalize(vec3(d.x, 0.0, d.z)));
-  return mix(horizon, uPaperLow * 0.9, smoothstep(0.02, 0.4, -d.y));
+  vec3 deep = mix(uPaperSky, uPaperNavy, 0.45) * 0.85;
+  return mix(horizon, deep, smoothstep(0.015, 0.3, -d.y));
 }
 
 // The sea's cards at a point on the water plane: the real card back, filtered by its own
@@ -85,6 +86,9 @@ vec3 paperCard(vec2 xz, float shade) {
   vec3 gap = uPaperNavy * 0.32;
   float far = smoothstep(0.3, 1.2, max(fw.x / card.x, fw.y / card.y));
   vec3 col = mix(mix(gap, back, inside), mix(gap, back, cover), far);
+  // Far away the white engraving averages into lilac: deepen it toward the navy, so the sea
+  // keeps the card back's depth all the way to the haze.
+  col = mix(col, col * vec3(0.72, 0.74, 0.92), far);
   return col * (0.8 + 0.24 * shade);
 }
 
@@ -98,7 +102,7 @@ vec3 paperSea(vec3 eye, vec3 d, float time, float flow) {
   // Sky reflection and the sun's glitter path.
   vec3 r = reflect(d, vec3(0.0, 1.0, 0.0));
   float fres = pow(1.0 - abs(d.y), 5.0);
-  col = mix(col, paperSky(r, time), 0.08 + 0.5 * fres);
+  col = mix(col, paperSky(r, time), 0.05 + 0.3 * fres);
   vec3 sd = normalize(uPaperSunDir);
   float sparkle = smoothstep(0.62, 0.92, vnoise(xz * vec2(2.1, 1.3) + vec2(time * 1.3, -time * 0.9)));
   float glitter = pow(max(dot(r, sd), 0.0), 180.0) * sparkle * (1.0 - smoothstep(0.04, 0.3, -d.y));
@@ -119,7 +123,7 @@ vec3 paperWorld(vec3 eye, vec3 d, float time, float flow) {
 export const PAPER_PALETTE = {
   zenith: 0x141a46,
   sky: 0x3a6dc5,
-  low: 0x9cbbea,
+  low: 0x8fb0e6,
   horizon: 0xfbe6b8,
   sun: 0xf7bf33,
   navy: 0x2d318a,
