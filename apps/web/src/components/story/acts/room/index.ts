@@ -145,6 +145,8 @@ class RoomAct implements StoryAct {
   private readonly raycaster = new Raycaster();
   private readonly ndc = new Vector2();
   private spots: Spots | null = null;
+  /** Hotspots held in place for keyboard focus after their object left play: they do nothing until blur. */
+  private readonly inert = new Set<keyof Spots>();
   private proxies: Mesh[] = [];
   private dof: RoomDof | null = null;
   private props: RoomProps | null = null;
@@ -315,6 +317,7 @@ class RoomAct implements StoryAct {
       id: "room-tv",
       label: labels.tv,
       onActivate: () => {
+        if (this.inert.has("tv")) return;
         // A click lands where the pointer is on the glass; Enter at the middle.
         this.tapTv(ctx, this.hoverTv ? this.tvUv : null);
       },
@@ -323,6 +326,7 @@ class RoomAct implements StoryAct {
       id: "room-box",
       label: labels.box,
       onActivate: () => {
+        if (this.inert.has("box")) return;
         this.tapBox();
       },
     });
@@ -330,6 +334,7 @@ class RoomAct implements StoryAct {
       id: "room-letters",
       label: labels.letters,
       onActivate: () => {
+        if (this.inert.has("letters")) return;
         // A click on a letter hops that letter; Enter (or a click between them) sends a wave along the rows.
         if (this.hoverLetter >= 0) this.letters?.hop(this.hoverLetter);
         else this.letters?.wave(ctx.clock.time);
@@ -339,6 +344,7 @@ class RoomAct implements StoryAct {
       id: "room-toy",
       label: labels.toy,
       onActivate: () => {
+        if (this.inert.has("toy")) return;
         this.tapToy(ctx);
       },
     });
@@ -346,6 +352,7 @@ class RoomAct implements StoryAct {
       id: "room-spark",
       label: labels.spark,
       onActivate: () => {
+        if (this.inert.has("spark")) return;
         this.tapSpark(ctx);
       },
     });
@@ -1450,8 +1457,10 @@ class RoomAct implements StoryAct {
 
   /**
    * The hotspots over what can be touched this frame (canvas px), each a
-   * real button for the keyboard and screen readers. A focused hotspot keeps
-   * its last place when its object leaves the frame, so focus never drops.
+   * real button for the keyboard and screen readers. A hotspot with keyboard
+   * focus keeps its last place when its object leaves the frame or its
+   * window (inert in the second case) until the visitor moves on, so focus
+   * never drops to the page inside the act.
    */
   private placeHotspots(ctx: StoryContext, state: ActState) {
     const spots = this.spots;
@@ -1460,11 +1469,24 @@ class RoomAct implements StoryAct {
     const t = state.t;
     const size = ctx.size;
     const flying = t >= at("r-dragged", 0);
-    // In its window and on screen: placed. In its window but off the frame while it has focus: kept where
-    // it was, so a keyboard visitor does not lose their place. Out of its window: gone.
-    const keep = (spot: StoryHotspot, rect: ReturnType<typeof projectBox>, inPlay: boolean) => {
-      if (!inPlay) spot.place(null);
-      else if (rect || !(spot.focused && this.keyboard)) spot.place(rect);
+    // In its window and on screen: placed. Off the frame, or out of its window, while it has keyboard
+    // focus: kept where it was, so a keyboard visitor's focus never drops to the page (out of its window
+    // it is inert until they Tab on). Otherwise out of its window: gone.
+    const keep = (
+      name: keyof Spots,
+      spot: StoryHotspot,
+      rect: ReturnType<typeof projectBox>,
+      inPlay: boolean,
+    ) => {
+      const held = spot.focused && this.keyboard;
+      if (inPlay) this.inert.delete(name);
+      else if (held) this.inert.add(name);
+      else {
+        this.inert.delete(name);
+        spot.place(null);
+        return;
+      }
+      if (rect || !held) spot.place(rect);
     };
     // Her: the boxes of her hit capsules.
     let toyRect = null;
@@ -1475,9 +1497,10 @@ class RoomAct implements StoryAct {
       for (const proxy of this.proxies) this.hitBox.union(this.partBox.setFromObject(proxy));
       toyRect = projectBox(this.hitBox, camera, size);
     }
-    keep(spots.toy, toyRect, toyInPlay);
+    keep("toy", spots.toy, toyRect, toyInPlay);
     const lettersShown = !flying && t >= this.letterTiming.to;
     keep(
+      "letters",
       spots.letters,
       lettersShown ? projectBox(this.letterBox, camera, size) : null,
       lettersShown,
@@ -1493,21 +1516,22 @@ class RoomAct implements StoryAct {
       this.hitBox.applyMatrix4(box.root.matrixWorld);
       boxRect = projectBox(this.hitBox, camera, size);
     }
-    keep(spots.box, boxRect, boxInPlay);
+    keep("box", spots.box, boxRect, boxInPlay);
     const spark = this.spark;
     const sparkInPlay = !!spark && this.sparkShown > 0.5;
     const sparkRect = spark && sparkInPlay ? projectPoint(spark.position, camera, size, 48) : null;
-    keep(spots.spark, sparkRect, sparkInPlay);
+    keep("spark", spots.spark, sparkRect, sparkInPlay);
     let tvRect = null;
     const tvInPlay = !!this.props && t < at("r-dive", 0.3);
     if (this.props && tvInPlay) {
       tvRect = projectBox(this.props.screenBox(this.hitBox), camera, size);
     }
-    keep(spots.tv, tvRect, tvInPlay);
+    keep("tv", spots.tv, tvRect, tvInPlay);
   }
 
   private placeNoSpots() {
     const spots = this.spots;
+    this.inert.clear();
     if (!spots) return;
     for (const spot of Object.values(spots)) spot.place(null);
   }
