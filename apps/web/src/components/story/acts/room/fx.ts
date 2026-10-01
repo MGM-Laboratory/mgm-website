@@ -406,6 +406,15 @@ export class LightPool {
     this.mesh.visible = intensity * falloff > 0.003;
   }
 
+  /** A pool of an explicit size: `width` by `depth` metres on the plane y = `y`, turned by `yaw`. */
+  place(centre: Vector3, width: number, depth: number, yaw: number, intensity: number) {
+    this.mesh.position.set(centre.x, centre.y + 0.0006, centre.z);
+    this.mesh.scale.set(width, 1, depth);
+    this.mesh.rotation.set(0, yaw, 0);
+    this.uniforms.uIntensity.value = intensity;
+    this.mesh.visible = intensity > 0.003;
+  }
+
   setColour(colour: number) {
     this.uniforms.uColour.value.setHex(colour);
   }

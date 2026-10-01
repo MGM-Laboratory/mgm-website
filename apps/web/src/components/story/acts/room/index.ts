@@ -134,6 +134,8 @@ class RoomAct implements StoryAct {
   private motes: DustMotes | null = null;
   private readonly puff = new DustPuff(90);
   private readonly pool = new LightPool(SPARK_COLOUR);
+  /** The lamp's warm pool on the table under the phrase and her (the light scheme's dusk). */
+  private readonly tablePool = new LightPool(0xffb36b);
   private readonly sparkLight = new PointLight(SPARK_COLOUR, 0, 0.6, 2);
   /** A soft light from the camera's side, so her face reads against the window. */
   private readonly fill = new DirectionalLight(0xfff1e0, 0);
@@ -224,7 +226,14 @@ class RoomAct implements StoryAct {
     // The objects of the act, in the room frame, behind the page backdrop (the card act's drop
     // dissolves into them with the room).
     this.group.name = "story-room-act";
-    this.group.add(this.letters.toy.group, this.shadows.mesh, this.puff.points, this.pool.mesh);
+    this.group.add(
+      this.letters.toy.group,
+      this.shadows.mesh,
+      this.puff.points,
+      this.pool.mesh,
+      this.tablePool.mesh,
+    );
+    this.tablePool.mesh.name = "story-room-table-pool";
     const top = anchors.table.topY;
     const motes = new DustMotes(
       ctx.tier === "low" ? 70 : 180,
@@ -347,6 +356,7 @@ class RoomAct implements StoryAct {
     motes.points.visible = true;
     this.puff.points.visible = true;
     this.pool.mesh.visible = true;
+    this.tablePool.mesh.visible = true;
     this.spark.warm(true);
     this.trail.warm(true);
     for (const letter of this.letters.toy.letters) letter.scale = 1;
@@ -570,7 +580,14 @@ class RoomAct implements StoryAct {
     const lit = this.litBySpots(still);
 
     // --- the room
-    room.setGrade(ctx.palette.scheme);
+    // In the light scheme the room is graded toward dusk as the lamps warm up (the afternoon grade alone
+    // reads as flat, overcast daylight), and the lamp leaves a warm pool on the table under the phrase
+    // and her. The dark scheme is already a lamp-lit night.
+    const light = ctx.palette.scheme === "light";
+    const dusk = light ? 0.45 * smoothstep(0, 0.65, state.beat("r-land")) : 0;
+    room.setGrade(ctx.palette.scheme, 1 - dusk);
+    const pool = this.tmp.v.set(0.4, room.anchors.table.topY, -0.53);
+    this.tablePool.place(pool, 0.9, 0.6, 0, light ? 0.24 * this.seam(state) : 0);
     room.setPresence(1);
     // The lamps finish warming as the box settles, and dim a little around the screen once it is on.
     const warm = LAMPS_AT_LAND + (1 - LAMPS_AT_LAND) * smoothstep(0, 0.65, state.beat("r-land"));
@@ -682,6 +699,7 @@ class RoomAct implements StoryAct {
     this.shadows.commit();
     this.puff.points.visible = false;
     this.pool.mesh.visible = false;
+    this.tablePool.mesh.visible = false;
     this.sparkLight.intensity = 0;
     this.fill.intensity = 0;
     this.spark?.setIntensity(0);
@@ -1086,7 +1104,7 @@ class RoomAct implements StoryAct {
       bloom: (0.16 + 0.3 * sparkle + 0.2 * smoothstep(0, 0.2, screen)) * on * bloom,
       bloomThreshold: MathUtils.lerp(0.82, 0.68, sparkle),
       bloomRadius: 0.55,
-      vignette: 0.3 * on,
+      vignette: (ctx.palette.scheme === "light" ? 0.42 : 0.3) * on,
       grain: 0.035 * on,
     });
   }
@@ -1097,7 +1115,16 @@ class RoomAct implements StoryAct {
     this.fill.position.copy(camera.position).addScaledVector(UP, 0.25);
     this.fill.target.position.copy(this.tmp.pose.target);
     this.fill.target.updateMatrixWorld();
-    const light = ctx.palette.scheme === "light" ? 0.5 : 0.28;
+    // In the light scheme it comes from the lamp side (the frame's right), softer, so she and the letters
+    // keep their modelling instead of a flat frontal light.
+    const lightScheme = ctx.palette.scheme === "light";
+    const light = lightScheme ? 0.25 : 0.28;
+    if (lightScheme) {
+      this.fill.position.addScaledVector(
+        this.tmp.v.setFromMatrixColumn(camera.matrixWorld, 0),
+        0.6,
+      );
+    }
     // Eased in with the rest of the act's look: the card act hands over a frame without it.
     this.fill.intensity = light * (1 - 0.4 * state.beat("r-tv")) * this.seam(state);
   }
@@ -1218,6 +1245,7 @@ class RoomAct implements StoryAct {
     if (this.box) this.box.root.visible = !near;
     if (this.letters) this.letters.toy.group.visible &&= !near;
     this.shadows.mesh.visible = !near;
+    if (near) this.tablePool.mesh.visible = false;
     if (this.motes) this.motes.points.visible &&= !near;
     if (this.godette) this.godette.stand.visible = !near;
   }
@@ -1574,6 +1602,7 @@ class RoomAct implements StoryAct {
     if (this.letters) this.letters.toy.group.visible = false;
     this.puff.points.visible = false;
     this.pool.mesh.visible = false;
+    this.tablePool.mesh.visible = false;
     this.sparkLight.intensity = 0;
     this.fill.intensity = 0;
     this.spark?.setIntensity(0);
@@ -1619,6 +1648,7 @@ class RoomAct implements StoryAct {
     this.motes?.dispose();
     this.puff.dispose();
     this.pool.dispose();
+    this.tablePool.dispose();
     this.spark?.dispose();
     this.trail?.dispose();
     this.burst?.dispose();
