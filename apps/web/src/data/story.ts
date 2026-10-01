@@ -142,7 +142,9 @@ export const STORY_PANELS: readonly StoryPanel[] = [
 export const STORY_FINALE = {
   title: "Let's work together.",
   line: "Bring us an idea. We will build the world around it.",
-  action: { label: "Get in touch", href: "/contact" },
+  action: { label: "Start a project", href: "/contact" },
+  /** The button over her in the WebGL story (keyboard and screen readers): she answers it. */
+  hello: "Say hello",
   /** Alt text of the waving still in the storybook. */
   alt: "The figure standing on a plain background, waving hello.",
 } as const;

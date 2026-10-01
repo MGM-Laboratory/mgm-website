@@ -98,21 +98,174 @@ html[data-story-mode="gl"] [data-storybook] {
   height: var(--story-vh, 100vh);
 }
 
-/* The character stands in the top of the screen, the words below her. */
+/*
+ * The WebGL story: Godette stands in the top of the screen, on the words
+ * (the act reads the title's place and stands her on its capitals), and
+ * the action stays clear of the "Watch again" control at the bottom left.
+ */
 .story-finale-gl {
   height: 100%;
   justify-content: flex-end;
-  padding: 0 1.5rem clamp(3.5rem, 13vh, 9rem);
+  padding: 0 1.5rem max(5.5rem, 9vh);
+}
+
+/* Before the motion is ready, the WebGL block shows nothing it would then hide. */
+html[data-story-mode="gl"]
+  .story-finale-gl:not([data-finale-ready])
+  :is(.story-finale-words, .story-finale-line, [data-finale-action]) {
+  visibility: hidden;
 }
 
 .story-finale-book {
   padding-bottom: 6rem;
 }
 
+/* The storybook's still of her waving (a cut-out, so it sits on either page colour). */
 .story-finale-art {
-  width: clamp(8.5rem, 17vw, 12rem);
-  aspect-ratio: 1;
-  margin-bottom: 2rem;
+  width: clamp(9rem, 19vw, 13.5rem);
+  aspect-ratio: 4 / 5;
+  margin-bottom: 1.25rem;
+}
+
+.story-finale-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+
+.story-finale-art .story-still-dark,
+.dark .story-finale-art .story-still-light {
+  display: none;
+}
+
+.dark .story-finale-art .story-still-dark {
+  display: block;
+}
+
+.story-finale-title {
+  position: relative;
+  font-size: clamp(2.6rem, 7.4vw, 6.75rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.story-finale-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Each letter rises out of its own mask; the mask reaches past the line for the descenders. */
+.story-finale-char {
+  display: inline-block;
+  padding: 0.1em 0 0.22em;
+  margin: -0.1em 0 -0.22em;
+  overflow: clip;
+}
+
+.story-finale-rise,
+.story-finale-roll {
+  display: inline-block;
+}
+
+.story-finale-roll {
+  position: relative;
+}
+
+/* The identical clone that rolls in from below, out of sight at rest. */
+.story-finale-clone {
+  position: absolute;
+  top: 130%;
+  left: 0;
+}
+
+.story-finale-pen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.story-finale-pen path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.story-finale-line {
+  text-wrap: balance;
+}
+
+.story-finale-line-mask {
+  display: inline-block;
+  padding-bottom: 0.15em;
+  margin-bottom: -0.15em;
+  overflow: clip;
+}
+
+.story-finale-line-word {
+  display: inline-block;
+}
+
+/* Her stars: they burst out of the pill when it is hovered. */
+.story-finale-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.story-finale-sparks svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin: -0.4rem 0 0 -0.4rem;
+  fill: var(--brand-yellow);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.story-finale-sparks svg[data-tone="1"] {
+  fill: var(--brand-red);
+}
+
+.story-finale-sparks svg[data-tone="2"] {
+  fill: var(--brand-green);
+}
+
+.story-finale-sparks svg[data-tone="3"] {
+  fill: var(--brand-blue);
+}
+
+/* The arrow flies out to the corner and a new one comes in behind it. */
+.story-finale-arrow-a,
+.story-finale-arrow-b {
+  transition: translate 0.45s cubic-bezier(0.35, 0, 0, 1);
+}
+
+.story-finale-arrow-b {
+  translate: -110% 110%;
+}
+
+.story-finale-action:hover .story-finale-arrow-a,
+.story-finale-action:focus-visible .story-finale-arrow-a {
+  translate: 110% -110%;
+}
+
+.story-finale-action:hover .story-finale-arrow-b,
+.story-finale-action:focus-visible .story-finale-arrow-b {
+  translate: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-finale-arrow-a,
+  .story-finale-arrow-b {
+    transition: none;
+  }
 }
 
 /* ------------------------------------------------------------ storybook cards */

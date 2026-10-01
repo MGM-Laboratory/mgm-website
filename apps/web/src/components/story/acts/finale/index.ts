@@ -1,155 +1,763 @@
 import {
-  CapsuleGeometry,
-  Group,
-  Mesh,
-  MeshStandardMaterial,
-  SphereGeometry,
+  DirectionalLight,
+  HemisphereLight,
+  Plane,
+  Raycaster,
+  Scene,
+  Vector2,
   Vector3,
-  type BufferGeometry,
-  type Material,
+  type Object3D,
 } from "three";
 
-import { aim, beatLabel, beatText } from "@/components/story/acts/placeholder-kit";
 import {
-  backOut,
-  cubicOut,
-  fit,
-  stepSpring,
+  Latch,
+  damp,
+  saturate,
   type ActState,
   type StoryAct,
   type StoryContext,
-  type StoryLabel,
+  type StoryHotspot,
   type StoryPointerEvent,
+  type StoryRect,
 } from "@/components/story/engine/act";
+import { beatOf } from "@/components/story/engine/timeline";
+import { finaleSignal } from "@/components/story/finale-signal";
+import { ensureGodette } from "@/components/story/props/shared";
+import type { Godette, GodetteBodyLayer, GodetteFace } from "@/components/story/props/godette";
+import { STORY_FINALE } from "@/data/story";
+import { random, randomBetween } from "@/lib/random";
+
+import {
+  PHASE,
+  WAVE_LIFE_T,
+  actingTime,
+  bodyYaw,
+  cameraJolt,
+  cameraLook,
+  dizzyAmount,
+  fallHeight,
+  fallSpeed,
+  framingAt,
+  headShake,
+  squash,
+  storyLayers,
+} from "./acting";
+import { SpriteBatch, StrokeBatch } from "./batches";
+import { placeCamera, solveShot, type Shot } from "./framing";
+import {
+  AmbientStars,
+  StarBursts,
+  drawDizzy,
+  drawImpact,
+  drawSpeedLines,
+  finaleColors,
+  type FinaleColors,
+} from "./fx";
 
 /**
- * PLACEHOLDER for Act 4 (the finale package replaces it). A hard cut to the
- * page colour, a capsule that falls into frame, lands, stands and waves,
- * then lives there (hover makes it shy, a tap makes it hop). During `f-out`
- * the canvas rides on the finale block, so she leaves with the text.
+ * Act 4, "Your turn" (SPEC section 1, Act 4). A hard cut from the last
+ * world to the plain page: Godette falls into frame, lands on her bottom,
+ * sees stars, shakes them off, stands, dusts herself off, finds us and
+ * waves. "Let's work together." docks under her feet as the block scrolls
+ * in, and then she lives there: she follows the cursor, gets shy when
+ * hovered, giggles, hops or strikes her hero pose when clicked, yawns and
+ * stretches when left alone, and waves goodbye as the footer comes.
+ *
+ * - Her own scene, lit with a soft key, a fill and a rim, over the exact
+ *   page colour (the backdrop paints it, `toneMapped: false`), so she sits
+ *   on the page itself in both schemes. She is life size here (1.848 m);
+ *   the camera is what makes her big or small.
+ * - The story (falling, landing, standing, the start of the wave) is a pure
+ *   function of the scroll position (`acting.ts`); the wave, the idle life
+ *   and every reaction run on the clock.
+ * - Her feet stand on the screen height where the title's letters sit at
+ *   the terminal rest (`framing.ts`), measured from the DOM every frame.
+ * - During `f-out` the stage layer rides on the finale block, so she leaves
+ *   with the words.
+ *
+ * Hand-off: at `f-cut` she comes from the worlds act (`ensureGodette`); the
+ * active act alone poses her and calls `update()`, so this act takes her
+ * into its scene on every frame it owns and sets every one of her settings.
  */
 
-/** A spot of its own, far from the room, so nothing else is in frame. */
-const HOME = new Vector3(40, 0, 0);
+const WAVE = beatOf("f-wave");
+const OUT = beatOf("f-out");
 
-class FinalePlaceholder implements StoryAct {
+/** Vertical field of view, degrees: a gentle lens, flattering at any aspect. */
+const FOV = 30;
+/** The title shows once the block is on its way in during the wave. */
+const TITLE_T = WAVE.start + WAVE.vh * 0.42;
+/** Two strokes a loop: she waves this long before she settles. */
+const WAVE_SECONDS = 1.333 * 2 + 0.2;
+/** Quick clicks in a row that make her spin until she is dizzy. */
+const SPIN_CLICKS = 5;
+
+type Special = { kind: "hero" | "spin"; t: number };
+type Glance = { point: Vector3; until: number; face: GodetteFace | null; faceUntil: number };
+type Part = "head" | "body" | "legs" | "arms" | "hands" | null;
+
+function smooth(a: number, b: number, x: number) {
+  const k = saturate((x - a) / (b - a));
+  return k * k * (3 - 2 * k);
+}
+
+class FinaleAct implements StoryAct {
   readonly id = "finale" as const;
-  private readonly group = new Group();
-  private readonly body = new Group();
-  private readonly arm = new Group();
-  private hitMesh: Mesh | null = null;
-  private label: StoryLabel | null = null;
-  private readonly materials: Material[] = [];
-  private readonly geometries: BufferGeometry[] = [];
-  private readonly hop: [number, number] = [0, 0];
-  private hopTarget = 0;
-  private shy = 0;
-  private hovered = false;
+  private readonly scene = new Scene();
+  private readonly key = new DirectionalLight(0xffffff, 2.4);
+  private readonly rim = new DirectionalLight(0xffffff, 1.6);
+  private readonly fill = new HemisphereLight(0xffffff, 0xe8e2d8, 1.2);
+  private godette: Godette | null = null;
+  private sprites: SpriteBatch | null = null;
+  private strokes: StrokeBatch | null = null;
+  private ambient = new AmbientStars(AmbientStars.countFor("high"));
+  private readonly bursts = new StarBursts();
+  private colors: FinaleColors | null = null;
+  private scheme: "light" | "dark" | null = null;
+  private hotspot: StoryHotspot | null = null;
+  private ctx: StoryContext | null = null;
+  private still = false;
+
+  // camera
+  private readonly shot: Shot = { distance: 8, eye: 1 };
+  private yaw = 0;
+  private floorY = 0.62;
+  private topY = 0.1;
+  private titleEl: HTMLElement | null = null;
+  private actionEl: HTMLElement | null = null;
+  private metricsKey = "";
+  private capOffset = 0;
+  private measureCanvas: HTMLCanvasElement | null = null;
+
+  // life
+  private life = 0;
+  private waveClock = -1;
+  private byeClock = 0;
+  private readonly bye = new Latch();
+  private readonly ambientIn = new Latch();
+  private titleOn = false;
+  private special: Special | null = null;
+  private lastSpecial: Special["kind"] | null = null;
+  private glance: Glance | null = null;
+  private nextAutoGlance = 6;
+  private clicks: number[] = [];
+  private lastClickAt = -10;
+  private hoverPart: Part = null;
+  private hoverGrace = 0;
+  private pointerSeenAt = -10;
+  private lastPointer = { x: 9, y: 9 };
+  private interactive = false;
+
+  // scratch
+  private readonly ray = new Raycaster();
+  private readonly ndc = new Vector2();
+  private readonly plane = new Plane(new Vector3(0, 0, 1), -0.35);
+  private readonly look = new Vector3();
+  private readonly tmp = new Vector3();
+  private readonly tmp2 = new Vector3();
+  private readonly head = new Vector3();
+  private readonly contact = new Vector3();
 
   async init(ctx: StoryContext) {
-    const skin = new MeshStandardMaterial({ color: 0xf7bf33, roughness: 0.45 });
-    const suit = new MeshStandardMaterial({ color: 0x3a6dc5, roughness: 0.55 });
-    this.materials.push(skin, suit);
-    const torso = new CapsuleGeometry(0.16, 0.42, 6, 16);
-    const head = new SphereGeometry(0.15, 24, 16);
-    const limb = new CapsuleGeometry(0.045, 0.3, 4, 10);
-    this.geometries.push(torso, head, limb);
-    const torsoMesh = new Mesh(torso, suit);
-    torsoMesh.position.y = 0.45;
-    const headMesh = new Mesh(head, skin);
-    headMesh.position.y = 0.92;
-    const armMesh = new Mesh(limb, skin);
-    armMesh.position.y = 0.18;
-    this.arm.add(armMesh);
-    this.arm.position.set(0.22, 0.62, 0);
-    this.body.add(torsoMesh, headMesh, this.arm);
-    this.hitMesh = torsoMesh;
-    this.group.add(this.body);
-    this.group.position.copy(HOME);
-    this.label = await beatLabel(ctx, 0.08);
-    this.group.add(this.label.object);
-    this.group.visible = false;
-    ctx.stage.rootScene.add(this.group);
-    await ctx.stage.compile();
+    this.ctx = ctx;
+    this.still =
+      process.env.NODE_ENV !== "production" &&
+      new URLSearchParams(window.location.search).has("storystill");
+    const godette = await ensureGodette(ctx);
+    this.godette = godette;
+    this.scene.name = "finale";
+    this.key.position.set(-3.2, 5.2, 6.5);
+    this.rim.position.set(3.6, 3.8, -5.2);
+    this.fill.position.set(0, 4, 0);
+    this.scene.add(this.key, this.key.target, this.rim, this.rim.target, this.fill);
+    this.ambient = new AmbientStars(AmbientStars.countFor(ctx.tier));
+    const sprites = new SpriteBatch(260);
+    const strokes = new StrokeBatch(64);
+    this.sprites = sprites;
+    this.strokes = strokes;
+    this.scene.add(sprites.mesh, strokes.mesh);
+    this.applyPalette(ctx);
+    sprites.warm();
+    strokes.warm(new Vector3(0, -100, 0));
+    await ctx.stage.compile(this.scene);
+    await godette.compile(ctx.stage.renderer, ctx.stage.camera, this.scene);
+    sprites.begin();
+    sprites.end();
+    strokes.begin();
+    strokes.end();
   }
 
+  // ------------------------------------------------------------------ palette
+
+  private applyPalette(ctx: StoryContext) {
+    const scheme = ctx.palette.scheme;
+    if (scheme === this.scheme && this.colors) return;
+    this.scheme = scheme;
+    this.colors = finaleColors(ctx.palette);
+    const light = scheme === "light";
+    this.key.color.setHex(light ? 0xfff6ec : 0xffead6);
+    this.key.intensity = light ? 2.5 : 2.2;
+    this.rim.color.setHex(light ? 0xffffff : 0xbcd2ff);
+    this.rim.intensity = light ? 1.4 : 3.2;
+    this.fill.color.setHex(light ? 0xf3f5ff : 0x8ea4d4);
+    this.fill.groundColor.setHex(light ? 0xe6ddd2 : 0x2a2521);
+    this.fill.intensity = light ? 1.25 : 0.95;
+  }
+
+  palette(ctx: StoryContext) {
+    this.applyPalette(ctx);
+  }
+
+  tier(ctx: StoryContext) {
+    this.ambient = new AmbientStars(AmbientStars.countFor(ctx.tier));
+  }
+
+  // ------------------------------------------------------------------ frame
+
   update(ctx: StoryContext, state: ActState) {
-    if (!state.active) {
-      this.group.visible = false;
+    this.ctx = ctx;
+    const godette = this.godette;
+    const sprites = this.sprites;
+    const strokes = this.strokes;
+    if (!state.active || !godette || !sprites || !strokes) {
+      if (!state.active) this.idleOut();
       return;
     }
-    this.group.visible = true;
-    // The hard cut: the plain page, exact to the DOM.
-    ctx.stage.backdrop.set({ paint: 1, reveal: 0 });
-    const life = ctx.clock.time;
-    const cut = state.beat("f-cut");
-    const land = state.beat("f-land");
-    const stand = state.beat("f-stand");
-    const wave = state.beat("f-wave");
-    // Falls in from the top, lands on her bottom, stands, waves.
-    const drop = cubicOut(Math.min(1, cut * 0.4 + land * 1.2));
-    const y = 2.2 * (1 - drop);
-    const squash = fit(land, 0.35, 0.6, 0, 1) * (1 - fit(land, 0.6, 1, 0, 1));
-    stepSpring(this.hop, this.hopTarget, ctx.clock.dt, 240, 14);
-    if (this.hopTarget > 0 && this.hop[0] > 0.8 * this.hopTarget) this.hopTarget = 0;
-    this.shy += ((this.hovered ? 1 : 0) - this.shy) * Math.min(1, ctx.clock.dt * 8);
-    this.body.position.set(0, y + this.hop[0] * 0.25 + Math.sin(life * 2) * 0.01 * wave, 0);
-    this.body.scale.set(
-      1 + squash * 0.18,
-      (1 - squash * 0.2) * (1 - this.shy * 0.06),
-      1 + squash * 0.18,
-    );
-    this.body.rotation.set(
-      0,
-      Math.sin(life * 0.7) * 0.15 * wave - this.shy * 0.4,
-      (1 - backOut(stand)) * 0.9,
-    );
-    const waving = fit(wave, 0.1, 0.4, 0, 1);
-    this.arm.rotation.z = Math.PI * 0.85 * waving + Math.sin(life * 9) * 0.35 * waving;
+    if (state.arrived) this.resetLife();
+    this.applyPalette(ctx);
+    const colors = this.colors ?? finaleColors(ctx.palette);
+    const { stage } = ctx;
+    stage.setScene(this.scene);
+    stage.backdrop.set({ paint: this.still ? 0 : 1, reveal: 0 });
+    ctx.setHeaderTone(null);
 
-    // A static medium shot, straight on, eye level (portrait keeps her larger).
-    const { camera } = ctx.stage;
-    const portrait = ctx.size.portrait;
-    // She stands in the top of the frame; the finale's words sit below her.
-    const eye = new Vector3(HOME.x, 0.75, HOME.z + (portrait ? 3.4 : 3.6));
-    const look = new Vector3(HOME.x, portrait ? -0.05 : 0.24, HOME.z);
-    aim(camera, eye, look, portrait ? 46 : 34);
+    const dt = ctx.clock.storyDt;
+    this.life += dt;
+    const t = state.t;
+    const A = actingTime(t);
 
-    const label = this.label;
-    if (label) {
-      label.setText(beatText(state));
-      label.object.position.set(0, 1.35, 0);
+    // She is ours now: into this scene, every setting this act's.
+    if (godette.root.parent !== this.scene) this.scene.add(godette.root);
+    if (godette.shadow.parent !== this.scene) this.scene.add(godette.shadow);
+    if (godette.stand.parent) godette.stand.removeFromParent();
+
+    // ---------------------------------------------------------------- camera
+    this.measureLayout(ctx);
+    const framing = framingAt(A);
+    const life = A >= PHASE.waveInEnd || t >= WAVE_LIFE_T;
+    const landscape = ctx.size.aspect >= 1;
+    const height = framing.height * (landscape ? 1 : 0.94);
+    solveShot(
+      {
+        floorY: this.floorY,
+        topY: this.topY,
+        height,
+        halfWidth: framing.halfWidth,
+        fovDeg: FOV,
+        aspect: ctx.size.aspect,
+      },
+      this.shot,
+    );
+    const pointer = ctx.pointer;
+    const mouse = pointer.inside && pointer.type !== "touch";
+    if (
+      pointer.inside &&
+      (pointer.ndc.x !== this.lastPointer.x || pointer.ndc.y !== this.lastPointer.y)
+    ) {
+      this.lastPointer = { x: pointer.ndc.x, y: pointer.ndc.y };
+      this.pointerSeenAt = this.life;
     }
+    // The view swings a little toward the cursor, about her feet (the floor stays put).
+    const yawGoal = (mouse ? -pointer.ndc.x * 0.055 : 0) + Math.sin(this.life * 0.23) * 0.012;
+    this.yaw = damp(this.yaw, yawGoal, 3.2, dt);
+    const jolt = cameraJolt(A) * height;
+    placeCamera(stage.camera, this.shot, 0, 0, this.yaw, FOV, jolt);
+    if (stage.camera.view?.enabled) stage.camera.clearViewOffset();
+
+    // ---------------------------------------------------------------- body
+    const rootY = fallHeight(A);
+    const sy = squash(A);
+    const sxz = 1 / Math.sqrt(sy);
+    godette.root.position.set(0, rootY, 0);
+    godette.root.rotation.set(0, bodyYaw(A), 0);
+    godette.root.scale.set(sxz, sy, sxz);
+    godette.setContext("ground");
+    godette.setNervous(A < PHASE.landEnd ? 0.35 : 0);
+    godette.setBreath(1);
+    godette.setBlinkRate(this.still ? 0 : 1);
+    godette.setGaze(0, 0);
+    const falling = A < PHASE.fallEnd;
+    godette.setFlight(
+      falling ? { velocity: { x: 0, y: -fallSpeed(A), z: 0 }, amount: 0.35 } : null,
+    );
+    const light = colors.light;
+    godette.setLook({
+      rim: light ? 0.14 : 0.42,
+      rimColor: light ? 0xffffff : 0xcddcff,
+      rimPower: light ? 3 : 2.6,
+      toy: 0,
+      lift: light ? 0.05 : 0.08,
+      glowColor: ctx.palette.yellow,
+    });
+    godette.setShadow({
+      y: 0,
+      opacity: (light ? 0.34 : 0.62) * smooth(3.4, 0.3, rootY),
+      size: 0.85,
+    });
+
+    const plan = this.planLife(ctx, state, A, godette, life);
+    godette.pivot.rotation.set(0, plan.spin, plan.roll);
+    godette.setBody(plan.layers);
+    godette.setFace(plan.face);
+    godette.lookAt(plan.lookPoint, plan.lookWeight);
+    godette.setGlow(plan.glow);
+    godette.setAutoIdle(plan.autoIdle);
+    if (plan.hover) godette.react("hover");
+    godette.update(dt);
+
+    // ---------------------------------------------------------------- the title
+    const titleOn = t >= TITLE_T;
+    if (titleOn && !this.titleOn && state.direction > 0 && life) {
+      // the letters rise under her feet: she glances down at them
+      this.setGlance(new Vector3(0, 0.05, 1.1), 1.0, "surprised", 0.35);
+    }
+    this.titleOn = titleOn;
+    finaleSignal.setTitle(titleOn);
+
+    // ---------------------------------------------------------------- fx
+    sprites.begin();
+    strokes.begin();
+    drawSpeedLines(strokes, A, rootY, colors);
+    godette.socket("hips", this.contact);
+    this.contact.y = 0;
+    drawImpact(sprites, strokes, A, this.contact, stage.camera, colors);
+    godette.socket("head", this.head);
+    const scatter = smooth(PHASE.dizzyEnd - 0.45, PHASE.dizzyEnd + 0.35, A);
+    const lifeDizzy = plan.dizzy;
+    drawDizzy(
+      sprites,
+      strokes,
+      this.head,
+      Math.max(dizzyAmount(A), lifeDizzy),
+      lifeDizzy > dizzyAmount(A) ? 0 : scatter,
+      this.life,
+      colors,
+      Math.sin(this.life * 1.7) * 0.6,
+    );
+    const ambient = this.ambientIn.update(titleOn && life && !this.still, ctx.clock.dt, 0.7, 1.4);
+    this.ambient.draw(
+      sprites,
+      stage.camera,
+      this.shot.distance,
+      ambient,
+      this.life,
+      dt,
+      mouse ? pointer.ndc : null,
+      colors,
+    );
+    this.bursts.draw(sprites, this.life, colors);
+    sprites.end();
+    strokes.end();
+
+    // ---------------------------------------------------------------- hotspot
+    this.placeHotspot(ctx, godette);
+  }
+
+  // ------------------------------------------------------------------ life
+
+  private planLife(ctx: StoryContext, state: ActState, A: number, godette: Godette, life: boolean) {
+    const dt = ctx.clock.storyDt;
+    const camera = ctx.stage.camera;
+    let layers: GodetteBodyLayer[] = storyLayers(A);
+    let face: GodetteFace | "auto" = "auto";
+    let lookPoint: Vector3 | null = this.look.copy(camera.position);
+    let lookWeight = cameraLook(A);
+    let glow = 0;
+    let spin = 0;
+    let roll = 0;
+    let dizzy = 0;
+    let autoIdle: number | null = null;
+    let hover = false;
+
+    // the head shake that throws the stars off
+    const shake = headShake(A);
+    if (shake !== 0) {
+      this.tmp.set(Math.sin(shake) * 2.2, 1.55, Math.cos(shake) * 2.2);
+      lookPoint = this.look.copy(this.tmp);
+      lookWeight = 1;
+    }
+
+    if (!life) {
+      this.waveClock = -1;
+      this.interactive = false;
+      this.special = null;
+      this.hoverPart = null;
+      return { layers, face, lookPoint, lookWeight, glow, spin, roll, dizzy, autoIdle, hover };
+    }
+
+    // ---- the wave (life from here), then the idle loop
+    if (this.waveClock < 0) this.waveClock = 0;
+    else this.waveClock += dt;
+    const w = this.waveClock;
+    const intoWave = smooth(0, 0.14, w);
+    const intoIdle = this.still ? 0 : smooth(WAVE_SECONDS, WAVE_SECONDS + 0.55, w);
+    const waveTime = this.still ? 0.42 : w;
+    layers = [];
+    if (intoWave < 1) layers.push({ clip: "wave_in", weight: 1 - intoWave, time: 0.6 - 1e-3 });
+    if (intoIdle < 1)
+      layers.push({ clip: "wave_loop", weight: intoWave * (1 - intoIdle), time: waveTime });
+    if (intoIdle > 0) {
+      layers.push({ clip: "idle_loop", weight: intoIdle, time: Math.max(0, w - WAVE_SECONDS) });
+    }
+    lookWeight = 0.85;
+    this.interactive = w > 0.4 && !this.still;
+
+    // ---- goodbye as the footer comes
+    const byeOn = state.t > OUT.start + OUT.vh * 0.08 && intoIdle >= 1;
+    const bye = this.bye.update(byeOn, dt, 2.4, 2);
+    if (bye > 0) {
+      this.byeClock = byeOn ? this.byeClock + dt : this.byeClock;
+      const b = bye * bye * (3 - 2 * bye);
+      layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - b) }));
+      layers.push({ clip: "wave_loop", weight: b, time: this.byeClock });
+    } else {
+      this.byeClock = 0;
+    }
+
+    // ---- specials: the hero pose, the dizzy spin
+    const special = this.special;
+    if (special) {
+      special.t += dt;
+      if (special.kind === "hero") {
+        const e = smooth(0, 0.4, special.t) * (1 - smooth(2.2, 2.6, special.t));
+        layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - e) }));
+        layers.push({ clip: "superhero_pose", weight: e, time: special.t });
+        glow = 1.15 * smooth(0.25, 0.6, special.t) * (1 - smooth(1.9, 2.5, special.t));
+        glow *= 0.85 + 0.15 * Math.sin(special.t * 21);
+        if (special.t > 0.5 && special.t - dt <= 0.5) {
+          this.bursts.fire(godette.socket("hand_R", this.tmp2), this.life, 1.1);
+        }
+        if (e > 0.5) face = "big_smile";
+        if (special.t > 2.6) this.special = null;
+      } else {
+        const turn = smooth(0, 1.05, special.t);
+        spin = turn * Math.PI * 4;
+        const wob = smooth(0.9, 1.2, special.t) * (1 - smooth(2.4, 3, special.t));
+        roll = Math.sin(special.t * 5.5) * 0.07 * wob;
+        dizzy = smooth(0.85, 1.15, special.t) * (1 - smooth(2.5, 3.1, special.t));
+        if (special.t > 0.8 && special.t < 2.7) face = "dizzy";
+        if (special.t > 3.1) this.special = null;
+      }
+    }
+
+    // ---- where she looks: the cursor, what was clicked, the action, or us
+    const pointer = ctx.pointer;
+    const pointerActive = pointer.inside && this.life - this.pointerSeenAt < 3.5 && !this.still;
+    const hovered = finaleSignal.hovered;
+    if (hovered === "action" && this.actionPoint(ctx, this.tmp)) {
+      lookPoint = this.look.copy(this.tmp);
+      lookWeight = 0.75;
+      if (!this.special) face = "big_smile";
+      glow = Math.max(glow, 0.32 + 0.06 * Math.sin(this.life * 6));
+    } else if (this.glance && this.life < this.glance.until) {
+      lookPoint = this.look.copy(this.glance.point);
+      lookWeight = 0.85;
+      if (this.glance.face && this.life < this.glance.faceUntil && !this.special) {
+        face = this.glance.face;
+      }
+    } else if (pointerActive && this.pointerPoint(ctx, this.tmp)) {
+      lookPoint = this.look.copy(this.tmp);
+      lookWeight = 0.6;
+    } else if (intoIdle >= 1 && !this.still) {
+      // left alone: now and then she looks around on her own
+      this.nextAutoGlance -= dt;
+      if (this.nextAutoGlance <= 0) {
+        this.nextAutoGlance = randomBetween(4.5, 8.5);
+        const pick = random();
+        if (pick < 0.3) this.setGlance(new Vector3(0, 0.1, 1.6), randomBetween(1, 1.6), null, 0);
+        else if (pick < 0.6) {
+          const side = random() < 0.5 ? -1 : 1;
+          this.setGlance(new Vector3(side * 2.4, 2.4, -0.5), randomBetween(1.1, 1.8), null, 0);
+        } else if (this.actionPoint(ctx, this.tmp)) {
+          this.setGlance(this.tmp.clone(), 1.2, "smile", 1.2);
+        }
+      }
+      lookWeight = 0.55;
+    }
+    if (bye > 0.5) {
+      lookPoint = this.look.copy(camera.position);
+      lookWeight = 0.9;
+    }
+
+    // ---- hover: shy or curious while the pointer stays on her
+    if (this.interactive && !this.special) {
+      const over = this.hoverPart !== null || this.hotspot?.focused === true;
+      if (over) this.hoverGrace = 0.15;
+      else this.hoverGrace = Math.max(0, this.hoverGrace - dt);
+      hover = this.hoverGrace > 0;
+      autoIdle = 8;
+    }
+    // a pressed action: a happy hop on the way out
+    if (finaleSignal.pressedSince() < 0.05) godette.react("click");
+
+    return { layers, face, lookPoint, lookWeight, glow, spin, roll, dizzy, autoIdle, hover };
+  }
+
+  private setGlance(
+    point: Vector3,
+    seconds: number,
+    face: GodetteFace | null,
+    faceSeconds: number,
+  ) {
+    this.glance = {
+      point,
+      until: this.life + seconds,
+      face,
+      faceUntil: this.life + faceSeconds,
+    };
+  }
+
+  private resetLife() {
+    this.waveClock = -1;
+    this.byeClock = 0;
+    this.special = null;
+    this.glance = null;
+    this.clicks = [];
+    this.bursts.clear();
+    this.titleOn = false;
+  }
+
+  /** Not on screen: nothing of hers to show, the title waits, the hotspot hides. */
+  private idleOut() {
+    this.hotspot?.place(null);
+    this.hoverPart = null;
+    if (this.ctx) {
+      const t = this.ctx.director.t;
+      if (t < TITLE_T) finaleSignal.setTitle(false);
+    }
+  }
+
+  // ------------------------------------------------------------------ input
+
+  /** A press on her (the hotspot or a tap that hit her). */
+  private clickHer(part: Part) {
+    const godette = this.godette;
+    if (!godette || !this.interactive) return;
+    const now = this.life;
+    this.clicks = this.clicks.filter((at) => now - at < 2.4);
+    this.clicks.push(now);
+    const quick = now - this.lastClickAt < 0.42;
+    this.lastClickAt = now;
+    if (this.special) return;
+    if (this.clicks.length >= SPIN_CLICKS) {
+      this.clicks = [];
+      this.special = { kind: "spin", t: 0 };
+      this.lastSpecial = "spin";
+      this.bursts.fire(godette.socket("head", this.tmp2), now, 0.8);
+      return;
+    }
+    if (quick || part === "head") {
+      godette.react("poke");
+      return;
+    }
+    if (this.lastSpecial !== "hero" && random() < 0.34) {
+      this.special = { kind: "hero", t: 0 };
+      this.lastSpecial = "hero";
+      return;
+    }
+    this.lastSpecial = null;
+    if (godette.react("click")) {
+      this.bursts.fire(godette.socket("chest", this.tmp2), now, 0.6);
+    }
+  }
+
+  /** A tap on the page around her: a burst of little stars, and she looks. */
+  private clickPage(ctx: StoryContext, ndc: Readonly<{ x: number; y: number }>) {
+    if (!this.interactive) return;
+    this.ndc.set(ndc.x, ndc.y);
+    this.ray.setFromCamera(this.ndc, ctx.stage.camera);
+    const point = new Vector3();
+    if (!this.ray.ray.intersectPlane(this.plane, point)) return;
+    this.bursts.fire(point, this.life, 1);
+    this.setGlance(point, 1.4, "surprised", 0.45);
   }
 
   pointer(ctx: StoryContext, event: StoryPointerEvent) {
-    const mesh = this.hitMesh;
-    if (!mesh) return false;
-    const hit = event.raycast([this.body]).length > 0;
-    if (event.type === "move" || event.type === "leave") {
-      this.hovered = hit && event.type === "move";
-      ctx.pointer.setCursor(this.hovered ? "pointer" : null);
-      return hit;
-    }
-    if (event.type === "tap" && hit) {
-      this.hopTarget = 1;
+    const godette = this.godette;
+    if (!godette || !this.interactive) return false;
+    if (event.type === "tap") {
+      const part = this.partUnder(event.raycast(godette.hitProxy));
+      if (part) this.clickHer(part);
+      else this.clickPage(ctx, event.ndc);
       return true;
     }
     return false;
   }
 
+  private partUnder(hits: readonly { object: Object3D }[]): Part {
+    const hit = hits.at(0);
+    if (!hit) return null;
+    const part = (hit.object.userData as { part?: string }).part;
+    if (
+      part === "head" ||
+      part === "body" ||
+      part === "legs" ||
+      part === "arms" ||
+      part === "hands"
+    ) {
+      return part;
+    }
+    return "body";
+  }
+
+  /** The world point under the cursor, at her face's depth. */
+  private pointerPoint(ctx: StoryContext, out: Vector3) {
+    const p = ctx.pointer;
+    this.ndc.set(p.ndc.x, p.ndc.y);
+    this.ray.setFromCamera(this.ndc, ctx.stage.camera);
+    return this.ray.ray.intersectPlane(this.plane, out) !== null;
+  }
+
+  /** The world point in front of the action button (where she looks when it is hovered). */
+  private actionPoint(ctx: StoryContext, out: Vector3) {
+    const el = this.actionEl;
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    const canvas = ctx.dom.canvasRect;
+    const x = r.left + r.width / 2 - canvas.x;
+    const y = r.top + r.height / 2 - canvas.y;
+    this.ndc.set((x / ctx.size.width) * 2 - 1, 1 - (y / ctx.size.height) * 2);
+    this.ray.setFromCamera(this.ndc, ctx.stage.camera);
+    return this.ray.ray.intersectPlane(this.plane, out) !== null;
+  }
+
+  // ------------------------------------------------------------------ layout
+
+  /**
+   * Where her feet go: the top of the title's capitals at the terminal
+   * rest (the finale screen at the viewport top), a hair above them, and how
+   * high her head may reach (under the header).
+   */
+  private measureLayout(ctx: StoryContext) {
+    const finale = ctx.dom.element("finale");
+    if (!finale) return;
+    if (!this.titleEl || !this.titleEl.isConnected) {
+      this.titleEl = finale.querySelector<HTMLElement>("[data-finale-title]");
+      this.actionEl = finale.querySelector<HTMLElement>("[data-finale-action]");
+    }
+    const title = this.titleEl;
+    const height = ctx.size.height;
+    if (!title || height <= 0) return;
+    const finaleRect = finale.getBoundingClientRect();
+    const titleRect = title.getBoundingClientRect();
+    const offset = titleRect.top - finaleRect.top;
+    const style = getComputedStyle(title);
+    const size = Number.parseFloat(style.fontSize) || 64;
+    const key = `${style.fontFamily}|${style.fontWeight}|${size}|${style.lineHeight}`;
+    if (key !== this.metricsKey) {
+      this.metricsKey = key;
+      this.capOffset = this.capTop(style, size);
+    }
+    const floor = offset + this.capOffset - size * 0.07;
+    this.floorY = Math.min(0.9, Math.max(0.3, floor / height));
+    const header = 76;
+    this.topY = Math.min(this.floorY - 0.25, (header + height * 0.025) / height);
+  }
+
+  /** The cap height line's distance from the top of the title's first line box, px. */
+  private capTop(style: CSSStyleDeclaration, size: number) {
+    this.measureCanvas ??= document.createElement("canvas");
+    const g = this.measureCanvas.getContext("2d");
+    const lineHeight = Number.parseFloat(style.lineHeight) || size * 1.0;
+    if (!g) return (lineHeight - size) / 2 + size * 0.2;
+    g.font = `${style.fontWeight} ${size}px ${style.fontFamily}`;
+    const m = g.measureText("H");
+    const ascent = m.fontBoundingBoxAscent || size * 0.95;
+    const descent = m.fontBoundingBoxDescent || size * 0.25;
+    const baseline = (lineHeight - (ascent + descent)) / 2 + ascent;
+    return baseline - (m.actualBoundingBoxAscent || size * 0.7);
+  }
+
+  // ------------------------------------------------------------------ hotspot
+
+  private placeHotspot(ctx: StoryContext, godette: Godette) {
+    if (!this.interactive) {
+      this.hotspot?.place(null);
+      this.hoverPart = null;
+      ctx.pointer.setCursor(null);
+      return;
+    }
+    this.hotspot ??= ctx.overlay.hotspot({
+      id: "finale-godette",
+      label: STORY_FINALE.hello,
+      onActivate: () => {
+        const p = this.ctx?.pointer;
+        const part = p?.inside ? this.partUnder(p.raycast(godette.hitProxy)) : null;
+        this.clickHer(part ?? "body");
+      },
+    });
+    const rect = this.projectBounds(ctx, godette);
+    this.hotspot.place(rect);
+    const hits = ctx.pointer.raycast(godette.hitProxy);
+    this.hoverPart = this.partUnder(hits);
+    ctx.pointer.setCursor(this.hoverPart ? "pointer" : null);
+  }
+
+  /** Her box on screen (canvas px), from her sockets, with a little room. */
+  private projectBounds(ctx: StoryContext, godette: Godette): StoryRect | null {
+    const camera = ctx.stage.camera;
+    const { width, height } = ctx.size;
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    const sockets = ["head", "hand_L", "hand_R", "foot_L", "foot_R", "hips", "chest"] as const;
+    for (const name of sockets) {
+      godette.socket(name, this.tmp);
+      if (name === "head") this.tmp.y += 0.22;
+      this.tmp.project(camera);
+      const x = (this.tmp.x * 0.5 + 0.5) * width;
+      const y = (0.5 - this.tmp.y * 0.5) * height;
+      x0 = Math.min(x0, x);
+      y0 = Math.min(y0, y);
+      x1 = Math.max(x1, x);
+      y1 = Math.max(y1, y);
+    }
+    if (!Number.isFinite(x0)) return null;
+    const pad = Math.max(8, (x1 - x0) * 0.12);
+    const w = Math.max(48, x1 - x0 + pad * 2);
+    const cx = (x0 + x1) / 2;
+    return { x: cx - w / 2, y: y0 - pad, width: w, height: y1 - y0 + pad * 1.5 };
+  }
+
+  // ------------------------------------------------------------------ lifetime
+
   sleep() {
-    this.group.visible = false;
+    this.hotspot?.place(null);
+    this.hoverPart = null;
+    finaleSignal.setTitle(false);
+    finaleSignal.setHover(null);
+    this.resetLife();
   }
 
   dispose() {
-    this.group.removeFromParent();
-    for (const material of this.materials) material.dispose();
-    for (const geometry of this.geometries) geometry.dispose();
-    this.label?.dispose();
+    this.hotspot?.dispose();
+    this.hotspot = null;
+    finaleSignal.setTitle(false);
+    const godette = this.godette;
+    if (godette?.root.parent === this.scene) godette.root.removeFromParent();
+    if (godette?.shadow.parent === this.scene) godette.shadow.removeFromParent();
+    this.sprites?.dispose();
+    this.strokes?.dispose();
+    this.key.dispose();
+    this.rim.dispose();
+    this.fill.dispose();
+    this.scene.clear();
+    this.godette = null;
+    this.ctx = null;
   }
 }
 
 export function createAct(): StoryAct {
-  return new FinalePlaceholder();
+  return new FinaleAct();
 }
