@@ -27,7 +27,12 @@ import { StoryHeaderTone } from "@/components/story/engine/header-tone";
 import type { OverlaySkip, StoryOverlayStore } from "@/components/story/engine/overlay-store";
 import { readStoryPalette, samePalette } from "@/components/story/engine/palette";
 import { StoryPointerImpl } from "@/components/story/engine/pointer";
-import { HopelessWatch, createStoryGovernor, levelOf } from "@/components/story/engine/quality";
+import {
+  HopelessWatch,
+  createStoryGovernor,
+  levelOf,
+  type QualityLevel,
+} from "@/components/story/engine/quality";
 import { ScrollIntent } from "@/components/story/engine/scroll-intent";
 import type { StoryStage } from "@/components/story/engine/stage";
 import {
@@ -230,8 +235,8 @@ export class StoryDirector {
   private jumpOnStart: { beat: BeatId; p: number } | null = null;
   private debugEvery = 0;
   private readonly offs: Array<() => void> = [];
-  private readonly governor;
-  private readonly hopeless: HopelessWatch;
+  private governor: ReturnType<typeof createStoryGovernor>;
+  private hopeless: HopelessWatch;
 
   constructor(
     private readonly stage: StoryStage,
@@ -270,17 +275,8 @@ export class StoryDirector {
       dom: { get: () => this.dom ?? detachedDom(), enumerable: true },
     });
     this.ctx = ctx as unknown as StoryContext;
-    this.governor = createStoryGovernor(stage.level.tier, (level) => {
-      const before = stage.level.tier;
-      stage.setLevel(level);
-      if (level.tier !== before)
-        this.forEachAct((act) => {
-          act.tier?.(this.ctx);
-        });
-    });
-    this.hopeless = new HopelessWatch(() => {
-      this.fail("slow");
-    });
+    this.governor = this.createGovernor();
+    this.hopeless = this.createHopeless();
     overlay.onSkip = (mode) => {
       if (mode === "skip") this.scrollToT(TIMELINE.finaleStart, 1);
       else this.scrollToT(0, 1);
@@ -297,6 +293,41 @@ export class StoryDirector {
       autoAdvancing: this.autoAdvancing,
       idle: this.idle,
     };
+  }
+
+  /** The runtime governor, walking down the ladder from the stage's current level. */
+  private createGovernor() {
+    return createStoryGovernor(this.stage.level.tier, (level) => {
+      this.applyLevel(level);
+    });
+  }
+
+  private createHopeless() {
+    return new HopelessWatch(() => {
+      this.fail("slow");
+    });
+  }
+
+  /** Puts the stage at `level` and tells the acts when the tier changed. */
+  private applyLevel(level: QualityLevel) {
+    const before = this.stage.level.tier;
+    this.stage.setLevel(level);
+    if (level.tier !== before)
+      this.forEachAct((act) => {
+        act.tier?.(this.ctx);
+      });
+  }
+
+  /**
+   * Where quality starts (the warm-up's verdict, or `__story.setTier`): the
+   * stage moves there and the governor and the hopeless watch start over
+   * from it, so the governor's first step down is a step below this level,
+   * never back up to the device guess.
+   */
+  setStartLevel(level: QualityLevel) {
+    this.applyLevel(level);
+    this.governor = this.createGovernor();
+    this.hopeless = this.createHopeless();
   }
 
   /** The story section is on the page: measure, listen, and draw from the next tick. */
@@ -767,10 +798,7 @@ export class StoryDirector {
           this.scrollToT(t);
         },
         setTier: (tier: StoryTier) => {
-          this.stage.setLevel(levelOf(tier));
-          this.forEachAct((act) => {
-            act.tier?.(this.ctx);
-          });
+          this.setStartLevel(levelOf(tier));
         },
       },
     });

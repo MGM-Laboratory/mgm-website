@@ -299,7 +299,8 @@ async function assemble(
     discardStoryEngine("slow");
     return null;
   }
-  if (verdict.tier !== tier) stage.setLevel(levelOf(verdict.tier));
+  // The governor starts from the verdict, so its first step down is below it.
+  if (verdict.tier !== tier) director.setStartLevel(levelOf(verdict.tier));
   ready = new StoryEngine(stage, director, overlay, acts, props);
   engine = ready;
   report("ready", 1);
