@@ -74,6 +74,9 @@ export class ToyDirector {
   private readonly tvCentre: Vector3;
   private readonly v = new Vector3();
   private readonly w = new Vector3();
+  private readonly rockTip = new Vector3();
+  private readonly rockPivot = new Vector3();
+  private readonly rockQ = new Quaternion();
 
   constructor(
     private readonly godette: Godette,
@@ -146,10 +149,34 @@ export class ToyDirector {
     });
   }
 
+  /**
+   * Rocks her and the stand together on the stand's rim (a toy knocked on its
+   * round base), by `angle` about the horizontal `axis`. Call after placing her.
+   */
+  private rock(angle: number, axis: Vector3) {
+    if (angle === 0) return;
+    const g = this.godette;
+    const [x, , z] = this.room.anchors.figureSpot.position;
+    const tip = this.rockTip.crossVectors(axis, UP).normalize();
+    tip.multiplyScalar(Math.sign(angle) * GODETTE_STAND.radius);
+    const pivot = this.rockPivot.set(x, this.room.anchors.table.topY, z).add(tip);
+    this.rockQ.setFromAxisAngle(axis, angle);
+    for (const object of [g.root, g.stand]) {
+      object.position.sub(pivot).applyQuaternion(this.rockQ).add(pivot);
+      object.quaternion.premultiply(this.rockQ);
+    }
+  }
+
   /** r-land and r-figure (and the card act's drop): the forced pose, nerves and all. */
-  onStand(ctx: StoryContext, nervous: number, hovered: boolean) {
+  onStand(
+    ctx: StoryContext,
+    nervous: number,
+    hovered: boolean,
+    rock: Readonly<{ angle: number; axis: Vector3 }> | null = null,
+  ) {
     const g = this.godette;
     this.placeOnStand();
+    if (rock) this.rock(rock.angle, rock.axis);
     this.frame.tau = -1;
     this.frame.inside = false;
     g.setContext("toy");
@@ -176,12 +203,20 @@ export class ToyDirector {
    * stretch, a hop off the stand. Then she looks around the room.
    * r-spark: she looks around, the spark finds her, `confused_reach`.
    */
-  onTable(ctx: StoryContext, state: ActState, spark: Vector3 | null, hovered: boolean) {
+  onTable(
+    ctx: StoryContext,
+    state: ActState,
+    spark: Vector3 | null,
+    hovered: boolean,
+    rock: Readonly<{ angle: number; axis: Vector3 }> | null = null,
+  ) {
     const g = this.godette;
     const t = state.t;
     const p = state.beat("r-break");
     const clip = breakClipTime(p);
     this.placeOnStand();
+    // A knock from the last beat still rocking her fades before she steps off.
+    if (rock) this.rock(rock.angle * (1 - smoothstep(0, 0.14, p)), rock.axis);
     const motion = g.rootMotion("af_break", clip, this.w);
     motion.applyAxisAngle(UP, TOY_YAW).multiplyScalar(GODETTE_TABLE_SCALE);
     g.root.position.add(motion);

@@ -54,6 +54,7 @@ uniform float uFeedFlip;
 uniform float uFeedEncode;
 uniform sampler2D uFeed;
 uniform vec4 uEntry;
+uniform vec4 uTap;
 uniform vec3 uEye;
 uniform vec3 uScreenCentre;
 uniform vec3 uScreenNormal;
@@ -173,11 +174,19 @@ vec3 portal(vec2 q, float t, float warp) {
   return col;
 }
 
+// The sRGB transfer curve, exactly as the canvas encodes (so the feed matches the worlds act's own frame).
+vec3 srgbEncode(vec3 c) {
+  c = clamp(c, 0.0, 1.0);
+  vec3 lo = c * 12.92;
+  vec3 hi = 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055;
+  return mix(lo, hi, step(vec3(0.0031308), c));
+}
+
 vec3 feed(vec2 p) {
   vec2 uv = vec2(p.x, uFeedFlip > 0.5 ? p.y : 1.0 - p.y);
   vec3 c = texture2D(uFeed, uv).rgb;
   // A linear (colour managed) feed is encoded here; a display-byte feed is used as it is.
-  return mix(c, pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)), uFeedEncode);
+  return mix(c, srgbEncode(c), uFeedEncode);
 }
 
 void main() {
@@ -195,6 +204,17 @@ void main() {
     float s = uEntry.w;
     float wave = sin(r * 70.0 - s * 26.0) * exp(-r * 7.0) * exp(-s * 2.2) * smoothstep(0.0, 0.05, s);
     q += normalize(d + 1e-5) * wave * 0.012 * uEntry.z;
+    p = q / vec2(uAspect, 1.0) + 0.5;
+  }
+
+  // A tap on the glass: one soft ring from the finger, like a hand on a puddle of light.
+  if (uTap.z > 0.0) {
+    vec2 e = (uTap.xy - 0.5) * vec2(uAspect, 1.0);
+    vec2 d = q - e;
+    float r = length(d);
+    float s = uTap.w;
+    float wave = sin(r * 55.0 - s * 18.0) * exp(-r * 5.0) * exp(-s * 2.6) * smoothstep(0.0, 0.04, s);
+    q += normalize(d + 1e-5) * wave * 0.009 * uTap.z;
     p = q / vec2(uAspect, 1.0) + 0.5;
   }
 
@@ -291,6 +311,7 @@ export class TvScreen {
       uFeedEncode: { value: 0 },
       uFeed: { value: this.blank as Texture },
       uEntry: { value: new Vector4(0.5, 0.5, 0, 0) },
+      uTap: { value: new Vector4(0.5, 0.5, 0, 0) },
       uEye: { value: new Vector3() },
       uScreenCentre: { value: centre.clone() },
       uScreenNormal: { value: normal.clone().normalize() },
@@ -338,6 +359,8 @@ export class TvScreen {
     eye: Vector3;
     feed: Texture | null;
     entry: Readonly<{ x: number; y: number; strength: number; seconds: number }> | null;
+    /** A tap on the glass (screen UV, y up), and seconds since it. */
+    tap: Readonly<{ x: number; y: number; strength: number; seconds: number }> | null;
     hover: number;
   }) {
     const u = this.uniforms;
@@ -361,12 +384,19 @@ export class TvScreen {
     const entry = options.entry;
     if (entry) u.uEntry.value.set(entry.x, entry.y, entry.strength, entry.seconds);
     else u.uEntry.value.set(0.5, 0.5, 0, 0);
+    const tap = options.tap;
+    if (tap) u.uTap.value.set(tap.x, tap.y, tap.strength, tap.seconds);
+    else u.uTap.value.set(0.5, 0.5, 0, 0);
   }
 
-  /** The standby LED: red and blinking while the set sleeps, a white wink as it wakes, then dark. */
-  setLed(time: number, power: number) {
+  /**
+   * The standby LED: red and blinking while the set sleeps (faster and brighter under the pointer,
+   * as if it noticed), a white wink as it wakes, then dark.
+   */
+  setLed(time: number, power: number, hover = 0) {
     const standby = 1 - Math.min(1, power * 6);
-    const blink = 0.55 + 0.45 * Math.pow(Math.max(0, Math.sin(time * 1.6)), 6);
+    const rate = 1.6 + 3.2 * hover;
+    const blink = 0.55 + 0.25 * hover + 0.45 * Math.pow(Math.max(0, Math.sin(time * rate)), 6);
     const wink = Math.max(0, 1 - Math.abs(power - 0.1) * 12);
     const lu = this.ledUniforms;
     lu.uColour.value.setRGB(1, 0.23 + 0.77 * wink, 0.19 + 0.81 * wink);
