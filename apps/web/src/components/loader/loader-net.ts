@@ -585,9 +585,10 @@ export type ToyKind =
 export type Toy = Readonly<{
   kind: ToyKind;
   colour: string;
-  /** Landscape position (% of the screen) and portrait position. */
+  /** Position (% of the screen) on landscape screens, portrait screens and short landscape ones. */
   at: readonly [number, number];
   portrait: readonly [number, number];
+  short: readonly [number, number];
   size: number;
   drift: readonly [number, number, number];
   /** Shown on wide screens only. */
@@ -600,6 +601,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--brand-yellow)",
     at: [9, 24],
     portrait: [13, 53],
+    short: [62, 16],
     size: 46,
     drift: [6, -10, 0],
   },
@@ -608,6 +610,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--brand-red)",
     at: [16, 58],
     portrait: [85, 57],
+    short: [95, 34],
     size: 42,
     drift: [-8, 6, 14],
   },
@@ -616,6 +619,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--brand-blue)",
     at: [7, 82],
     portrait: [7, 82],
+    short: [60, 90],
     size: 36,
     drift: [5, -6, -10],
     wide: true,
@@ -625,6 +629,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--brand-green)",
     at: [21, 85],
     portrait: [10, 90],
+    short: [60, 86],
     size: 30,
     drift: [-5, -7, 45],
   },
@@ -633,6 +638,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--brand-blue)",
     at: [90, 20],
     portrait: [88, 91],
+    short: [94, 84],
     size: 40,
     drift: [-6, 8, 0],
   },
@@ -641,6 +647,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--brand-green)",
     at: [84, 50],
     portrait: [70, 49],
+    short: [88, 13],
     size: 36,
     drift: [7, 5, -18],
   },
@@ -649,6 +656,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--ld-ink)",
     at: [93, 72],
     portrait: [87, 5],
+    short: [59, 52],
     size: 26,
     drift: [-4, -6, 30],
   },
@@ -657,6 +665,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--brand-red)",
     at: [80, 86],
     portrait: [80, 86],
+    short: [96, 60],
     size: 28,
     drift: [6, -5, 20],
     wide: true,
@@ -666,6 +675,7 @@ export const TOYS: readonly Toy[] = [
     colour: "var(--brand-yellow)",
     at: [14, 40],
     portrait: [12, 5],
+    short: [73, 10],
     size: 24,
     drift: [4, 6, 40],
   },

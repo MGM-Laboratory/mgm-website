@@ -62,6 +62,15 @@ function now() {
   return performance.now();
 }
 
+/** A performance mark for each step of the outro (`ld:*` in the performance timeline). */
+function mark(name: string) {
+  try {
+    performance.mark(`ld:${name}`);
+  } catch {
+    // Marks are a nicety for timing checks.
+  }
+}
+
 function shuffled<T>(items: readonly T[]): T[] {
   return items
     .map((item) => ({ item, key: random() }))
@@ -646,6 +655,7 @@ export class LoaderShow {
       await this.reveal(true, true);
       return;
     }
+    mark("leave");
     const early = state.progress < 1;
     const status = early ? LOADER_COPY.rest : LOADER_COPY.done;
     this.override = { line: status, until: Infinity };
@@ -662,9 +672,11 @@ export class LoaderShow {
     this.endStall();
     this.changeStatus(status);
     const long = !early && (this.snapshot?.elapsed ?? 0) >= 2400;
+    mark("fold");
     await this.fold(early, long);
     if (this.gone()) return;
     // After the peek's tap tap the box opens at once; otherwise it taps once first.
+    mark("shut");
     await this.reveal(false, !long);
   }
 
@@ -676,8 +688,8 @@ export class LoaderShow {
       walls: 140 * k,
       wallStep: 70 * k,
       deck: 470 * k,
-      top: (quick ? 760 : 1060) * k,
-      topStep: 110 * k,
+      top: (quick ? 760 : 1040) * k,
+      topStep: 80 * k,
       flap: 420 * k,
       lid: 460 * k,
     };
@@ -743,7 +755,8 @@ export class LoaderShow {
         ? at.top + (panel.order - 7) * at.topStep
         : at.walls + panel.order * at.wallStep;
       const duration = lid ? at.lid : at.flap;
-      end = Math.max(end, delay + duration);
+      // The tuck flap folds inside, out of sight: the box is shut when the lid lands.
+      if (panel.id !== "tuck") end = Math.max(end, delay + duration * (lid ? 0.74 : 1));
       this.animate(
         el,
         lid
@@ -774,6 +787,7 @@ export class LoaderShow {
     if (this.gone()) return;
     await this.deckIn(dest, quick);
     if (this.gone()) return;
+    mark("deck");
 
     // The lid shuts (scheduled above).
     const left = foldEnd - now();
@@ -790,7 +804,12 @@ export class LoaderShow {
     const [fx, fy] = this.frontCentre();
     const dx = box.left + box.width / 2 - fx;
     const dy = box.top + box.height / 2 - fy;
-    const scale = Math.min(1.3, Math.max(1, (box.height * 0.4) / Math.max(1, front.offsetHeight)));
+    // The front panel ends at about a third of the screen's height (a little more on phones).
+    const share = box.width < box.height ? 0.34 : 0.4;
+    const scale = Math.min(
+      1.3,
+      Math.max(0.6, (box.height * share) / Math.max(1, front.offsetHeight)),
+    );
     return `translate(${px(dx)}, ${px(dy)}) rotateX(-16deg) rotateY(-28deg) scale(${Math.round(scale * 1000) / 1000})`;
   }
 
@@ -822,6 +841,10 @@ export class LoaderShow {
     const ty = dest.top + dest.height / 2 - cy;
     const scale = Math.max(1, dest.height / deckH);
     const duration = quick ? 300 : 380;
+    // The deck passes behind the box and drops in through its open top (no card shadows: they would grow with it).
+    const stage = this.root.querySelector<HTMLElement>(".ld-stage");
+    if (stage) stage.style.zIndex = "2";
+    fan.dataset.deck = "";
     const fly = this.animate(
       fan,
       [
@@ -972,22 +995,24 @@ export class LoaderShow {
       Math.hypot(box.width - cx, box.height - cy),
     );
     const max = (far / 0.314) * 1.08;
-    const duration = fast ? 420 : 640;
+    const duration = fast ? 460 : 820;
     const frames: Keyframe[] = [];
-    const steps = 12;
+    const ring: Keyframe[] = [];
+    const steps = 18;
+    const r0 = 3;
     for (let k = 0; k <= steps; k += 1) {
       const f = k / steps;
-      // Slow start, fast middle, a soft end (expo in-out on the radius).
-      const e =
-        f === 0
-          ? 0
-          : f === 1
-            ? 1
-            : f < 0.5
-              ? 2 ** (20 * f - 10) / 2
-              : (2 - 2 ** (-20 * f + 10)) / 2;
-      const radius = Math.max(0.5, max * e);
-      const turn = (Math.PI / 4) * f;
+      // The radius grows on a log scale, eased in and out: the opening reads as one steady zoom.
+      const g = f < 0.5 ? 4 * f ** 3 : 1 - (-2 * f + 2) ** 3 / 2;
+      const radius = k === 0 ? 0.5 : r0 * (max / r0) ** g;
+      const turn = (Math.PI / 4) * g;
+      // The yellow edge: the same star a little larger (the loader's own clip cuts its inside out).
+      const edge = starPoints(0, 0, radius + 7 + radius * 0.02).map(([x, y]) => {
+        const rx = x * Math.cos(turn) - y * Math.sin(turn) + cx;
+        const ry = x * Math.sin(turn) + y * Math.cos(turn) + cy;
+        return `${px(rx)} ${px(ry)}`;
+      });
+      ring.push({ clipPath: `polygon(${edge.join(", ")})`, offset: f });
       const star = starPoints(0, 0, radius).map(([x, y]) => {
         const rx = x * Math.cos(turn) - y * Math.sin(turn) + cx;
         const ry = x * Math.sin(turn) + y * Math.cos(turn) + cy;
@@ -1000,9 +1025,12 @@ export class LoaderShow {
         offset: f,
       });
     }
+    mark("open");
     const iris = this.animate(this.host, frames, { duration, easing: "linear" });
+    this.animate(this.q("iris"), ring, { duration, easing: "linear" });
     await iris?.finished.catch(() => undefined);
     if (this.gone()) return;
+    mark("exited");
     this.onExited();
   }
 }

@@ -75,7 +75,17 @@ function penKeyframes() {
   return `@keyframes ld-pen{${frames.join("")}}`;
 }
 
-const PEN_CSS = penKeyframes();
+/** A glint that keeps running along the cut line while the page waits (70% of each loop, then a rest). */
+function glintKeyframes() {
+  const frames = PEN_PATH.map(
+    ({ p, at }) =>
+      `${Math.round(at * 7000) / 100}%{transform:translate(${u(sx(p[0]))},${u(sy(p[1]))})}`,
+  );
+  frames.push("0%,70%,100%{opacity:0}", "3%,66%{opacity:1}");
+  return `@keyframes ld-glint{${frames.join("")}}`;
+}
+
+const PEN_CSS = penKeyframes() + glintKeyframes();
 
 function StarShape({ glow = true }: Readonly<{ glow?: boolean }>) {
   const core = polyPath(starPoints(50, 50, 50));
@@ -234,6 +244,7 @@ function Blueprint() {
   return (
     <div className="ld-print-sheet" data-ld="blueprint">
       {nodes}
+      <i className="ld-glint" />
       <div className="ld-pen" data-ld="pen">
         <div className="ld-pen-star">
           <StarShape />
@@ -381,6 +392,8 @@ function Toys() {
               "--y": `${toy.at[1]}cqh`,
               "--px": `${toy.portrait[0]}cqw`,
               "--py": `${toy.portrait[1]}cqh`,
+              "--sx": `${toy.short[0]}cqw`,
+              "--sy": `${toy.short[1]}cqh`,
               "--s": `clamp(${Math.round(toy.size * 0.62)}px, ${Math.round((toy.size / 14.4) * 100) / 100}cqw, ${toy.size}px)`,
               "--d": s3(0.5 + i * 0.07),
               "--dur": s3(3.2 + (i % 4) * 0.7),
@@ -458,6 +471,7 @@ export function LoaderView({ state, onExited }: LoaderViewProps) {
       <p className="ld-status" data-ld="status">
         {LOADER_COPY.statuses[0]}
       </p>
+      <div className="ld-iris" data-ld="iris" />
       <p className="ld-bar" data-ld="bar">
         {barText(0)}
       </p>

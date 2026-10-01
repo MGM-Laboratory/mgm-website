@@ -76,7 +76,7 @@
     --ld-sheet-top: max(56px, calc((100cqh - var(--ld-hub-space) - var(--ld-sheet-h)) / 2 + 20px));
     --ld-card-w: clamp(24px, 7.4cqw, 38px);
     --ld-fan-r: clamp(68px, 20cqw, 96px);
-    --ld-hub-y: calc(100cqh - clamp(96px, 15cqh, 140px));
+    --ld-hub-y: calc(100cqh - clamp(140px, 21cqh, 210px));
   }
 }
 
@@ -369,6 +369,22 @@
   }
 }
 
+/* A small light that keeps running along the cut line once it is drawn. */
+.ld-glint {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 1.5px var(--ld-line),
+    0 0 10px 3px rgb(247 191 51 / 0.75);
+  opacity: 0;
+  animation: ld-glint 6.5s linear 2.3s infinite;
+}
+
 /* The star that draws the sheet (the story's spark). */
 .ld-pen {
   position: absolute;
@@ -574,6 +590,10 @@
     0 1px 3px var(--ld-shadow);
 }
 
+.ld-fan[data-deck] .ld-card-face {
+  box-shadow: none;
+}
+
 .ld-card-front {
   display: grid;
   place-items: center;
@@ -693,6 +713,16 @@
   pointer-events: none;
 }
 
+/* The edge of the star the page opens through (clipped to the star by the show). */
+.ld-iris {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--brand-yellow);
+  clip-path: polygon(50% 50%, 50% 50%, 50% 50%);
+  pointer-events: none;
+}
+
 /* The text bar for reduced motion. */
 .ld-bar {
   position: absolute;
@@ -757,6 +787,11 @@
 }
 
 @media (orientation: landscape) and (max-height: 560px) {
+  .ld-toy {
+    left: var(--sx);
+    top: var(--sy);
+  }
+
   .ld-toy[data-wide] {
     display: none;
   }
