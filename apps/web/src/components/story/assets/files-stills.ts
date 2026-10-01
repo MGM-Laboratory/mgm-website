@@ -25,8 +25,8 @@ export const STORY_STILLS: ReadonlyMap<string, StoryStill> = new Map<string, Sto
     {
       width: 480,
       height: 600,
-      light: { url: "/story/v1/stills/finale-light.dcfa64e775.webp", bytes: 20072 },
-      dark: { url: "/story/v1/stills/finale-dark.ea159e01d6.webp", bytes: 21490 },
+      light: { url: "/story/v1/stills/finale-light.daecd9077d.webp", bytes: 19982 },
+      dark: { url: "/story/v1/stills/finale-dark.e7699bd0c7.webp", bytes: 22098 },
     },
   ],
 ]);
