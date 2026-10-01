@@ -35,10 +35,12 @@ html[data-story-mode="gl"] [data-storybook] {
 
 /* ------------------------------------------------------------ typography */
 
+/* One word that always fits: 13.5vw is about 80% of the width at any phone size, and it never wraps. */
 .story-title {
-  font-size: clamp(3.25rem, 13.5vw, 15rem);
+  font-size: clamp(2.4rem, 13.5vw, 15rem);
   line-height: 0.9;
   letter-spacing: -0.045em;
+  white-space: nowrap;
 }
 
 .story-description {
@@ -84,7 +86,7 @@ html[data-story-mode="gl"] [data-storybook] {
 
 .story-intro {
   /* The title's measured width (story-host.tsx); the fallback is its typical width. */
-  --story-box-w: calc(var(--story-title-w, clamp(3.25rem, 13.5vw, 15rem) * 5.9) * 0.8);
+  --story-box-w: calc(var(--story-title-w, clamp(2.4rem, 13.5vw, 15rem) * 5.9) * 0.8);
   --story-box-h: calc(var(--story-box-w) * 1.41102);
   --story-box-peek: calc(var(--story-box-h) * 0.2);
   position: relative;
