@@ -120,7 +120,8 @@ export class BoxDirector {
     // ------------------------------------------------------------ the base pose (pure)
     const rise = state.beat("c-rise");
     const sink = smoothstep(0.18, 0.62, state.beat("c-snake"));
-    const back = span(state.beat("c-gather"), 0.02, 0.34, cubicInOut);
+    // Back for the gather, eased once (by `away` below), in place before the stream reaches it.
+    const back = span(state.beat("c-gather"), 0.02, 0.4);
     const square = smoothstep(0.78, 0.9, state.beat("c-gather"));
     let yaw: number;
     let leanTop: number;
