@@ -106,6 +106,17 @@ function smooth(a: number, b: number, x: number) {
   return k * k * (3 - 2 * k);
 }
 
+/** The hero pose's share of her body, `t` seconds into it. */
+function heroWeight(t: number) {
+  return smooth(0, 0.4, t) * (1 - smooth(2.2, 2.6, t));
+}
+
+/** The hero pose's glow, `t` seconds into it (a quick flicker on a swell). */
+function heroGlow(t: number) {
+  const glow = 1.15 * smooth(0.25, 0.6, t) * (1 - smooth(1.9, 2.5, t));
+  return glow * (0.85 + 0.15 * Math.sin(t * 21));
+}
+
 class FinaleAct implements StoryAct {
   readonly id = "finale" as const;
   private readonly scene = new Scene();
@@ -146,6 +157,8 @@ class FinaleAct implements StoryAct {
   private readonly ambientIn = new Latch();
   private titleOn = false;
   private special: Special | null = null;
+  /** A hero pose melting away because five quick clicks started the spin over it. */
+  private fading: { t: number; k: number } | null = null;
   private lastSpecial: Special["kind"] | null = null;
   private glance: Glance | null = null;
   private nextAutoGlance = 6;
@@ -515,11 +528,10 @@ class FinaleAct implements StoryAct {
     if (special) {
       special.t += dt;
       if (special.kind === "hero") {
-        const e = smooth(0, 0.4, special.t) * (1 - smooth(2.2, 2.6, special.t));
+        const e = heroWeight(special.t);
         layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - e) }));
         layers.push({ clip: "superhero_pose", weight: e, time: special.t });
-        glow = 1.15 * smooth(0.25, 0.6, special.t) * (1 - smooth(1.9, 2.5, special.t));
-        glow *= 0.85 + 0.15 * Math.sin(special.t * 21);
+        glow = heroGlow(special.t);
         if (special.t > 0.5 && special.t - dt <= 0.5) {
           this.bursts.fire(godette.socket("hand_R", this.tmp2), this.life, 1.1);
         }
@@ -533,6 +545,19 @@ class FinaleAct implements StoryAct {
         dizzy = smooth(0.85, 1.15, special.t) * (1 - smooth(2.5, 3.1, special.t));
         if (special.t > 0.8 && special.t < 2.7) face = "dizzy";
         if (special.t > 3.1) this.special = null;
+      }
+    }
+    const fading = this.fading;
+    if (fading) {
+      fading.t += dt;
+      fading.k -= dt / 0.35;
+      if (fading.k <= 0) this.fading = null;
+      else {
+        const k = smooth(0, 1, fading.k);
+        const e = heroWeight(fading.t) * k;
+        layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - e) }));
+        layers.push({ clip: "superhero_pose", weight: e, time: fading.t });
+        glow = Math.max(glow, heroGlow(fading.t) * k);
       }
     }
 
@@ -613,10 +638,17 @@ class FinaleAct implements StoryAct {
     this.blush = 0;
     this.byeClock = 0;
     this.special = null;
+    this.fading = null;
     this.glance = null;
     this.clicks = [];
     this.bursts.clear();
     this.titleOn = false;
+  }
+
+  /** The special playing now gives way (a hero pose melts away instead of snapping off). */
+  private fadeSpecial() {
+    if (this.special?.kind === "hero") this.fading = { t: this.special.t, k: 1 };
+    this.special = null;
   }
 
   /** Not on screen: nothing of hers to show, the title waits, the hotspot hides. */
@@ -640,14 +672,16 @@ class FinaleAct implements StoryAct {
     this.clicks.push(now);
     const quick = now - this.lastClickAt < 0.42;
     this.lastClickAt = now;
-    if (this.special) return;
-    if (this.clicks.length >= SPIN_CLICKS) {
+    // Five quick clicks always win, even over a hero pose that is playing (it melts away).
+    if (this.clicks.length >= SPIN_CLICKS && this.special?.kind !== "spin") {
       this.clicks = [];
+      this.fadeSpecial();
       this.special = { kind: "spin", t: 0 };
       this.lastSpecial = "spin";
       this.bursts.fire(godette.socket("head", this.tmp2), now, 0.8);
       return;
     }
+    if (this.special) return;
     if (quick || part === "head") {
       godette.react("poke");
       return;
