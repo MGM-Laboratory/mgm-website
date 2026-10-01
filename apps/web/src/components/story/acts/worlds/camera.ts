@@ -1,0 +1,61 @@
+import type { PerspectiveCamera } from "three";
+
+import type { StoryContext } from "@/components/story/engine/act";
+
+import { wobble, type CameraShot } from "./common";
+
+/**
+ * Puts a `CameraShot` on the stage camera: the scrubbed pose (position,
+ * target, lens, Dutch roll) first, then two life layers on top that never
+ * change the story: handheld noise on the clock and a small look-around
+ * toward the cursor (a finger does nothing here: touch has no hover, and a
+ * drag scrolls the page).
+ */
+export class CameraRig {
+  private yaw = 0;
+  private pitch = 0;
+
+  /** `time` is the act's life clock; `dt` its step. */
+  apply(ctx: StoryContext, shot: CameraShot, time: number, dt: number, near = 0.06, far = 900) {
+    const camera = ctx.stage.camera;
+    const pointer = ctx.pointer;
+    const mouse = pointer.type === "mouse" && pointer.inside;
+    const k = 1 - Math.exp(-3 * dt);
+    this.yaw += ((mouse ? -pointer.ndc.x * shot.look : 0) - this.yaw) * k;
+    this.pitch += ((mouse ? pointer.ndc.y * shot.look * 0.6 : 0) - this.pitch) * k;
+    place(camera, shot, time, this.yaw, this.pitch);
+    camera.near = near;
+    camera.far = far;
+    camera.aspect = ctx.size.aspect;
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld(true);
+  }
+
+  /** Forget the cursor drift (a fresh arrival). */
+  reset() {
+    this.yaw = 0;
+    this.pitch = 0;
+  }
+}
+
+/** The shot plus handheld noise and the look-around offsets. */
+export function place(
+  camera: PerspectiveCamera,
+  shot: CameraShot,
+  time: number,
+  yaw = 0,
+  pitch = 0,
+) {
+  camera.position.copy(shot.position);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(shot.target);
+  if (shot.roll !== 0) camera.rotateZ(shot.roll);
+  if (shot.shake > 0) {
+    camera.rotateY(shot.shake * wobble(time * 1.7, 1));
+    camera.rotateX(shot.shake * 0.8 * wobble(time * 1.9, 2));
+    camera.rotateZ(shot.shake * 0.5 * wobble(time * 1.3, 3));
+  }
+  if (yaw !== 0) camera.rotateY(yaw);
+  if (pitch !== 0) camera.rotateX(pitch);
+  camera.fov = shot.fov;
+}

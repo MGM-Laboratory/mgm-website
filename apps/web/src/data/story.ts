@@ -98,6 +98,11 @@ export const STORY_WORLDS = [
   { id: "w-5", caption: "World 05 · The Edge" },
 ] as const;
 
+/** Labels in the five worlds (the button over Godette while she flies). */
+export const STORY_FLIGHT = {
+  cheer: "Cheer her on",
+} as const;
+
 /** The story after the cards, told as stills in the storybook. */
 export const STORY_PANELS: readonly StoryPanel[] = [
   {
