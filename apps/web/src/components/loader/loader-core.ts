@@ -6,6 +6,7 @@ import {
   updateBoot,
 } from "@/components/loader/boot";
 import { hardwareWebGL2 } from "@/components/reel/gl/webgl-probe";
+import type { StoryTier } from "@/components/story/assets/types";
 import { LOADER_COPY } from "@/data/story";
 import { NAV_ITEMS } from "@/data/nav";
 import { motionAllowed } from "@/lib/reduced-motion";
@@ -28,10 +29,15 @@ import { markRouteCoverStarted, markRouteRevealDone } from "@/lib/route-reveal";
  *   the WebGL story (hardware WebGL2, motion allowed), otherwise only for
  *   the fonts, and never longer than 12 s of visible time: the rest keeps
  *   loading behind the page. A short minimum keeps it from flashing.
- * - A repeat load in the same tab (a reload) is the fast path: it starts the
- *   story's build but waits only for the fonts, so the view's short outro
- *   is all the visitor sees; the build finishes behind the page (the story
- *   section shows its own waiting state if someone gets there first).
+ * - A repeat load in the same tab (a reload) is the fast path: the view
+ *   starts on the finished box. On a fast device (the story's high tier) it
+ *   waits only for the fonts and the story builds behind the page, which it
+ *   does without a dropped frame. Anywhere else the build (from the HTTP
+ *   cache it is mostly parsing and shader compiles) would share a slow main
+ *   thread with the reveal and the page's entrance, so it waits for that
+ *   too, for at most `repeatBuildCapMs` of visible time; what is left
+ *   finishes behind the page (the story section shows its own waiting
+ *   state if someone gets there first).
  * - Every fetch it starts catches its own failure (no unhandled rejection).
  * - While it shows it counts as a route cover (`lib/route-reveal.ts`), so
  *   every entrance that waits for the route curtain (the header, the
@@ -66,12 +72,21 @@ export const LOADER_TIMING = {
   minVisibleRepeatMs: 100,
   capVisibleMs: 12_000,
   /**
-   * How long a view's exit may take before the core hides it anyway. The
-   * deal's longest outro (the last cards land, the fold, the peek, the
-   * reveal) is about 3.2 s; this is only the failsafe for a view that never
-   * calls `onExited`.
+   * The longest a reload's fast path waits for the story's build below the
+   * high tier (from the HTTP cache it takes about 2 to 3 s on a mid phone).
+   * Leaving earlier would not be quicker: the build would share the main
+   * thread with the reveal and the page's entrance.
    */
-  exitTimeoutMs: 5_000,
+  repeatBuildCapMs: 4_000,
+  /**
+   * How long a view's exit may take before the core hides it anyway. The
+   * deal's longest outro (the last cards land and print, the fold, the
+   * peek, the tap and the reveal) is about 4.5 s, and timers slip on a busy
+   * phone; this is only the failsafe for a view that never calls `onExited`.
+   */
+  exitTimeoutMs: 8_000,
+  /** Once the view starts its reveal, it always gets at least this long to finish it. */
+  revealGraceMs: 1_500,
 } as const;
 
 const INITIAL: LoaderSnapshot = {
@@ -105,6 +120,15 @@ function storyCapable(pathname: string) {
   return motionAllowed() && hardwareWebGL2();
 }
 
+/** The story's tier guess for this device (no three.js needed); "low" when it cannot be read. */
+function storyTier(): Promise<StoryTier> {
+  return import("@/components/story/engine/quality")
+    .then(({ guessStoryTier, storyTierOverride }) => {
+      return storyTierOverride(window.location.search) ?? guessStoryTier();
+    })
+    .catch((): StoryTier => "low");
+}
+
 class LoaderCore {
   private snapshot: LoaderSnapshot = INITIAL;
   private readonly listeners = new Set<() => void>();
@@ -117,6 +141,8 @@ class LoaderCore {
   private pathname = "/";
   private revealed = false;
   private readonly revealWaiters = new Set<() => void>();
+  private readonly goneWaiters = new Set<() => void>();
+  private readonly visibleWaiters = new Set<{ ms: number; resolve: () => void }>();
 
   readonly subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -147,6 +173,7 @@ class LoaderCore {
       // Nothing covers the page (or the boot script's failsafe already took the loader down).
       this.revealing();
       this.set({ phase: "done" });
+      this.gone();
       this.afterDone();
       return;
     }
@@ -174,6 +201,13 @@ class LoaderCore {
   readonly revealing = () => {
     if (this.revealed) return;
     this.revealed = true;
+    // A reveal that started is never cut short by the failsafe.
+    if (this.snapshot.phase === "leaving") {
+      this.leavingFor = Math.min(
+        this.leavingFor,
+        LOADER_TIMING.exitTimeoutMs - LOADER_TIMING.revealGraceMs,
+      );
+    }
     if (coverMarked) markRouteRevealDone("loader");
     for (const resolve of [...this.revealWaiters]) resolve();
     this.revealWaiters.clear();
@@ -187,11 +221,37 @@ class LoaderCore {
     });
   }
 
+  /** Resolves when the loader has gone (its exit has played), at once when there is none. */
+  whenGone(): Promise<void> {
+    if (this.snapshot.phase === "done" || !readBoot().loader) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.goneWaiters.add(resolve);
+    });
+  }
+
+  private gone() {
+    for (const resolve of [...this.goneWaiters]) resolve();
+    this.goneWaiters.clear();
+  }
+
+  /** Resolves once the loader has shown for `ms` of visible time. */
+  private visibleFor(ms: number) {
+    return new Promise<void>((resolve) => {
+      if (this.snapshot.elapsed >= ms) resolve();
+      else this.visibleWaiters.add({ ms, resolve });
+    });
+  }
+
   private async work(story: boolean) {
     if (story) {
       const build = this.buildStory();
-      // The fast path leaves the build running behind the page.
-      if (!this.snapshot.repeat) await build;
+      if (!this.snapshot.repeat) {
+        await build;
+      } else if ((await storyTier()) !== "high") {
+        // The fast path waits for the build too, but only so long: the rest
+        // finishes behind the page.
+        await Promise.race([build, this.visibleFor(LOADER_TIMING.repeatBuildCapMs)]);
+      }
     }
     try {
       await Promise.race([document.fonts.ready, wait(2000)]);
@@ -226,11 +286,10 @@ class LoaderCore {
   /** The story's byte download, reported as the fetch share of the build (0 to 0.8). */
   private async preloadBytes() {
     try {
-      const [{ preloadStory }, { guessStoryTier, storyTierOverride }] = await Promise.all([
+      const [{ preloadStory }, tier] = await Promise.all([
         import("@/components/story/assets/cache"),
-        import("@/components/story/engine/quality"),
+        storyTier(),
       ]);
-      const tier = storyTierOverride(window.location.search) ?? guessStoryTier();
       await preloadStory(tier, (bytes) => {
         if (this.snapshot.phase !== "loading" || bytes.totalBytes <= 0) return;
         this.set({
@@ -252,6 +311,11 @@ class LoaderCore {
     if (document.hidden) return;
     const elapsed = this.snapshot.elapsed + step;
     const phase = this.snapshot.phase;
+    for (const waiter of [...this.visibleWaiters]) {
+      if (elapsed < waiter.ms) continue;
+      this.visibleWaiters.delete(waiter);
+      waiter.resolve();
+    }
     if (phase === "loading") {
       const min = this.snapshot.repeat
         ? LOADER_TIMING.minVisibleRepeatMs
@@ -281,6 +345,7 @@ class LoaderCore {
       // The fast path is a nicety.
     }
     window.dispatchEvent(new Event("mgm:loader-done"));
+    this.gone();
     this.afterDone();
   }
 
@@ -324,4 +389,13 @@ export const siteLoader = new LoaderCore();
  */
 export function whenLoaderRevealed() {
   return siteLoader.whenRevealed();
+}
+
+/**
+ * Resolves when the loader has fully gone (its exit has played), or at once
+ * when no loader shows. Heavy setup that would cost the reveal its frames
+ * (the compact hero's physics) waits for this instead.
+ */
+export function whenLoaderGone() {
+  return siteLoader.whenGone();
 }
