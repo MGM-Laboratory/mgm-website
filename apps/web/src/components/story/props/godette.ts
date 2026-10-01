@@ -481,10 +481,15 @@ type Reaction = {
   kind: GodetteReaction;
   t: number;
   duration: number;
+  /** Blend in, seconds: the clip's own, or longer when it takes over from a reaction that needs time to leave. */
+  blendIn: number;
   holdUntil: number;
   face: GodetteFace | null;
   jolt: number;
 };
+
+/** A reaction that was replaced: it keeps playing and hands its weight to the new one over the new one's blend in. */
+type FadingReaction = { clip: GodetteClip; t: number; w0: number };
 
 export async function loadGodette(
   assets: StoryLoaderLike,
@@ -767,6 +772,7 @@ export async function loadGodette(
   let nextBlink = randomBetween(1.2, 3);
 
   let reaction: Reaction | null = null;
+  let fading: FadingReaction[] = [];
   let lastClickClip: GodetteClip | null = null;
   let lastHoverClip: GodetteClip | null = null;
   let autoIdle: number | null = null;
@@ -812,18 +818,52 @@ export async function loadGodette(
   /* Reactions                                                              */
   /* ---------------------------------------------------------------------- */
 
+  const reactionEnvelope = (): number => {
+    const r = reaction;
+    if (!r) return 0;
+    const spec = r.clip ? clipSpec(r.clip) : null;
+    const bo = spec ? spec.blendOut : 0.25;
+    const inW = MathUtils.clamp(r.t / Math.max(0.001, r.blendIn), 0, 1);
+    const outW = MathUtils.clamp((r.duration - r.t) / Math.max(0.001, bo), 0, 1);
+    return MathUtils.smootherstep(Math.min(inW, outW), 0, 1);
+  };
+
+  /** How far the reaction's blend in has come (0..1): the share the replaced reactions have handed over. */
+  const blendInOf = (r: Reaction): number =>
+    MathUtils.smootherstep(MathUtils.clamp(r.t / Math.max(0.001, r.blendIn), 0, 1), 0, 1);
+
+  /** A clip still on screen as the running reaction or a fading one (one action cannot play two times at once). */
+  const busy = (clip: GodetteClip) =>
+    reaction?.clip === clip || fading.some((f) => f.clip === clip);
+
   const startReaction = (
     kind: GodetteReaction,
     clip: GodetteClip | null,
     face: GodetteFace | null,
     dur: number,
   ) => {
-    const spec = clip ? clipSpec(clip) : null;
+    // the running reaction does not stop: it fades out under the new one, so the pose never jumps
+    const old = reaction;
+    const spec = clip && body.has(clip) ? clipSpec(clip) : null;
+    let blendIn = spec ? spec.blendIn : 0.15;
+    if (old) {
+      const handed = blendInOf(old);
+      const w = reactionEnvelope();
+      fading = fading
+        .map((f) => ({ clip: f.clip, t: f.t, w0: f.w0 * (1 - handed) }))
+        .filter((f) => f.w0 > 0.002);
+      if (old.clip && w > 0.002) {
+        fading.push({ clip: old.clip, t: old.t, w0: w });
+        // the old pose leaves as gently as its own blend out would have taken it
+        blendIn = Math.max(blendIn, clipSpec(old.clip).blendOut, 0.2);
+      }
+    }
     reaction = {
       kind,
-      clip: clip && body.has(clip) ? clip : null,
+      clip: spec ? clip : null,
       t: 0,
-      duration: clip && body.has(clip) ? clipDuration(clip) : dur,
+      duration: spec && clip ? clipDuration(clip) : dur,
+      blendIn,
       holdUntil: spec?.hold ? clock + 0.9 : 0,
       face,
       jolt: 0,
@@ -833,11 +873,19 @@ export async function loadGodette(
 
   const react = (kind: GodetteReaction): boolean => {
     idleClock = 0;
-    if (kind === "hover" && reaction && reaction.kind === "hover") {
-      reaction.holdUntil = clock + 0.6;
-      return true;
+    const running = reaction;
+    if (kind === "hover" && running && running.kind === "hover") {
+      // a pointer that stays keeps the hold looping; once the clip has left its hold it plays out and a new hover
+      // reaction takes over below
+      const hold = running.clip ? clipSpec(running.clip).hold : null;
+      if (!hold || running.t <= hold[1]) {
+        running.holdUntil = clock + 0.6;
+        return true;
+      }
     }
-    if (reaction && reaction.kind !== "hover" && reaction.t < reaction.duration * 0.6) return false;
+    if (running && running.kind !== "hover" && running.t < running.duration * 0.6) return false;
+    // a spin in flight is a whole turn: let it land before anything else
+    if (running && context === "flight" && running.kind === "click") return false;
     if (context === "toy") {
       // a toy cannot move: she flinches inside the pose, eyes wide, a blink burst
       startReaction(
@@ -857,24 +905,32 @@ export async function loadGodette(
     }
     if (kind === "hover") {
       const pick: GodetteClip = lastHoverClip === "hover_shy" ? "hover_curious" : "hover_shy";
-      const clip = random() < 0.7 ? pick : (lastHoverClip ?? pick);
+      const other: GodetteClip = pick === "hover_shy" ? "hover_curious" : "hover_shy";
+      let clip = random() < 0.7 ? pick : (lastHoverClip ?? pick);
+      if (busy(clip)) clip = clip === pick ? other : pick;
+      if (busy(clip)) return false;
       lastHoverClip = clip;
       startReaction(kind, clip, null, 2);
       return true;
     }
     if (kind === "click") {
       const options: GodetteClip[] = ["click_giggle", "click_hop"];
-      const choices = options.filter((c) => c !== lastClickClip);
-      const clip = choices.at(Math.floor(random() * choices.length)) ?? "click_giggle";
+      const choices = options.filter((c) => c !== lastClickClip && !busy(c));
+      const clip = choices.at(Math.floor(random() * choices.length));
+      if (!clip) return false;
       lastClickClip = clip;
       startReaction(kind, clip, null, 1.3);
       return true;
     }
     if (kind === "poke") {
+      // she is already flinching: the poke lands inside it
+      if (busy("poke_flinch")) return false;
       startReaction(kind, "poke_flinch", null, 0.9);
       return true;
     }
-    startReaction(kind, kind === "yawn" ? "idle_yawn" : "idle_stretch", null, 3);
+    const idleClip: GodetteClip = kind === "yawn" ? "idle_yawn" : "idle_stretch";
+    if (busy(idleClip)) return false;
+    startReaction(kind, idleClip, null, 3);
     return true;
   };
 
@@ -893,19 +949,10 @@ export async function loadGodette(
     weights.set(a, (weights.get(a) ?? 0) + w);
   };
 
-  const reactionEnvelope = (): number => {
-    const r = reaction;
-    if (!r) return 0;
-    const spec = r.clip ? clipSpec(r.clip) : null;
-    const bi = spec ? spec.blendIn : 0.15;
-    const bo = spec ? spec.blendOut : 0.25;
-    const inW = MathUtils.clamp(r.t / Math.max(0.001, bi), 0, 1);
-    const outW = MathUtils.clamp((r.duration - r.t) / Math.max(0.001, bo), 0, 1);
-    return MathUtils.smootherstep(Math.min(inW, outW), 0, 1);
-  };
-
   const stepReaction = (dt: number) => {
     const r = reaction;
+    for (const f of fading) f.t += dt;
+    if (!r || blendInOf(r) >= 1) fading = [];
     if (!r) return;
     const spec = r.clip ? clipSpec(r.clip) : null;
     const hold = spec ? spec.hold : null;
@@ -918,8 +965,20 @@ export async function loadGodette(
 
   const updateBody = (dt: number) => {
     weights.clear();
+    // the reaction's envelope, the share the replaced reactions still hold, and the base layers in what is left
     const env = reactionEnvelope();
-    const keep = 1 - env;
+    const r = reaction;
+    const handed = r ? blendInOf(r) : 1;
+    let held = 0;
+    for (const f of fading) {
+      const a = body.get(f.clip);
+      const w = f.w0 * (1 - handed);
+      if (!a || w <= 0 || f.clip === r?.clip) continue;
+      a.time = clampTime(f.clip, f.t);
+      setW(a, w);
+      held += w;
+    }
+    const keep = Math.max(0, 1 - env - held);
     for (const layer of layers) {
       const a = body.get(layer.clip);
       if (!a || layer.weight <= 0) continue;
@@ -936,7 +995,6 @@ export async function loadGodette(
       a.time = clampTime(layer.clip, t);
       setW(a, layer.weight * keep);
     }
-    const r = reaction;
     if (r?.clip) {
       const a = body.get(r.clip);
       if (a) {
