@@ -177,9 +177,9 @@ class CardsAct implements StoryAct {
     }
     if (drop > 0) {
       director.update(ctx, state, this.view);
-      this.camera.update(ctx, state, director.frame.position);
+      this.camera.update(ctx, state, director.frame.position, this.view);
     } else {
-      this.camera.update(ctx, state, director.frame.position);
+      this.camera.update(ctx, state, director.frame.position, this.view);
       director.update(ctx, state, this.view);
     }
     reveal.update(ctx, state);

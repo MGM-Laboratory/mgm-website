@@ -12,12 +12,14 @@ import {
 import {
   SHOT_LAND_POSITION,
   SHOT_LAND_TARGET,
+  SPRING_LIFT,
   STAGE_DISTANCE,
-  STAGE_ORIGIN,
   aimCamera,
+  springPull,
   landFov,
   stageFov,
   stageToWorld,
+  type StageView,
 } from "@/components/story/acts/cards/stage-space";
 
 /**
@@ -40,7 +42,7 @@ export class CameraDirector {
   private readonly driftV: [number, number] = [0, 0];
   private readonly lift: [number, number] = [0, 0];
 
-  update(ctx: StoryContext, state: ActState, box: Vector3) {
+  update(ctx: StoryContext, state: ActState, box: Vector3, view: StageView) {
     const camera = ctx.stage.camera;
     const dt = ctx.clock.dt;
     const t = state.t;
@@ -61,10 +63,18 @@ export class CameraDirector {
     // The gather pulls back a little so the stream fits as it pours into the box, then settles.
     const gather = state.beat("c-gather");
     const pull = smoothstep(0.05, 0.3, gather) * (1 - smoothstep(0.78, 0.98, gather)) * 0.08;
-    const distance = STAGE_DISTANCE - push + pull;
-    stageToWorld(this.driftV[0] * 0.012, this.driftV[1] * 0.008, distance, position);
-    target.copy(STAGE_ORIGIN);
+    // The spring: the frame rises so the box sits low and the cards rising out of it stay in view
+    // (a card must rise its whole length to clear the rim), pulling back as far as the aspect
+    // needs (stage-space.ts), then settles before the snake spreads over the screen.
     let fov = stageFov(aspect);
+    const springFrame =
+      smoothstep(0.5, 0.95, state.beat("c-open")) *
+      (1 - smoothstep(0.1, 0.5, state.beat("c-snake")));
+    const lift = SPRING_LIFT * springFrame;
+    const back = springPull(view) * springFrame;
+    const distance = STAGE_DISTANCE - push + pull + back;
+    stageToWorld(this.driftV[0] * 0.012, this.driftV[1] * 0.008 + lift, distance, position);
+    stageToWorld(0, lift, 0, target);
     let near = 0.01;
     let far = 40;
 

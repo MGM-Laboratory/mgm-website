@@ -226,7 +226,7 @@ export class DeckView {
     let vy = this.push.at(base + 3) ?? 0;
     let tx = 0;
     let ty = 0;
-    if (pointerOn) {
+    if (pointerOn && pose.free > 0) {
       world.copy(pose.position);
       this.stage.localToWorld(world);
       ndc.copy(world).project(camera);
@@ -235,7 +235,7 @@ export class DeckView {
       const d = Math.hypot(dx, dy);
       const reach = 0.26;
       if (d < reach && d > 1e-4) {
-        const k = (1 - d / reach) ** 2 * parting;
+        const k = (1 - d / reach) ** 2 * parting * pose.free;
         // Metres per NDC unit at the card's depth, so the push is the same size on screen at any depth.
         const depth = Math.max(0.2, camera.position.distanceTo(world));
         const unit = depth * Math.tan((camera.fov * Math.PI) / 360);
@@ -253,8 +253,9 @@ export class DeckView {
       py += vy * h;
     }
     this.push.set([px, py, vx, vy], base);
-    pose.position.x += px;
-    pose.position.y += py;
+    // Inside the box nothing may move it (the push springs back to rest out of sight).
+    pose.position.x += px * pose.free;
+    pose.position.y += py * pose.free;
     // The pushed card tips away a little, like a card brushed by a hand.
     const tip = saturate(Math.hypot(px, py) * 30);
     pose.curl += tip * 0.08;

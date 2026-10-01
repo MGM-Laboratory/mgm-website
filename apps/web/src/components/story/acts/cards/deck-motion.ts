@@ -14,7 +14,6 @@ import { beatOf } from "@/components/story/engine/timeline";
 import { CARD_H, CARD_THICKNESS } from "@/components/story/props/card-mesh";
 import { hash01, hashSigned } from "@/components/story/props/deck-shared";
 import type { DeckLayout } from "@/components/story/acts/cards/deck-layout";
-import type { DeckPath } from "@/components/story/acts/cards/deck-path";
 
 /**
  * The deck's choreography (CREATIVE 4, ACTS Act 1, research inspiration
@@ -47,8 +46,8 @@ const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
 /** Vh after the spring's start by which every card has left the box. */
 const EMIT_END = 0.64;
-/** Vh a card takes to reach the stream's speed out of the mouth. */
-const ACCEL = 0.2;
+/** Vh a card takes to pop out of the box (the spring's release), easing into the stream's speed. */
+const POP = 0.04;
 /** Spring flight: the stretch of path (metres) a card spins and rolls through after the mouth. */
 const FLIGHT = 0.42;
 /** The stack's pitch between cards (toward the camera), metres. */
@@ -79,6 +78,8 @@ export type CardPose = {
   mist: number;
   scale: number;
   visible: boolean;
+  /** 0 while the card is still inside the box (no life may move it), 1 clear of it. */
+  free: number;
 };
 
 export function createPose(): CardPose {
@@ -91,6 +92,7 @@ export function createPose(): CardPose {
     mist: 0,
     scale: 1,
     visible: false,
+    free: 1,
   };
 }
 
@@ -149,17 +151,31 @@ export function heroIndices(count: number): readonly number[] {
   return [0.2, 0.4, 0.6, 0.8].map((share) => Math.round(count * share));
 }
 
+/**
+ * Distance along the snake `tau` vh after a card's launch: it pops out of the
+ * box fast (covering `exit` in POP vh while easing down to the stream's
+ * speed), then rides the stream at `speed`.
+ */
+function streamTravel(tau: number, speed: number, exit: number) {
+  if (tau <= 0) return 0;
+  const v0 = Math.max(speed, (2 * exit) / POP - speed);
+  if (tau < POP) return v0 * tau - ((v0 - speed) * tau * tau) / (2 * POP);
+  return exit + speed * (tau - POP);
+}
+
+/** The time after launch at which `streamTravel` reaches `s`. */
+function streamArrival(s: number, speed: number, exit: number) {
+  if (s >= exit) return POP + (s - exit) / speed;
+  const v0 = Math.max(speed, (2 * exit) / POP - speed);
+  const a = (v0 - speed) / (2 * POP);
+  if (a < 1e-9) return s / v0;
+  return (v0 - Math.sqrt(Math.max(0, v0 * v0 - 4 * a * s))) / (2 * a);
+}
+
 function travel(tau: number, speed: number, accel: number) {
   if (tau <= 0) return 0;
   if (tau < accel) return (speed * tau * tau) / (2 * accel);
   return speed * (tau - accel / 2);
-}
-
-/** The time since launch at which `travel` reaches `s`. */
-function arrival(s: number, speed: number, accel: number) {
-  const knee = (speed * accel) / 2;
-  if (s <= knee) return Math.sqrt((2 * accel * s) / speed);
-  return s / speed + accel / 2;
 }
 
 const zAxis = new Vector3(0, 0, 1);
@@ -239,8 +255,8 @@ export class DeckMotion {
   }
 
   /** The stream's speed: the last card reaches the stack as the pour ends. */
-  private streamSpeed(length: number) {
-    return length / (POUR_END - EMIT_END - ACCEL / 2);
+  private streamSpeed(length: number, exit: number) {
+    return (length - exit) / (POUR_END - EMIT_END - POP);
   }
 
   /** Cards in the box, 0..1 (the box's stack). */
@@ -252,9 +268,10 @@ export class DeckMotion {
         if (this.gatherDistance(i, beats, layout) >= layout.back.length) inBox += 1;
       }
     } else {
-      const speed = this.streamSpeed(layout.snake.length);
+      const exit = layout.exitLength;
+      const speed = this.streamSpeed(layout.snake.length, exit);
       for (let i = 0; i < this.count; i += 1) {
-        if (travel(beats.u - this.launch(i), speed, ACCEL) < 0.035) inBox += 1;
+        if (streamTravel(beats.u - this.launch(i), speed, exit) < exit * 0.5) inBox += 1;
       }
     }
     return inBox / Math.max(1, this.count);
@@ -298,9 +315,10 @@ export class DeckMotion {
       return out;
     }
     const L = layout.snake.length;
-    const speed = this.streamSpeed(L);
-    out.head = Math.min(L, travel(beats.u - this.launch(0), speed, ACCEL));
-    out.tail = Math.min(L, travel(beats.u - this.launch(this.count - 1), speed, ACCEL));
+    const exit = layout.exitLength;
+    const speed = this.streamSpeed(L, exit);
+    out.head = Math.min(L, streamTravel(beats.u - this.launch(0), speed, exit));
+    out.tail = Math.min(L, streamTravel(beats.u - this.launch(this.count - 1), speed, exit));
     out.on = smoothstep(0.02, 0.2, beats.u) * (1 - smoothstep(POUR_END - 0.3, POUR_END, beats.u));
     return out;
   }
@@ -317,11 +335,12 @@ export class DeckMotion {
   ) {
     const path = layout.snake;
     const L = path.length;
-    const speed = this.streamSpeed(L);
+    const exit = layout.exitLength;
+    const speed = this.streamSpeed(L, exit);
     const tau = u - this.launch(i);
-    const since = tau - arrival(L, speed, ACCEL);
+    const since = tau - streamArrival(L, speed, exit);
     if (since < 0) {
-      this.streamPose(i, Math.min(L, travel(tau, speed, ACCEL)), path, speed, u, time, out);
+      this.streamPose(i, Math.min(L, streamTravel(tau, speed, exit)), layout, speed, u, time, out);
       return true;
     }
     // Caught in the stack: settles upright with a small bounce, then the pressure fan opens.
@@ -344,35 +363,51 @@ export class DeckMotion {
     return true;
   }
 
-  /** A card riding the stream at distance s, and the spring's flight out of the mouth. */
+  /**
+   * A card riding the stream at distance s. First the exit: straight up the
+   * box, upright in its plane, until its bottom clears the rim; then the
+   * spring's flight: it rolls into the stream, turns once or twice about its
+   * long edge and flexes, tight at the source and loose at the catch.
+   */
   private streamPose(
     i: number,
     s: number,
-    path: DeckPath,
+    layout: DeckLayout,
     speed: number,
     u: number,
     time: number,
     out: CardPose,
   ) {
+    const path = layout.snake;
+    const exit = layout.exitLength;
     path.point(s, out.position);
+    if (s < exit) {
+      out.quaternion.copy(layout.cardInBox);
+      out.free = 0;
+      return;
+    }
     path.tangent(s, tangent);
     const roll = path.rollAt(s) - Math.PI / 2;
     const curvature = path.curvatureAt(s);
-    // The spring: out of the mouth upright, rolling into the stream, a turn or two about the long edge.
-    const flightK = saturate(s / FLIGHT);
-    const flight = smoothstep(0, FLIGHT, s);
+    const sf = s - exit;
+    const flightK = saturate(sf / FLIGHT);
+    const flight = smoothstep(0, FLIGHT, sf);
     const spins = hash01(i, 7) < 0.7 ? 1 : 2;
-    // Life: the stream undulates across its direction and every card flutters.
-    const flow = window4(u, 0.3, 0.9, POUR_END - 0.55, POUR_END);
+    // Life: the stream undulates across its direction and every card flutters (none at the mouth).
+    const flow = window4(u, 0.3, 0.9, POUR_END - 0.55, POUR_END) * smoothstep(0, 0.12, sf);
+    out.free = smoothstep(0, 0.06, sf);
     va.set(-tangent.y, tangent.x, 0).normalize();
     out.position.addScaledVector(va, Math.sin(time * 2.2 + i * 0.35) * 0.0045 * flow);
     out.position.z += Math.sin(time * 1.4 + i * 0.6) * 0.003 * flow;
     const bank = Math.max(-35 * DEG, Math.min(35 * DEG, curvature * 0.09 * speed)) * flight;
     const flutter = Math.sin(time * 5 + i * 2) * 4 * DEG * flow;
     const yaw = tangent.z * 0.5 * flight + Math.sin(time * 3.1 + i) * 3 * DEG * flow;
-    orient(out.quaternion, mix(0, roll, flight) + flutter, bank, yaw);
-    out.flip = spins * TAU * smoothstep(0.07, FLIGHT, s);
-    out.curl = Math.sin(Math.PI * flightK) * 0.24 + Math.sin(time * 6 + i) * 0.03 * flow;
+    orient(qPath, mix(0, roll, flight) + flutter, bank, yaw);
+    out.quaternion.copy(layout.cardInBox).slerp(qPath, flight);
+    out.flip = spins * TAU * smoothstep(0.015, FLIGHT, sf);
+    out.curl =
+      Math.sin(Math.PI * flightK) * 0.24 * smoothstep(0, 0.03, sf) +
+      Math.sin(time * 6 + i) * 0.03 * flow;
     out.flex = Math.sin(time * 4.3 + i * 1.7) * 0.03 * flow;
     // Far cards fade a touch toward the page (aerial perspective).
     out.mist = smoothstep(1.0, 1.4, 0.8 - out.position.z) * 0.3;
@@ -497,19 +532,29 @@ export class DeckMotion {
       copyPose(held, out);
       return true;
     }
+    // Into the box: the last stretch is the exit backwards, straight down, upright in its plane.
+    const exit = layout.exitLength;
+    if (s > L - exit) {
+      path.point(s, out.position);
+      out.quaternion.copy(layout.cardInBox);
+      out.free = 0;
+      return true;
+    }
     // On the stream back: from where it was onto the path, then into the box.
     path.point(s, va);
     path.tangent(s, tangent);
     const roll = path.rollAt(s) - Math.PI / 2;
     const join = smoothstep(0, hero >= 0 ? 0.24 : 0.08, s);
     out.position.copy(held.position).lerp(va, join);
-    const flow = 1 - smoothstep(L - 0.25, L - 0.05, s);
+    const flow = 1 - smoothstep(L - exit - 0.2, L - exit - 0.04, s);
+    out.free = flow;
     vb.set(-tangent.y, tangent.x, 0).normalize();
     out.position.addScaledVector(vb, Math.sin(time * 2.6 + i * 0.4) * 0.004 * flow);
-    // Into the box upright: the roll eases to the nearest upright turn over the last stretch.
-    const settle = smoothstep(L - 0.14, L - 0.03, s);
+    // Into the box upright: the roll eases to the nearest upright turn, then to the box's own tilt.
+    const settle = smoothstep(L - exit - 0.12, L - exit - 0.02, s);
     const pathRoll = mix(roll, nearestTurn(roll), settle);
     orient(qPath, pathRoll + Math.sin(time * 5 + i) * 3 * DEG * flow, 0, tangent.z * 0.4 * flow);
+    qPath.slerp(layout.cardInBox, smoothstep(L - exit - 0.06, L - exit, s));
     out.quaternion.copy(held.quaternion).slerp(qPath, join);
     if (hero >= 0) {
       // The four fly in spinning flat in their own plane (a card throw), settling as they join.
@@ -518,7 +563,7 @@ export class DeckMotion {
     }
     out.scale = mix(held.scale, 1, join);
     out.mist = mix(held.mist, 0, join);
-    out.curl = Math.sin(join * Math.PI) * 0.1 + Math.sin(time * 6 + i) * 0.02 * flow;
+    out.curl = (Math.sin(join * Math.PI) * 0.1 + Math.sin(time * 6 + i) * 0.02) * flow;
     return true;
   }
 }
@@ -530,6 +575,7 @@ function resetPose(pose: CardPose) {
   pose.mist = 0;
   pose.scale = 1;
   pose.visible = true;
+  pose.free = 1;
 }
 
 function copyPose(from: CardPose, to: CardPose) {
@@ -541,4 +587,5 @@ function copyPose(from: CardPose, to: CardPose) {
   to.mist = from.mist;
   to.scale = from.scale;
   to.visible = from.visible;
+  to.free = from.free;
 }

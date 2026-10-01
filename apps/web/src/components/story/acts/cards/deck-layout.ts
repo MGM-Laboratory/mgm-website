@@ -1,4 +1,4 @@
-import { Euler, Matrix4, Vector3 } from "three";
+import { Euler, Matrix4, Quaternion, Vector3 } from "three";
 
 import { CARD_H, CARD_W } from "@/components/story/props/card-mesh";
 import type { DeckBox } from "@/components/story/props/deck-box";
@@ -6,6 +6,7 @@ import { DeckPath } from "@/components/story/acts/cards/deck-path";
 import {
   STAGE_DISTANCE,
   depthForHeight,
+  springPull,
   halfHeightAt,
   halfWidthAt,
   screenToStage,
@@ -27,10 +28,23 @@ const DEG = Math.PI / 180;
 /** Screen fraction (x, y in -1..1) and depth (metres from the resting camera). */
 type ViewPoint = readonly [number, number, number];
 
-/** The snake on a landscape screen: up and right out of the box, a loop near the lens, a far meander, the pour. */
+/**
+ * The spring's arc out of the box mouth (CREATIVE 4, "the spring"): up and to
+ * the right, curling over, as shares of the spring frame's half width and
+ * half height at the box (x, y above the mouth) and metres toward the lens.
+ */
+const SPRING_ARC: readonly ViewPoint[] = [
+  [0.12, 0.1, 0.02],
+  [0.38, 0.17, 0.04],
+  [0.66, 0.08, 0.05],
+  [0.84, -0.12, 0.03],
+];
+
+/**
+ * The snake on a landscape screen after the spring's arc (`SPRING_ARC`): down the right, a loop
+ * near the lens, a far meander, the pour.
+ */
 const SNAKE_LANDSCAPE: readonly ViewPoint[] = [
-  [0.1, 0.5, 0.95],
-  [0.45, 0.66, 1.15],
   [0.78, 0.3, 1.3],
   [0.7, -0.4, 1.15],
   [0.2, -0.66, 1.0],
@@ -47,10 +61,8 @@ const SNAKE_LANDSCAPE: readonly ViewPoint[] = [
   [0.24, 0.24, 1.2],
 ];
 
-/** The snake on a portrait screen: the same story, stacked vertically. */
+/** The snake on a portrait screen after the spring's arc: the same story, stacked vertically. */
 const SNAKE_PORTRAIT: readonly ViewPoint[] = [
-  [0.3, 0.32, 0.95],
-  [0.7, 0.48, 1.1],
   [0.55, 0.06, 1.2],
   [-0.3, -0.18, 1.1],
   [-0.72, -0.48, 1.15],
@@ -109,6 +121,15 @@ export class DeckLayout {
   portrait = false;
   /** Box frame to stage frame, at the box's rest pose on the card stage. */
   readonly boxToStage = new Matrix4();
+  /** A card standing in the box (its back to the box front), in the stage frame. */
+  readonly cardInBox = new Quaternion();
+  /**
+   * Distance along a path at which a card leaving the box has cleared the
+   * rim (its bottom edge above the box's top): until then it rises straight
+   * along the box's own up axis, upright in the box's plane, with no spin,
+   * roll or flex, so it never cuts a wall. The return mirrors it.
+   */
+  exitLength = 0.09;
   private key = "";
 
   /** Recomputes for this viewport (cheap when nothing changed). */
@@ -125,8 +146,17 @@ export class DeckLayout {
     this.boxToStage.makeRotationY(-Math.PI / 2).multiply(rest);
 
     const H = box.dims.H;
-    const mouthIn = new Vector3(0, -0.012, 0).applyMatrix4(this.boxToStage);
-    const mouthOut = new Vector3(0, H / 2 + 0.03, 0).applyMatrix4(this.boxToStage);
+    this.cardInBox
+      .setFromRotationMatrix(this.boxToStage)
+      .multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2));
+    // The exit, along the box's up axis: the card starts whole inside (its bottom 2 mm above the
+    // box's floor), and clears the rim (its bottom 6 mm above the top) at `exitLength`.
+    const start = -H / 2 + CARD_H / 2 + 0.002;
+    const clear = H / 2 + CARD_H / 2 + 0.006;
+    this.exitLength = clear - start;
+    const along = (y: number) => new Vector3(0, y, 0).applyMatrix4(this.boxToStage);
+    const exit = [along(start), along(start + 0.04), along(clear), along(clear + 0.02)];
+    const mouthOut = exit.at(-1) ?? along(clear);
 
     // The fan and the wheel sit far enough back to fit the screen.
     const spread = (portrait ? 140 : 200) * DEG;
@@ -145,8 +175,14 @@ export class DeckLayout {
     this.pivot.y -= CARD_H * 0.4;
     screenToStage(view, 0, portrait ? 0.02 : 0.04, ringDepth, this.ring);
 
-    // The snake: out of the box mouth, through the screen, the pour into the stack.
-    const snake = [mouthIn, mouthOut];
+    // The snake: out of the box mouth, the spring's arc, through the screen, the pour into the stack.
+    const snake = exit.map((point) => point.clone());
+    const springDistance = STAGE_DISTANCE + springPull(view);
+    const springHalfH = springDistance * view.tanHalf;
+    const springHalfW = springHalfH * view.aspect;
+    for (const [ax, ay, az] of SPRING_ARC) {
+      snake.push(mouthOut.clone().add(new Vector3(ax * springHalfW, ay * springHalfH, az)));
+    }
     for (const [nx, ny, d] of portrait ? SNAKE_PORTRAIT : SNAKE_LANDSCAPE) {
       snake.push(screenToStage(view, nx, ny, d * (fanDepth / 1.04), new Vector3()));
     }
@@ -161,8 +197,7 @@ export class DeckLayout {
       back.push(screenToStage(view, nx, ny, d, new Vector3()));
     }
     back.push(mouthOut.clone().add(new Vector3(0, 0.03, 0)));
-    back.push(mouthOut.clone());
-    back.push(mouthIn.clone());
+    for (const point of [...exit].reverse()) back.push(point.clone());
     this.back.build(back);
 
     // The reveal slots.

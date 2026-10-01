@@ -101,6 +101,22 @@ export function depthForHeight(view: StageView, worldHeight: number, px: number)
   return (worldHeight * view.height) / (2 * view.tanHalf * Math.max(1, px));
 }
 
+/**
+ * The spring's frame (the camera and the deck's layout share it): the frame
+ * rises by `SPRING_LIFT` so the box sits low, and pulls back from the rest
+ * distance until `SPRING_TOP` (stage metres above the box's centre) fits,
+ * so a card rising its whole length out of the box and the arc it flies
+ * stay in view. Portrait screens are tall enough already.
+ */
+export const SPRING_LIFT = 0.06;
+export const SPRING_TOP = 0.23;
+
+/** How far the camera pulls back for the spring, metres (0 when the view is tall enough). */
+export function springPull(view: StageView) {
+  const needed = ((SPRING_TOP - SPRING_LIFT) * 1.08) / Math.max(1e-3, view.tanHalf);
+  return Math.max(0, needed - STAGE_DISTANCE);
+}
+
 /** Points `camera` from `position` at `target` (room frame), with a vertical FOV in degrees. */
 export function aimCamera(
   camera: PerspectiveCamera,
