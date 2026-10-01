@@ -51,7 +51,7 @@ import { ContactShadows, DustMotes, DustPuff, LightPool, setLayerDeep } from "./
 import { RoomProps, Wobble, projectBox, projectPoint } from "./interact";
 import { TableLetters, type LetterTiming } from "./letters";
 import { at, beatSeconds, bump, ring } from "./script";
-import { TOY_YAW, ToyDirector } from "./toy";
+import { BREAK, TOY_YAW, ToyDirector } from "./toy";
 import { TvScreen } from "./tv";
 
 /**
@@ -84,6 +84,8 @@ const TOY_FRONT = new Vector3(Math.sin(TOY_YAW), 0, Math.cos(TOY_YAW));
 const TOY_LEFT = new Vector3(Math.cos(TOY_YAW), 0, -Math.sin(TOY_YAW));
 /** Her head's height above her feet on the table, metres. */
 const HEAD_HEIGHT = 0.148;
+/** How far the camera swings round her (toward her left) for the hop off the stand, degrees. */
+const HOP_ORBIT = 40;
 
 type Scratch = {
   pose: CamPose;
@@ -397,36 +399,51 @@ class RoomAct implements StoryAct {
     read.target.z -= 0.012 * wide;
     this.followScale = 1 + 0.32 * (1 - saturate(aspect));
     const close = shotPose(shots.b_mcu, aspect);
-    // While she looks around: a slow orbit that keeps the TV behind her, a little lower.
-    const pivot = new Vector3(0.575, 0.52, -0.592);
-    const orbit = shotPose(shots.b_mcu, aspect);
-    orbit.position
-      .sub(pivot)
-      .applyAxisAngle(UP, MathUtils.degToRad(9))
-      .multiplyScalar(1.12)
-      .add(pivot);
-    orbit.position.y -= 0.015;
-    orbit.target.set(0.548, 0.522, -0.565);
+    // While she breaks the pose: a slow push in on the close-up.
+    const breaking = shotPose(shots.b_mcu, aspect);
+    breaking.position.lerp(breaking.target, 0.05);
+    breaking.position.y -= 0.004;
+    // For the hop off the stand the camera swings round to her side, so the hop crosses the frame
+    // (from the close-up it would come straight at the lens), and holds there as she looks around.
+    const pivot = new Vector3(0.566, 0.5, -0.597);
+    const orbit = (degrees: number, scale: number, lower: number) => {
+      const pose = shotPose(shots.b_mcu, aspect);
+      pose.position
+        .sub(pivot)
+        .applyAxisAngle(UP, MathUtils.degToRad(degrees))
+        .multiplyScalar(scale)
+        .add(pivot);
+      pose.position.y -= lower;
+      pose.target.set(0.553, 0.515, -0.6);
+      pose.fov *= 1.06;
+      return pose;
+    };
+    const hop = orbit(HOP_ORBIT, 1.12, 0.012);
+    const looked = orbit(HOP_ORBIT + 4, 1.14, 0.016);
     // The two-shot with the box for the spark, a push in for its loops round her head, then her reach.
     const spark = createPose();
     spark.position.set(0.97, 0.53, -0.5);
     spark.target.set(0.52, 0.535, -0.535);
-    spark.fov = orbit.fov * 1.08;
+    spark.fov = close.fov * 1.08;
     const sparkClose = createPose();
     sparkClose.position.set(0.86, 0.565, -0.53);
     sparkClose.target.set(0.575, 0.555, -0.585);
-    sparkClose.fov = orbit.fov * 0.95;
+    sparkClose.fov = close.fov * 0.95;
     const reach = createPose();
     reach.position.set(0.95, 0.56, -0.52);
     reach.target.set(0.575, 0.585, -0.585);
-    reach.fov = orbit.fov * 1.05;
+    reach.fov = close.fov * 1.05;
     this.path = new CameraPath([
       { t: at("r-land", 0), pose: land },
       { t: at("r-land", 0.42), pose: push },
       { t: at("r-figure", 0.3), pose: letters },
       { t: at("r-figure", 1), pose: read, stop: true },
-      { t: at("r-break", 0.2), pose: close },
-      { t: at("r-break", 0.92), pose: orbit },
+      // The crane lands on her close-up first and holds: her eyes find the lens on a still frame.
+      { t: at("r-break", BREAK.landed), pose: close, stop: true, ease: "out" },
+      { t: at("r-break", BREAK.clip), pose: close, stop: true },
+      { t: at("r-break", 0.6), pose: breaking },
+      { t: at("r-break", 0.8), pose: hop },
+      { t: at("r-break", 0.97), pose: looked },
       { t: at("r-spark", 0.3), pose: spark },
       { t: at("r-spark", 0.55), pose: sparkClose },
       { t: at("r-spark", 0.8), pose: sparkClose },
@@ -1189,6 +1206,7 @@ class RoomAct implements StoryAct {
     this.sparkDodge.multiplyScalar(Math.exp(-4 * ctx.clock.dt));
     const eye = ctx.stage.camera.position;
     if (!still || !pointer.inside || pointer.type === "none") {
+      if (this.toy) this.toy.cursorOn = false;
       this.props?.hover(null, eye);
       pointer.setCursor(null);
       return;
@@ -1197,8 +1215,16 @@ class RoomAct implements StoryAct {
     this.raycaster.setFromCamera(this.ndc, ctx.stage.camera);
     this.raycaster.layers.enableAll();
     const hit = this.pick(state.t);
-    if (hit.kind === "toy") this.hoverToy = true;
-    else if (hit.kind === "letter") this.hoverLetter = hit.index;
+    const toy = this.toy;
+    if (toy) toy.cursorOn = false;
+    if (hit.kind === "toy") {
+      this.hoverToy = true;
+      // Where on the ray she would look: the point nearest her head.
+      if (toy) {
+        this.raycaster.ray.closestPointToPoint(toy.frame.head, toy.cursor);
+        toy.cursorOn = true;
+      }
+    } else if (hit.kind === "letter") this.hoverLetter = hit.index;
     else if (hit.kind === "box") this.hoverBox = true;
     else if (hit.kind === "prop") prop = hit.mesh;
     else if (hit.kind === "tv") {
@@ -1291,14 +1317,14 @@ class RoomAct implements StoryAct {
   // ------------------------------------------------------------------ the answers to a tap (clock life)
 
   private tapToy(ctx: StoryContext) {
-    const godette = this.godette;
-    if (!godette || !this.toy) return;
-    godette.react("click");
-    this.fireCheer(this.toy.frame.head, ctx.clock.time, 0.6);
-    // On her stand she rocks on its rim like a knocked toy, side to side as the camera sees it.
-    if (this.lastT < at("r-break", 0.15)) {
+    const toy = this.toy;
+    if (!toy) return;
+    toy.tap(ctx.clock.time);
+    this.fireCheer(toy.frame.head, ctx.clock.time, 0.6);
+    // Frozen on her stand she rocks on its rim like a knocked toy, side to side as the camera sees it.
+    if (this.lastT < at("r-break", BREAK.glance)) {
       const camera = ctx.stage.camera;
-      this.rockAxis.copy(this.toy.standTop()).sub(camera.position).setY(0).normalize();
+      this.rockAxis.copy(toy.standTop()).sub(camera.position).setY(0).normalize();
       if (this.rockAxis.lengthSq() < 0.5) this.rockAxis.set(1, 0, 0);
       const side = this.toyRock.velocity >= 0 ? 1 : -1;
       this.toyRock.kick(MathUtils.degToRad(85) * side);
@@ -1456,10 +1482,11 @@ class RoomAct implements StoryAct {
     if (box && t < at("r-figure", 0)) {
       const onBox = depth(box.root.position);
       focus = MathUtils.lerp(onBox, focus, smoothstep(0.35, 0.85, land));
-    } else if (t < at("r-break", 0.25)) {
+    } else if (t < at("r-break", BREAK.landed + 0.04)) {
+      // Racked from the phrase's plane to her face while the crane lands on her.
       this.tmp.u.copy(her).lerp(this.letterBox.getCenter(this.tmp.head), 0.5);
       const both = depth(this.tmp.u);
-      const k = smoothstep(0.12, 0.25, state.beat("r-break"));
+      const k = smoothstep(0.02, BREAK.landed + 0.04, state.beat("r-break"));
       focus = MathUtils.lerp(both, focus, k);
     }
     // Aperture by beat, then scaled by the lens: a longer lens blurs more at the same stop.
@@ -1467,9 +1494,9 @@ class RoomAct implements StoryAct {
       0.22 * (1 - smoothstep(0, 0.3, state.beat("r-figure"))) +
       0.12 *
         smoothstep(0, 0.3, state.beat("r-figure")) *
-        (1 - smoothstep(0, 0.2, state.beat("r-break"))) +
-      0.75 *
-        smoothstep(0, 0.2, state.beat("r-break")) *
+        (1 - smoothstep(0, BREAK.landed, state.beat("r-break"))) +
+      1.05 *
+        smoothstep(0, BREAK.landed, state.beat("r-break")) *
         (1 - smoothstep(0, 0.4, state.beat("r-dragged"))) +
       0.38 *
         smoothstep(0, 0.4, state.beat("r-dragged")) *

@@ -59,6 +59,11 @@ export type CamKey = Readonly<{
   pose: CamPose;
   /** Comes to rest here (zero speed), for holds and rests. */
   stop?: boolean;
+  /**
+   * Between two stops the move is an ease in and out; "out" makes the move
+   * into this key leave at speed and settle (a crane that lands, then holds).
+   */
+  ease?: "out";
 }>;
 
 /**
@@ -101,6 +106,10 @@ export class CameraPath {
     const next = keys.at(i + 2);
     const dt = Math.max(1e-6, k1.t - k0.t);
     const u = saturate((t - k0.t) / dt);
+    if (k1.ease === "out") {
+      const w = 1 - (1 - u) * (1 - u) * (1 - u);
+      return blendPose(out, k0.pose, k1.pose, w);
+    }
     const h00 = 2 * u * u * u - 3 * u * u + 1;
     const h10 = u * u * u - 2 * u * u + u;
     const h01 = -2 * u * u * u + 3 * u * u;
