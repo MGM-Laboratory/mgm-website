@@ -215,7 +215,12 @@ export interface StoryPointer {
   /** Smoothed velocity, CSS px per second. */
   readonly velocity: Readonly<{ x: number; y: number }>;
   readonly down: boolean;
-  /** Over the story's canvas area, not over the header or an interactive DOM control. */
+  /**
+   * Over the story's canvas area, not over the header or an interactive DOM
+   * control. Over an overlay hotspot it is inside too (hover and raycasts
+   * work on the object under it), but presses there belong to the hotspot's
+   * link or button and are not routed to `pointer()`.
+   */
   readonly inside: boolean;
   readonly type: "mouse" | "pen" | "touch" | "none";
   /** Raycasts `objects` from the camera through the pointer (empty when not inside). */

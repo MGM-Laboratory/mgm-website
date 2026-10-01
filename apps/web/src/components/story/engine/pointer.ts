@@ -14,7 +14,11 @@ import type { StoryPointer, StoryPointerEvent, StoryRect } from "@/components/st
  * the stage camera, and events routed to the active act. The canvas itself
  * never takes pointer events (`pointer-events: none`), so this listens on
  * the window and decides what counts as "inside": over the story section,
- * not over the header, the overlay or an interactive DOM control.
+ * not over the header, the overlay or an interactive DOM control. The
+ * overlay's hotspots are the exception: they sit over GL objects, so the
+ * pointer over one is inside (hover and raycasts keep working on the object
+ * under it), but a press there belongs to the hotspot's own link or button
+ * and is not routed to the act.
  *
  * Taps follow gotcha #29: a mouse or pen taps on `pointerdown`, a finger on
  * a `pointerup` that moved under 12 px and was never cancelled.
@@ -23,6 +27,8 @@ import type { StoryPointer, StoryPointerEvent, StoryRect } from "@/components/st
 const TAP_SLOP_PX = 12;
 const INTERACTIVE =
   "a, button, input, select, textarea, label, summary, [role='button'], [contenteditable='true']";
+/** The overlay's DOM controls over GL objects. */
+const HOTSPOT = "[data-story-overlay] .story-hotspot";
 
 type PointerKind = "mouse" | "pen" | "touch";
 
@@ -43,6 +49,8 @@ export class StoryPointerImpl implements StoryPointer {
   private lastMoveAt = 0;
   private press: { id: number; x: number; y: number; cancelled: boolean } | null = null;
   private overTarget = false;
+  /** Over one of the overlay's hotspots: inside, but presses are the hotspot's. */
+  private overHotspot = false;
   private section: HTMLElement | null = null;
   private cursor: string | null = null;
   private readonly offs: Array<() => void> = [];
@@ -149,7 +157,12 @@ export class StoryPointerImpl implements StoryPointer {
   private targets(event: PointerEvent) {
     const section = this.section;
     const target = event.target;
+    this.overHotspot = false;
     if (!section || !(target instanceof Element)) return false;
+    if (target.closest(HOTSPOT)) {
+      this.overHotspot = true;
+      return true;
+    }
     if (!section.contains(target)) return false;
     return target.closest(INTERACTIVE) === null;
   }
@@ -184,7 +197,7 @@ export class StoryPointerImpl implements StoryPointer {
     this.down = true;
     const kind = kindOf(event);
     this.press = { id: event.pointerId, x: event.clientX, y: event.clientY, cancelled: false };
-    if (!this.inside) return;
+    if (!this.inside || this.overHotspot) return;
     this.emitAt("down", kind);
     if (kind !== "touch") this.emitAt("tap", kind);
   }
@@ -195,7 +208,7 @@ export class StoryPointerImpl implements StoryPointer {
     const kind = kindOf(event);
     const press = this.press;
     this.press = null;
-    if (!this.inside) return;
+    if (!this.inside || this.overHotspot) return;
     this.emitAt("up", kind);
     if (kind === "touch" && press && press.id === event.pointerId && !press.cancelled) {
       this.emitAt("tap", kind);
