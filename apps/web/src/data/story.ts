@@ -93,6 +93,9 @@ export const STORY_CARD_PLAY: Readonly<
   ux: { look: "UX. Take a closer look.", link: "See our UX work" },
 };
 
+/** The hint at the cards' rest on a touch screen, where a tap brings a card closer. */
+export const STORY_CARD_TAP_HINT = "Tap a card for a closer look.";
+
 /** Small overlay lines while the story waits for the visitor. */
 export const STORY_HINTS = {
   deckWaiting: "Keep scrolling. The deck is listening.",

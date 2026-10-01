@@ -366,7 +366,7 @@ export class CardPlay {
         saturate(this.pillHover[0]),
         ctx.palette.scheme,
       );
-      const centre = layout.centre.position;
+      const centre = layout.focus.position;
       const depth = STAGE_DISTANCE - centre.z;
       const perPx = (2 * depth * view.tanHalf) / Math.max(1, view.height);
       const h = PILL_HEIGHT_PX * perPx;
@@ -374,7 +374,7 @@ export class CardPlay {
       const rise = (1 - this.pillShown) * 14 * perPx;
       mesh.position.set(
         centre.x,
-        centre.y - (CARD_H * layout.centre.scale) / 2 - gap - h / 2 - rise,
+        centre.y - (CARD_H * layout.focus.scale) / 2 - gap - h / 2 - rise,
         centre.z + 0.004,
       );
       const pop = 0.92 + 0.08 * this.pillShown + 0.03 * this.pillHover[0];

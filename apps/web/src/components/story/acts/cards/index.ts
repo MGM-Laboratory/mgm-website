@@ -29,7 +29,7 @@ import { Entrance } from "@/components/story/acts/cards/entrance";
 import type { StreamExtent } from "@/components/story/acts/cards/deck-motion";
 import { swarmCountFor } from "@/components/story/props/card-mesh";
 import { smoothstep, window4 } from "@/components/story/engine/act";
-import { STORY_HINTS } from "@/data/story";
+import { STORY_CARD_TAP_HINT, STORY_HINTS } from "@/data/story";
 import {
   STAGE_ORIGIN,
   STAGE_YAW,
@@ -79,11 +79,14 @@ class CardsAct implements StoryAct {
   private threads: Threads | null = null;
   private play: CardPlay | null = null;
   private readonly entrance = new Entrance();
+  /** A screen without hover (a phone or a tablet): the hints speak of taps. */
+  private touch = false;
   private readonly stream: StreamExtent = { head: 0, tail: 0, back: false, on: 0 };
   private readonly hover = [0, 0, 0, 0];
   private readonly beats = createBeats();
 
   async init(ctx: StoryContext) {
+    this.touch = window.matchMedia("(hover: none)").matches;
     const [room, box, kit] = await Promise.all([
       ensureRoom(ctx),
       ensureDeckBox(ctx),
@@ -222,7 +225,9 @@ class CardsAct implements StoryAct {
     const resting = (id: string) => state.current === id && state.local > 0.985;
     if (resting("c-rise") && idle > 1.2) ctx.overlay.setHint(STORY_HINTS.deckWaiting);
     else if (resting("c-turn") && idle > 1.5 && (this.play?.focus ?? -1) < 0)
-      ctx.overlay.setHint(STORY_HINTS.cardsReady);
+      ctx.overlay.setHint(
+        this.touch || ctx.pointer.type === "touch" ? STORY_CARD_TAP_HINT : STORY_HINTS.cardsReady,
+      );
   }
 
   pointer(ctx: StoryContext, event: StoryPointerEvent) {

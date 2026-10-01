@@ -107,8 +107,10 @@ export class DeckLayout {
   readonly snake = new DeckPath();
   readonly back = new DeckPath();
   readonly slots: Slot[] = [0, 1, 2, 3].map(() => ({ position: new Vector3(), scale: 1 }));
-  /** The big spot at the centre: a portrait reveal, and the focus mode. */
+  /** The big spot at the centre for a portrait reveal. */
   readonly centre: Slot = { position: new Vector3(), scale: 1 };
+  /** A card's closer look: big, a little above the centre, with room under it for its link. */
+  readonly focus: Slot = { position: new Vector3(), scale: 1 };
   /** The stack the snake pours into, and the fan's common pivot below it. */
   readonly stack = new Vector3();
   readonly pivot = new Vector3();
@@ -204,7 +206,7 @@ export class DeckLayout {
     const W = view.width;
     const Hpx = view.height;
     if (portrait) {
-      const cardPx = Math.min(0.4 * W, 0.31 * Hpx * (CARD_W / CARD_H));
+      const cardPx = Math.min(0.37 * W, 0.3 * Hpx * (CARD_W / CARD_H));
       const gap = Math.max(0.045 * W, 12);
       const heightPx = (cardPx * CARD_H) / CARD_W;
       const depth = depthForHeight(view, CARD_H, heightPx);
@@ -230,6 +232,12 @@ export class DeckLayout {
         Math.min((bigPx * CARD_H) / CARD_W, 0.66 * Hpx),
       );
       screenToStage(view, 0, 0.04, bigDepth, this.centre.position);
+      const focusDepth = depthForHeight(
+        view,
+        CARD_H,
+        Math.min((0.7 * W * CARD_H) / CARD_W, 0.55 * Hpx),
+      );
+      screenToStage(view, 0, 0.1, focusDepth, this.focus.position);
     } else {
       const cardPx = Math.min(0.19 * W, 0.54 * Hpx * (CARD_W / CARD_H));
       const gap = Math.max(0.02 * W, 14);
@@ -242,6 +250,7 @@ export class DeckLayout {
       });
       const bigDepth = depthForHeight(view, CARD_H, 0.7 * Hpx);
       screenToStage(view, 0, 0.04, bigDepth, this.centre.position);
+      screenToStage(view, 0, 0.09, depthForHeight(view, CARD_H, 0.62 * Hpx), this.focus.position);
     }
     this.centre.scale = 1;
     return true;

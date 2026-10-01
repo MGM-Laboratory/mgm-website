@@ -201,8 +201,8 @@ export class HeroCards {
   private addLife(pose: CardPose, life: HeroLife, layout: DeckLayout) {
     pose.position.add(life.lift);
     if (life.focus > 0.001) {
-      pose.position.lerp(layout.centre.position, cubicInOut(life.focus));
-      pose.scale = mix(pose.scale, layout.centre.scale, cubicInOut(life.focus));
+      pose.position.lerp(layout.focus.position, cubicInOut(life.focus));
+      pose.scale = mix(pose.scale, layout.focus.scale, cubicInOut(life.focus));
     }
     if (life.dim > 0.001) {
       pose.position.z -= 0.08 * life.dim;
