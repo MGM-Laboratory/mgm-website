@@ -1,5 +1,4 @@
 import {
-  ConeGeometry,
   IcosahedronGeometry,
   Matrix4,
   PerspectiveCamera,
@@ -53,6 +52,7 @@ import {
   type RiftState,
 } from "./rift";
 import { CityWorld } from "./world-city";
+import { DunesWorld } from "./world-dunes";
 import { EdgeWorld } from "./world-edge";
 import { SketchWorld } from "./world-sketch";
 import { PaperTide } from "./world-paper";
@@ -223,22 +223,7 @@ class WorldsAct implements StoryAct {
 
     // The worlds.
     const paper = new PaperTide();
-    const dunes = new SketchWorld({
-      id: "dunes",
-      key: 0xf94141,
-      length: WORLD_BEATS.at(1)?.vh ?? 5.5,
-      tail: 0,
-      zenith: 0x3a6dc5,
-      horizon: 0xfef6e0,
-      ground: 0xf7bf33,
-      colours: [0xf94141, 0xf7bf33, 0x3a6dc5, 0x0f8657],
-      geometry: () => new ConeGeometry(1.4, 3.2, 4),
-      clip: "fly_slalom",
-      pitchDeg: 80,
-      face: "determined",
-      entry: new Vector3(0, 8, 0),
-      exit: new Vector3(0, 9, -240),
-    });
+    const dunes = new DunesWorld(WORLD_BEATS.at(1)?.vh ?? 5.5);
     const leaf = new SketchWorld({
       id: "leaf",
       key: 0x0f8657,
