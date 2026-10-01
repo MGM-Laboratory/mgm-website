@@ -9,7 +9,7 @@ import type { StoryFile } from "@/components/story/assets/types";
 export const DECK_FILES: StoryFile[] = [
   {
     url: "/story/v1/deck/box.glb",
-    bytes: 15976,
+    bytes: 15972,
     kind: "gltf",
     group: "deck",
     tiers: ["high", "medium", "low"],
@@ -30,14 +30,14 @@ export const DECK_FILES: StoryFile[] = [
   },
   {
     url: "/story/v1/deck/box-panels-2k.ktx2",
-    bytes: 180649,
+    bytes: 177573,
     kind: "ktx2",
     group: "deck",
     tiers: ["high", "medium"],
   },
   {
     url: "/story/v1/deck/box-panels-1k.ktx2",
-    bytes: 104727,
+    bytes: 89063,
     kind: "ktx2",
     group: "deck",
     tiers: ["low"],

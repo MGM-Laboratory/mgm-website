@@ -40,10 +40,10 @@ import {
   hash01,
   patchShader,
   shaderChunk,
-  smoothstep,
   tierPick,
   type PrintUniforms,
 } from "@/components/story/props/deck-shared";
+import { createBoxPoseSolver, type BoxPose } from "@/components/story/props/deck-box-pose";
 import { BILLBOARD_VERTEX } from "@/components/story/props/fx/star-sdf.glsl";
 
 /**
@@ -52,7 +52,9 @@ import { BILLBOARD_VERTEX } from "@/components/story/props/fx/star-sdf.glsl";
  * dust flaps, a bottom, a navy inside and a stack of cards. The lid, the
  * flap and the dust flaps bend on paper folds (arcs of constant length
  * that straighten as they open) and are rebuilt into one dynamic mesh when
- * their angles change, so the whole box costs a handful of draw calls.
+ * their angles change, so the whole box costs a handful of draw calls. The
+ * hinge solver (`deck-box-pose.ts`) keeps every board out of the walls, the
+ * tease card and the stack for any lid, flap and tease values.
  *
  * Box frame (metres): origin at the centre of the walls, +x the front's
  * outward normal, +y up, z across (seen from the front, screen left is
@@ -72,8 +74,6 @@ export function deckBoxTextureUrls(tier: StoryTier) {
 
 /** Lid angle (degrees) at `setLid(1)`: a little past upright. */
 export const LID_OPEN_DEGREES = 118;
-/** How far the dust flaps spring up (degrees) once the lid is out of their way. */
-const DUST_SPRING_DEGREES = 34;
 /** The tease card rises this far at `peek(1)` (half its length). */
 export const PEEK_RISE = CARD_H / 2;
 /** Cards in a full deck, for the stack's edge lines. */
@@ -125,11 +125,31 @@ export type DeckBox = {
   readonly drop: DeckDrop;
   /** The tease card (a real card mesh; its back faces the box front). */
   readonly peekCard: HeroCard;
-  /** 0 closed, 1 open (LID_OPEN_DEGREES); up to 1.25 for an overshoot. */
+  /**
+   * The solved hinges, live: the lid's opening and each fold's bend
+   * (radians), and the tease card's rise (metres). Read it to time things on
+   * what the box really does (the flap clears the rim near a 33 degree lid).
+   */
+  readonly pose: Readonly<BoxPose>;
+  /**
+   * 0 closed, 1 open (LID_OPEN_DEGREES); up to 1.25 for an overshoot. A low
+   * lid keeps the flap tucked: its tip slides up the inside of the front wall
+   * and swings out once it clears the rim, so a closing lid tucks it back in.
+   */
   setLid(open: number): void;
-  /** 0 tucked (folded 90 degrees), 1 straight; up to 1.3 for a flick back. */
+  /**
+   * 0 tucked (folded 90 degrees), 1 straight; up to 1.3 for a flick back.
+   * The flap only follows once the lid has lifted it past the rim (above).
+   */
   setFlap(open: number): void;
-  /** 0 in the box, 1 half out. It lifts the lid and the flap as it rises. */
+  /**
+   * The tease, 0 in the box to 1 half out, one move: the lid lifts first
+   * (0 to 0.4, to 50 degrees) and the flap slides out and flicks open (0.14
+   * to 0.46), then the card rises (0.24 to 1) and pushes the lid a little
+   * further when it needs the room. A card only shows above the rim from
+   * about 0.32 on. It combines with `setLid` and `setFlap` (the larger
+   * opening wins). Scrub it back to 0 for the card's return.
+   */
   peek(amount: number): void;
   /** Cards left in the box, 0 empty to 1 full. */
   setStack(fill: number): void;
@@ -428,6 +448,12 @@ export async function loadDeckBox(
   }
   root.add(shellGroup);
 
+  // The stack and the tease card stand on the floor, against the front wall's tuck slot.
+  const stackThickness = DECK_CARDS * CARD_THICKNESS * 1.12;
+  const stackFront = a - t - dims.gap - t - CARD_THICKNESS * 1.8;
+  const cardBottom = -H / 2 + t;
+  const stackBack = stackFront - CARD_THICKNESS * 1.5;
+
   // ---------------------------------------------------------------- the moving boards (one mesh)
   const lidPart = partOf("box_lid");
   const flapPart = partOf("box_flap");
@@ -571,22 +597,38 @@ export async function loadDeckBox(
   dynGeometry.setAttribute("uv", new BufferAttribute(dynUv, 2));
   dynGeometry.setAttribute("aMask", new BufferAttribute(dynMask, 4));
 
-  // Pose state.
+  // Pose state: what the act asks for, and what the hinge solver makes of it.
   let lidOpen = 0;
   let flapOpen = 0;
   let peekAmount = 0;
   const lidMatrix = new Matrix4();
   const flapEnd = new Matrix4();
+  const solver = createBoxPoseSolver({
+    H,
+    D,
+    t,
+    rh: dims.rh,
+    rf: dims.rf,
+    rd: dims.rd,
+    lidLen: dims.lidLen,
+    flapLen: dims.flapLen,
+    dustLen: dims.dustLen,
+    dustChamfer: dims.dustChamfer,
+    dustHalf: dims.dustHalf,
+    cardX0: stackFront - CARD_THICKNESS / 2,
+    cardX1: stackFront + CARD_THICKNESS / 2,
+    cardTop: cardBottom + CARD_H,
+    stackX0: stackBack - stackThickness,
+    stackX1: stackBack,
+    stackTop: cardBottom + CARD_H,
+    rise: PEEK_RISE,
+    lidOpen: (LID_OPEN_DEGREES * Math.PI) / 180,
+  });
+  const pose: BoxPose = solver.solve(0, 0, 0);
 
   const rebuild = () => {
-    const peekLid = smoothstep(0.02, 0.45, peekAmount) * 0.36;
-    const peekFlap = smoothstep(0.0, 0.35, peekAmount) * 0.95;
-    const lid = Math.max(lidOpen, peekLid);
-    const flap = Math.max(flapOpen, peekFlap);
-    const phiLid = ((90 - lid * LID_OPEN_DEGREES) * Math.PI) / 180;
-    const phiFlap = (90 * (1 - flap) * Math.PI) / 180;
-    const dustLift = smoothstep(0.04, 0.42, lid) * DUST_SPRING_DEGREES;
-    const phiDust = ((90 - dustLift) * Math.PI) / 180;
+    solver.solve(lidOpen, flapOpen, peekAmount, pose);
+    const { phiLid, phiFlap, phiDust } = pose;
 
     writeFold(0, lidFold, phiLid, null);
     foldEndMatrix(lidFold, phiLid, lidMatrix);
@@ -639,9 +681,6 @@ export async function loadDeckBox(
   root.add(boards);
 
   // ---------------------------------------------------------------- the stack and the tease card
-  const stackThickness = DECK_CARDS * CARD_THICKNESS * 1.12;
-  const stackFront = a - t - dims.gap - t - CARD_THICKNESS * 1.8;
-  const cardBottom = -H / 2 + t;
   const stackGeometry = createStackGeometry(stackThickness);
   const stackMaterial = new MeshStandardMaterial({ map: kit.back, roughness: 0.7, metalness: 0 });
   stackMaterial.name = "story-box-stack";
@@ -668,7 +707,7 @@ export async function loadDeckBox(
   const stack = new Mesh(stackGeometry, stackMaterial);
   stack.name = "box-stack";
   // Behind the tease card: the stack's front face sits one card behind it.
-  stack.position.set(stackFront - CARD_THICKNESS * 1.5, cardBottom + CARD_H / 2, 0);
+  stack.position.set(stackBack, cardBottom + CARD_H / 2, 0);
   root.add(stack);
 
   const peekCard = kit.createHeroCard(null);
@@ -678,6 +717,7 @@ export async function loadDeckBox(
   );
   const peekRest = new Vector3(stackFront, cardBottom + CARD_H / 2, 0);
   peekCard.mesh.position.copy(peekRest);
+  peekCard.mesh.position.y += pose.rise;
   peekCard.mesh.name = "box-peek-card";
   root.add(peekCard.mesh);
 
@@ -720,6 +760,7 @@ export async function loadDeckBox(
     dims,
     drop,
     peekCard,
+    pose,
     setLid(open) {
       const next = Math.max(0, Math.min(1.25, open));
       if (next === lidOpen) return;
@@ -736,8 +777,8 @@ export async function loadDeckBox(
       const next = clamp01(amount);
       if (next === peekAmount) return;
       peekAmount = next;
-      peekCard.mesh.position.set(peekRest.x, peekRest.y + next * PEEK_RISE, 0);
       rebuild();
+      peekCard.mesh.position.set(peekRest.x, peekRest.y + pose.rise, 0);
     },
     setStack(fill) {
       const f = clamp01(fill);
