@@ -90,6 +90,10 @@ const FOV = 30;
 const TITLE_T = WAVE.start + WAVE.vh * 0.42;
 /** Two strokes a loop: she waves this long before she settles. */
 const WAVE_SECONDS = 1.333 * 2 + 0.2;
+/** The medium shot's bottom edge, metres above her floor: just above her knees. */
+const MEDIUM_CUT = 0.56;
+/** Beside the words she turns this far toward them (radians, toward screen right). */
+const PRESENT_YAW = 0.2;
 /** Quick clicks in a row that make her spin until she is dizzy. */
 const SPIN_CLICKS = 5;
 /** How long her last pose of the terminal life takes to melt into the story's, scrolling back. */
@@ -111,6 +115,12 @@ const HAIR_REACH: readonly (readonly [number, number])[] = [
 function smooth(a: number, b: number, x: number) {
   const k = saturate((x - a) / (b - a));
   return k * k * (3 - 2 * k);
+}
+
+/** A quintic ease between `a` and `b` (a soft start and a soft landing for camera moves). */
+function smoother(a: number, b: number, x: number) {
+  const k = saturate((x - a) / (b - a));
+  return k * k * k * (k * (k * 6 - 15) + 10);
 }
 
 /** The hero pose's share of her body, `t` seconds into it. */
@@ -151,6 +161,10 @@ class FinaleAct implements StoryAct {
   /** Where she stands across the frame: centred over the words, or beside them on a short landscape screen. */
   private xFrac = 0.5;
   private splitX = 0.5;
+  /** The words sit beside her (landscape), not under her. */
+  private split = false;
+  /** How far the camera has come in on her for the medium shot (0 whole figure, 1 medium). */
+  private close = 0;
   private titleEl: HTMLElement | null = null;
   private actionEl: HTMLElement | null = null;
   private headerEl: HTMLElement | null = null;
@@ -311,15 +325,22 @@ class FinaleAct implements StoryAct {
 
     // ---------------------------------------------------------------- camera
     this.measureLayout(ctx);
-    // beside the words, she steps aside only as they arrive (centred until then)
-    this.xFrac = 0.5 + (this.splitX - 0.5) * smooth(WAVE.start, TITLE_T + 0.12, t);
     const framing = framingAt(A);
     const life = A >= PHASE.waveInEnd || t >= WAVE_LIFE_T;
     const landscape = ctx.size.aspect >= 1;
     const height = framing.height * (landscape ? 1 : 0.9);
+    // Beside the words (the split layout) the camera comes in on her as they arrive: from the
+    // whole figure of the landing to a medium shot cut above her knees (the floor goes below the
+    // frame), while she steps aside to the left part of the frame. Under the words (portrait)
+    // she stands on them, whole, where she is.
+    const close = this.split && !this.still ? smoother(WAVE.start - 0.15, WAVE.end, t) : 0;
+    this.close = close;
+    this.xFrac = 0.5 + (this.splitX - 0.5) * close;
+    const cut = MEDIUM_CUT / height;
+    const closeFloor = (1 - cut * this.topY) / (1 - cut);
     solveShot(
       {
-        floorY: this.floorY,
+        floorY: this.floorY + (closeFloor - this.floorY) * close,
         topY: this.topY,
         height,
         halfWidth: framing.halfWidth,
@@ -355,7 +376,8 @@ class FinaleAct implements StoryAct {
     const sy = squash(A);
     const sxz = 1 / Math.sqrt(sy);
     godette.root.position.set(0, rootY, 0);
-    godette.root.rotation.set(0, bodyYaw(A), 0);
+    // beside the words she turns a little toward them, her face still ours
+    godette.root.rotation.set(0, bodyYaw(A) + PRESENT_YAW * close, 0);
     godette.root.scale.set(sxz, sy, sxz);
     godette.setContext("ground");
     godette.setNervous(A < PHASE.landEnd ? 0.35 : 0);
@@ -399,8 +421,10 @@ class FinaleAct implements StoryAct {
     // ---------------------------------------------------------------- the title
     const titleOn = t >= TITLE_T;
     if (titleOn && !this.titleOn && state.direction > 0 && life) {
-      // the letters rise under her feet: she glances down at them
-      this.setGlance(new Vector3(0, 0.05, 1.1), 1.0, "surprised", 0.35);
+      // the letters rise under her feet (or beside her): she glances at them
+      const point = new Vector3(0, 0.05, 1.1);
+      if (this.split) this.elementPoint(ctx, this.titleEl, point);
+      this.setGlance(point, 1.0, "surprised", 0.35);
     }
     this.titleOn = titleOn;
     finaleSignal.setTitle(titleOn);
@@ -777,17 +801,26 @@ class FinaleAct implements StoryAct {
     return this.ray.ray.intersectPlane(this.plane, out) !== null;
   }
 
-  /** The world point in front of the action button (where she looks when it is hovered). */
-  private actionPoint(ctx: StoryContext, out: Vector3) {
-    const el = this.actionEl;
-    if (!el) return false;
-    const r = el.getBoundingClientRect();
+  /** The world point at her face's depth under a viewport point (CSS px). */
+  private viewportPoint(ctx: StoryContext, clientX: number, clientY: number, out: Vector3) {
     const canvas = ctx.dom.canvasRect;
-    const x = r.left + r.width / 2 - canvas.x;
-    const y = r.top + r.height / 2 - canvas.y;
+    const x = clientX - canvas.x;
+    const y = clientY - canvas.y;
     this.ndc.set((x / ctx.size.width) * 2 - 1, 1 - (y / ctx.size.height) * 2);
     this.ray.setFromCamera(this.ndc, ctx.stage.camera);
     return this.ray.ray.intersectPlane(this.plane, out) !== null;
+  }
+
+  /** The world point in front of an element's centre (null element: false). */
+  private elementPoint(ctx: StoryContext, el: HTMLElement | null, out: Vector3) {
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return this.viewportPoint(ctx, r.left + r.width / 2, r.top + r.height / 2, out);
+  }
+
+  /** The world point in front of the action button (where she looks when it is hovered). */
+  private actionPoint(ctx: StoryContext, out: Vector3) {
+    return this.elementPoint(ctx, this.actionEl, out);
   }
 
   // ------------------------------------------------------------------ layout
@@ -821,12 +854,14 @@ class FinaleAct implements StoryAct {
     // the site header (fixed, 64 px today), measured: her raised hand stays clear of it
     if (!this.headerEl?.isConnected) this.headerEl = document.querySelector(".site-header");
     const header = Math.min(120, this.headerEl?.offsetHeight ?? 64);
-    // A short landscape screen puts the words beside her (story.css): she stands on the screen's
-    // floor in the left part, the words keep the right.
-    const split = titleRect.left - finaleRect.left > ctx.size.width * 0.38;
+    // Landscape screens put the words beside her (story.css): she lands in the middle of the
+    // frame, then the camera comes in on her in the left part while the words keep the right.
+    const left = (titleRect.left - finaleRect.left) / Math.max(1, ctx.size.width);
+    const split = left > 0.38;
+    this.split = split;
     if (split) {
-      this.splitX = 0.27;
-      this.floorY = 0.86;
+      this.splitX = Math.min(0.34, Math.max(0.24, left * 0.62));
+      this.floorY = 0.8;
     } else {
       const floor = offset + this.capOffset - size * 0.07;
       this.splitX = 0.5;

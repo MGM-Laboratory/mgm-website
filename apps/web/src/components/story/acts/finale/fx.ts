@@ -445,7 +445,8 @@ export class AmbientStars {
         .addScaledVector(up, (v + star.pushY) * halfH);
       const edge = 1 - saturate((Math.abs(v) - 0.85) / 0.3);
       const twinkle = 0.65 + 0.35 * Math.sin(time * (1.4 + star.speed * 30) + star.phase);
-      const size = star.size * 0.055 * (depth / Math.max(1, focus)) * (0.85 + 0.15 * twinkle);
+      // a share of the frame's height, whatever the camera's distance (close or wide shots alike)
+      const size = star.size * 0.0128 * 2 * halfH * (0.85 + 0.15 * twinkle);
       const color = star.brand ? (colors.brand.at(star.color) ?? colors.ink) : colors.faint;
       const alpha = (star.brand ? 0.62 : 0.3) * twinkle * edge * amount;
       sprites.push(
