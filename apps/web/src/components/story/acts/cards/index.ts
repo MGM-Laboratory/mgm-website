@@ -2,6 +2,7 @@ import { Group, MeshStandardMaterial, Vector3 } from "three";
 
 import {
   type ActState,
+  type BeatId,
   type StoryAct,
   type StoryContext,
   type StoryPointerEvent,
@@ -260,7 +261,9 @@ class CardsAct implements StoryAct {
     const director = this.boxDirector;
     const box = this.box;
     if (!director || !box) return false;
-    const hit = event.raycast([box.root]).length > 0;
+    // Only the box's own card (the shell and the lid): never its glow quads, which are sized in their
+    // shader and would catch the pointer far from the box.
+    const hit = event.raycast(director.targets, false).length > 0;
     if (event.type === "move" || event.type === "leave") {
       director.hovered = hit && event.type === "move";
       ctx.pointer.setCursor(hit ? "pointer" : null);
