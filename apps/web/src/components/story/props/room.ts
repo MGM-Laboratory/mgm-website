@@ -705,6 +705,8 @@ void main() {
 `;
 
 const SKY_FRAGMENT = /* glsl */ `
+#include <common>
+#include <dithering_pars_fragment>
 uniform sampler2D uMullions;
 uniform vec3 uSkyTop;
 uniform vec3 uSkyHorizon;
@@ -718,6 +720,7 @@ void main() {
 	gl_FragColor = vec4( mix( sky, uMullion, step( 0.5, bars.a ) ), 1.0 );
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
+	#include <dithering_fragment>
 }
 `;
 
@@ -969,6 +972,8 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
       m = src.clone();
       m.side = src.name === "atlasC_plants" ? DoubleSide : FrontSide;
       m.envMapIntensity = 0.5;
+      // Dusk is mostly dark gradients: dither the output so 8 bits never band.
+      m.dithering = true;
       const gu = g ? (groupUniforms.get(g) ?? null) : null;
       if (g && gu) {
         m.lightMap = lightmaps.get(`${g}_practical`) ?? null;
@@ -1035,6 +1040,7 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
   // The TV screen, off: a dark glossy panel that reflects the room.
   const screenOff = new MeshStandardMaterial({ color: 0x040405, roughness: 0.16, metalness: 0 });
   screenOff.envMapIntensity = 0.9;
+  screenOff.dithering = true;
   patchRoomMaterial(screenOff, shared, null);
   created.push(screenOff);
   envMaterials.push(screenOff);
@@ -1058,6 +1064,7 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
       fragmentShader: SKY_FRAGMENT,
     });
     skyMat.toneMapped = true;
+    skyMat.dithering = true;
     created.push(skyMat);
     skyCard.material = skyMat;
   }
