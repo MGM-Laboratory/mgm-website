@@ -587,7 +587,13 @@ export type Toy = Readonly<{
   colour: string;
   /** Position (% of the screen) on landscape screens, portrait screens and short landscape ones. */
   at: readonly [number, number];
+  /**
+   * On portrait screens x is % of the width; y is % of the height, or with
+   * `band` a fraction of the free band above or below the drawing (whose
+   * place changes a lot from phone to tablet).
+   */
   portrait: readonly [number, number];
+  band?: "above" | "below";
   short: readonly [number, number];
   size: number;
   drift: readonly [number, number, number];
@@ -600,7 +606,8 @@ export const TOYS: readonly Toy[] = [
     kind: "circle",
     colour: "var(--brand-yellow)",
     at: [9, 24],
-    portrait: [13, 53],
+    portrait: [12, 0.16],
+    band: "below",
     short: [62, 16],
     size: 46,
     drift: [6, -10, 0],
@@ -609,7 +616,8 @@ export const TOYS: readonly Toy[] = [
     kind: "half",
     colour: "var(--brand-red)",
     at: [16, 58],
-    portrait: [85, 57],
+    portrait: [87, 0.2],
+    band: "below",
     short: [95, 34],
     size: 42,
     drift: [-8, 6, 14],
@@ -646,7 +654,8 @@ export const TOYS: readonly Toy[] = [
     kind: "leaf",
     colour: "var(--brand-green)",
     at: [84, 50],
-    portrait: [70, 49],
+    portrait: [72, 0.07],
+    band: "below",
     short: [88, 13],
     size: 36,
     drift: [7, 5, -18],
@@ -655,7 +664,8 @@ export const TOYS: readonly Toy[] = [
     kind: "cross",
     colour: "var(--ld-ink)",
     at: [93, 72],
-    portrait: [87, 5],
+    portrait: [87, 0.5],
+    band: "above",
     short: [59, 52],
     size: 26,
     drift: [-4, -6, 30],
@@ -674,7 +684,8 @@ export const TOYS: readonly Toy[] = [
     kind: "star",
     colour: "var(--brand-yellow)",
     at: [14, 40],
-    portrait: [12, 5],
+    portrait: [12, 0.5],
+    band: "above",
     short: [73, 10],
     size: 24,
     drift: [4, 6, 40],

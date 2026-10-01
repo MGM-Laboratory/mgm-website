@@ -24,6 +24,7 @@ import {
   type NetPanel,
   type PanelId,
   type Stroke,
+  type Toy,
   type ToyKind,
   DRAW,
   TOYS,
@@ -349,6 +350,16 @@ function Counter() {
   );
 }
 
+const SHEET_BOTTOM = "(var(--ld-sheet-top) + var(--ld-sheet-h))";
+
+/** A toy's top on portrait screens (see `Toy.band`). */
+function portraitY(toy: Toy) {
+  const y = toy.portrait[1];
+  if (toy.band === "above") return `calc(var(--ld-sheet-top) * ${y})`;
+  if (toy.band === "below") return `calc(${SHEET_BOTTOM} + (100cqh - ${SHEET_BOTTOM}) * ${y})`;
+  return `${y}cqh`;
+}
+
 function ToyShape({ kind, colour }: Readonly<{ kind: ToyKind; colour: string }>) {
   const fill = { fill: colour } as CSSProperties;
   switch (kind) {
@@ -394,7 +405,7 @@ function Toys() {
               "--x": `${toy.at[0]}cqw`,
               "--y": `${toy.at[1]}cqh`,
               "--px": `${toy.portrait[0]}cqw`,
-              "--py": `${toy.portrait[1]}cqh`,
+              "--py": portraitY(toy),
               "--sx": `${toy.short[0]}cqw`,
               "--sy": `${toy.short[1]}cqh`,
               "--s": `clamp(${Math.round(toy.size * 0.62)}px, ${Math.round((toy.size / 14.4) * 100) / 100}cqw, ${toy.size}px)`,

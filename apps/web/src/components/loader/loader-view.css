@@ -35,7 +35,7 @@
   /* Layout: the sheet above, the hub (the fan around the counter) below. */
   --ld-aspect: 1.1846;
   --ld-hub-space: clamp(250px, 34cqh, 330px);
-  --ld-sheet-w: min(58cqw, calc((100cqh - var(--ld-hub-space) - 40px) * var(--ld-aspect)), 760px);
+  --ld-sheet-w: min(58cqw, calc((100cqh - var(--ld-hub-space) - 40px) * var(--ld-aspect)), 900px);
   --ld-sheet-h: calc(var(--ld-sheet-w) / var(--ld-aspect));
   --ld-sheet-top: max(28px, calc((100cqh - var(--ld-hub-space) - var(--ld-sheet-h)) / 2 + 8px));
   --ld-sheet-left: calc(50cqw - var(--ld-sheet-w) / 2);
