@@ -349,11 +349,14 @@ function haloMaterial(uniforms: BodyUniforms, size: { value: number }): ShaderMa
         float r = length(p) * 2.0;
         float a = atan(p.y, p.x);
         float rays = 0.85 + 0.15 * sin(a * 4.0 + uTime * 0.8) * sin(a * 7.0 - uTime * 1.3);
-        float soft = exp(-r * r * 5.5) * rays;
-        float core = exp(-r * r * 26.0);
-        vec3 col = mix(uGlowColor, vec3(1.0), 0.55 * core);
-        float k = uGlow * (soft * 0.42 + core * 0.3);
+        float soft = exp(-r * r * 10.0) * rays;
+        float core = exp(-r * r * 40.0);
+        vec3 col = mix(uGlowColor, vec3(1.0), 0.45 * core);
+        float k = uGlow * (soft * 0.22 + core * 0.2);
         gl_FragColor = vec4(col * k, 1.0);
+        // light adds up in linear and is encoded once for the target (sRGB on the canvas and the stage's display
+        // target), so the ring keeps the spark's yellow all the way out instead of sliding to orange
+        #include <colorspace_fragment>
       }
     `,
     transparent: true,
