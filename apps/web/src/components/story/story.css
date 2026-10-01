@@ -144,7 +144,7 @@ html[data-story-mode="gl"] [data-storybook] {
  * indices. It keeps a card's 63:88 shape wherever its words fit; on the
  * narrowest phones (cards about 130 px wide) it grows taller rather than
  * cut the line off (overflow: clip is not a scroll container, so the
- * aspect ratio's automatic minimum height still follows the content), and
+ * aspect ratio's content-based minimum height still applies), and
  * the cards of a row grow to the tallest one's height. The bottom padding
  * always clears the bottom corner index.
  */
