@@ -304,6 +304,8 @@ export class StoryStage implements StoryStageApi {
     const camera = this.camera;
     const scene = this.frameScene;
     camera.updateProjectionMatrix();
+    // Lit, tone-mapped materials only: the backdrop and anything `toneMapped: false` keep their bytes.
+    r.toneMappingExposure = this.post.params.exposure;
     const post = this.post.active;
     const target = post
       ? this.post.begin(

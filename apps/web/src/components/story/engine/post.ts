@@ -213,7 +213,7 @@ export class StoryPost implements StoryPostApi {
     Object.assign(this.params, params);
   }
 
-  /** Any effect on this frame (exposure alone needs no pass). */
+  /** Any effect on this frame (exposure needs no pass: the stage sets it on the renderer). */
   get active() {
     const p = this.params;
     return p.bloom > 0 || p.vignette > 0 || p.grain > 0 || p.flash > 0 || p.fade > 0;

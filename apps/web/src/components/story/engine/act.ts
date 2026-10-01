@@ -99,7 +99,10 @@ export const STORY_LAYERS = { front: 0, behind: 1 } as const;
  * Post effects, set per frame (every frame starts from `POST_DEFAULTS`, all
  * off, and costs nothing then). `bloom` is a cheap display-space bloom:
  * `bloomThreshold` is a luminance in 0..1, `bloomRadius` 0..1 widens it.
- * `flash` adds `flashColor`, `fade` mixes toward `fadeColor`.
+ * `flash` adds `flashColor`, `fade` mixes toward `fadeColor`. `exposure`
+ * is the tone mapping exposure of lit materials this frame (1 by default;
+ * the room's lamps warming up, a rift's flash): it costs no pass and leaves
+ * `toneMapped: false` materials (the backdrop, page-matched colours) alone.
  */
 export type StoryPostParams = {
   bloom: number;
