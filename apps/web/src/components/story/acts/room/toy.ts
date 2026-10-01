@@ -110,6 +110,8 @@ export class ToyDirector {
   private hoverIn = 0;
   private wasHovered = false;
   private shyUntil = 0;
+  /** A finger brushed her (touch has no hover): a shy face until this clock time. */
+  private touchedUntil = 0;
   private hopAt = -1;
   /** The point under the cursor near her head (set by the act while the pointer is on her), or null. */
   readonly cursor = new Vector3();
@@ -269,6 +271,25 @@ export class ToyDirector {
   }
 
   /**
+   * A finger landing on her or brushing past her (touch has no hover): the
+   * frozen toy flinches, on the table she turns shy for a moment, in the
+   * air she blinks. Never a body clip.
+   */
+  brush(time: number) {
+    const g = this.godette;
+    if (this.where === "stand" || this.where === "frozen") {
+      g.react("hover");
+      return;
+    }
+    if (this.where === "ground" && time > this.touchedUntil) {
+      this.touchedUntil = time + 1.1;
+      g.blink(false);
+      return;
+    }
+    if (this.where !== "ground") g.blink(false);
+  }
+
+  /**
    * The table's hover and click answers (see `where`): a shy face for a
    * moment and a low weight look at the cursor while it stays, a laugh and a
    * hop after a click. `look` is the scripted look (point and weight).
@@ -289,7 +310,7 @@ export class ToyDirector {
     const hop = this.hopAt >= 0 ? time - this.hopAt : -1;
     if (hop > 0.9) this.hopAt = -1;
     if (hop >= 0 && hop < 0.8) g.setFace("laugh", 0.9);
-    else if (hovered && time < this.shyUntil) g.setFace("shy", 0.85);
+    else if ((hovered && time < this.shyUntil) || time < this.touchedUntil) g.setFace("shy", 0.85);
     // Her eyes and head drift a little toward the cursor while it stays on her.
     const k = this.hoverIn * 0.55;
     if (k > 0.001) {

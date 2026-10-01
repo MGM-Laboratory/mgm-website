@@ -160,6 +160,10 @@ class RoomAct implements StoryAct {
   private tvBlip = -1;
   private tvTap: { x: number; y: number; seconds: number } | null = null;
   private hoverBox = false;
+  /** What a finger last brushed (touch has no hover), and the clock times its answers last until. */
+  private brushed: string | null = null;
+  private boxTouchedUntil = 0;
+  private tvTouchedUntil = 0;
   private hoverTv = false;
   /** Where the pointer is on the screen (its UV), while `hoverTv`. */
   private readonly tvUv = new Vector2(0.5, 0.5);
@@ -746,7 +750,8 @@ class RoomAct implements StoryAct {
       box.root.quaternion.premultiply(this.tmp.q.setFromAxisAngle(this.tmp.v.set(0, 0, 1), rock));
     }
     // Life: a hover lifts the lid a hair; a tap makes the box hop and one card pop up and back.
-    this.boxLift = damp(this.boxLift, this.hoverBox || focused ? 1 : 0, 9, dt);
+    const touched = ctx.clock.time < this.boxTouchedUntil;
+    this.boxLift = damp(this.boxLift, this.hoverBox || focused || touched ? 1 : 0, 9, dt);
     let hop = 0;
     let squash = 1;
     let pop = 0;
@@ -1191,7 +1196,8 @@ class RoomAct implements StoryAct {
     }
     const power = Math.max(this.power.value, floor, blip);
     this.powerShown = Math.max(this.power.value, floor);
-    this.tvHover = damp(this.tvHover, this.hoverTv || focused ? 1 : 0, 8, ctx.clock.dt);
+    const touched = ctx.clock.time < this.tvTouchedUntil;
+    this.tvHover = damp(this.tvHover, this.hoverTv || focused || touched ? 1 : 0, 8, ctx.clock.dt);
     let tap: { x: number; y: number; strength: number; seconds: number } | null = null;
     if (this.tvTap) {
       this.tvTap.seconds += dt;
@@ -1328,7 +1334,12 @@ class RoomAct implements StoryAct {
       if (index >= 0) return { kind: "letter", index };
     }
     const box = this.box;
-    if (box?.root.visible && !flying && this.raycaster.intersectObject(box.root, true).length > 0) {
+    // Only what shows: the box carries hidden parts (its glow's rays, the peeking card) a ray would hit.
+    if (
+      box?.root.visible &&
+      !flying &&
+      this.raycaster.intersectObject(box.root, true).some((hit) => shown(hit.object))
+    ) {
       return { kind: "box" };
     }
     const props = this.props;
@@ -1345,6 +1356,13 @@ class RoomAct implements StoryAct {
   }
 
   pointer(ctx: StoryContext, event: StoryPointerEvent) {
+    // Touch has no hover: a finger that lands on or brushes over something gives it the hover's answer.
+    // It never consumes the event, so the same finger still scrolls the page.
+    if (event.pointerType === "touch" && (event.type === "down" || event.type === "move")) {
+      this.brush(ctx, event);
+      return false;
+    }
+    if (event.type === "up" || event.type === "leave") this.brushed = null;
     if (event.type !== "tap") return false;
     this.ndc.set(event.ndc.x, event.ndc.y);
     this.raycaster.setFromCamera(this.ndc, ctx.stage.camera);
@@ -1376,6 +1394,44 @@ class RoomAct implements StoryAct {
         return true;
       default:
         return false;
+    }
+  }
+
+  /** The answer to a finger over the table: once per thing it enters (see `pointer`). */
+  private brush(ctx: StoryContext, event: StoryPointerEvent) {
+    this.ndc.set(event.ndc.x, event.ndc.y);
+    this.raycaster.setFromCamera(this.ndc, ctx.stage.camera);
+    this.raycaster.layers.enableAll();
+    const hit = this.pick(this.lastT);
+    const key =
+      hit.kind === "letter"
+        ? `letter-${hit.index}`
+        : hit.kind === "prop"
+          ? hit.mesh.uuid
+          : hit.kind === "none"
+            ? null
+            : hit.kind;
+    if (key === this.brushed) return;
+    this.brushed = key;
+    const time = ctx.clock.time;
+    switch (hit.kind) {
+      case "letter":
+        this.letters?.toy.poke(hit.index, 0.9);
+        break;
+      case "prop":
+        this.props?.brush(hit.mesh, ctx.stage.camera.position);
+        break;
+      case "box":
+        this.boxTouchedUntil = time + 0.7;
+        break;
+      case "toy":
+        this.toy?.brush(time);
+        break;
+      case "tv":
+        this.tvTouchedUntil = time + 0.8;
+        break;
+      default:
+        break;
     }
   }
 
@@ -1658,6 +1714,9 @@ class RoomAct implements StoryAct {
     this.tvBlip = -1;
     this.tvTap = null;
     this.tvHover = 0;
+    this.brushed = null;
+    this.boxTouchedUntil = 0;
+    this.tvTouchedUntil = 0;
     this.sparkDodge.set(0, 0, 0);
     this.power.value = 0;
     this.powerShown = 0;
@@ -1688,6 +1747,12 @@ class RoomAct implements StoryAct {
     if (spots) for (const spot of Object.values(spots)) spot.dispose();
     this.spots = null;
   }
+}
+
+/** Whether `object` and every parent of it are visible. */
+function shown(object: Object3D) {
+  for (let o: Object3D | null = object; o; o = o.parent) if (!o.visible) return false;
+  return true;
 }
 
 /** Whether the focused element got its focus from the keyboard (the browser's own judgement). */

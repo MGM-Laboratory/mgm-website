@@ -203,6 +203,14 @@ export class RoomProps {
     }
   }
 
+  /** A finger brushing past (touch has no hover): the hover's knock. True when `mesh` is one of the props. */
+  brush(mesh: Mesh | null, eye: Vector3) {
+    const prop = this.props.find((one) => one.mesh === mesh);
+    if (!prop) return false;
+    this.knock(prop, eye, prop.spec.hover);
+    return true;
+  }
+
   /** A click: a firmer knock. True when `mesh` is one of the props. */
   tap(mesh: Mesh | null, eye: Vector3) {
     const prop = this.props.find((one) => one.mesh === mesh);
