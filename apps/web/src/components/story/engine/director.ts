@@ -70,11 +70,12 @@ import { acquireThemeLock, releaseThemeLock } from "@/lib/theme-lock";
  *   input direction, ramping to the beat's speed over 0.8 s and landing
  *   softly exactly on the rest. It moves the rendered position itself
  *   (`smoother.scrollTo(y, false)`, or `window.scrollTo` on native scroll),
- *   so a press stops it dead. Any input cancels it; a held pointer or
- *   finger freezes it; the scroll lock, the reel player and reduced motion
+ *   so a press stops it dead. Any input cancels it; a pressed pointer or
+ *   finger pauses it; the scroll lock, the reel player and reduced motion
  *   stand it down.
- * - Freeze: holding a pointer or finger down eases `freeze` to 1; acts run
- *   their clocks at `mix(1, 0.3, freeze)`.
+ * - Freeze: press and hold (a press kept down for a moment, a finger that
+ *   does not scroll) eases `freeze` to 1; acts run their clocks at
+ *   `mix(1, 0.3, freeze)`. A scroll drag or a quick click never slows time.
  * - Integrations: the theme lock from `c-rise` to the end of `f-wave`, the
  *   cursor flow's yield while the section covers the top of the viewport,
  *   the header's tone, the overlay's hint, HUD and skip control.
@@ -295,7 +296,7 @@ export class StoryDirector {
       direction: this.intent.direction,
       velocity: this.velocity,
       freeze: this.freeze,
-      held: this.intent.held || this.pointer.down,
+      held: this.intent.held,
       autoAdvancing: this.autoAdvancing,
       idle: this.idle,
     };
@@ -468,8 +469,8 @@ export class StoryDirector {
     }
     this.awake = true;
 
-    const held = this.intent.held || this.pointer.down;
-    this.freeze = damp(this.freeze, held ? 1 : 0, 10, dt);
+    // Press and hold slows time; a scroll drag or a quick click does not.
+    this.freeze = damp(this.freeze, this.intent.held ? 1 : 0, 10, dt);
 
     // Locks: the theme holds from c-rise to the end of f-wave; the flow steps aside while covered.
     this.holdTheme(t >= 0 && t <= TIMELINE.advance.end);
@@ -684,7 +685,7 @@ export class StoryDirector {
     const reduced = !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
     const enabled =
       intent.armed &&
-      !intent.held &&
+      !intent.pressed &&
       !this.pointer.down &&
       !reduced &&
       !isScrollLocked() &&

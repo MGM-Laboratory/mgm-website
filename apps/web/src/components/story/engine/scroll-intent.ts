@@ -15,8 +15,10 @@ import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";
  * - A scroll nobody asked for (a script, `scrollIntoView`, an anchor, an
  *   e2e spec) disarms it once 600 ms have passed since the last real input.
  *   Scroll events within 400 ms of a scroll lock change are ignored.
- * - `held`: a pointer or a finger is down (press and hold freezes the
- *   story and pauses auto-advance).
+ * - `pressed`: a pointer button or a finger is down (pauses auto-advance).
+ * - `held`: press and hold (freezes the story's time): a press kept down
+ *   for 180 ms, where a finger must also stay within 10 px. A finger that
+ *   scrolls the page, or a quick click, is never a hold.
  */
 
 const NEUTRAL_KEYS = new Set(["Escape", "Shift", "Control", "Alt", "Meta", "CapsLock"]);
@@ -29,6 +31,9 @@ const KEY_DIRECTION = new Map<string, 1 | -1>([
   ["Home", -1],
 ]);
 const DISARM_AFTER_MS = 600;
+/** How long a press must stay down before it is a hold, and how far a finger may drift. */
+const HOLD_DELAY_MS = 180;
+const HOLD_SLOP_PX = 10;
 /** Controls whose Enter and Space activate them rather than scroll the page. */
 const CONTROL = "a[href], button, [role='button'], summary";
 const LOCK_GRACE_MS = 400;
@@ -48,10 +53,15 @@ export class ScrollIntent {
   armed = false;
   /** The last input direction: 1 down the page, -1 up. */
   direction: 1 | -1 = 1;
-  /** A pointer or finger is down. */
-  held = false;
+  /** A pointer button or a finger is down. */
+  pressed = false;
   /** A finger is on the screen. */
   touching = false;
+  private pressAt = 0;
+  private pressX = 0;
+  private pressY = 0;
+  /** The press stopped being a hold (a finger scrolled, a second finger came down). */
+  private pressMoved = false;
   /** Input arrived since the last `consume()`. */
   private inputFlag = false;
   private lastInputAt = 0;
@@ -85,13 +95,26 @@ export class ScrollIntent {
       this.onKey(event);
     });
     listen("touchstart", (event) => {
+      const touch = event.touches.item(0);
+      if (this.touching) {
+        // A second finger: a pinch or a two-finger gesture, never a hold.
+        this.pressMoved = true;
+      } else {
+        this.press(touch?.clientX ?? 0, touch?.clientY ?? 0);
+      }
       this.touching = true;
-      this.held = true;
-      this.lastTouchY = event.touches.item(0)?.clientY ?? 0;
+      this.lastTouchY = touch?.clientY ?? 0;
       this.mark();
     });
     listen("touchmove", (event) => {
-      const y = event.touches.item(0)?.clientY ?? this.lastTouchY;
+      const touch = event.touches.item(0);
+      const y = touch?.clientY ?? this.lastTouchY;
+      if (
+        touch &&
+        Math.hypot(touch.clientX - this.pressX, touch.clientY - this.pressY) > HOLD_SLOP_PX
+      ) {
+        this.pressMoved = true;
+      }
       const dy = this.lastTouchY - y;
       this.lastTouchY = y;
       if (Math.abs(dy) > 0.5) this.arm(dy > 0 ? 1 : -1);
@@ -100,7 +123,7 @@ export class ScrollIntent {
     const touchEnd = (event: TouchEvent) => {
       if (event.touches.length > 0) return;
       this.touching = false;
-      this.held = false;
+      this.pressed = false;
       this.lastTouchEndAt = performance.now();
       this.mark();
     };
@@ -112,19 +135,19 @@ export class ScrollIntent {
         this.mark();
         return;
       }
-      if (event.pointerType !== "touch") this.held = true;
+      if (event.pointerType !== "touch") this.press(event.clientX, event.clientY);
     });
     const pointerUp = () => {
       if (this.scrollbarDrag) {
         this.scrollbarDrag = false;
         this.mark();
       }
-      if (!this.touching) this.held = false;
+      if (!this.touching) this.pressed = false;
     };
     listen("pointerup", pointerUp);
     listen("pointercancel", pointerUp);
     listen("blur", () => {
-      this.held = false;
+      this.pressed = false;
       this.touching = false;
       this.scrollbarDrag = false;
     });
@@ -153,9 +176,22 @@ export class ScrollIntent {
   detach() {
     for (const off of this.offs.splice(0)) off();
     this.armed = false;
-    this.held = false;
+    this.pressed = false;
     this.touching = false;
     this.scrollbarDrag = false;
+  }
+
+  /** Press and hold: down for a moment, and (for a finger) not scrolling. */
+  get held() {
+    return this.pressed && !this.pressMoved && performance.now() - this.pressAt >= HOLD_DELAY_MS;
+  }
+
+  private press(x: number, y: number) {
+    this.pressed = true;
+    this.pressMoved = false;
+    this.pressAt = performance.now();
+    this.pressX = x;
+    this.pressY = y;
   }
 
   /** Input since the last call (and resets the flag). */

@@ -368,7 +368,10 @@ export type DirectorReadout = Readonly<{
   velocity: number;
   /** 0..1, press and hold. */
   freeze: number;
-  /** A pointer or finger is held down. */
+  /**
+   * Press and hold: a pointer or finger kept down for a moment (a finger
+   * without scrolling). A scroll drag or a quick click is not a hold.
+   */
   held: boolean;
   /** Auto-advance is moving the page right now. */
   autoAdvancing: boolean;
