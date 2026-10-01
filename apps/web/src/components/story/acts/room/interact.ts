@@ -276,7 +276,7 @@ export class RoomProps {
     if (!body) return;
     const pivot = this.tvBodyHome;
     this.q.setFromAxisAngle(this.tvAxis, angle);
-    if (body) body.quaternion.copy(this.q);
+    body.quaternion.copy(this.q);
     if (screen) {
       screen.quaternion.copy(this.q);
       screen.position.copy(this.tvScreenHome).sub(pivot).applyQuaternion(this.q).add(pivot);

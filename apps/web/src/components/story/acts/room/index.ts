@@ -1044,7 +1044,12 @@ class RoomAct implements StoryAct {
     if (!slot || !shadow) return;
     slot.opacity = 0;
     if (ctx.tier !== "low" || !shadow.visible) return;
-    const opacity = (shadow.material as ShaderMaterial).uniforms.uOpacity?.value;
+    // Her runtime's shadow material keeps its strength in `uOpacity` (read defensively: another build of
+    // her may not).
+    const uniforms: Readonly<Record<string, { value: unknown } | undefined>> = (
+      shadow.material as ShaderMaterial
+    ).uniforms;
+    const opacity = uniforms.uOpacity?.value;
     slot.position.copy(shadow.position);
     slot.width = shadow.scale.x;
     slot.depth = shadow.scale.x;
