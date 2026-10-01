@@ -91,6 +91,12 @@ export type FlightPose = {
   nervous: number;
   /** Visible at all (false during a crossing she is not part of). */
   visible: boolean;
+  /**
+   * Where her root's +Y points (her back while she lies prone), or null for
+   * the world's up. A loop sets it toward the loop's centre, so she goes over
+   * the top upside down instead of flipping.
+   */
+  up: Vector3 | null;
 };
 
 export function createPose(): FlightPose {
@@ -117,6 +123,7 @@ export function createPose(): FlightPose {
     lookWeight: 0,
     nervous: 0,
     visible: true,
+    up: null,
   };
 }
 
@@ -234,6 +241,7 @@ export function copyPose(out: FlightPose, from: FlightPose) {
   out.lookWeight = from.lookWeight;
   out.nervous = from.nervous;
   out.visible = from.visible;
+  out.up = from.up ? from.up.clone() : null;
   return out;
 }
 
@@ -297,6 +305,13 @@ export function mixPose(out: FlightPose, a: FlightPose, b: FlightPose, w: number
   out.lookWeight = a.lookWeight + (b.lookWeight - a.lookWeight) * k;
   out.nervous = a.nervous + (b.nervous - a.nervous) * k;
   out.visible = lead.visible;
+  if (a.up || b.up) {
+    out.up = (out.up ?? new Vector3()).lerpVectors(a.up ?? WORLD_UP, b.up ?? WORLD_UP, k);
+    if (out.up.lengthSq() < 1e-8) out.up.copy(WORLD_UP);
+    out.up.normalize();
+  } else {
+    out.up = null;
+  }
   return out;
 }
 

@@ -1,5 +1,4 @@
 import {
-  IcosahedronGeometry,
   Matrix4,
   PerspectiveCamera,
   Quaternion,
@@ -54,7 +53,7 @@ import {
 import { CityWorld } from "./world-city";
 import { DunesWorld } from "./world-dunes";
 import { EdgeWorld } from "./world-edge";
-import { SketchWorld } from "./world-sketch";
+import { LeafWorld } from "./world-leaf";
 import { PaperTide } from "./world-paper";
 import { World, transformPose } from "./world";
 import {
@@ -224,22 +223,7 @@ class WorldsAct implements StoryAct {
     // The worlds.
     const paper = new PaperTide();
     const dunes = new DunesWorld(WORLD_BEATS.at(1)?.vh ?? 5.5);
-    const leaf = new SketchWorld({
-      id: "leaf",
-      key: 0x0f8657,
-      length: WORLD_BEATS.at(3)?.vh ?? 5.5,
-      tail: 0,
-      zenith: 0xbfe3b4,
-      horizon: 0xf3f6d8,
-      ground: 0x0f8657,
-      colours: [0x0f8657, 0x5fb36f, 0xf7bf33, 0xf94141],
-      geometry: () => new IcosahedronGeometry(1.6, 0),
-      clip: "fly_play_spin",
-      pitchDeg: 0,
-      face: "laugh",
-      entry: new Vector3(0, 6, 0),
-      exit: new Vector3(0, 8, -220),
-    });
+    const leaf = new LeafWorld(WORLD_BEATS.at(3)?.vh ?? 5.5);
     const edge = new EdgeWorld(WORLD_BEATS.at(4)?.vh ?? 4, LOSS_BEAT.vh, FALL_BEAT.vh);
     const city = new CityWorld(WORLD_BEATS.at(2)?.vh ?? 5.5);
     this.worlds = [paper, dunes, city, leaf, edge];
@@ -276,6 +260,8 @@ class WorldsAct implements StoryAct {
     });
 
     await this.compile(ctx);
+    // Development only: the act for verification scripts (its worlds, their landmarks).
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { __storyWorlds: this });
   }
 
   /** Every program on the GPU, and one draw into every target, before anyone scrolls. */
@@ -300,14 +286,20 @@ class WorldsAct implements StoryAct {
       scene.add(rift.group, rift.warp, flight.trail.mesh, burst.points);
       flight.trail.warm(true);
       await stage.compile(scene);
-      await godette.compile(renderer, camera, scene);
+      const extra = world?.extraTargets?.() ?? [];
+      await godette.compile(
+        renderer,
+        camera,
+        scene,
+        extra.length > 0 ? [null, ...extra] : undefined,
+      );
       flight.trail.warm(false);
       rift.group.removeFromParent();
       rift.warp.removeFromParent();
       flight.trail.mesh.removeFromParent();
       burst.points.removeFromParent();
       world?.warm(false);
-      world?.warmTargets?.(renderer);
+      world?.warmTargets?.(renderer, camera);
     }
     // One draw into each of the act's own targets (Metal builds a pipeline per target on the first draw).
     const hole = this.hole;
@@ -475,6 +467,9 @@ class WorldsAct implements StoryAct {
     else rift.warp.removeFromParent();
 
     if (herScene === world.scene) this.fly(ctx, world.scene, pose);
+    // A world with its own composite renders itself now, with her posed.
+    const shown = world.present?.(ctx, camera);
+    if (shown) ctx.stage.setScene(shown);
 
     ctx.setHeaderTone(world.headerTone?.(T) ?? "dark");
     const look = world.post();
@@ -683,6 +678,7 @@ class WorldsAct implements StoryAct {
   }
 
   dispose() {
+    if (process.env.NODE_ENV !== "production") Reflect.deleteProperty(window, "__storyWorlds");
     this.feed?.dispose();
     for (const world of this.worlds) world.dispose();
     this.rift?.dispose();

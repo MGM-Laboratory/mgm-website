@@ -109,8 +109,19 @@ export abstract class World {
   /** The header's ink over this world at `T` ("dark" over a dark scene, light ink); "dark" when absent. */
   headerTone?(T: number): "light" | "dark";
 
+  /**
+   * After she is posed, the scene the stage should render this frame (null:
+   * the world's own). A world with its own composite (Leafhold's depth of
+   * field) renders `scene` into its target here and hands back a scene that
+   * shows the result.
+   */
+  present?(ctx: StoryContext, camera: PerspectiveCamera): Scene | null;
+
   /** One draw into each render target the world owns (pipelines are built on a first draw). */
-  warmTargets?(renderer: WebGLRenderer): void;
+  warmTargets?(renderer: WebGLRenderer, camera: PerspectiveCamera): void;
+
+  /** Targets she is drawn into besides the canvas and the stage's post target (her warm draws). */
+  extraTargets?(): readonly WebGLRenderTarget[];
 
   /** A tap or move while this world is on screen. Return true when consumed. */
   pointer?(ctx: StoryContext, event: StoryPointerEvent, time: number): boolean;

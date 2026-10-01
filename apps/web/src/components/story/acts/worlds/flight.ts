@@ -40,7 +40,8 @@ export class FlightDriver {
     root.scale.setScalar(1);
     g.scale = 1;
     root.position.copy(pose.position);
-    headingQuaternion(pose.heading, this.quaternion);
+    if (pose.up) headingQuaternion(pose.heading, this.quaternion, pose.up);
+    else headingQuaternion(pose.heading, this.quaternion);
     if (pose.yaw !== 0) {
       this.turn.setFromAxisAngle(this.axis.set(0, 1, 0), pose.yaw);
       this.quaternion.multiply(this.turn);
