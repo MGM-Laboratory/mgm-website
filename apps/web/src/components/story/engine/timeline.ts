@@ -72,7 +72,7 @@ const ROWS = [
   // Act 4: your turn (finale)
   { id: "f-cut", act: "finale", vh: 0.2, speed: 1.0, rest: "none" },
   // Hands off, these speeds play her landing, standing and wave at about real time.
-  { id: "f-land", act: "finale", vh: 1.0, speed: 0.42, rest: "none" },
+  { id: "f-land", act: "finale", vh: 1.0, speed: 0.33, rest: "none" },
   { id: "f-stand", act: "finale", vh: 1.0, speed: 0.36, rest: "none" },
   { id: "f-wave", act: "finale", vh: 0.8, speed: 0.45, rest: "terminal" },
   { id: "f-out", act: "finale", vh: 1.0, speed: null, rest: "none" },
