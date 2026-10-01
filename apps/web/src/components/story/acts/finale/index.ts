@@ -178,6 +178,8 @@ class FinaleAct implements StoryAct {
     glow: number;
   } | null = null;
   private lifeFade = 0;
+  /** This act had her on the last frame (false: a fresh run starts on the next active frame). */
+  private wasActive = false;
   /** The auto idle last given to her (undefined: not yet this run). */
   private autoIdle: number | null | undefined = undefined;
 
@@ -258,9 +260,14 @@ class FinaleAct implements StoryAct {
     const strokes = this.strokes;
     if (!state.active || !godette || !sprites || !strokes) {
       if (!state.active) this.idleOut();
+      this.wasActive = false;
       return;
     }
-    if (state.arrived) this.resetLife();
+    // A fresh run (an arrival, or the first frame after the worlds act had her, say a jump back
+    // through the fall): her life starts over, nothing of the last run shows.
+    const fresh = state.arrived || !this.wasActive;
+    this.wasActive = true;
+    if (fresh) this.resetLife();
     this.applyPalette(ctx);
     const colors = this.colors ?? finaleColors(ctx.palette);
     const { stage } = ctx;
@@ -277,11 +284,7 @@ class FinaleAct implements StoryAct {
     // Whatever the act before left on her (the table's behind layer, hidden at the end of a
     // fall, a toy scale) goes: this scene draws her on the front layer, visible, life size.
     // The stand stays where the table act keeps it (this scene never draws it).
-    if (
-      godette.root.parent !== this.scene ||
-      godette.shadow.parent !== this.scene ||
-      state.arrived
-    ) {
+    if (godette.root.parent !== this.scene || godette.shadow.parent !== this.scene || fresh) {
       this.scene.add(godette.root, godette.shadow);
       godette.root.traverse((object) => {
         object.layers.set(STORY_LAYERS.front);
@@ -637,10 +640,16 @@ class FinaleAct implements StoryAct {
     this.lifeFade = 0;
     this.blush = 0;
     this.byeClock = 0;
+    this.bye.value = 0;
+    this.ambientIn.value = 0;
     this.special = null;
     this.fading = null;
+    this.lastSpecial = null;
     this.glance = null;
     this.clicks = [];
+    this.lastClickAt = -10;
+    this.pokedAt = -10;
+    this.hoverGrace = 0;
     this.bursts.clear();
     this.titleOn = false;
   }
