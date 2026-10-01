@@ -844,11 +844,7 @@ function worldGeometry(mesh: Mesh) {
     const size = attribute.itemSize;
     const values = new Float32Array(attribute.count * size);
     for (let i = 0; i < attribute.count; i++) {
-      const o = i * size;
-      values[o] = attribute.getX(i);
-      if (size > 1) values[o + 1] = attribute.getY(i);
-      if (size > 2) values[o + 2] = attribute.getZ(i);
-      if (size > 3) values[o + 3] = attribute.getW(i);
+      for (let c = 0; c < size; c++) values[i * size + c] = attribute.getComponent(i, c);
     }
     out.setAttribute(name, new BufferAttribute(values, size));
   }
@@ -1263,7 +1259,7 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
   // the shared state (the render target, the meshes' parent, layers and phase) is put back before
   // the wait: anything that renders meanwhile (the loader, another prop's warm-up) sees the room as
   // it was.
-  async function capture(renderer: WebGLRenderer) {
+  const capture = async (renderer: WebGLRenderer): Promise<void> => {
     for (const t of textures) renderer.initTexture(t);
     const scene = new Scene();
     const probeTarget = new WebGLRenderTarget(4, 4, { type: HalfFloatType });
@@ -1320,7 +1316,7 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
       m.envMap = target.texture;
       m.needsUpdate = true;
     }
-  }
+  };
 
   const room: StoryRoom = {
     root,
