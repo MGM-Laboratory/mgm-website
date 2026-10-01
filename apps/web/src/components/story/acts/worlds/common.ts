@@ -139,6 +139,10 @@ export type CameraShot = {
    * wormhole's first frame must match the TV's crop).
    */
   widen: number;
+  /** Her centre this frame (the act fills it in): a narrow screen aims part way toward it. */
+  subject: Vector3;
+  /** 0..1: how much a narrow screen pulls the aim toward `subject` (0 lets her leave frame). */
+  hold: number;
 };
 
 export function createShot(): CameraShot {
@@ -150,6 +154,8 @@ export function createShot(): CameraShot {
     shake: 0,
     look: 0.03,
     widen: 1,
+    subject: new Vector3(),
+    hold: 1,
   };
 }
 
@@ -161,6 +167,8 @@ export function copyShot(out: CameraShot, from: CameraShot) {
   out.shake = from.shake;
   out.look = from.look;
   out.widen = from.widen;
+  out.subject.copy(from.subject);
+  out.hold = from.hold;
   return out;
 }
 
@@ -173,6 +181,8 @@ export function mixShot(out: CameraShot, a: CameraShot, b: CameraShot, w: number
   out.shake = a.shake + (b.shake - a.shake) * w;
   out.look = a.look + (b.look - a.look) * w;
   out.widen = a.widen + (b.widen - a.widen) * w;
+  out.subject.lerpVectors(a.subject, b.subject, w);
+  out.hold = a.hold + (b.hold - a.hold) * w;
   return out;
 }
 

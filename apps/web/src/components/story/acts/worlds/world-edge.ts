@@ -505,6 +505,8 @@ export class EdgeWorld extends World {
     shot.target.addScaledVector(UP, -0.7 * peek);
     shot.fov += 2 * peek;
     shot.shake = 0;
+    // The camera does not follow her down, on any screen.
+    shot.hold = 0;
   }
 
   timeRate(T: number) {

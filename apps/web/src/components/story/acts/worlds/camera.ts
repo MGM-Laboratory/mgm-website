@@ -1,4 +1,4 @@
-import type { PerspectiveCamera } from "three";
+import { Vector3, type PerspectiveCamera } from "three";
 
 import type { StoryContext } from "@/components/story/engine/act";
 import { fovForAspect } from "@/components/story/engine/frame";
@@ -32,6 +32,7 @@ export function portraitFov(fov: number, aspect: number, widen = 1) {
 export class CameraRig {
   private yaw = 0;
   private pitch = 0;
+  private readonly aim = new Vector3();
 
   /** `time` is the act's life clock; `dt` its step. */
   apply(ctx: StoryContext, shot: CameraShot, time: number, dt: number, near = 0.06, far = 900) {
@@ -41,7 +42,17 @@ export class CameraRig {
     const k = 1 - Math.exp(-3 * dt);
     this.yaw += ((mouse ? -pointer.ndc.x * shot.look : 0) - this.yaw) * k;
     this.pitch += ((mouse ? pointer.ndc.y * shot.look * 0.6 : 0) - this.pitch) * k;
-    place(camera, shot, time, this.yaw, this.pitch);
+    // A narrow (portrait) screen aims part way toward her, so a shot framed beside her keeps her.
+    const narrow =
+      Math.min(1, Math.max(0, (1.25 - ctx.size.aspect) / 0.7)) * shot.hold * shot.widen;
+    if (narrow > 0) {
+      this.aim.copy(shot.target);
+      shot.target.lerp(shot.subject, 0.78 * narrow);
+      place(camera, shot, time, this.yaw, this.pitch);
+      shot.target.copy(this.aim);
+    } else {
+      place(camera, shot, time, this.yaw, this.pitch);
+    }
     camera.fov = portraitFov(shot.fov, ctx.size.aspect, shot.widen);
     camera.near = near;
     camera.far = far;

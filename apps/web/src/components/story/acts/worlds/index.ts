@@ -1,5 +1,4 @@
 import {
-  BoxGeometry,
   ConeGeometry,
   IcosahedronGeometry,
   Matrix4,
@@ -39,6 +38,7 @@ import {
   mixPose,
   mixShot,
   scaledSize,
+  type CameraShot,
   type FlightPose,
 } from "./common";
 import { FlightDriver } from "./flight";
@@ -52,6 +52,7 @@ import {
   riftState,
   type RiftState,
 } from "./rift";
+import { CityWorld } from "./world-city";
 import { EdgeWorld } from "./world-edge";
 import { SketchWorld } from "./world-sketch";
 import { PaperTide } from "./world-paper";
@@ -222,58 +223,41 @@ class WorldsAct implements StoryAct {
 
     // The worlds.
     const paper = new PaperTide();
-    const sketches = [
-      new SketchWorld({
-        id: "dunes",
-        key: 0xf94141,
-        length: WORLD_BEATS.at(1)?.vh ?? 5.5,
-        tail: 0,
-        zenith: 0x3a6dc5,
-        horizon: 0xfef6e0,
-        ground: 0xf7bf33,
-        colours: [0xf94141, 0xf7bf33, 0x3a6dc5, 0x0f8657],
-        geometry: () => new ConeGeometry(1.4, 3.2, 4),
-        clip: "fly_slalom",
-        pitchDeg: 80,
-        face: "determined",
-        entry: new Vector3(0, 8, 0),
-        exit: new Vector3(0, 9, -240),
-      }),
-      new SketchWorld({
-        id: "city",
-        key: 0x3a6dc5,
-        length: WORLD_BEATS.at(2)?.vh ?? 5.5,
-        tail: 0,
-        zenith: 0x05060c,
-        horizon: 0x1a1f3a,
-        ground: 0x0e1116,
-        colours: [0xf7bf33, 0x3a6dc5, 0xf94141, 0xffffff],
-        geometry: () => new BoxGeometry(2, 9, 2),
-        clip: "fly_action",
-        pitchDeg: 85,
-        face: "determined",
-        entry: new Vector3(0, 20, 0),
-        exit: new Vector3(0, 26, -240),
-      }),
-      new SketchWorld({
-        id: "leaf",
-        key: 0x0f8657,
-        length: WORLD_BEATS.at(3)?.vh ?? 5.5,
-        tail: 0,
-        zenith: 0xbfe3b4,
-        horizon: 0xf3f6d8,
-        ground: 0x0f8657,
-        colours: [0x0f8657, 0x5fb36f, 0xf7bf33, 0xf94141],
-        geometry: () => new IcosahedronGeometry(1.6, 0),
-        clip: "fly_play_spin",
-        pitchDeg: 0,
-        face: "laugh",
-        entry: new Vector3(0, 6, 0),
-        exit: new Vector3(0, 8, -220),
-      }),
-    ];
+    const dunes = new SketchWorld({
+      id: "dunes",
+      key: 0xf94141,
+      length: WORLD_BEATS.at(1)?.vh ?? 5.5,
+      tail: 0,
+      zenith: 0x3a6dc5,
+      horizon: 0xfef6e0,
+      ground: 0xf7bf33,
+      colours: [0xf94141, 0xf7bf33, 0x3a6dc5, 0x0f8657],
+      geometry: () => new ConeGeometry(1.4, 3.2, 4),
+      clip: "fly_slalom",
+      pitchDeg: 80,
+      face: "determined",
+      entry: new Vector3(0, 8, 0),
+      exit: new Vector3(0, 9, -240),
+    });
+    const leaf = new SketchWorld({
+      id: "leaf",
+      key: 0x0f8657,
+      length: WORLD_BEATS.at(3)?.vh ?? 5.5,
+      tail: 0,
+      zenith: 0xbfe3b4,
+      horizon: 0xf3f6d8,
+      ground: 0x0f8657,
+      colours: [0x0f8657, 0x5fb36f, 0xf7bf33, 0xf94141],
+      geometry: () => new IcosahedronGeometry(1.6, 0),
+      clip: "fly_play_spin",
+      pitchDeg: 0,
+      face: "laugh",
+      entry: new Vector3(0, 6, 0),
+      exit: new Vector3(0, 8, -220),
+    });
     const edge = new EdgeWorld(WORLD_BEATS.at(4)?.vh ?? 4, LOSS_BEAT.vh, FALL_BEAT.vh);
-    this.worlds = [paper, ...sketches, edge];
+    const city = new CityWorld(WORLD_BEATS.at(2)?.vh ?? 5.5);
+    this.worlds = [paper, dunes, city, leaf, edge];
     for (const world of this.worlds) {
       await yieldToMain();
       await world.build(ctx);
@@ -402,6 +386,7 @@ class WorldsAct implements StoryAct {
 
     if (r.kind === "hole") {
       holeChoreo(r.p, ctx.size.aspect, pose, shot, life.time);
+      this.subject(shot, pose);
       this.rig.apply(ctx, shot, life.time, life.dt, 0.5, 4000);
       this.drawHole(ctx, r.p);
       ctx.stage.setScene(this.holeScene);
@@ -461,6 +446,7 @@ class WorldsAct implements StoryAct {
       if (world.exit && r.T > world.length - EXIT_BLEND) this.blendExit(world, r.index, r.T);
     }
 
+    this.subject(shot, pose);
     this.rig.apply(ctx, shot, life.time, life.dt);
     const T = r.T;
     world.frame(ctx, {
@@ -519,6 +505,12 @@ class WorldsAct implements StoryAct {
     const p = T / world.length;
     this.hud.update(ctx, r.arrive || r.leave ? null : r.index, p);
     this.placeHotspot(ctx, camera);
+  }
+
+  /** Her centre on the shot, for narrow screens (prone she is centred 1 m over her root, upright 1.1 m). */
+  private subject(shot: CameraShot, pose: FlightPose) {
+    shot.subject.copy(pose.position);
+    shot.subject.y += pose.pitch > 0.6 ? 1.0 : 1.1;
   }
 
   /** The wormhole into its half-resolution target, from the stage camera. */
