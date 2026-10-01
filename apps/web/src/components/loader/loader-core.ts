@@ -9,6 +9,7 @@ import { hardwareWebGL2 } from "@/components/reel/gl/webgl-probe";
 import { LOADER_COPY } from "@/data/story";
 import { NAV_ITEMS } from "@/data/nav";
 import { motionAllowed } from "@/lib/reduced-motion";
+import { markRouteCoverStarted, markRouteRevealDone } from "@/lib/route-reveal";
 
 /**
  * The site loader's core (docs/homepage-story.md, "The loader"): what it
@@ -31,6 +32,10 @@ import { motionAllowed } from "@/lib/reduced-motion";
  *   is all the visitor sees; the build finishes behind the page (the story
  *   section shows its own waiting state if someone gets there first).
  * - Every fetch it starts catches its own failure (no unhandled rejection).
+ * - While it shows it counts as a route cover (`lib/route-reveal.ts`), so
+ *   every entrance that waits for the route curtain (the header, the
+ *   projects and articles pages) waits for the loader's reveal too, and the
+ *   visitor sees each page start from its first frame.
  * - When it is done: `html[data-loader="done"]`, a `mgm:loader` flag for the
  *   fast path, and a full prefetch of the menu's routes at idle (skipped
  *   under webdriver).
@@ -138,6 +143,8 @@ class LoaderCore {
     this.prefetch = prefetch;
     const boot = readBoot();
     if (!boot.loader) {
+      // Nothing covers the page (or the boot script's failsafe already took the loader down).
+      this.revealing();
       this.set({ phase: "done" });
       this.afterDone();
       return;
@@ -166,6 +173,7 @@ class LoaderCore {
   readonly revealing = () => {
     if (this.revealed) return;
     this.revealed = true;
+    if (coverMarked) markRouteRevealDone();
     for (const resolve of [...this.revealWaiters]) resolve();
     this.revealWaiters.clear();
   };
@@ -296,6 +304,14 @@ class LoaderCore {
     }
   }
 }
+
+/**
+ * A loader that shows covers the first page like the route curtain does.
+ * Marked when this module first runs on the client, before any page effect
+ * can ask (`waitForRouteReveal`); released when the view starts its reveal.
+ */
+const coverMarked = typeof window !== "undefined" && readBoot().loader;
+if (coverMarked) markRouteCoverStarted();
 
 export const siteLoader = new LoaderCore();
 
