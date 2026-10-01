@@ -155,6 +155,8 @@ class RoomAct implements StoryAct {
   private tvTap: { x: number; y: number; seconds: number } | null = null;
   private hoverBox = false;
   private hoverTv = false;
+  /** Where the pointer is on the screen (its UV), while `hoverTv`. */
+  private readonly tvUv = new Vector2(0.5, 0.5);
   private hoverSpark = false;
   /** How much of the spark shows this frame (its hotspot and its dodge need it out). */
   private sparkShown = 0;
@@ -297,7 +299,8 @@ class RoomAct implements StoryAct {
       id: "room-tv",
       label: labels.tv,
       onActivate: () => {
-        this.tapTv(ctx, null);
+        // A click lands where the pointer is on the glass; Enter at the middle.
+        this.tapTv(ctx, this.hoverTv ? this.tvUv : null);
       },
     });
     const boxSpot = ctx.overlay.hotspot({
@@ -311,7 +314,9 @@ class RoomAct implements StoryAct {
       id: "room-letters",
       label: labels.letters,
       onActivate: () => {
-        this.letters?.wave(ctx.clock.time);
+        // A click on a letter hops that letter; Enter (or a click between them) sends a wave along the rows.
+        if (this.hoverLetter >= 0) this.letters?.hop(this.hoverLetter);
+        else this.letters?.wave(ctx.clock.time);
       },
     });
     const toySpot = ctx.overlay.hotspot({
@@ -521,7 +526,7 @@ class RoomAct implements StoryAct {
     this.rig.tick(ctx);
     const still = Math.abs(state.velocity) < 0.05;
     const dt = ctx.clock.storyDt;
-    const lit = this.litBySpots();
+    const lit = this.litBySpots(still);
 
     // --- the room
     room.setGrade(ctx.palette.scheme);
@@ -1173,7 +1178,10 @@ class RoomAct implements StoryAct {
     else if (hit.kind === "letter") this.hoverLetter = hit.index;
     else if (hit.kind === "box") this.hoverBox = true;
     else if (hit.kind === "prop") prop = hit.mesh;
-    else if (hit.kind === "tv") this.hoverTv = true;
+    else if (hit.kind === "tv") {
+      this.hoverTv = true;
+      if (hit.uv) this.tvUv.copy(hit.uv);
+    }
     this.props?.hover(prop, eye);
     // The spark dodges a cursor that comes within a few centimetres of it.
     const spark = this.spark;
@@ -1305,10 +1313,15 @@ class RoomAct implements StoryAct {
     this.props?.knockTv(0.3);
   }
 
-  /** Hotspots that are hovered or focused light their object up as a pointer would. */
-  private litBySpots(): Lit {
+  /**
+   * Hotspots that are hovered or focused light their object up as a pointer
+   * would. A hover counts only while the page is still (gotcha #20: a hotspot
+   * sliding under a resting pointer during a scroll is not a hover).
+   */
+  private litBySpots(still: boolean): Lit {
     const spots = this.spots;
-    const on = (spot: StoryHotspot | undefined) => !!spot && (spot.hovered || spot.focused);
+    const on = (spot: StoryHotspot | undefined) =>
+      !!spot && ((still && spot.hovered) || spot.focused);
     return {
       toy: on(spots?.toy),
       // The letters answer the pointer one by one (the ray finds the letter); focus walks the phrase.

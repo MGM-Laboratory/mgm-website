@@ -34,10 +34,15 @@ export class TableLetters {
   private hovered = -1;
   private idleIn = 3;
   private readonly yaw: number;
+  /** Seconds into each letter's spin after a click (-1: none). */
+  private readonly spins: Float32Array;
+  private readonly spinQ = new Quaternion();
+  private readonly up = new Vector3(0, 1, 0);
 
   private constructor(toy: ToyLetters, yaw: number) {
     this.toy = toy;
     this.yaw = yaw;
+    this.spins = new Float32Array(toy.letters.length).fill(-1);
     const euler = new Euler();
     this.heights = toy.letters.map((letter) => 0.055 + 0.04 * hash01(letter.index, 3));
     this.tilts = toy.letters.map((letter) =>
@@ -159,13 +164,25 @@ export class TableLetters {
         this.idleIn = 2.2 + random() * 2.8;
       }
     }
-    this.toy.update(ctx.clock.storyDt);
+    // A clicked letter spins once about its base while it hops (on top of its pose this frame).
+    const dt = ctx.clock.storyDt;
+    for (const letter of this.toy.letters) {
+      const s = this.spins.at(letter.index) ?? -1;
+      if (s < 0) continue;
+      const k = (s + dt) / 0.5;
+      this.spins.set([k >= 1 ? -1 : s + dt], letter.index);
+      const eased = k >= 1 ? 1 : k * k * (3 - 2 * k);
+      this.spinQ.setFromAxisAngle(this.up, eased * Math.PI * 2);
+      letter.quaternion.premultiply(this.spinQ);
+    }
+    this.toy.update(dt);
     this.toy.commit();
   }
 
   /** A click: the letter hops, and its neighbours feel it a little. */
   hop(index: number) {
     this.toy.hop(index);
+    if ((this.spins.at(index) ?? -1) < 0) this.spins.set([0], index);
     const letter = this.toy.letters.at(index);
     if (!letter) return;
     for (const other of this.toy.letters) {
@@ -187,6 +204,7 @@ export class TableLetters {
   reset() {
     this.hovered = -1;
     this.idleIn = 3;
+    this.spins.fill(-1);
   }
 
   dispose() {
