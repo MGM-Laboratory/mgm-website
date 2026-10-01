@@ -50,6 +50,10 @@ manager.itemEnd = (url: string) => {
 };
 
 let ktx2: KTX2Loader | null = null;
+/** Whether the meshopt decoder runs its own workers (started on the first glTF parse). */
+let meshoptWorkers = false;
+/** The decoder under a plain name (its `useWorkers` is not a React hook). */
+const meshopt = MeshoptDecoder;
 let ktx2Renderer: WebGLRenderer | null = null;
 
 /** The visit's KTX2 loader, set up for `renderer`. */
@@ -67,6 +71,10 @@ export function disposeStoryLoaders() {
   ktx2?.dispose();
   ktx2 = null;
   ktx2Renderer = null;
+  if (meshoptWorkers) {
+    meshoptWorkers = false;
+    meshopt.useWorkers(0);
+  }
   for (const blobUrl of blobs.values()) URL.revokeObjectURL(blobUrl);
   blobs.clear();
 }
@@ -89,10 +97,27 @@ function isKtx2(path: string) {
   return path.endsWith(".ktx2");
 }
 
+/** A new task (a message, which a hidden tab does not throttle like a timer). */
+function pause(): Promise<void> {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(null);
+  });
+}
+
 async function parseGltf(renderer: WebGLRenderer, url: string): Promise<GLTF> {
   const path = storyAssetPath(url);
   if (!path) throw new Error(`not a story asset: ${url}`);
   const bytes = await bytesOf(path);
+  // Geometry decodes off the main thread (the decoder's own workers).
+  if (!meshoptWorkers) {
+    meshoptWorkers = true;
+    meshopt.useWorkers(2);
+  }
   const loader = new GLTFLoader(manager);
   loader.setMeshoptDecoder(MeshoptDecoder);
   loader.setKTX2Loader(ktx2For(renderer));
@@ -180,10 +205,17 @@ export function createStoryAssets(renderer: WebGLRenderer, tier: StoryTier) {
       return bytesOf(url);
     },
     async warm() {
-      const jobs = files
-        .filter((file) => file.kind === "gltf")
-        .map((file) => assets.gltf(file.url).then(() => undefined));
-      await Promise.allSettled(jobs);
+      // One file at a time, each parse starting in a task of its own: a page
+      // that is already live never gets one long parse task.
+      for (const file of files) {
+        if (file.kind !== "gltf") continue;
+        await pause();
+        try {
+          await assets.gltf(file.url);
+        } catch {
+          // The act that needs it reports the failure; the warm-up only primes.
+        }
+      }
     },
   };
   return assets;

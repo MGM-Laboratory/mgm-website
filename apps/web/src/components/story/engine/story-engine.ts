@@ -51,6 +51,24 @@ async function loadActs(): Promise<StoryAct[]> {
   return [cards.createAct(), room.createAct(), worlds.createAct(), finale.createAct()];
 }
 
+/**
+ * Hands the main thread back (input, paint) and resumes in a new task. Not
+ * `requestAnimationFrame`, which never fires in a hidden tab: the build must
+ * keep going behind the loading screen of a background tab.
+ */
+function yieldToMain(): Promise<void> {
+  const scheduler = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  if (typeof scheduler?.yield === "function") return scheduler.yield();
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(null);
+  });
+}
+
 /** Every beat's middle, and the entrance: the warm-up renders each once. */
 function warmPositions() {
   const positions = [-ENTRANCE_VH / 2];
@@ -271,22 +289,38 @@ async function assemble(
     },
   });
   for (const act of acts) {
+    await yieldToMain();
+    if (!current()) return abandon();
     await act.init(director.ctx);
     if (!current()) return abandon();
   }
   report("warm", 0.9);
   if (stage.isLost()) return abandon();
 
-  // Every beat once: every program and texture is on the GPU before anyone scrolls.
-  for (const t of warmPositions()) director.renderAt(t);
+  // Every beat once: every program and texture is on the GPU before anyone
+  // scrolls. One beat per task, so the warm-up never blocks a live page.
+  const positions = warmPositions();
+  for (const [index, t] of positions.entries()) {
+    await yieldToMain();
+    if (!current() || stage.isLost()) return abandon();
+    director.renderAt(t);
+    report("warm", 0.9 + (0.08 * (index + 1)) / positions.length);
+  }
   const gl = stage.renderer.getContext();
   const pixel = new Uint8Array(4);
+  // Waits for the queued GPU work in a task of its own.
+  await yieldToMain();
+  if (!current()) return abandon();
   gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
   const heavy = heaviestPosition();
-  const verdict = judgeWarmup(tier, () => {
-    director.renderAt(heavy);
-    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-  });
+  const verdict = await judgeWarmup(
+    tier,
+    () => {
+      director.renderAt(heavy);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    },
+    { pause: yieldToMain },
+  );
   director.resetStates();
   if (process.env.NODE_ENV !== "production") {
     console.debug(

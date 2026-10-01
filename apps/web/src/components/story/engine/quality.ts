@@ -86,11 +86,19 @@ export type WarmVerdict = Readonly<{
  * GPU work is inside the measurement) and judges the start tier from the
  * median: over 20 ms one tier lower, over 33 ms two, over 90 ms hopeless.
  * `frames` stays small: this runs during the loading screen or the first
- * visit, and a software rasteriser takes a second a frame.
+ * visit, and a software rasteriser takes a second a frame. `pause` runs
+ * before each timed frame, so every frame is its own task (no long task on
+ * a live page).
  */
-export function judgeWarmup(start: StoryTier, render: () => void, frames = 3): WarmVerdict {
+export async function judgeWarmup(
+  start: StoryTier,
+  render: () => void,
+  options: { frames?: number; pause?: () => Promise<void> } = {},
+): Promise<WarmVerdict> {
+  const frames = options.frames ?? 3;
   const samples: number[] = [];
   for (let i = 0; i < frames; i += 1) {
+    await options.pause?.();
     const begin = performance.now();
     render();
     const ms = performance.now() - begin;
