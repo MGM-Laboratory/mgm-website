@@ -797,6 +797,23 @@ class RoomAct implements StoryAct {
     box.update(ctx.clock.time);
     box.root.updateMatrixWorld(true);
     const puffP = saturate(state.beat("r-land") / 0.55);
+    // The same puff, smaller, where her boots land off the stand (the box's has long settled by then).
+    const hopP = (state.beat("r-break") - BREAK.land + 0.004) / 0.13;
+    const toy = this.toy;
+    if (toy && puffP >= 1 && hopP > 0 && hopP < 1) {
+      this.puff.set(
+        this.tmp.v.copy(toy.ground).setY(room.anchors.table.topY),
+        0.014,
+        0.011,
+        TOY_YAW,
+        hopP,
+        ctx.size.height,
+        ctx.stage.camera.fov,
+        0.85,
+        0.6,
+      );
+      return;
+    }
     this.puff.set(
       this.tmp.v.copy(box.root.position).setY(room.anchors.table.topY),
       0.035,

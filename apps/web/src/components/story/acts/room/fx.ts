@@ -248,6 +248,7 @@ uniform vec2 uHalf;
 uniform float uYaw;
 uniform float uSize;
 uniform float uViewport;
+uniform float uScale;
 varying float vAlpha;
 void main() {
   // Dust squeezed out from under the box's edges: out along the table, a little up, slowing, fading.
@@ -256,15 +257,15 @@ void main() {
   float along = aSeed.y * 2.0 - 1.0;
   vec2 edge = side < 1.0 ? vec2(1.0, along) : side < 2.0 ? vec2(-1.0, along) : side < 3.0 ? vec2(along, 1.0) : vec2(along, -1.0);
   vec2 outward = side < 2.0 ? vec2(sign(edge.x), 0.0) : vec2(0.0, sign(edge.y));
-  float travel = (1.0 - exp(-k * 4.0)) * (0.012 + 0.02 * aSeed.w);
+  float travel = (1.0 - exp(-k * 4.0)) * (0.012 + 0.02 * aSeed.w) * uScale;
   vec2 local = edge * uHalf + outward * travel;
   float c = cos(uYaw);
   float s = sin(uYaw);
-  vec3 p = uOrigin + vec3(local.x * c + local.y * s, 0.0015 + k * (0.004 + 0.01 * aSeed.z), -local.x * s + local.y * c);
+  vec3 p = uOrigin + vec3(local.x * c + local.y * s, 0.0015 + k * (0.004 + 0.01 * aSeed.z) * uScale, -local.x * s + local.y * c);
   vAlpha = smoothstep(0.0, 0.08, k) * (1.0 - smoothstep(0.35, 1.0, k)) * (k > 0.0 && k < 1.0 ? 1.0 : 0.0);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = clamp(uSize * (0.7 + 1.6 * k) * uViewport / max(0.05, -mv.z), 1.0, 48.0);
+  gl_PointSize = clamp(uSize * uScale * (0.7 + 1.6 * k) * uViewport / max(0.05, -mv.z), 1.0, 48.0);
 }
 `;
 
@@ -299,6 +300,7 @@ export class DustPuff {
       uYaw: { value: 0 },
       uSize: { value: 0.006 },
       uViewport: { value: 900 },
+      uScale: { value: 1 },
       uColour: { value: new Color(0xb9ab97) },
       uIntensity: { value: 0.5 },
     };
@@ -317,7 +319,11 @@ export class DustPuff {
     this.points.renderOrder = 2;
   }
 
-  /** `progress` 0..1 of the puff (scrubbed), around a footprint `halfX` by `halfZ` turned by `yaw`. */
+  /**
+   * `progress` 0..1 of the puff (scrubbed), around a footprint `halfX` by
+   * `halfZ` turned by `yaw`. `scale` shrinks how far and how high the dust
+   * travels and its grain (1 for the box, less for her boots).
+   */
   set(
     origin: Vector3,
     halfX: number,
@@ -327,8 +333,10 @@ export class DustPuff {
     viewportHeightPx: number,
     fovDeg: number,
     intensity: number,
+    scale = 1,
   ) {
     const u = this.uniforms;
+    u.uScale.value = scale;
     u.uOrigin.value.copy(origin);
     u.uHalf.value.set(halfX, halfZ);
     u.uYaw.value = yaw;

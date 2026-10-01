@@ -43,7 +43,15 @@ export const BREAK = {
   glance: 0.24,
   clip: 0.32,
   clipEnd: 0.97,
+  /** The hop off the stand (in `af_break`'s root motion) touches the table here. */
+  land: 0.883,
 } as const;
+
+/** The landing's squash, 0 to 1 and back over a few hundredths of r-break after `BREAK.land`. */
+export function hopLanding(p: number) {
+  const u = (p - BREAK.land) / 0.05;
+  return u > 0 && u < 1 ? Math.sin(u * Math.PI) : 0;
+}
 
 /** `af_break` time at r-break progress `p`: it starts once her eyes have found the camera and darted. */
 export function breakClipTime(p: number) {
@@ -322,16 +330,24 @@ export class ToyDirector {
     return hop;
   }
 
-  /** The click's hop on the table, applied after her update: up and down in 0.34 s, a squash on each end. */
-  private tableHop(hop: number) {
-    if (hop < 0 || hop > 0.62) return;
+  /**
+   * The click's hop on the table, applied after her update: up and down in
+   * 0.34 s, a squash on each end. `base` is a squash already on her (the
+   * scripted landing off the stand), which the click's multiplies.
+   */
+  private tableHop(hop: number, base = 1) {
+    const clicked = hop >= 0 && hop <= 0.62;
+    if (!clicked && base === 1) return;
     const g = this.godette;
-    const air = hop < 0.34 ? Math.sin((hop / 0.34) * Math.PI) : 0;
-    const land = hop >= 0.34 ? Math.sin(saturate((hop - 0.34) / 0.28) * Math.PI) : 0;
-    const takeOff = hop < 0.05 ? Math.sin((hop / 0.05) * Math.PI) : 0;
-    const squash = 1 + 0.05 * air - 0.07 * land - 0.04 * takeOff;
+    let squash = base;
+    if (clicked) {
+      const air = hop < 0.34 ? Math.sin((hop / 0.34) * Math.PI) : 0;
+      const land = hop >= 0.34 ? Math.sin(saturate((hop - 0.34) / 0.28) * Math.PI) : 0;
+      const takeOff = hop < 0.05 ? Math.sin((hop / 0.05) * Math.PI) : 0;
+      squash *= 1 + 0.05 * air - 0.07 * land - 0.04 * takeOff;
+      g.root.position.y += air * 0.007;
+    }
     const s = GODETTE_TABLE_SCALE;
-    g.root.position.y += air * 0.007;
     g.root.scale.set(s / Math.sqrt(squash), s * squash, s / Math.sqrt(squash));
     g.root.updateMatrixWorld(true);
   }
@@ -416,7 +432,8 @@ export class ToyDirector {
       });
     }
     g.update(ctx.clock.storyDt);
-    this.tableHop(hop);
+    // The hop off the stand lands with a small squash (scrubbed), under any click hop of her own.
+    this.tableHop(hop, 1 - 0.08 * hopLanding(p));
     this.sockets();
   }
 
