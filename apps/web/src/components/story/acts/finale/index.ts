@@ -594,6 +594,9 @@ class FinaleAct implements StoryAct {
         lookPoint = this.look.copy(this.tmp);
         lookWeight = Math.max(lookWeight * 0.6, 0.25);
       }
+      // still seeing stars: her sitting body sways a little about where she sits (alive at rest)
+      const woozy = dizzyAmount(A) * (1 - smooth(PHASE.dizzyEnd - 0.55, PHASE.dizzyEnd - 0.1, A));
+      roll += woozy * (0.028 * Math.sin(this.life * 2.3) + 0.012 * Math.sin(this.life * 3.7 + 0.8));
       const poked = this.life - this.pokedAt;
       if (poked < 0.6) {
         const jolt = Math.sin(poked * 26) * Math.exp(-poked * 7);

@@ -54,11 +54,19 @@ const WAVE = beatOf("f-wave");
 /** The story position (vh) where `wave_in` has played: the wave is life from here. */
 export const WAVE_LIFE_T = WAVE.start + WAVE.vh * 0.3;
 
+/**
+ * The acting seconds of the dizzy sit left at `f-stand`'s start: its head
+ * shake and the stars scattering play in `f-stand`. A backward advance from
+ * the terminal rest stops at that start, so she rests there still seeing
+ * all her stars.
+ */
+const SIT_LEFT = 0.6;
+
 /** [t, A] knots, ascending. */
 const KNOTS: readonly (readonly [number, number])[] = [
   [CUT.start, 0],
   [CUT.end, 0.2],
-  [LAND.end, PHASE.dizzyEnd],
+  [LAND.end, PHASE.dizzyEnd - SIT_LEFT],
   [STAND.end, PHASE.dustEnd],
   [WAVE_LIFE_T, PHASE.waveInEnd],
   [WAVE.end, PHASE.waveInEnd + 1],
