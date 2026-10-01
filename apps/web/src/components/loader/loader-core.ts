@@ -21,8 +21,9 @@ import { markRouteCoverStarted, markRouteRevealDone } from "@/lib/route-reveal";
  *   `html[data-loader="active"]`: not `/admin`, `/forms/*`, `/s/*`, and not
  *   under `navigator.webdriver` unless `?loader=1`). A client navigation
  *   never shows it again (it mounts once, in the root layout).
- * - It never writes `html { overflow }` and never makes the page inert; it
- *   only swallows wheel and touch scrolling over itself while it shows.
+ * - It never writes `html { overflow }` and never makes the page inert; while
+ *   it covers the page it swallows wheel and touch scrolling over itself, and
+ *   the boot script keeps the keyboard from scrolling or moving focus underneath.
  * - It waits for the story's assets and warm-up on a device that can run
  *   the WebGL story (hardware WebGL2, motion allowed), otherwise only for
  *   the fonts, and never longer than 12 s of visible time: the rest keeps

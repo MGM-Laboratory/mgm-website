@@ -57,7 +57,8 @@ export function SiteLoader({ View = LoaderView }: Readonly<{ View?: LoaderViewCo
     });
   }, []);
 
-  // While it shows, a wheel or a swipe over it must not scroll the page underneath.
+  // While it shows, a wheel or a swipe over it must not scroll the page
+  // underneath (the boot script keeps the keyboard off it, from the first frame).
   useEffect(() => {
     const root = rootRef.current;
     if (!root || state.phase === "done") return;
