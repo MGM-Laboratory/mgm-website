@@ -1101,14 +1101,15 @@ class RoomAct implements StoryAct {
     const flicker = 0.75 + 0.25 * Math.sin(ctx.clock.time * 43) * Math.sin(ctx.clock.time * 17.3);
     const staticAmt = smoothstep(0.12, 0.3, power) * (1 - smoothstep(0.42, 0.68, power));
     const flash = smoothstep(0, 0.05, power) * (1 - smoothstep(0.1, 0.36, power));
+    // About 0.55 with the lamps still on (a picture, not a floodlight), near 1 as the room dims for the dive.
     const level =
       power <= 0.001
         ? 0
-        : 0.45 * smoothstep(0.4, 0.9, power) +
+        : 0.32 * smoothstep(0.4, 0.9, power) +
           0.55 * flash +
-          0.35 * staticAmt * flicker +
-          0.35 * smoothstep(0.1, 0.8, tvBeat) +
-          0.4 * smoothstep(0.2, 1, diveBeat);
+          0.3 * staticAmt * flicker +
+          0.22 * smoothstep(0.1, 0.8, tvBeat) +
+          0.45 * smoothstep(0.2, 1, diveBeat);
     room.tvGlow(tv.averageColour(power, this.glowColour), level);
     room.screenMaterial(power > 0.001 ? tv.material : null);
     tv.setLed(ctx.clock.time, power, this.tvHover);
