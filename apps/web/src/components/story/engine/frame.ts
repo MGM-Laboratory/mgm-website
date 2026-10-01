@@ -46,12 +46,19 @@ export const SHOT_LAND = {
 /** Real sizes, metres. */
 export const SIZES = {
   box: { width: 0.0635, height: 0.0896, depth: 0.0206 },
-  card: { width: 0.063, height: 0.088, thickness: 0.0003, cornerRadius: 0.003 },
+  /** The card back's own proportions (back.svg, 641 x 1078): 52.3 x 88 mm. See props/card-mesh.ts. */
+  card: {
+    width: (0.088 * 641) / 1078,
+    height: 0.088,
+    thickness: 0.0003,
+    cornerRadius: (0.088 * 50) / 1078,
+  },
   /** Godette on her stand. */
   figureHeight: 0.175,
-  /** Model height 1.848 m scaled to the toy. */
-  figureScale: 0.0947,
-  letterHeight: 0.03,
+  /** Model height 1.848 m scaled to the toy; equals GODETTE_TABLE_SCALE (props/godette.ts). */
+  figureScale: 0.0915,
+  /** Capital height of the toy letters at their default 34 cm strip (props/toy-letters.ts). */
+  letterHeight: 0.0178,
 } as const;
 
 /** 16:9 and 9:16, the aspects the paired FOVs are authored for. */
