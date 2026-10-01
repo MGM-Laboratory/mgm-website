@@ -142,23 +142,27 @@ function foldFrame(
   out.yy = f.xy * nx + f.yy * ny;
 }
 
+/** One straight piece of a board's side-view outline. */
+type Segment = { x0: number; y0: number; x1: number; y1: number };
+
 /**
- * A board's side-view outline as segments (outer polyline, inner polyline,
- * the cut edges), written into a flat buffer: x0, y0, x1, y1 per segment.
+ * A board's side-view outline (outer polyline, inner polyline, the cut
+ * edges) as a pool of segments reused every solve; `count` are live.
  */
-type Segments = { data: Float64Array; count: number };
+type Segments = { list: Segment[]; count: number };
 
 const newSegments = (capacity: number): Segments => ({
-  data: new Float64Array(capacity * 4),
+  list: Array.from({ length: capacity }, () => ({ x0: 0, y0: 0, x1: 0, y1: 0 })),
   count: 0,
 });
 
 function pushSegment(seg: Segments, x0: number, y0: number, x1: number, y1: number) {
-  const o = seg.count * 4;
-  seg.data[o] = x0;
-  seg.data[o + 1] = y0;
-  seg.data[o + 2] = x1;
-  seg.data[o + 3] = y1;
+  const slot = seg.list.at(seg.count);
+  if (!slot) return;
+  slot.x0 = x0;
+  slot.y0 = y0;
+  slot.x1 = x1;
+  slot.y1 = y1;
   seg.count += 1;
 }
 
@@ -166,23 +170,33 @@ function pushSegment(seg: Segments, x0: number, y0: number, x1: number, y1: numb
  * Deepest overlap of a segment with a region given as the intersection of
  * half-planes `a_i + b_i * u >= 0` along the segment (u in 0..1). The depth
  * is the smallest `a_i + b_i u`, a concave function of u, so its maximum is
- * at an end or where two of the lines cross.
+ * at an end or where two of the lines cross. Two and three planes, unrolled.
  */
-function segmentDepth(a: Float64Array, b: Float64Array, n: number): number {
-  const at = (u: number) => {
-    let m = Infinity;
-    for (let i = 0; i < n; i++) m = Math.min(m, (a[i] ?? 0) + (b[i] ?? 0) * u);
-    return m;
-  };
-  let best = Math.max(at(0), at(1));
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const db = (b[i] ?? 0) - (b[j] ?? 0);
-      if (Math.abs(db) < 1e-12) continue;
-      const u = ((a[j] ?? 0) - (a[i] ?? 0)) / db;
-      if (u > 0 && u < 1) best = Math.max(best, at(u));
-    }
-  }
+function crossing(a0: number, b0: number, a1: number, b1: number): number {
+  const db = b0 - b1;
+  if (Math.abs(db) < 1e-12) return -1;
+  return (a1 - a0) / db;
+}
+
+function depth2(a0: number, b0: number, a1: number, b1: number): number {
+  let best = Math.max(Math.min(a0, a1), Math.min(a0 + b0, a1 + b1));
+  const u = crossing(a0, b0, a1, b1);
+  if (u > 0 && u < 1) best = Math.max(best, Math.min(a0 + b0 * u, a1 + b1 * u));
+  return best;
+}
+
+function min3At(a0: number, b0: number, a1: number, b1: number, a2: number, b2: number, u: number) {
+  return Math.min(a0 + b0 * u, a1 + b1 * u, a2 + b2 * u);
+}
+
+function depth3(a0: number, b0: number, a1: number, b1: number, a2: number, b2: number): number {
+  let best = Math.max(min3At(a0, b0, a1, b1, a2, b2, 0), min3At(a0, b0, a1, b1, a2, b2, 1));
+  const u01 = crossing(a0, b0, a1, b1);
+  if (u01 > 0 && u01 < 1) best = Math.max(best, min3At(a0, b0, a1, b1, a2, b2, u01));
+  const u02 = crossing(a0, b0, a2, b2);
+  if (u02 > 0 && u02 < 1) best = Math.max(best, min3At(a0, b0, a1, b1, a2, b2, u02));
+  const u12 = crossing(a1, b1, a2, b2);
+  if (u12 > 0 && u12 < 1) best = Math.max(best, min3At(a0, b0, a1, b1, a2, b2, u12));
   return best;
 }
 
@@ -203,10 +217,8 @@ export function createBoxPoseSolver(shape: BoxPoseShape): BoxPoseSolver {
   const flapEnd = newFrame();
   const tmp = newFrame();
   const tmp2 = newFrame();
-  const lidSegs = newSegments(64);
-  const flapSegs = newSegments(64);
-  const coefA = new Float64Array(4);
-  const coefB = new Float64Array(4);
+  const lidSegs = newSegments(24);
+  const flapSegs = newSegments(24);
 
   /** Writes the outline of a fold plus its flat board, both surfaces, in the frame `f`. */
   const traceBoard = (
@@ -267,17 +279,10 @@ export function createBoxPoseSolver(shape: BoxPoseShape): BoxPoseSolver {
   /** Depth of a segment set inside the wall region {x >= wallX, y <= top}. */
   const wallDepth = (seg: Segments) => {
     let best = -Infinity;
-    for (let s = 0; s < seg.count; s++) {
-      const o = s * 4;
-      const x0 = seg.data[o] ?? 0;
-      const y0 = seg.data[o + 1] ?? 0;
-      const x1 = seg.data[o + 2] ?? 0;
-      const y1 = seg.data[o + 3] ?? 0;
-      coefA[0] = x0 - wallX;
-      coefB[0] = x1 - x0;
-      coefA[1] = top - y0;
-      coefB[1] = y0 - y1;
-      best = Math.max(best, segmentDepth(coefA, coefB, 2));
+    let left = seg.count;
+    for (const sg of seg.list) {
+      if (left-- <= 0) break;
+      best = Math.max(best, depth2(sg.x0 - wallX, sg.x1 - sg.x0, top - sg.y0, sg.y0 - sg.y1));
     }
     return best;
   };
@@ -285,19 +290,11 @@ export function createBoxPoseSolver(shape: BoxPoseShape): BoxPoseSolver {
   /** Depth of a segment set inside a block standing in the box: x0..x1, below `y`. */
   const blockDepth = (seg: Segments, x0: number, x1: number, y: number) => {
     let best = -Infinity;
-    for (let s = 0; s < seg.count; s++) {
-      const o = s * 4;
-      const sx0 = seg.data[o] ?? 0;
-      const sy0 = seg.data[o + 1] ?? 0;
-      const sx1 = seg.data[o + 2] ?? 0;
-      const sy1 = seg.data[o + 3] ?? 0;
-      coefA[0] = sx0 - x0;
-      coefB[0] = sx1 - sx0;
-      coefA[1] = x1 - sx0;
-      coefB[1] = sx0 - sx1;
-      coefA[2] = y - sy0;
-      coefB[2] = sy0 - sy1;
-      best = Math.max(best, segmentDepth(coefA, coefB, 3));
+    let left = seg.count;
+    for (const sg of seg.list) {
+      if (left-- <= 0) break;
+      const dx = sg.x1 - sg.x0;
+      best = Math.max(best, depth3(sg.x0 - x0, dx, x1 - sg.x0, -dx, y - sg.y0, sg.y0 - sg.y1));
     }
     return best;
   };
@@ -398,19 +395,20 @@ export function createBoxPoseSolver(shape: BoxPoseShape): BoxPoseSolver {
       const along = Math.max(0, s - dustFoldLen) / dustLen;
       const px = -(dustHalf - dustChamfer * along);
       const py = tmp.oy;
-      for (let i = 2; i <= SAMPLES * 2 + 2; i += 2) {
-        const o = i * 4;
-        const x0 = lidSegs.data[o] ?? 0;
-        const y0 = lidSegs.data[o + 1] ?? 0;
-        const x1 = lidSegs.data[o + 2] ?? 0;
-        const y1 = lidSegs.data[o + 3] ?? 0;
-        const dx = x1 - x0;
-        const dy = y1 - y0;
+      // Inner-surface segments: every other one from the second through the board's inner line.
+      let index = 0;
+      for (const sg of lidSegs.list) {
+        index += 1;
+        if (index > SAMPLES * 2 + 3) break;
+        if (index % 2 === 0) continue;
+        if (index < 3) continue;
+        const dx = sg.x1 - sg.x0;
+        const dy = sg.y1 - sg.y0;
         const len2 = dx * dx + dy * dy;
         if (len2 < 1e-14) continue;
-        const u = ((px - x0) * dx + (py - y0) * dy) / len2;
+        const u = ((px - sg.x0) * dx + (py - sg.y0) * dy) / len2;
         if (u < 0 || u > 1) continue;
-        best = Math.max(best, ((px - x0) * -dy + (py - y0) * dx) / Math.sqrt(len2));
+        best = Math.max(best, ((px - sg.x0) * -dy + (py - sg.y0) * dx) / Math.sqrt(len2));
       }
     }
     return best;
