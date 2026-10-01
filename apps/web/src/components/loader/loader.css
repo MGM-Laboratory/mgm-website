@@ -1,0 +1,40 @@
+/*
+ * The site loader (components/loader). Shown only while the boot script (or
+ * the core) says html[data-loader="active"]: no JavaScript, a client
+ * navigation or a finished load all leave it hidden. It never touches
+ * html { overflow }.
+ */
+
+.site-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  color: var(--foreground);
+  overscroll-behavior: contain;
+}
+
+html[data-loader="active"] .site-loader {
+  display: flex;
+}
+
+/*
+ * The view plays its own exit (loader-view.tsx). The loader keeps taps and
+ * wheels while its outro still covers the page (a tap on the folding box
+ * must not land on a link nobody can see), and lets them through the
+ * moment its reveal starts (the view sets data-revealing).
+ */
+.site-loader[data-revealing] {
+  pointer-events: none;
+}
+
+.site-loader-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

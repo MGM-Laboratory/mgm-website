@@ -8,6 +8,8 @@ import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Toaster } from "sonner";
 
+import { useThemeLock } from "@/lib/theme-lock";
+
 const ReactQueryDevtools =
   process.env.NEXT_PUBLIC_SHOW_QUERY_DEVTOOLS === "true"
     ? dynamic(
@@ -18,6 +20,14 @@ const ReactQueryDevtools =
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  // A page holding the theme lock (the homepage story) keeps the scheme it
+  // started in, even if the OS switches mid-scene (lib/theme-lock.ts).
+  const lock = useThemeLock();
+  const forcedTheme = pathname.startsWith("/admin")
+    ? "light"
+    : lock.locked && lock.theme
+      ? lock.theme
+      : undefined;
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -31,12 +41,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      forcedTheme={pathname.startsWith("/admin") ? "light" : undefined}
-    >
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem forcedTheme={forcedTheme}>
       <QueryClientProvider client={queryClient}>
         <NuqsAdapter>{children}</NuqsAdapter>
         <Toaster

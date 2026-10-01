@@ -1,0 +1,674 @@
+/*
+ * The homepage story (components/story, docs/homepage-story.md).
+ *
+ * Both versions are in the server HTML. The boot script sets
+ * html[data-story-mode] before the first paint: "gl" shows the WebGL
+ * shell, anything else (no JavaScript, reduced motion, no WebGL, a
+ * fallback) keeps the storybook. The section and everything around the
+ * canvas stays transparent, so the canvas behind it shows through.
+ */
+
+.story-section {
+  position: relative;
+}
+
+[data-story-gl] {
+  display: none;
+}
+
+html[data-story-mode="gl"] [data-story-gl] {
+  display: block;
+}
+
+html[data-story-mode="gl"] [data-storybook] {
+  display: none;
+}
+
+/* The stage's canvas lives here (an empty element React never renders into). */
+[data-story-layer-host] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+/* ------------------------------------------------------------ typography */
+
+.story-title {
+  font-size: clamp(3.25rem, 13.5vw, 15rem);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+}
+
+.story-description {
+  font-size: clamp(1.0625rem, 1.45vw, 1.375rem);
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* ------------------------------------------------------------ the entrance */
+
+.story-intro {
+  /* The title's measured width (story-host.tsx); the fallback is its typical width. */
+  --story-box-w: calc(var(--story-title-w, clamp(3.25rem, 13.5vw, 15rem) * 5.9) * 0.8);
+  --story-box-h: calc(var(--story-box-w) * 1.41102);
+  --story-box-peek: calc(var(--story-box-h) * 0.2);
+  position: relative;
+  height: var(--story-vh, 100vh);
+}
+
+.story-intro-copy {
+  position: absolute;
+  inset: 4rem 0 var(--story-box-peek) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.5rem 1.5rem;
+}
+
+/* The card box's front face: the GL box is glued to this rect. */
+.story-box {
+  position: absolute;
+  left: calc(50% - var(--story-box-w) / 2);
+  top: calc(100% - var(--story-box-peek));
+  width: var(--story-box-w);
+  height: var(--story-box-h);
+  pointer-events: none;
+}
+
+/* Development glue check (?storyglue): the placeholder's edge, to compare with the GL face. */
+[data-story-glue] .story-box {
+  outline: 1px solid #ff00ff;
+  outline-offset: -1px;
+}
+
+/* ------------------------------------------------------------ the finale */
+
+.story-finale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.story-finale-screen {
+  height: var(--story-vh, 100vh);
+}
+
+/*
+ * The WebGL story, portrait and narrow screens: Godette stands in the top
+ * of the screen, on the words (the act reads the title's place and stands
+ * her on its capitals), and the action keeps 24 px clear of the "Watch
+ * again" control at the bottom left (44 px tall, 24 px over the bottom).
+ */
+.story-finale-gl {
+  position: relative;
+  height: 100%;
+  justify-content: flex-end;
+  padding: 0 1.5rem max(5.75rem, 9vh);
+}
+
+/*
+ * Landscape desktops and tablets, and short landscape screens (a phone on
+ * its side): the words beside her on the right, and the camera comes in
+ * close on her at the left (a medium shot, cut above the knees). The act
+ * reads this layout from the title's place.
+ */
+@media (min-width: 1024px) and (min-aspect-ratio: 13/10),
+  (orientation: landscape) and (max-height: 600px) {
+  .story-finale-gl {
+    align-items: flex-start;
+    justify-content: center;
+    padding: 4.5rem 6vw 4rem 50%;
+    text-align: left;
+  }
+
+  .story-finale-gl .story-finale-title {
+    max-width: 6.5em;
+    font-size: clamp(3.25rem, min(7.4vw, 12.5vh), 8rem);
+    line-height: 0.94;
+  }
+
+  /*
+   * The medium shot ends above her knees at the screen's bottom edge: the
+   * page colour takes her legs over the last part of the screen, so she
+   * never ends on a hard line (and the footer comes up under a soft edge).
+   */
+  .story-finale-gl::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 18%;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--background) 0%, transparent),
+      color-mix(in srgb, var(--background) 72%, transparent) 62%,
+      var(--background)
+    );
+    pointer-events: none;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .story-finale-gl {
+    padding: 4.5rem 6vw 3rem 50%;
+  }
+
+  .story-finale-gl .story-finale-title {
+    max-width: none;
+    font-size: clamp(2rem, 4.6vw, 3.5rem);
+  }
+
+  .story-finale-gl .story-finale-line {
+    margin-top: 0.75rem;
+  }
+
+  .story-finale-gl .story-finale-action-wrap {
+    margin-top: 1.25rem;
+  }
+}
+
+/* Phones: a tighter stack under her, so she keeps more of the screen. */
+@media (max-width: 639px) {
+  .story-finale-gl .story-finale-line {
+    margin-top: 0.875rem;
+  }
+
+  .story-finale-gl .story-finale-action-wrap {
+    margin-top: 1.5rem;
+  }
+}
+
+/*
+ * Shorter portrait phones (375 x 667, 360 x 740): a smaller stack under
+ * her, so she keeps half of the screen (SPEC 4.4: 50 to 60 %).
+ */
+@media (orientation: portrait) and (max-height: 760px) {
+  .story-finale-gl .story-finale-title {
+    font-size: clamp(2rem, 9vw, 2.375rem);
+  }
+
+  .story-finale-gl .story-finale-line {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .story-finale-gl .story-finale-action-wrap {
+    margin-top: 1rem;
+  }
+
+  .story-finale-gl .story-finale-action {
+    padding-block: 0.75rem;
+  }
+}
+
+/*
+ * The smallest phones (320 x 568): the line is read but not shown, and the
+ * title and action alone keep her at half of the screen.
+ */
+@media (orientation: portrait) and (max-height: 620px) {
+  .story-finale-gl .story-finale-line {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/*
+ * Before the motion is ready, the WebGL block shows nothing it would then
+ * hide (opacity only: the words stay in the accessibility tree).
+ */
+html[data-story-mode="gl"]
+  .story-finale-gl:not([data-finale-ready])
+  :is(.story-finale-words, .story-finale-line, [data-finale-action]) {
+  opacity: 0;
+}
+
+/* "Say hello": the act places it over Godette (canvas px) and keeps it there; presses pass through. */
+.story-finale-hello {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  border-radius: 1.25rem;
+  pointer-events: none;
+}
+
+.story-finale-book {
+  padding-bottom: 6rem;
+}
+
+/* The storybook's still of her waving (a cut-out, so it sits on either page colour). */
+.story-finale-art {
+  width: clamp(9rem, 19vw, 13.5rem);
+  aspect-ratio: 4 / 5;
+  margin-bottom: 1.25rem;
+}
+
+.story-finale-art .story-still {
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+
+/* A still in the page's scheme (storybook/story-still.tsx): both are in the HTML, one shows. */
+.story-still {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.story-still-dark,
+.dark .story-still-light {
+  display: none;
+}
+
+.dark .story-still-dark {
+  display: block;
+}
+
+.story-finale-title {
+  position: relative;
+  font-size: clamp(2.6rem, 7.4vw, 6.75rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.story-finale-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Each letter rises out of its own mask; the mask reaches past the line for the descenders. */
+.story-finale-char {
+  display: inline-block;
+  padding: 0.1em 0 0.22em;
+  margin: -0.1em 0 -0.22em;
+  overflow: clip;
+}
+
+.story-finale-rise,
+.story-finale-roll {
+  display: inline-block;
+}
+
+.story-finale-roll {
+  position: relative;
+}
+
+/*
+ * While a letter rolls, its own glyph hides (it keeps the layout and the
+ * text) and two copies roll in its window: the letter leaving (::before)
+ * and its clone arriving from below (::after), each fading on its own, so
+ * the middle of a roll never shows two hard half letters. Pseudo-elements,
+ * so the title copies, reads and indexes once. The block sets --roll-step
+ * (the letter's ink height plus a hair), --roll-out and --roll-in, and clips
+ * the mask to that ink for the roll.
+ */
+.story-finale-roll[data-rolling] {
+  -webkit-text-fill-color: transparent;
+}
+
+.story-finale-roll[data-rolling]::before,
+.story-finale-roll[data-rolling]::after {
+  content: attr(data-char);
+  position: absolute;
+  left: 0;
+  -webkit-text-fill-color: currentColor;
+}
+
+.story-finale-roll[data-rolling]::before {
+  top: 0;
+  opacity: var(--roll-out, 1);
+}
+
+.story-finale-roll[data-rolling]::after {
+  top: var(--roll-step);
+  opacity: var(--roll-in, 1);
+}
+
+.story-finale-pen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.story-finale-pen path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.story-finale-line {
+  text-wrap: balance;
+}
+
+.story-finale-line-mask {
+  display: inline-block;
+  padding-bottom: 0.15em;
+  margin-bottom: -0.15em;
+  overflow: clip;
+}
+
+.story-finale-line-word {
+  display: inline-block;
+}
+
+/* Her stars: they burst out of the pill when it is hovered. */
+.story-finale-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.story-finale-sparks svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin: -0.4rem 0 0 -0.4rem;
+  fill: var(--brand-yellow);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.story-finale-sparks svg[data-tone="1"] {
+  fill: var(--brand-red);
+}
+
+.story-finale-sparks svg[data-tone="2"] {
+  fill: var(--brand-green);
+}
+
+.story-finale-sparks svg[data-tone="3"] {
+  fill: var(--brand-blue);
+}
+
+/* The arrow flies out to the corner and a new one comes in behind it. */
+.story-finale-arrow-a,
+.story-finale-arrow-b {
+  transition: translate 0.45s cubic-bezier(0.35, 0, 0, 1);
+}
+
+.story-finale-arrow-b {
+  translate: -110% 110%;
+}
+
+.story-finale-action:hover .story-finale-arrow-a,
+.story-finale-action:focus-visible .story-finale-arrow-a {
+  translate: 110% -110%;
+}
+
+.story-finale-action:hover .story-finale-arrow-b,
+.story-finale-action:focus-visible .story-finale-arrow-b {
+  translate: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-finale-arrow-a,
+  .story-finale-arrow-b {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------ storybook cards */
+
+.story-card {
+  --story-accent: var(--brand-blue);
+  /* The card scales like a real one: type and spacing follow its width. */
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  perspective: 900px;
+}
+
+.story-card[data-accent="red"] {
+  --story-accent: var(--brand-red);
+}
+
+.story-card[data-accent="green"] {
+  --story-accent: var(--brand-green);
+}
+
+.story-card[data-accent="yellow"] {
+  --story-accent: var(--brand-yellow);
+}
+
+/*
+ * A real playing card: white in both schemes, a thin ink border, corner
+ * indices. It keeps a card's 63:88 shape wherever its words fit; on the
+ * narrowest phones (cards about 130 px wide) it grows taller rather than
+ * cut the line off (overflow: clip is not a scroll container, so the
+ * aspect ratio's content-based minimum height still applies), and
+ * the cards of a row grow to the tallest one's height. The bottom padding
+ * always clears the bottom corner index.
+ */
+.story-card-face {
+  position: relative;
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  aspect-ratio: 63 / 88;
+  padding: 11cqw 10cqw max(12cqw, calc(4.6cqw + 1.35rem));
+  overflow: clip;
+  border: 1px solid rgb(14 17 22 / 0.16);
+  border-radius: 1.1rem;
+  background: #ffffff;
+  box-shadow: var(--shadow-2);
+  transform-origin: 50% 70%;
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dark .story-card-face {
+  border-color: rgb(255 255 255 / 0.1);
+  box-shadow: 0 24px 60px -28px rgb(0 0 0 / 0.8);
+}
+
+/* A glint that crosses the face on hover. */
+.story-card-face::after {
+  position: absolute;
+  inset: -40% -60%;
+  content: "";
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    rgb(255 255 255 / 0.65) 50%,
+    transparent 58%
+  );
+  opacity: 0;
+  pointer-events: none;
+  translate: -40% 0;
+  transition:
+    translate 0.9s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.4s;
+}
+
+.story-card-index {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  color: #0e1116;
+  font-family: var(--font-display);
+  font-size: clamp(0.625rem, 5.2cqw, 0.9rem);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.story-card-index-top {
+  top: 4.6cqw;
+  left: 4.8cqw;
+}
+
+.story-card-index-bottom {
+  right: 4.8cqw;
+  bottom: 4.6cqw;
+  rotate: 180deg;
+}
+
+.story-card-pip {
+  width: clamp(0.35rem, 2.6cqw, 0.5rem);
+  height: clamp(0.35rem, 2.6cqw, 0.5rem);
+  border-radius: 999px;
+  background: var(--story-accent);
+}
+
+/* The major visual: the top half of the card (44% of a 63:88 face, in card widths). */
+.story-card-visual {
+  flex: none;
+  height: 61.5cqw;
+  padding: 0 4cqw 6cqw;
+}
+
+/* Title and line start right under the visual, so all four titles align. */
+.story-card-copy {
+  padding-right: 6cqw;
+}
+
+.story-card-title {
+  font-size: clamp(1.05rem, 12cqw, 2rem);
+}
+
+.story-card-line {
+  margin-top: 3cqw;
+  font-size: clamp(0.75rem, 6.6cqw, 0.9375rem);
+  line-height: 1.38;
+}
+
+.story-card-copy::before {
+  display: block;
+  width: 11cqw;
+  height: 3px;
+  margin-bottom: 5cqw;
+  content: "";
+  border-radius: 2px;
+  background: var(--story-accent);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .story-card:hover .story-card-face,
+  .story-card:focus-visible .story-card-face {
+    transform: translateY(-8px) rotateY(-10deg) rotateX(5deg);
+    box-shadow: var(--shadow-3);
+  }
+
+  .story-card:hover .story-card-face::after,
+  .story-card:focus-visible .story-card-face::after {
+    opacity: 1;
+    translate: 40% 0;
+  }
+}
+
+/* ------------------------------------------------------------ storybook panels */
+
+.story-panel {
+  --panel-tone: var(--brand-blue);
+}
+
+.story-panel-art {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--panel-tone) 12%, var(--background));
+}
+
+.story-panel-art[data-panel="table"],
+.story-panel-art[data-panel="spark"] {
+  --panel-tone: var(--brand-yellow);
+}
+
+.story-panel-art[data-panel="toy"],
+.story-panel-art[data-panel="fall"] {
+  --panel-tone: var(--brand-red);
+}
+
+.story-panel-art[data-panel="worlds"] {
+  --panel-tone: var(--brand-green);
+}
+
+/* ------------------------------------------------------------ while the engine is on the way */
+
+.story-waiting {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.story-waiting[data-shown="true"] {
+  opacity: 1;
+}
+
+.story-waiting-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.story-waiting-star {
+  width: 2rem;
+  height: 2rem;
+  fill: var(--brand-blue);
+}
+
+/* The spark's yellow reads better than blue on the dark page. */
+.dark .story-waiting-star {
+  fill: var(--brand-yellow);
+}
+
+.story-waiting-count {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .story-waiting-star {
+    animation: story-waiting-turn 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+}
+
+@keyframes story-waiting-turn {
+  0% {
+    rotate: 0deg;
+    scale: 1;
+  }
+
+  50% {
+    rotate: 45deg;
+    scale: 0.82;
+  }
+
+  100% {
+    rotate: 90deg;
+    scale: 1;
+  }
+}

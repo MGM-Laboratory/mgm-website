@@ -47,13 +47,16 @@ test("desktop idle motion and headline parallax survive returning home", async (
   await expect.poll(() => text.evaluate((el) => getComputedStyle(el).transform)).not.toBe(before);
   const corner = await page.locator(".corner-pattern").boundingBox();
   const hero = await page.locator(".hero").boundingBox();
-  expect(corner!.y + corner!.height).toBeGreaterThan(hero!.y + hero!.height);
+  if (!corner || !hero) throw new Error("the hero and its corner pattern have no boxes");
+  expect(corner.y + corner.height).toBeGreaterThan(hero.y + hero.height);
   await expect(page.locator(".hero")).toHaveCSS("overflow", "visible");
   // Click actual links so the route curtain and mount cleanup are exercised.
   await page
     .locator('a[href="/articles"]')
     .first()
-    .evaluate((el: HTMLElement) => el.click());
+    .evaluate((el: HTMLElement) => {
+      el.click();
+    });
   // Into the library through the articles portal (docs/page-transition.md).
   await expect(page).toHaveURL(/\/articles$/, { timeout: 15000 });
   // A click while the portal still covers the page is dropped by design, so
@@ -73,7 +76,9 @@ test("desktop idle motion and headline parallax survive returning home", async (
   await page
     .locator('a[href="/"]')
     .first()
-    .evaluate((el: HTMLElement) => el.click());
+    .evaluate((el: HTMLElement) => {
+      el.click();
+    });
   await expect(page).toHaveURL(/\/$/, { timeout: 15000 });
   await page.waitForTimeout(2000);
   const returned = await cross.evaluate((el) => getComputedStyle(el).transform);
@@ -91,8 +96,8 @@ const flowCanvas = "canvas[data-cursor-flow]";
 
 function refuseWebGL() {
   const refuses = (type: string) => /^(webgl2?|experimental-webgl)$/.test(type);
-  for (const target of [HTMLCanvasElement, globalThis.OffscreenCanvas]) {
-    if (!target) continue;
+  const patchHtmlCanvas = (target?: typeof HTMLCanvasElement | typeof OffscreenCanvas) => {
+    if (!target) return;
     const original = target.prototype.getContext as (...args: unknown[]) => unknown;
     Object.defineProperty(target.prototype, "getContext", {
       configurable: true,
@@ -100,7 +105,9 @@ function refuseWebGL() {
         return refuses(type) ? null : original.call(this, type, ...rest);
       },
     });
-  }
+  };
+  patchHtmlCanvas(/*safe*/ HTMLCanvasElement);
+  patchHtmlCanvas(/*safe*/ globalThis.OffscreenCanvas);
 }
 
 const flowMarked = (page: Page) =>
@@ -179,27 +186,4 @@ test("the cursor flow shows through the page on a GPU and gives it back", async 
   } finally {
     await browser.close();
   }
-});
-
-test("article covers respond to focus without reloading their image", async ({ page }) => {
-  // The homepage's articles section (the /articles list draws its own cards).
-  await page.goto("/");
-  const cover = page.locator(".article-cover").first();
-  test.skip((await cover.count()) === 0, "No published articles in this environment");
-  const requests: string[] = [];
-  page.on("request", (request) => {
-    // Only the covers' own pictures (the header logo, say, may load late).
-    if (request.resourceType() === "image" && request.url().includes("/api/articles-cms/media/")) {
-      requests.push(request.url());
-    }
-  });
-  await cover.locator("..").focus();
-  await expect(cover.locator(".article-cover-arrow")).toHaveCSS("opacity", "1");
-  await expect(cover.locator(".article-cover-image")).toHaveCSS(
-    "filter",
-    "saturate(1.12) contrast(1.04)",
-  );
-  expect(requests).toEqual([]);
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(cover.locator(".article-cover-image")).toHaveCSS("transform", "none");
 });

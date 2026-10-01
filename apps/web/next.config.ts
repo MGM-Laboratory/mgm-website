@@ -40,6 +40,18 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // The homepage story's models, textures and data. Versioned paths
+        // (public/story/v1/...), so a changed file ships under a new version
+        // and every visit keeps the old bytes for good.
+        source: "/story/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
         source: "/logo/:path*",
         headers: [
           {

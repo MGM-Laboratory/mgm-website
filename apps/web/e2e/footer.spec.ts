@@ -55,13 +55,17 @@ test.describe("footer", () => {
       testInfo.project.name.startsWith("mobile"),
       "Touch-only projects do not have a hover state.",
     );
+    // The homepage story can make the page many screens tall (the WebGL
+    // version), so wheel until the footer is in view instead of a fixed
+    // distance: real wheel input, a generous bound.
+    test.setTimeout(90_000);
     await page.goto("/");
 
     const instagram = page.locator('footer a[href="https://www.instagram.com/labmgmfilkomub/"]');
-    for (let i = 0; i < 30; i++) {
-      await page.mouse.wheel(0, 500);
-    }
-    await expect(instagram).toBeInViewport();
+    await expect(async () => {
+      await page.mouse.wheel(0, 1200);
+      await expect(instagram).toBeInViewport({ timeout: 250 });
+    }).toPass({ timeout: 75_000, intervals: [0] });
     await expect
       .poll(() =>
         instagram.locator("svg").evaluate((element) => Number(getComputedStyle(element).opacity)),

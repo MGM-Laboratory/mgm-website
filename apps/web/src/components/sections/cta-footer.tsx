@@ -108,9 +108,9 @@ function BackToTop() {
 
 /**
  * The footer every page shares. `lead` is an optional block rendered at its
- * top, for a page's own closing words: the homepage passes its "Your turn"
- * finale (components/home-extras/home-finale.tsx) there, and every other
- * page leaves it out, so their footer reads exactly as before.
+ * top, for a page's own closing words. No page passes one today: the
+ * homepage ends its story with its own finale above the footer
+ * (components/story/finale-block.tsx).
  */
 export function CtaFooter({ lead }: { lead?: ReactNode } = {}) {
   const rootRef = useRef<HTMLElement>(null);
@@ -138,8 +138,8 @@ export function CtaFooter({ lead }: { lead?: ReactNode } = {}) {
     const track = wordmarkTrackRef.current;
     if (!track || reducedMotion()) return;
     const measure = () => {
-      const secondCopy = track.children[1] as HTMLElement | undefined;
-      return secondCopy ? secondCopy.offsetLeft : track.scrollWidth / 2;
+      const second = track.children.item(1);
+      return second instanceof HTMLElement ? second.offsetLeft : track.scrollWidth / 2;
     };
     let shiftPx = measure();
     const setX = gsap.quickSetter(track, "x", "px") as (value: number) => void;
