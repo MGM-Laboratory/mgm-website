@@ -798,7 +798,8 @@ class RoomAct implements StoryAct {
     box.root.updateMatrixWorld(true);
     const puffP = saturate(state.beat("r-land") / 0.55);
     // The same puff, smaller, where her boots land off the stand (the box's has long settled by then).
-    const hopP = (state.beat("r-break") - BREAK.land + 0.004) / 0.13;
+    // It is over before r-break ends, where the beat's progress holds at 1 for the rest of the act.
+    const hopP = (state.beat("r-break") - BREAK.land + 0.004) / 0.11;
     const toy = this.toy;
     if (toy && puffP >= 1 && hopP > 0 && hopP < 1) {
       this.puff.set(
