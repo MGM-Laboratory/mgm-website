@@ -11,6 +11,7 @@ import {
 
 import {
   Latch,
+  STORY_LAYERS,
   damp,
   saturate,
   type ActState,
@@ -92,6 +93,8 @@ const TITLE_T = WAVE.start + WAVE.vh * 0.42;
 const WAVE_SECONDS = 1.333 * 2 + 0.2;
 /** Quick clicks in a row that make her spin until she is dizzy. */
 const SPIN_CLICKS = 5;
+/** How long her last pose of the terminal life takes to melt into the story's, scrolling back. */
+const LIFE_FADE_SECONDS = 0.35;
 
 type Special = { kind: "hero" | "spin"; t: number };
 type Glance = { point: Vector3; until: number; face: GodetteFace | null; faceUntil: number };
@@ -129,6 +132,7 @@ class FinaleAct implements StoryAct {
   private splitX = 0.5;
   private titleEl: HTMLElement | null = null;
   private actionEl: HTMLElement | null = null;
+  private headerEl: HTMLElement | null = null;
   private metricsKey = "";
   private capOffset = 0;
   private measureCanvas: HTMLCanvasElement | null = null;
@@ -152,6 +156,11 @@ class FinaleAct implements StoryAct {
   private pointerSeenAt = -10;
   private lastPointer = { x: 9, y: 9 };
   private interactive = false;
+  /** Her last pose in the terminal life, melted into the story's when the visitor scrolls back. */
+  private lastLife: { layers: GodetteBodyLayer[]; spin: number; roll: number } | null = null;
+  private lifeFade = 0;
+  /** The auto idle last given to her (undefined: not yet this run). */
+  private autoIdle: number | null | undefined = undefined;
 
   // scratch
   private readonly ray = new Raycaster();
@@ -244,9 +253,20 @@ class FinaleAct implements StoryAct {
     const A = actingTime(t);
 
     // She is ours now: into this scene, every setting this act's.
-    if (godette.root.parent !== this.scene) this.scene.add(godette.root);
-    if (godette.shadow.parent !== this.scene) this.scene.add(godette.shadow);
-    if (godette.stand.parent) godette.stand.removeFromParent();
+    // Whatever the act before left on her (the table's behind layer, hidden at the end of a
+    // fall, a toy scale) goes: this scene draws her on the front layer, visible, life size.
+    // The stand stays where the table act keeps it (this scene never draws it).
+    if (
+      godette.root.parent !== this.scene ||
+      godette.shadow.parent !== this.scene ||
+      state.arrived
+    ) {
+      this.scene.add(godette.root, godette.shadow);
+      godette.root.traverse((object) => object.layers.set(STORY_LAYERS.front));
+      godette.shadow.layers.set(STORY_LAYERS.front);
+      this.autoIdle = undefined;
+    }
+    godette.root.visible = true;
 
     // ---------------------------------------------------------------- camera
     this.measureLayout(ctx);
@@ -271,12 +291,14 @@ class FinaleAct implements StoryAct {
     const side = sideFor(this.shot, this.xFrac, FOV, ctx.size.aspect);
     const pointer = ctx.pointer;
     const mouse = pointer.inside && pointer.type !== "touch";
+    let movedPointer = false;
     if (
       pointer.inside &&
       (pointer.ndc.x !== this.lastPointer.x || pointer.ndc.y !== this.lastPointer.y)
     ) {
       this.lastPointer = { x: pointer.ndc.x, y: pointer.ndc.y };
       this.pointerSeenAt = this.life;
+      movedPointer = true;
     }
     // The view swings a little toward the cursor, about her feet (the floor stays put).
     const yawGoal = this.still
@@ -324,7 +346,12 @@ class FinaleAct implements StoryAct {
     godette.setFace(plan.face);
     godette.lookAt(plan.lookPoint, plan.lookWeight);
     godette.setGlow(plan.glow);
-    godette.setAutoIdle(plan.autoIdle);
+    // The yawn and stretch count time alone: set (which restarts her count) only when the
+    // setting changes or the visitor moves the pointer.
+    if (plan.autoIdle !== this.autoIdle || (plan.autoIdle !== null && movedPointer)) {
+      this.autoIdle = plan.autoIdle;
+      godette.setAutoIdle(plan.autoIdle);
+    }
     if (plan.hover) godette.react("hover");
     godette.update(dt);
 
@@ -422,6 +449,19 @@ class FinaleAct implements StoryAct {
       if (poked < 0.6) {
         const jolt = Math.sin(poked * 26) * Math.exp(-poked * 7);
         roll += jolt * 0.07;
+      }
+      // Scrolled back out of her life: her last pose there melts into the story's (no snap).
+      const from = this.lastLife;
+      if (from && this.lifeFade > 0) {
+        this.lifeFade = Math.max(0, this.lifeFade - dt / LIFE_FADE_SECONDS);
+        const k = smooth(0, 1, this.lifeFade);
+        layers = [
+          ...layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - k) })),
+          ...from.layers.map((layer) => ({ ...layer, weight: layer.weight * k })),
+        ];
+        spin = from.spin * k;
+        roll += from.roll * k;
+        if (this.lifeFade <= 0) this.lastLife = null;
       }
       return { layers, face, lookPoint, lookWeight, glow, spin, roll, dizzy, autoIdle, hover };
     }
@@ -532,6 +572,8 @@ class FinaleAct implements StoryAct {
     // a pressed action: a happy hop on the way out
     if (finaleSignal.pressedSince() < 0.05) godette.react("click");
 
+    this.lastLife = { layers, spin, roll };
+    this.lifeFade = 1;
     return { layers, face, lookPoint, lookWeight, glow, spin, roll, dizzy, autoIdle, hover };
   }
 
@@ -551,6 +593,8 @@ class FinaleAct implements StoryAct {
 
   private resetLife() {
     this.waveClock = -1;
+    this.lastLife = null;
+    this.lifeFade = 0;
     this.byeClock = 0;
     this.special = null;
     this.glance = null;
@@ -699,7 +743,9 @@ class FinaleAct implements StoryAct {
       this.metricsKey = key;
       this.capOffset = this.capTop(style, size);
     }
-    const header = 76;
+    // the site header (fixed, 64 px today), measured: her raised hand stays clear of it
+    if (!this.headerEl?.isConnected) this.headerEl = document.querySelector(".site-header");
+    const header = Math.min(120, this.headerEl?.offsetHeight ?? 64);
     // A short landscape screen puts the words beside her (story.css): she stands on the screen's
     // floor in the left part, the words keep the right.
     const split = titleRect.left - finaleRect.left > ctx.size.width * 0.38;
@@ -711,7 +757,7 @@ class FinaleAct implements StoryAct {
       this.splitX = 0.5;
       this.floorY = Math.min(0.9, Math.max(0.3, floor / height));
     }
-    this.topY = Math.min(this.floorY - 0.25, (header + height * 0.025) / height);
+    this.topY = Math.min(this.floorY - 0.25, (header + Math.max(12, height * 0.024)) / height);
   }
 
   /** The cap height line's distance from the top of the title's first line box, px. */

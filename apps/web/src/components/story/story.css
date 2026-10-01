@@ -147,6 +147,29 @@ html[data-story-mode="gl"] [data-storybook] {
 }
 
 /*
+ * Short portrait phones (320 x 568, 375 x 667): a smaller stack under her,
+ * so she still keeps a good part of the screen.
+ */
+@media (orientation: portrait) and (max-height: 700px) {
+  .story-finale-gl {
+    padding-bottom: 4.75rem;
+  }
+
+  .story-finale-gl .story-finale-title {
+    font-size: clamp(2.125rem, 10.6vw, 2.75rem);
+  }
+
+  .story-finale-gl .story-finale-line {
+    margin-top: 0.625rem;
+    font-size: 0.875rem;
+  }
+
+  .story-finale-gl .story-finale-action-wrap {
+    margin-top: 1.125rem;
+  }
+}
+
+/*
  * Before the motion is ready, the WebGL block shows nothing it would then
  * hide (opacity only: the words stay in the accessibility tree).
  */
