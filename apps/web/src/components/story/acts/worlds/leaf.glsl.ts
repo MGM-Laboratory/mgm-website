@@ -11,18 +11,39 @@ import { GLSL_COMMON } from "./common";
  * They sway on the clock; the cursor and a tap's gust make them flutter.
  */
 
-/** The canopy as seen through a macro lens: warm light above, soft bokeh, deep blue green shade below. */
-export const CANOPY_GLSL = /* glsl */ `
-uniform vec3 uSunDir;
+/** The canopy's three tones, and its gradient alone (no sun, no bokeh): also the garden's haze. */
+const CANOPY_TONES = /* glsl */ `
 uniform vec3 uCanopyTop;
 uniform vec3 uCanopyMid;
 uniform vec3 uCanopyLow;
+vec3 canopyGradient(float y) {
+  vec3 col = mix(uCanopyLow, uCanopyMid, smoothstep(-0.6, 0.1, y));
+  return mix(col, uCanopyTop, smoothstep(0.05, 0.85, y));
+}
+`;
+
+/**
+ * The air between the leaves: far things melt into the canopy behind them,
+ * deep blue green looking down and level, warm light looking up, lifted a
+ * little toward the haze colour. Needs CANOPY_TONES (or CANOPY_GLSL).
+ */
+const LEAF_HAZE = /* glsl */ `
+uniform vec3 uHaze;
+uniform float uHazeDensity;
+vec3 leafHaze(vec3 d) {
+  return mix(canopyGradient(d.y), uHaze, 0.2);
+}
+`;
+
+/** The canopy as seen through a macro lens: warm light above, soft bokeh, deep blue green shade below. */
+export const CANOPY_GLSL = /* glsl */ `
+uniform vec3 uSunDir;
+${CANOPY_TONES}
 uniform vec3 uBokehA;
 uniform vec3 uBokehB;
 vec3 canopy(vec3 d, float time) {
   float y = d.y;
-  vec3 col = mix(uCanopyLow, uCanopyMid, smoothstep(-0.6, 0.1, y));
-  col = mix(col, uCanopyTop, smoothstep(0.05, 0.85, y));
+  vec3 col = canopyGradient(y);
   // The sun through the leaves: a hot blob and a wide warm wash.
   float s = max(dot(d, normalize(uSunDir)), 0.0);
   col += vec3(1.0, 0.95, 0.75) * (pow(s, 90.0) * 1.6 + pow(s, 8.0) * 0.35);
@@ -114,8 +135,8 @@ uniform float uTime;
 uniform float uFreeze;
 uniform vec3 uCamPos;
 uniform vec3 uSunDir;
-uniform vec3 uHaze;
-uniform float uHazeDensity;
+${CANOPY_TONES}
+${LEAF_HAZE}
 uniform vec3 uRib;
 uniform vec3 uGlow;
 varying vec2 vUv;
@@ -154,7 +175,7 @@ void main() {
   vec3 r = reflect(view, n);
   col += vec3(1.0, 0.98, 0.9) * pow(max(dot(r, L), 0.0), 40.0) * 0.25;
   float dist = length(vWorld - uCamPos);
-  col = mix(col, uHaze, clamp(1.0 - exp(-dist * uHazeDensity), 0.0, 0.92));
+  col = mix(col, leafHaze(normalize(vWorld - uCamPos)), clamp(1.0 - exp(-dist * uHazeDensity), 0.0, 0.92));
   col = freezeGrade(col, uFreeze);
   gl_FragColor = linearToOutputTexel(vec4(col, 1.0));
 }
@@ -181,8 +202,8 @@ export const SOLID_FRAGMENT = /* glsl */ `
 uniform float uFreeze;
 uniform vec3 uCamPos;
 uniform vec3 uSunDir;
-uniform vec3 uHaze;
-uniform float uHazeDensity;
+${CANOPY_TONES}
+${LEAF_HAZE}
 varying vec3 vWorld;
 varying vec3 vNormal;
 varying vec3 vTint;
@@ -196,7 +217,7 @@ void main() {
   float rim = pow(1.0 - abs(dot(n, -view)), 3.0);
   col += vec3(0.9, 1.0, 0.75) * rim * 0.25;
   float dist = length(vWorld - uCamPos);
-  col = mix(col, uHaze, clamp(1.0 - exp(-dist * uHazeDensity), 0.0, 0.92));
+  col = mix(col, leafHaze(normalize(vWorld - uCamPos)), clamp(1.0 - exp(-dist * uHazeDensity), 0.0, 0.92));
   col = freezeGrade(col, uFreeze);
   gl_FragColor = linearToOutputTexel(vec4(col, 1.0));
 }
@@ -229,13 +250,12 @@ export const DROP_FRAGMENT = /* glsl */ `
 uniform float uTime;
 uniform float uFreeze;
 uniform vec3 uCamPos;
-uniform vec3 uHaze;
-uniform float uHazeDensity;
 varying vec3 vWorld;
 varying vec3 vNormal;
 varying vec3 vCentre;
 ${GLSL_COMMON}
 ${CANOPY_GLSL}
+${LEAF_HAZE}
 void main() {
   vec3 n = normalize(vNormal);
   vec3 view = normalize(vWorld - uCamPos);
@@ -250,7 +270,7 @@ void main() {
   col += vec3(1.0, 0.97, 0.88) * pow(max(dot(reflect(view, n), L), 0.0), 120.0) * 2.4;
   col += vec3(1.0) * pow(fres, 2.0) * 0.18;
   float dist = length(vWorld - uCamPos);
-  col = mix(col, uHaze, clamp(1.0 - exp(-dist * uHazeDensity), 0.0, 0.9));
+  col = mix(col, leafHaze(normalize(vWorld - uCamPos)), clamp(1.0 - exp(-dist * uHazeDensity), 0.0, 0.9));
   col = freezeGrade(col, uFreeze);
   gl_FragColor = linearToOutputTexel(vec4(col, 1.0));
 }

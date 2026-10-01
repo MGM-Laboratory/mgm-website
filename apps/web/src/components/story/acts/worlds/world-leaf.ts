@@ -173,8 +173,8 @@ export class LeafWorld extends World {
       uHaze: { value: new Color(0xcfe3b0) },
       uHazeDensity: { value: 0.009 },
       uCanopyTop: { value: new Color(0xfff3c8) },
-      uCanopyMid: { value: new Color(0x86c27a) },
-      uCanopyLow: { value: new Color(0x16473f) },
+      uCanopyMid: { value: new Color(0x5f9f63) },
+      uCanopyLow: { value: new Color(0x0d3a33) },
       uBokehA: { value: new Color(0xd8f0a0) },
       uBokehB: { value: new Color(0x5fb36f) },
     };
