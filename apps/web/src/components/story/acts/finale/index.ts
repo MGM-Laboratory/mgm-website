@@ -251,8 +251,8 @@ class FinaleAct implements StoryAct {
     this.fill.position.set(0, 4, 0);
     this.scene.add(this.key, this.key.target, this.rim, this.rim.target, this.fill);
     this.ambient = new AmbientStars(AmbientStars.countFor(ctx.tier));
-    const sprites = new SpriteBatch(260);
-    const strokes = new StrokeBatch(64);
+    const sprites = new SpriteBatch(320);
+    const strokes = new StrokeBatch(72);
     this.sprites = sprites;
     this.strokes = strokes;
     this.scene.add(sprites.mesh, strokes.mesh);

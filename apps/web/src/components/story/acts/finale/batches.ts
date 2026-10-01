@@ -25,7 +25,8 @@ import {
  *   compass star, its small constellation star, a flat disc (dust puffs),
  *   a thin ring and a soft glow (her blush).
  * - `StrokeBatch`: camera-facing ribbons with round caps (speed lines, the
- *   constellation links of the dizzy ring, impact dashes).
+ *   constellation links of the dizzy ring, impact dashes, the landing's
+ *   ground ring), each of them tapering from its start to its end if asked.
  *
  * Positions are world units in the act's scene. Colours are 0xRRGGBB in
  * sRGB, encoded once for the target (`colorspace_fragment`), so a brand hex
@@ -81,8 +82,10 @@ void main() {
   } else if (vShape < 1.5) {
     a = sdFill(sdStar4Rot(vQuad, 0.98, ${STAR_RATIO_TWINKLE.toFixed(3)}, vSpin), aa);
   } else if (vShape < 2.5) {
-    // a flat cartoon puff with a crisp edge (overlapping puffs merge into one cloud)
-    a = 1.0 - smoothstep(0.9 - aa, 0.9 + aa, r);
+    // a flat cartoon puff (overlapping puffs merge into one cloud); for a disc the spin slot
+    // carries its edge's softness, 0 crisp to 1 soft
+    float soft = clamp(vSpin, 0.0, 1.0) * 0.55;
+    a = 1.0 - smoothstep(0.9 - aa - soft, 0.9 + aa, r);
   } else if (vShape < 3.5) {
     a = smoothstep(0.8 - aa, 0.8 + aa, r) * (1.0 - smoothstep(0.96 - aa, 0.96 + aa, r));
   } else {
@@ -99,7 +102,7 @@ void main() {
 const STROKE_VERTEX = /* glsl */ `
 attribute vec3 aStart;
 attribute vec3 aEnd;
-attribute vec3 aLook; // width (world), alpha, softness 0..1
+attribute vec4 aLook; // width (world), alpha, softness 0..1, end width share (taper)
 attribute vec3 aColor;
 varying vec2 vLocal;
 varying float vLength;
@@ -107,6 +110,7 @@ varying float vHalf;
 varying vec3 vColor;
 varying float vAlpha;
 varying float vSoft;
+varying float vTaper;
 void main() {
   vec4 s = modelViewMatrix * vec4(aStart, 1.0);
   vec4 e = modelViewMatrix * vec4(aEnd, 1.0);
@@ -125,6 +129,7 @@ void main() {
   vColor = aColor;
   vAlpha = aLook.y;
   vSoft = aLook.z;
+  vTaper = aLook.w;
   gl_Position = projectionMatrix * p;
 }
 `;
@@ -136,13 +141,16 @@ varying float vHalf;
 varying vec3 vColor;
 varying float vAlpha;
 varying float vSoft;
+varying float vTaper;
 void main() {
-  // A capsule: the distance to the segment (0, 0) to (len, 0) against the half width.
+  // A capsule: the distance to the segment (0, 0) to (len, 0) against the half width, which
+  // narrows from the start to the end by the taper.
   float x = clamp(vLocal.x, 0.0, vLength);
+  float rad = vHalf * mix(1.0, vTaper, vLength > 1e-6 ? x / vLength : 0.0);
   float d = length(vLocal - vec2(x, 0.0));
   float aa = fwidth(d) * 1.1 + 1e-6;
-  float a = 1.0 - smoothstep(vHalf - aa, vHalf + aa, d);
-  float core = 1.0 - clamp(d / max(vHalf, 1e-6), 0.0, 1.0);
+  float a = 1.0 - smoothstep(rad - aa, rad + aa, d);
+  float core = 1.0 - clamp(d / max(rad, 1e-6), 0.0, 1.0);
   a *= mix(1.0, core * core, vSoft);
   a *= vAlpha;
   if (a <= 0.003) discard;
@@ -285,7 +293,7 @@ export class StrokeBatch {
     geometry.setAttribute("position", quad.getAttribute("position"));
     this.start = attribute(capacity, 3);
     this.end_ = attribute(capacity, 3);
-    this.look = attribute(capacity, 3);
+    this.look = attribute(capacity, 4);
     this.color = attribute(capacity, 3);
     geometry.setAttribute("aStart", this.start);
     geometry.setAttribute("aEnd", this.end_);
@@ -303,7 +311,10 @@ export class StrokeBatch {
     this.count = 0;
   }
 
-  /** One stroke from `a` to `b`, `width` world units across, `soft` 0 (crisp) to 1 (a glow). */
+  /**
+   * One stroke from `a` to `b`, `width` world units across at `a`, `soft` 0
+   * (crisp) to 1 (a glow), `taper` its width at `b` as a share of `width`.
+   */
   push(
     a: Readonly<Vector3>,
     b: Readonly<Vector3>,
@@ -311,6 +322,7 @@ export class StrokeBatch {
     color: number,
     alpha: number,
     soft = 0,
+    taper = 1,
   ) {
     if (this.count >= this.capacity || alpha <= 0.003 || width <= 0) return;
     const i = this.count;
@@ -323,9 +335,10 @@ export class StrokeBatch {
     e[i * 3 + 1] = b.y;
     e[i * 3 + 2] = b.z;
     const l = this.look.array as Float32Array;
-    l[i * 3] = width;
-    l[i * 3 + 1] = Math.min(1, alpha);
-    l[i * 3 + 2] = soft;
+    l[i * 4] = width;
+    l[i * 4 + 1] = Math.min(1, alpha);
+    l[i * 4 + 2] = soft;
+    l[i * 4 + 3] = taper;
     writeColor(this.color.array as Float32Array, i * 3, color);
     this.count += 1;
   }
@@ -338,7 +351,7 @@ export class StrokeBatch {
     for (const [a, size] of [
       [this.start, 3],
       [this.end_, 3],
-      [this.look, 3],
+      [this.look, 4],
       [this.color, 3],
     ] as const) {
       a.clearUpdateRanges();

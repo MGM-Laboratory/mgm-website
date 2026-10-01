@@ -24,7 +24,9 @@ import type { SpriteBatch, StrokeBatch } from "./batches";
 export type FinaleColors = Readonly<{
   ink: number;
   page: number;
-  dust: number;
+  /** The dust clouds' two tones: the shaded base and the lit top. */
+  dustBase: number;
+  dustTop: number;
   faint: number;
   brand: readonly number[];
   /** Her blush (a warm pink from the brand red). */
@@ -47,7 +49,8 @@ export function finaleColors(palette: StoryPalette): FinaleColors {
   return {
     ink: palette.ink,
     page: palette.page,
-    dust: light ? mixHex(palette.page, palette.ink, 0.085) : mixHex(palette.page, 0xffffff, 0.12),
+    dustBase: light ? mixHex(palette.page, 0x6d6359, 0.2) : mixHex(palette.page, 0xd8d0c8, 0.3),
+    dustTop: light ? mixHex(palette.page, 0xffffff, 0.75) : mixHex(palette.page, 0xffffff, 0.52),
     faint: light ? mixHex(palette.page, palette.ink, 0.5) : mixHex(palette.page, 0xffffff, 0.62),
     brand: [palette.yellow, palette.blue, palette.red, palette.green],
     // on the dark page her lit skin is darker: a deeper rose there, not a light patch
@@ -109,14 +112,37 @@ export function drawSpeedLines(
     const top = rootY + 1.9 + gap;
     tmpA.set(x, top, -0.15);
     tmpB.set(x, top + length, -0.15);
-    strokes.push(tmpA, tmpB, 0.022, colors.faint, 0.55 * fade, 0.15);
+    strokes.push(tmpA, tmpB, 0.022, colors.faint, 0.55 * fade, 0.15, 0.25);
   });
 }
 
+/** The landing's dust clouds: [angle (0 is her right, along the floor), reach (m), size, delay (s)]. */
+const LANDING_CLOUDS: readonly (readonly [number, number, number, number])[] = [
+  [0.12, 0.95, 1.15, 0],
+  [Math.PI - 0.1, 1.0, 1.2, 0.01],
+  [0.55, 0.62, 0.85, 0.03],
+  [Math.PI - 0.6, 0.66, 0.9, 0.02],
+  [1.35, 0.38, 0.7, 0.05],
+  [Math.PI + 0.35, 0.72, 0.75, 0.04],
+  [-0.4, 0.7, 0.7, 0.05],
+];
+
+/** Impact dashes: [angle (radians from her right, counter clockwise), delay (s)], a shuffled pop. */
+const DASHES: readonly (readonly [number, number])[] = [
+  [0.2, 0.0],
+  [0.62, 0.035],
+  [1.08, 0.012],
+  [1.57, 0.05],
+  [2.06, 0.02],
+  [2.52, 0.045],
+  [2.94, 0.006],
+];
+
 /**
- * The landing: soft dust puffs rolling out along the floor from where her
- * bottom hits, a few pebbles of light hopping out, and comic impact dashes
- * around the hit.
+ * The landing: little cartoon dust clouds (two tones, soft edged, each a
+ * cluster of puffs) roll out along the floor from where her bottom hits and
+ * break up, a thin ring runs out over the floor, pebbles of light hop out,
+ * and tapered impact dashes pop around the hit, a frame or two apart.
  */
 export function drawImpact(
   sprites: SpriteBatch,
@@ -126,36 +152,63 @@ export function drawImpact(
   camera: PerspectiveCamera,
   colors: FinaleColors,
 ) {
-  // the feet tap first: a small puff each side
+  // the feet tap first: a small soft puff each side
   const feet = (A - PHASE.fallEnd) / 0.45;
   if (feet > 0 && feet < 1) {
     for (const side of [-1, 1]) {
       const k = easeOut(feet);
       tmpA.set(contact.x + side * (0.14 + 0.16 * k), 0.04 + 0.03 * k, contact.z + 0.25);
-      sprites.push(tmpA, 0.1 + 0.1 * k, "disc", colors.dust, 0.55 * (1 - feet) ** 1.5);
+      sprites.push(tmpA, 0.1 + 0.1 * k, "disc", colors.dustBase, 0.6 * (1 - feet) ** 1.5, 0.6);
     }
   }
-  const u = (A - PHASE.bottomHit) / 1.0;
+  const u = (A - PHASE.bottomHit) / 1.1;
   if (u < 0 || u > 1) return;
-  const k = easeOut(u);
-  // cartoon dust: flat puffs that roll out along the floor, swell, then shrink away
-  const puffs = 10;
-  for (let i = 0; i < puffs; i += 1) {
-    const angle = (i / puffs) * Math.PI * 2 + 0.35;
-    const wobble = 0.75 + 0.5 * Math.abs(Math.sin(i * 12.9898));
-    const radius = (0.22 + 0.62 * k) * (0.9 + 0.2 * Math.sin(i * 5.7));
-    const x = contact.x + Math.cos(angle) * radius * 1.25;
-    const z = contact.z + Math.sin(angle) * radius * 0.7;
-    const lift = 0.05 + 0.1 * k * (0.5 + 0.5 * Math.abs(Math.sin(i * 3.1)));
-    const swell = Math.sin(Math.min(1, u * 1.15) * Math.PI) ** 0.7;
-    const size = (0.1 + 0.16 * k) * wobble * swell;
-    tmpA.set(x, lift, z);
-    sprites.push(tmpA, size, "disc", colors.dust, 1);
+  // the ring on the floor: thin, fast, gone first
+  const ring = u / 0.55;
+  if (ring < 1) {
+    const radius = 0.3 + 0.85 * easeOut(ring);
+    const segments = 26;
+    const alpha = 0.26 * (1 - ring) ** 1.4;
+    for (let i = 0; i < segments; i += 1) {
+      const a0 = (i / segments) * Math.PI * 2;
+      const a1 = ((i + 1) / segments) * Math.PI * 2;
+      tmpA.set(contact.x + Math.cos(a0) * radius, 0.006, contact.z + Math.sin(a0) * radius * 0.85);
+      tmpB.set(contact.x + Math.cos(a1) * radius, 0.006, contact.z + Math.sin(a1) * radius * 0.85);
+      strokes.push(tmpA, tmpB, 0.009, colors.faint, alpha);
+    }
+  }
+  // the clouds: every base first, then every lit top (so a top never hides under a neighbour)
+  for (let pass = 0; pass < 2; pass += 1) {
+    LANDING_CLOUDS.forEach(([angle, reach, size, delay], c) => {
+      const age = (A - PHASE.bottomHit - delay) / 1.0;
+      if (age <= 0 || age >= 1) return;
+      const k = easeOut(age);
+      const swell = Math.sin(Math.min(1, age * 1.2) * Math.PI) ** 0.6;
+      const cx = contact.x + Math.cos(angle) * reach * (0.25 + 0.75 * k);
+      const cz = contact.z + Math.sin(angle) * reach * 0.45 * (0.25 + 0.75 * k);
+      const r = 0.075 * size * (0.7 + 0.6 * k);
+      PUFF_CLOUD.forEach(([ox, oy, s], i) => {
+        // the cloud rolls (its puffs turn about its centre) and opens as it goes
+        const roll = k * 1.6 * (Math.cos(angle) >= 0 ? -1 : 1) + c;
+        const open = 1 + 0.45 * k;
+        const px = ox * Math.cos(roll) - oy * Math.sin(roll) * 0.35;
+        const py = oy * 0.7 + Math.abs(ox) * 0.08;
+        const lift = 0.03 + r * (0.85 + py) + 0.06 * k;
+        const puff = 2 * r * s * swell * (1 - 0.35 * age);
+        if (pass === 0) {
+          tmpA.set(cx + px * r * open, lift, cz + 0.01 * i);
+          sprites.push(tmpA, puff, "disc", colors.dustBase, 0.92 * (1 - age ** 3), 0.45);
+        } else {
+          tmpA.set(cx + px * r * open - 0.12 * r, lift + 0.22 * puff, cz + 0.01 * i + 0.004);
+          sprites.push(tmpA, puff * 0.62, "disc", colors.dustTop, 0.85 * (1 - age ** 2), 0.7);
+        }
+      });
+    });
   }
   // pebbles of light: brand stars hopping out of the dust
   for (let i = 0; i < 5; i += 1) {
     const angle = -0.4 + i * 0.95;
-    const age = u * 1.0;
+    const age = u * 1.1;
     const out = 0.25 + 0.7 * easeOut(age * 1.4);
     const hop = Math.max(0, 0.42 * Math.sin(Math.min(1, age * 1.6) * Math.PI)) * (0.7 + 0.1 * i);
     tmpA.set(
@@ -166,28 +219,29 @@ export function drawImpact(
     const color = colors.brand[i % colors.brand.length] ?? colors.ink;
     sprites.push(tmpA, 0.065, "twinkle", color, (1 - u) ** 1.2 * saturate(u * 18), age * 5 + i);
   }
-  // comic impact dashes around the hit, in the view plane
-  const dash = (A - PHASE.bottomHit) / 0.28;
-  if (dash > 0 && dash < 1) {
-    cameraAxes(camera);
-    tmpC.set(contact.x, 0.32, contact.z);
-    for (let i = 0; i < 7; i += 1) {
-      const angle = Math.PI * (0.06 + (i / 6) * 0.88);
-      const r0 = 0.42 + 0.22 * easeOut(dash);
-      const r1 = r0 + 0.16 * (1 - dash) + 0.04;
-      const cx = Math.cos(angle);
-      const cy = Math.sin(angle) * 0.85;
-      tmpA
-        .copy(tmpC)
-        .addScaledVector(right, cx * r0 * 1.3)
-        .addScaledVector(up, cy * r0);
-      tmpB
-        .copy(tmpC)
-        .addScaledVector(right, cx * r1 * 1.3)
-        .addScaledVector(up, cy * r1);
-      strokes.push(tmpA, tmpB, 0.03, colors.ink, 0.85 * (1 - dash));
-    }
-  }
+  // comic impact dashes around the hit, in the view plane: tapered, light, popping in turn
+  cameraAxes(camera);
+  tmpC.set(contact.x, 0.3, contact.z);
+  DASHES.forEach(([angle, delay], i) => {
+    const dash = (A - PHASE.bottomHit - delay) / 0.3;
+    if (dash <= 0 || dash >= 1) return;
+    const r0 = 0.44 + 0.24 * easeOut(dash);
+    const r1 = r0 + 0.2 * (1 - dash) + 0.05;
+    const cx = Math.cos(angle);
+    const cy = Math.sin(angle) * 0.85;
+    tmpA
+      .copy(tmpC)
+      .addScaledVector(right, cx * r0 * 1.3)
+      .addScaledVector(up, cy * r0);
+    tmpB
+      .copy(tmpC)
+      .addScaledVector(right, cx * r1 * 1.3)
+      .addScaledVector(up, cy * r1);
+    // two of the seven in the spark's yellow
+    const color = i === 1 || i === 4 ? (colors.brand[0] ?? colors.ink) : colors.ink;
+    const alpha = (i === 1 || i === 4 ? 0.9 : 0.45) * (1 - dash) ** 0.8;
+    strokes.push(tmpA, tmpB, 0.022, color, alpha, 0, 0.15);
+  });
 }
 
 /** One little cartoon cloud: disc offsets (x, y in puff radii) and sizes. */
@@ -215,32 +269,46 @@ export function drawBrushPuffs(
   const clip = (A - PHASE.standEnd) * PHASE.dustRate;
   if (clip < 0 || clip > 2.4) return;
   const brushes = [0.38, 0.72, 1.08];
-  brushes.forEach((at, b) => {
-    const age = (clip - at) / 0.8;
-    if (age <= 0 || age >= 1) return;
-    const side = b % 2 === 0 ? -1 : 1;
-    const k = easeOut(age);
-    const radius = 0.045 + 0.03 * k;
-    const swell = Math.sin(Math.min(1, age * 1.25) * Math.PI) ** 0.55;
-    const cx = hips.x + side * (0.2 + 0.22 * k);
-    const cy = hips.y - 0.08 + 0.1 * k;
-    PUFF_CLOUD.forEach(([ox, oy, size], i) => {
-      // the cloud opens as it goes: its discs drift apart a little
-      const open = 1 + 0.35 * k;
-      tmpA.set(cx + side * ox * radius * open, cy + oy * radius * open, hips.z + 0.14 + i * 0.002);
-      sprites.push(tmpA, 2 * radius * size * swell, "disc", colors.dust, 1);
+  // every base first, then every lit top (so a top never hides under a neighbour)
+  for (let pass = 0; pass < 2; pass += 1) {
+    brushes.forEach((at, b) => {
+      const age = (clip - at) / 0.8;
+      if (age <= 0 || age >= 1) return;
+      const side = b % 2 === 0 ? -1 : 1;
+      const k = easeOut(age);
+      const radius = 0.045 + 0.03 * k;
+      const swell = Math.sin(Math.min(1, age * 1.25) * Math.PI) ** 0.55;
+      const cx = hips.x + side * (0.2 + 0.22 * k);
+      const cy = hips.y - 0.08 + 0.1 * k;
+      PUFF_CLOUD.forEach(([ox, oy, size], i) => {
+        // the cloud opens as it goes: its discs drift apart a little
+        const open = 1 + 0.35 * k;
+        tmpA.set(
+          cx + side * ox * radius * open,
+          cy + oy * radius * open,
+          hips.z + 0.14 + i * 0.002,
+        );
+        if (pass === 0) {
+          sprites.push(tmpA, 2 * radius * size * swell, "disc", colors.dustBase, 0.9, 0.45);
+        } else {
+          tmpA.y += 0.3 * radius * size;
+          tmpA.z += 0.003;
+          sprites.push(tmpA, 1.3 * radius * size * swell, "disc", colors.dustTop, 0.8, 0.7);
+        }
+      });
+      if (pass === 1) return;
+      // specks flicked out ahead of the cloud
+      for (let i = 0; i < 2; i += 1) {
+        const fly = easeOut(Math.min(1, age * 1.4));
+        tmpA.set(
+          cx + side * (0.12 + 0.2 * fly + i * 0.06),
+          cy + 0.05 + 0.1 * fly - 0.12 * age * age + i * 0.04,
+          hips.z + 0.15,
+        );
+        sprites.push(tmpA, 0.026 * (1 - age), "disc", colors.dustBase, 1, 0.3);
+      }
     });
-    // specks flicked out ahead of the cloud
-    for (let i = 0; i < 2; i += 1) {
-      const fly = easeOut(Math.min(1, age * 1.4));
-      tmpA.set(
-        cx + side * (0.12 + 0.2 * fly + i * 0.06),
-        cy + 0.05 + 0.1 * fly - 0.12 * age * age + i * 0.04,
-        hips.z + 0.15,
-      );
-      sprites.push(tmpA, 0.026 * (1 - age), "disc", colors.dust, 1);
-    }
-  });
+  }
 }
 
 /**
