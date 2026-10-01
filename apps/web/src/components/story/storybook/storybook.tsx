@@ -1,7 +1,8 @@
 import { FinaleBlock } from "@/components/story/finale-block";
 import { PanelArt, WavingArt } from "@/components/story/storybook/panel-art";
 import { StoryCard } from "@/components/story/storybook/story-card";
-import { STORY_CARDS, STORY_INTRO, STORY_PANELS } from "@/data/story";
+import { StoryStill } from "@/components/story/storybook/story-still";
+import { STORY_CARDS, STORY_FINALE, STORY_INTRO, STORY_PANELS } from "@/data/story";
 
 /**
  * The storybook: the story told in the DOM, for everyone the WebGL story
@@ -48,7 +49,12 @@ export function Storybook() {
             {STORY_PANELS.map((panel, index) => (
               <li key={panel.id} data-storybook-panel={panel.id} className="story-panel">
                 <div className="story-panel-art" data-panel={panel.id}>
-                  <PanelArt id={panel.id} />
+                  <StoryStill
+                    id={panel.id}
+                    alt={panel.alt}
+                    sizes="(min-width: 1024px) 24rem, (min-width: 640px) 45vw, 92vw"
+                    fallback={<PanelArt id={panel.id} />}
+                  />
                 </div>
                 <h3 className="mt-4 flex items-baseline gap-3 font-display text-xl font-semibold tracking-tight text-foreground">
                   <span className="font-mono text-xs font-normal text-foreground/60">
@@ -69,7 +75,12 @@ export function Storybook() {
           className="story-finale-book mt-28 sm:mt-36"
         >
           <div data-storybook-finale className="story-finale-art">
-            <WavingArt />
+            <StoryStill
+              id="finale"
+              alt={STORY_FINALE.alt}
+              sizes="13.5rem"
+              fallback={<WavingArt />}
+            />
           </div>
         </FinaleBlock>
       </div>
