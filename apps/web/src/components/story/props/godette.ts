@@ -80,6 +80,12 @@ export type Vec3Like = Readonly<{ x: number; y: number; z: number }>;
  * One body layer for this frame. Give `time` (seconds) or `progress` (0..1
  * of the clip) to scrub; give neither and the clip runs on her own clock
  * (`speed` times dt), restarting when the layer reappears after a gap.
+ *
+ * Weights are relative: the layers always share the whole body between them
+ * (one layer at 0.25 is the same as one layer at 1; 0.5 and 0.25 mix two to
+ * one). To fade a clip in, fade the clip before it out. A clip that is not
+ * loaded is skipped (a warning in development), and with no loaded layer at
+ * all she shows her bind pose, a T-pose, so always give her one.
  */
 export type GodetteBodyLayer = Readonly<{
   clip: GodetteClip;
@@ -140,6 +146,7 @@ export interface Godette {
   clipDuration(name: GodetteClip): number;
   hasClip(name: GodetteClip): boolean;
   loadClips(group: GodetteClipGroup): Promise<void>;
+  /** This frame's base layers (relative weights, see GodetteBodyLayer). Reactions blend over them. */
   setBody(layers: readonly GodetteBodyLayer[]): void;
   setFace(name: GodetteFace | "auto", weight?: number): void;
   lookAt(point: Vec3Like | null, headWeight?: number): void;
@@ -773,6 +780,7 @@ export async function loadGodette(
 
   let reaction: Reaction | null = null;
   let fading: FadingReaction[] = [];
+  const warned = new Set<string>();
   let lastClickClip: GodetteClip | null = null;
   let lastHoverClip: GodetteClip | null = null;
   let autoIdle: number | null = null;
@@ -965,7 +973,8 @@ export async function loadGodette(
 
   const updateBody = (dt: number) => {
     weights.clear();
-    // the reaction's envelope, the share the replaced reactions still hold, and the base layers in what is left
+    // three's mixer fills any weight short of 1 with the bind pose (a T-pose), so the weights always add up to
+    // 1: the reaction's envelope, the share the replaced reactions still hold, and the base layers in what is left
     const env = reactionEnvelope();
     const r = reaction;
     const handed = r ? blendInOf(r) : 1;
@@ -979,6 +988,10 @@ export async function loadGodette(
       held += w;
     }
     const keep = Math.max(0, 1 - env - held);
+    // base layer weights are relative: they share `keep` in proportion
+    let total = 0;
+    for (const layer of layers) if (layer.weight > 0 && body.has(layer.clip)) total += layer.weight;
+    const norm = total > 0 ? keep / total : 0;
     for (const layer of layers) {
       const a = body.get(layer.clip);
       if (!a || layer.weight <= 0) continue;
@@ -993,7 +1006,7 @@ export async function loadGodette(
       }
       lastSeen.set(layer.clip, clock);
       a.time = clampTime(layer.clip, t);
-      setW(a, layer.weight * keep);
+      setW(a, layer.weight * norm);
     }
     if (r?.clip) {
       const a = body.get(r.clip);
@@ -1436,6 +1449,15 @@ export async function loadGodette(
     },
     setBody(next) {
       layers = next;
+      if (process.env.NODE_ENV !== "production") {
+        for (const layer of next) {
+          if (body.has(layer.clip) || warned.has(layer.clip)) continue;
+          warned.add(layer.clip);
+          console.warn(
+            `[godette] setBody: "${layer.clip}" is not loaded (loadClips("${clipSpec(layer.clip).group}") first); it is skipped`,
+          );
+        }
+      }
     },
     setFace(name, weight = 1) {
       if (name === "auto") {
