@@ -111,6 +111,8 @@ export type DeckBeats = {
   sinceDraw: number;
 };
 
+export type StreamExtent = { head: number; tail: number; back: boolean; on: number };
+
 export function createBeats(): DeckBeats {
   return {
     u: -1,
@@ -268,6 +270,39 @@ export class DeckMotion {
     if (beats.gather > 0) return this.gatherPose(i, beats, layout, time, out);
     if (beats.draw > 0) return this.drawnPose(i, beats, layout, time, out);
     return this.flightPose(i, beats.u, beats.fan, layout, time, out);
+  }
+
+  /**
+   * The stream's extent for the spine thread: the first and the last card's
+   * distance along the active path (the snake, or the return in the gather)
+   * and how much of the spine shows.
+   */
+  stream(beats: DeckBeats, layout: DeckLayout, out: StreamExtent) {
+    out.on = 0;
+    out.back = false;
+    if (beats.drop > 0 || beats.u <= 0) return out;
+    if (beats.gather > 0) {
+      let head = 0;
+      let tail = Infinity;
+      const L = layout.back.length;
+      for (let i = 0; i < this.count; i += 1) {
+        const s = this.gatherDistance(i, beats, layout);
+        if (s <= 0) continue;
+        head = Math.max(head, Math.min(L, s));
+        if (s < L) tail = Math.min(tail, s);
+      }
+      out.back = true;
+      out.head = head;
+      out.tail = Number.isFinite(tail) ? tail : head;
+      out.on = window4(beats.gather, UNROLL_FROM, UNROLL_FROM + 0.06, GATHER_IN - 0.12, GATHER_IN);
+      return out;
+    }
+    const L = layout.snake.length;
+    const speed = this.streamSpeed(L);
+    out.head = Math.min(L, travel(beats.u - this.launch(0), speed, ACCEL));
+    out.tail = Math.min(L, travel(beats.u - this.launch(this.count - 1), speed, ACCEL));
+    out.on = smoothstep(0.02, 0.2, beats.u) * (1 - smoothstep(POUR_END - 0.3, POUR_END, beats.u));
+    return out;
   }
 
   // ------------------------------------------------------------------ spring, snake, stack, fan

@@ -22,6 +22,8 @@ import {
 } from "@/components/story/acts/cards/deck-motion";
 import { DeckView } from "@/components/story/acts/cards/deck-view";
 import { HeroCards } from "@/components/story/acts/cards/hero-cards";
+import { Threads } from "@/components/story/acts/cards/threads";
+import type { StreamExtent } from "@/components/story/acts/cards/deck-motion";
 import { swarmCountFor } from "@/components/story/props/card-mesh";
 import { smoothstep, window4 } from "@/components/story/engine/act";
 import {
@@ -69,6 +71,9 @@ class CardsAct implements StoryAct {
   private motion: DeckMotion | null = null;
   private deck: DeckView | null = null;
   private heroes: HeroCards | null = null;
+  private threads: Threads | null = null;
+  private readonly stream: StreamExtent = { head: 0, tail: 0, back: false, on: 0 };
+  private readonly hover = [0, 0, 0, 0];
   private readonly beats = createBeats();
 
   async init(ctx: StoryContext) {
@@ -111,6 +116,7 @@ class CardsAct implements StoryAct {
       swarmMaterial.envMapIntensity = 0.55;
     }
     this.deck = deck;
+    this.threads = new Threads(this.stage, ctx.tier);
     const heroes = new HeroCards(deck, ctx.tier);
     this.heroes = heroes;
     // Compile the live fronts too (a hero with a front texture is the same program as without).
@@ -122,9 +128,11 @@ class CardsAct implements StoryAct {
     // Compile with every object shown once (hidden objects are not compiled).
     box.warm(true);
     deck.warm(true);
+    this.threads.warm(true);
     await ctx.stage.compile();
     box.warm(false);
     deck.warm(false);
+    this.threads.warm(false);
     for (const hero of deck.heroes) hero.card.setFront(null);
   }
 
@@ -166,7 +174,26 @@ class CardsAct implements StoryAct {
         window4(state.t, 1.9, 2.3, 5.0, 5.4) +
         smoothstep(0.12, 0.3, this.beats.gather) * (1 - smoothstep(0.7, 0.85, this.beats.gather));
       deck.update(ctx, motion, this.beats, this.layout, Math.min(1, parting));
-      this.heroes?.update(ctx, this.beats, this.layout, state.velocity);
+      const heroes = this.heroes;
+      heroes?.update(ctx, this.beats, this.layout, state.velocity);
+      const threads = this.threads;
+      if (threads && heroes) {
+        heroes.life.forEach((life, k) => {
+          this.hover.splice(k, 1, life.hover);
+        });
+        threads.update(ctx, {
+          beats: this.beats,
+          layout: this.layout,
+          view: this.view,
+          heroes: deck.heroPoses,
+          faceUp: heroes.faceUp,
+          hover: this.hover,
+          stream: motion.stream(this.beats, this.layout, this.stream),
+          entrance: state.entrance,
+          drop: drop,
+          t: state.t,
+        });
+      }
     }
   }
 
@@ -212,6 +239,8 @@ class CardsAct implements StoryAct {
     this.deck = null;
     this.heroes?.dispose();
     this.heroes = null;
+    this.threads?.dispose();
+    this.threads = null;
     this.studio?.dispose();
     this.studio = null;
     this.boxDirector = null;
