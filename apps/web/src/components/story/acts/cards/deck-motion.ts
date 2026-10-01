@@ -410,7 +410,7 @@ export class DeckMotion {
       Math.sin(time * 6 + i) * 0.03 * flow;
     out.flex = Math.sin(time * 4.3 + i * 1.7) * 0.03 * flow;
     // Far cards fade a touch toward the page (aerial perspective).
-    out.mist = smoothstep(1.0, 1.4, 0.8 - out.position.z) * 0.3;
+    out.mist = smoothstep(1.0, 1.5, 0.8 - out.position.z) * 0.14;
   }
 
   // ------------------------------------------------------------------ draw, turn, hold

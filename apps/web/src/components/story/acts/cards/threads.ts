@@ -34,20 +34,26 @@ import { turnWindow } from "@/components/story/acts/cards/hero-cards";
  *    phase offsets, so they cross and make moire, like the card back's
  *    linework) behind the stage. They draw themselves on as the section
  *    arrives, swell while the deck dances, calm at the rests, part around
- *    the cursor, and carry each card's colour across the screen when it
- *    turns.
- * 2. The spine: the stream's own path, drawn from its last card to just
- *    ahead of its first, with a glowing head: the cards ride the line.
+ *    the cursor, carry each card's colour across the screen when it turns,
+ *    and glints of light run along them, racing while the page scrolls.
+ * 2. The spine: a gold thread through the stream, just in front of the
+ *    cards' centres from its last card to just ahead of its first, with a
+ *    glowing head and a star: the cards ride the thread.
  * 3. Puppet strings: two threads from each drawn card's top corners up out
  *    of the frame, simulated (verlet), swinging with the card, taut when
  *    it is hovered, cut when the gather snaps the cards face down.
- * 4. Constellations: small four-point stars between the four, linked by
- *    hairlines drawn in once they are revealed, twinkling.
- * 5. The zigzag frame (the card back's border) along the screen's edges,
- *    pulsing in a card's colour as it turns.
+ * 4. The constellation: once the four are revealed, a star map sets them
+ *    in a lattice (a chain above the row, a chain below it, a link down
+ *    every gap; a ring and a cross around the 2 x 2 on portrait screens),
+ *    drawn in by the scroll, twinkling, never crossing a card. The links
+ *    beside a hovered card take its colour.
+ * 5. The stage line: the card back's zigzag border under the row, drawn
+ *    out from the centre when the four land, a pulse of each card's colour
+ *    running out from it as it turns.
  */
 
 type Rgb = readonly [number, number, number];
+type Point = readonly [number, number];
 
 const ACCENT_RGB: ReadonlyMap<string, Rgb> = new Map<string, Rgb>([
   ["blue", [58 / 255, 109 / 255, 197 / 255]],
@@ -58,6 +64,11 @@ const ACCENT_RGB: ReadonlyMap<string, Rgb> = new Map<string, Rgb>([
 const INK_LIGHT: Rgb = [14 / 255, 17 / 255, 22 / 255];
 const INK_DARK: Rgb = [1, 1, 1];
 const YELLOW: Rgb = [247 / 255, 191 / 255, 51 / 255];
+/** The gold of the threads' light on the light page (brand yellow, deepened to read on white). */
+const GOLD_LIGHT: Rgb = [196 / 255, 140 / 255, 24 / 255];
+
+/** How far the spine floats toward the lens from the cards' centres, metres. */
+const SPINE_LIFT = 0.014;
 
 const STRING_NODES = 12;
 const ROWS_STRINGS = 8;
@@ -96,20 +107,24 @@ export class Threads {
   private readonly rowSpine: number;
   private readonly rowStrings: number;
   private readonly rowConstellation: number;
-  private readonly rowZigzag: number;
+  private readonly rowStage: number;
   private readonly strands: Strand[] = [];
   private readonly cursor = { x: 0, y: 0, strength: 0 };
   private lastTime = 0;
+  private lastT = 0;
+  /** Where the braids' glints are (a clock that runs faster while the page scrolls). */
+  private glint = 0;
+  private gold: Rgb = GOLD_LIGHT;
 
   constructor(stage: Group, tier: StoryTier) {
     this.braidLines = tier === "low" ? 6 : tier === "medium" ? 8 : 9;
     this.braidSamples = tier === "low" ? 110 : tier === "medium" ? 150 : 200;
-    // Rows: two braids, the spine, the strings, a constellation, the zigzag frame.
+    // Rows: two braids, the spine, the strings, the constellation, the stage line.
     this.rowSpine = this.braidLines * 2;
     this.rowStrings = this.rowSpine + 1;
     this.rowConstellation = this.rowStrings + ROWS_STRINGS;
-    this.rowZigzag = this.rowConstellation + 1;
-    this.field = new ThreadField(this.rowZigzag + 1);
+    this.rowStage = this.rowConstellation + 1;
+    this.field = new ThreadField(this.rowStage + 1);
     this.stars = new StarPoints(48);
     stage.add(this.field.mesh, this.stars.points);
     for (let k = 0; k < ROWS_STRINGS; k += 1) {
@@ -133,12 +148,18 @@ export class Threads {
     const time = ctx.clock.time;
     const dt = Math.min(0.05, Math.max(0, time - this.lastTime));
     this.lastTime = time;
+    // The glints run on the clock, and race while the page scrolls (in either direction).
+    const scroll = Math.min(3, Math.abs(input.t - this.lastT) / Math.max(1e-3, dt));
+    this.lastT = input.t;
+    this.glint += dt * (0.05 + 0.22 * scroll);
     field.setViewport(ctx.size.width, ctx.size.height, ctx.size.dpr);
     this.stars.setPixelRatio(ctx.size.dpr);
     field.clear();
     this.stars.clear();
-    const ink = ctx.palette.scheme === "dark" ? INK_DARK : INK_LIGHT;
-    const inkAlpha = ctx.palette.scheme === "dark" ? 0.24 : 0.19;
+    const dark = ctx.palette.scheme === "dark";
+    const ink = dark ? INK_DARK : INK_LIGHT;
+    const inkAlpha = dark ? 0.24 : 0.2;
+    this.gold = dark ? YELLOW : GOLD_LIGHT;
 
     // The cursor, eased (lines part around it).
     const inside = ctx.pointer.inside;
@@ -153,10 +174,10 @@ export class Threads {
     if (!shown) return;
 
     this.braids(input, ink, inkAlpha, time);
-    this.spine(input, ink, inkAlpha);
+    this.spine(input, time);
     this.strings(input, ink, inkAlpha, dt, time);
     this.constellation(input, ink, inkAlpha, time);
-    this.zigzag(input, ink, time);
+    this.stageLine(input, ink, inkAlpha, time);
     field.commit();
     this.stars.commit();
   }
@@ -167,6 +188,7 @@ export class Threads {
     const { view, beats, t } = input;
     const lines = this.braidLines;
     const samples = this.braidSamples;
+    const gold = this.gold;
     // Energy: calm at the rests, swelling with the stream, calmer for the reveal.
     const energy =
       0.25 +
@@ -189,6 +211,9 @@ export class Threads {
         const row = band * lines + k;
         const offset = (k / lines) * Math.PI * 2;
         const head = draw - k * 0.02;
+        // Two glints per line, half a length apart, each line on its own beat.
+        const g1 = (((this.glint + k * 0.137 + band * 0.31) % 1) + 1) % 1;
+        const g2 = (g1 + 0.5) % 1;
         for (let i = 0; i < samples; i += 1) {
           const u = i / (samples - 1);
           const x = -1.08 + 2.16 * u;
@@ -203,34 +228,35 @@ export class Threads {
               Math.sin(2.4 * x + offset + phase * 1.3) *
               (0.75 + 0.25 * Math.cos(5.1 * x + offset));
           // The cursor parts the cord (screen space at this depth).
-          const nx = x / 1.0;
-          const dx = (nx - this.cursor.x) * view.aspect;
+          const dx = (x - this.cursor.x) * view.aspect;
           const dy = y - this.cursor.y;
           const d2 = dx * dx + dy * dy;
           if (this.cursor.strength > 0.01 && d2 < 0.2) {
             const push = Math.exp(-d2 / 0.012) * 0.09 * this.cursor.strength;
             y += dy >= 0 ? push : -push;
           }
-          // The head glows a little brighter; the tail fades in.
+          // The head glows a little brighter; the tail fades in; glints run along.
           const tip = smoothstep(head - 0.08, head, u);
           const ends = smoothstep(0, 0.06, u) * (1 - smoothstep(0.94, 1, u));
-          let r = ink[0];
-          let g = ink[1];
-          let b = ink[2];
+          const glint = Math.exp(-(((u - g1) / 0.035) ** 2)) + Math.exp(-(((u - g2) / 0.035) ** 2));
+          let r = mix(ink[0], gold[0], glint * 0.85);
+          let g = mix(ink[1], gold[1], glint * 0.85);
+          let b = mix(ink[2], gold[2], glint * 0.85);
           const pulse = this.revealPulse(input, x, row);
           if (pulse.amount > 0.001) {
             r = mix(r, pulse.rgb[0], pulse.amount);
             g = mix(g, pulse.rgb[1], pulse.amount);
             b = mix(b, pulse.rgb[2], pulse.amount);
           }
-          const alpha = (inkAlpha + pulse.amount * 0.4) * fade * ends * (1 + tip * 0.8);
+          const alpha =
+            (inkAlpha * 1.15 + pulse.amount * 0.4 + glint * 0.45) * fade * ends * (1 + tip * 0.8);
           this.field.point(
             row,
             i,
             x * hx,
             y * hy,
             z,
-            (band === 0 ? 1.1 : 0.9) + tip * 0.8,
+            (band === 0 ? 1.1 : 0.9) + tip * 0.8 + glint * 0.9,
             r,
             g,
             b,
@@ -265,37 +291,39 @@ export class Threads {
 
   // ------------------------------------------------------------------ 2. the spine
 
-  private spine(input: ThreadInputs, ink: Rgb, inkAlpha: number) {
+  private spine(input: ThreadInputs, time: number) {
     const { stream, layout } = input;
     if (stream.on <= 0.001) return;
     const path = stream.back ? layout.back : layout.snake;
-    const lead = 0.06;
+    const lead = 0.07;
     const from = Math.max(0, stream.tail - 0.04);
     const to = Math.min(path.length, stream.head + lead);
     if (to - from < 0.01) return;
+    const gold = this.gold;
     const n = SAMPLES;
+    // A spark that runs down the thread from the head to the tail, over and over.
+    const spark = mix(to, from, (time * 0.55) % 1);
     for (let i = 0; i < n; i += 1) {
       const u = i / (n - 1);
       const s = mix(from, to, u);
       path.point(s, va);
       // Fades in from the tail, glows at the first card, thins to nothing just ahead of it.
       const ahead = smoothstep(stream.head, to, s);
-      const tail = smoothstep(0, 0.25, u);
+      const tail = smoothstep(0, 0.2, u);
       const glow = Math.exp(-(((s - stream.head) / 0.05) ** 2));
-      const r = mix(ink[0], YELLOW[0], glow);
-      const g = mix(ink[1], YELLOW[1], glow);
-      const b = mix(ink[2], YELLOW[2], glow);
-      const alpha = (inkAlpha * 1.7 * tail * (1 - ahead) + glow * 0.75) * stream.on;
+      const run = Math.exp(-(((s - spark) / 0.03) ** 2));
+      const alpha = (0.55 * tail * (1 - ahead) + glow * 0.4 + run * 0.35) * stream.on;
+      // In front of the cards (a banked card's edge comes 15 mm forward), so it runs over the deck.
       this.field.point(
         this.rowSpine,
         i,
         va.x,
         va.y,
-        va.z,
-        1.3 + glow * 2.2 - ahead,
-        r,
-        g,
-        b,
+        va.z + SPINE_LIFT,
+        1.1 + glow * 2.2 + run * 1.2 - ahead,
+        gold[0],
+        gold[1],
+        gold[2],
         alpha,
       );
     }
@@ -305,8 +333,8 @@ export class Threads {
       0,
       vb.x,
       vb.y,
-      vb.z + 0.002,
-      14 * stream.on,
+      vb.z + SPINE_LIFT + 0.002,
+      15 * stream.on,
       YELLOW[0],
       YELLOW[1],
       YELLOW[2],
@@ -457,175 +485,220 @@ export class Threads {
     }
   }
 
-  // ------------------------------------------------------------------ 4. constellations
+  // ------------------------------------------------------------------ 4. the constellation
+
+  /** The lattice's polylines (stage x, y) around the four slots, for this layout. */
+  private lattice(layout: DeckLayout): Point[][] {
+    const slots = layout.slots;
+    const p0 = slots.at(0)?.position;
+    const p1 = slots.at(1)?.position;
+    const p2 = slots.at(2)?.position;
+    const p3 = slots.at(3)?.position;
+    if (!p0 || !p1 || !p2 || !p3) return [];
+    const w = CARD_W * 0.5;
+    const h = CARD_H * 0.5;
+    if (layout.portrait) {
+      // A ring around the 2 x 2 and a cross through its gaps.
+      const cx = (p0.x + p3.x) / 2;
+      const cy = (p0.y + p3.y) / 2;
+      const ex = Math.abs(p1.x - p0.x) / 2 + w * 1.14;
+      const ey = Math.abs(p0.y - p2.y) / 2 + h * 1.1;
+      const ring: Point[] = [
+        [cx - ex, cy + ey],
+        [cx, cy + ey * 1.04],
+        [cx + ex, cy + ey],
+        [cx + ex * 1.04, cy],
+        [cx + ex, cy - ey],
+        [cx, cy - ey * 1.04],
+        [cx - ex, cy - ey],
+        [cx - ex * 1.04, cy],
+        [cx - ex, cy + ey],
+      ];
+      return [
+        ring,
+        [
+          [cx, cy + ey * 1.04],
+          [cx, cy],
+          [cx, cy - ey * 1.04],
+        ],
+        [
+          [cx - ex * 1.04, cy],
+          [cx, cy],
+          [cx + ex * 1.04, cy],
+        ],
+      ];
+    }
+    // A row: a chain above, a chain below, a link down every gap and past both ends.
+    const y0 = (p0.y + p1.y + p2.y + p3.y) / 4;
+    const top = y0 + h * 1.13;
+    const bottom = y0 - h * 1.13;
+    const xs = [
+      p0.x - w * 1.42,
+      (p0.x + p1.x) / 2,
+      (p1.x + p2.x) / 2,
+      (p2.x + p3.x) / 2,
+      p3.x + w * 1.42,
+    ];
+    const lift = (g: number) => (g % 2 === 0 ? 1 : -1) * h * 0.07;
+    const upper: Point[] = xs.map((x, g) => [x, top + lift(g)]);
+    const lower: Point[] = xs.map((x, g) => [x, bottom - lift(g)]);
+    const out: Point[][] = [upper, lower];
+    xs.forEach((x, g) => {
+      const outer = g === 0 || g === 4;
+      const bend = outer ? (g === 0 ? -w * 0.32 : w * 0.32) : 0;
+      out.push([
+        [x, top + lift(g)],
+        [x + bend, y0 + h * 0.08 * (g % 2 === 0 ? 1 : -1)],
+        [x, bottom - lift(g)],
+      ]);
+    });
+    return out;
+  }
 
   private constellation(input: ThreadInputs, ink: Rgb, inkAlpha: number, time: number) {
     const { beats, layout } = input;
     const draw =
-      fit(beats.turn, 0.78, 1, 0, 1) *
+      fit(beats.turn, 0.7, 1, 0, 1) *
       (1 - smoothstep(0.01, 0.1, beats.gather)) *
       (beats.drop > 0 ? 0 : 1);
     if (draw <= 0.001) return;
-    const slots = layout.slots;
-    const first = slots.at(0);
+    const first = layout.slots.at(0);
     if (!first) return;
-    const z = first.position.z - 0.025;
-    // Star places: around and between the four (row) or the grid (2 x 2).
-    const points: [number, number][] = [];
-    const w = CARD_W * 0.5;
-    const h = CARD_H * 0.5;
-    if (layout.portrait) {
-      const a = slots.at(0)?.position ?? va;
-      const d = slots.at(3)?.position ?? va;
-      const cx = (a.x + d.x) / 2;
-      const cy = (a.y + d.y) / 2;
-      const ex = Math.abs(d.x - a.x) / 2 + w * 1.12;
-      const ey = Math.abs(d.y - a.y) / 2 + h * 1.08;
-      points.push(
-        [cx - ex, cy + ey * 0.4],
-        [cx - ex * 0.5, cy + ey],
-        [cx, cy + ey * 0.15],
-        [cx + ex * 0.5, cy + ey],
-        [cx + ex, cy + ey * 0.4],
-      );
-      points.push(
-        [cx + ex, cy - ey * 0.4],
-        [cx + ex * 0.5, cy - ey],
-        [cx, cy - ey * 0.15],
-        [cx - ex * 0.5, cy - ey],
-        [cx - ex, cy - ey * 0.4],
-      );
-    } else {
-      for (let k = 0; k <= 4; k += 1) {
-        const left = slots.at(Math.max(0, k - 1))?.position.x ?? 0;
-        const right = slots.at(Math.min(3, k))?.position.x ?? 0;
-        const gapX = k === 0 ? left - w * 1.25 : k === 4 ? right + w * 1.25 : (left + right) / 2;
-        const y = first.position.y + (k % 2 === 0 ? h * 1.16 : -h * 1.16);
-        points.push([gapX, y]);
-      }
-      for (let k = 4; k >= 0; k -= 1) {
-        const pt = points.at(k);
-        if (pt) points.push([pt[0], first.position.y + (k % 2 === 0 ? -h * 1.24 : h * 1.24)]);
-      }
-    }
+    const z = first.position.z - 0.02;
+    const lines = this.lattice(layout);
     const row = this.rowConstellation;
-    const count = points.length;
-    const per = Math.floor((SAMPLES - 1) / Math.max(1, count - 1));
+    // Samples by length, within the row's budget; a dead point between polylines breaks them.
+    const lengths = lines.map((line) => polylineLength(line));
+    const total = lengths.reduce((a, b) => a + b, 0) || 1;
+    const budget = SAMPLES - lines.length - 2;
     let i = 0;
-    for (let p = 0; p < count - 1 && i < SAMPLES - 1; p += 1) {
-      const [x0, y0] = points.at(p) ?? [0, 0];
-      const [x1, y1] = points.at(p + 1) ?? [0, 0];
-      const segStart = p / (count - 1);
-      for (let j = 0; j < per && i < SAMPLES; j += 1) {
-        const u = j / per;
-        const along = segStart + u / (count - 1);
-        if (along > draw * 1.02) break;
-        this.field.point(
-          row,
-          i,
-          mix(x0, x1, u),
-          mix(y0, y1, u),
-          z,
-          0.8,
-          ink[0],
-          ink[1],
-          ink[2],
-          inkAlpha * 0.9,
-        );
+    const slotX = layout.slots.map((slot) => slot.position.x);
+    lines.forEach((line, n) => {
+      const count = Math.max(6, Math.floor(((lengths.at(n) ?? 0) / total) * budget));
+      // Each polyline draws in on its own stretch of the progress.
+      const start = (n / Math.max(1, lines.length)) * 0.45;
+      const shown = saturate((draw - start) / 0.55);
+      for (let j = 0; j < count && i < SAMPLES - 1; j += 1) {
+        const u = j / (count - 1);
+        if (u > shown) break;
+        const [x, y] = pointOn(line, u);
+        // Beside a hovered card the links take its colour.
+        let r = ink[0];
+        let g = ink[1];
+        let b = ink[2];
+        let a = inkAlpha * 1.05;
+        slotX.forEach((sx, k) => {
+          const hover = input.hover.at(k) ?? 0;
+          if (hover < 0.01) return;
+          const near = Math.exp(-(((x - sx) / (CARD_W * 0.75)) ** 2)) * hover;
+          const accent = ACCENT_RGB.get(STORY_CARDS.at(k)?.accent ?? "blue") ?? YELLOW;
+          r = mix(r, accent[0], near);
+          g = mix(g, accent[1], near);
+          b = mix(b, accent[2], near);
+          a += near * 0.3;
+        });
+        const shimmer = 0.85 + 0.15 * Math.sin(time * 1.7 + u * 9 + n);
+        this.field.point(row, i, x, y, z, 0.85, r, g, b, a * shimmer);
         i += 1;
       }
-    }
-    points.forEach(([x, y], p) => {
-      const appear = smoothstep(p / count, p / count + 0.12, draw);
-      const twinkle = 0.75 + 0.25 * Math.sin(time * 2.2 + p * 1.9);
-      const accent = ACCENT_RGB.get(STORY_CARDS.at(p % 4)?.accent ?? "blue") ?? YELLOW;
-      this.stars.star(
-        1 + p,
-        x,
-        y,
-        z,
-        9 * appear * twinkle,
-        mix(ink[0], accent[0], 0.35),
-        mix(ink[1], accent[1], 0.35),
-        mix(ink[2], accent[2], 0.35),
-        0.75 * appear,
-        p * 0.4 + time * 0.2,
-      );
+      i += 1;
+    });
+    // The stars: every vertex once, twinkling, tinted by the nearest card.
+    const seen = new Set<string>();
+    let star = 1;
+    lines.forEach((line) => {
+      line.forEach(([x, y]) => {
+        const key = `${x.toFixed(4)},${y.toFixed(4)}`;
+        if (seen.has(key) || star >= this.stars.capacity) return;
+        seen.add(key);
+        let nearest = 0;
+        let best = Infinity;
+        slotX.forEach((sx, k) => {
+          const d = Math.abs(x - sx);
+          if (d < best) {
+            best = d;
+            nearest = k;
+          }
+        });
+        const accent = ACCENT_RGB.get(STORY_CARDS.at(nearest)?.accent ?? "blue") ?? YELLOW;
+        const appear = smoothstep(0.1 + (star % 7) * 0.06, 0.3 + (star % 7) * 0.06, draw);
+        const twinkle = 0.7 + 0.3 * Math.sin(time * 2.3 + star * 1.9);
+        const hover = input.hover.at(nearest) ?? 0;
+        this.stars.star(
+          star,
+          x,
+          y,
+          z + 0.001,
+          (8 + hover * 5) * appear * twinkle,
+          mix(ink[0], accent[0], 0.45 + hover * 0.5),
+          mix(ink[1], accent[1], 0.45 + hover * 0.5),
+          mix(ink[2], accent[2], 0.45 + hover * 0.5),
+          0.8 * appear,
+          star * 0.4 + time * 0.25,
+        );
+        star += 1;
+      });
     });
   }
 
-  // ------------------------------------------------------------------ 5. the zigzag frame
+  // ------------------------------------------------------------------ 5. the stage line
 
-  private zigzag(input: ThreadInputs, ink: Rgb, time: number) {
-    const { beats, view } = input;
+  private stageLine(input: ThreadInputs, ink: Rgb, inkAlpha: number, time: number) {
+    const { beats, layout, view } = input;
     const live =
-      smoothstep(0.6, 1, beats.draw) *
-      (1 - smoothstep(0.05, 0.25, beats.gather)) *
+      smoothstep(0.55, 1, beats.draw) *
+      (1 - smoothstep(0.05, 0.22, beats.gather)) *
       (beats.drop > 0 ? 0 : 1);
     if (live <= 0.001) return;
-    const depth = STAGE_DISTANCE - (input.layout.slots.at(0)?.position.z ?? 0) + 0.08;
-    const hx = halfWidthAt(view, depth) * 0.94;
-    const hy = halfHeightAt(view, depth) * 0.9;
-    const z = STAGE_DISTANCE - depth;
-    const perimeter = 4 * (hx + hy);
-    const teeth = 64;
-    const amp = Math.min(hx, hy) * 0.018;
+    const p0 = layout.slots.at(0)?.position;
+    const p3 = layout.slots.at(3)?.position;
+    if (!p0 || !p3) return;
+    const w = CARD_W * 0.5;
+    const h = CARD_H * 0.5;
+    const z = p0.z - 0.03;
+    const cx = (p0.x + p3.x) / 2;
+    const low = Math.min(p0.y, p3.y);
+    const y = low - h * (layout.portrait ? 1.35 : 1.42);
+    const half = Math.abs(p3.x - p0.x) / 2 + w * (layout.portrait ? 1.3 : 1.7);
+    // Teeth in screen px at the line's depth: 7 px high, 22 px apart.
+    const perPx = (2 * (STAGE_DISTANCE - z) * view.tanHalf) / Math.max(1, view.height);
+    const amp = 3.5 * perPx;
+    const period = 22 * perPx;
+    const reach = half * smoothstep(0.55, 1, beats.draw);
     const n = SAMPLES;
+    const slotX = layout.slots.map((slot) => slot.position.x);
     for (let i = 0; i < n; i += 1) {
       const u = i / (n - 1);
-      const s = u * perimeter;
-      // Walk the frame clockwise from the top left corner.
-      let x: number;
-      let y: number;
-      let nx: number;
-      let ny: number;
-      if (s < 2 * hx) {
-        x = -hx + s;
-        y = hy;
-        nx = 0;
-        ny = 1;
-      } else if (s < 2 * hx + 2 * hy) {
-        x = hx;
-        y = hy - (s - 2 * hx);
-        nx = 1;
-        ny = 0;
-      } else if (s < 4 * hx + 2 * hy) {
-        x = hx - (s - 2 * hx - 2 * hy);
-        y = -hy;
-        nx = 0;
-        ny = -1;
-      } else {
-        x = -hx;
-        y = -hy + (s - 4 * hx - 2 * hy);
-        nx = -1;
-        ny = 0;
+      const x = cx - half + 2 * half * u;
+      if (Math.abs(x - cx) > reach) {
+        continue;
       }
-      const tooth = Math.abs(((u * teeth) % 1) * 2 - 1) * 2 - 1;
-      x += nx * tooth * amp;
-      y += ny * tooth * amp;
-      // Pulses: each card's colour runs round the frame as it turns.
+      const phase = (x - cx) / period;
+      const tooth = Math.abs((((phase % 1) + 1) % 1) * 2 - 1) * 2 - 1;
+      // Pulses: each card's colour runs out from it as it turns.
       let pulse = 0;
       let rgb: Rgb = ink;
-      for (let k = 0; k < 4; k += 1) {
-        const [a, b] = turnWindow(k, input.layout.portrait);
-        const p = fit(beats.turn, a + (b - a) * 0.5, b + 0.08, 0, 1);
-        if (p <= 0 || p >= 1) continue;
-        const d = Math.abs(((u - p + 1.5) % 1) - 0.5);
-        const amount = Math.exp(-(d * d) / 0.004) * Math.sin(p * Math.PI);
+      slotX.forEach((sx, k) => {
+        const [a, b] = turnWindow(k, layout.portrait);
+        const p = fit(beats.turn, a + (b - a) * 0.5, b + 0.1, 0, 1);
+        if (p <= 0 || p >= 1) return;
+        const d = Math.abs(Math.abs(x - sx) - p * half * 1.4);
+        const amount = Math.exp(-((d / (half * 0.08)) ** 2)) * Math.sin(p * Math.PI);
         if (amount > pulse) {
           pulse = amount;
           rgb = ACCENT_RGB.get(STORY_CARDS.at(k)?.accent ?? "blue") ?? YELLOW;
         }
-      }
-      const idle = 0.06 + 0.03 * Math.sin(u * 40 - time * 1.5);
-      const alpha = (idle + pulse * 0.85) * live;
+      });
+      const ends = smoothstep(reach, reach * 0.86, Math.abs(x - cx));
+      const breath = 0.85 + 0.15 * Math.sin(time * 1.2 - u * 7);
+      const alpha = (inkAlpha * 0.9 * breath + pulse * 0.8) * live * ends;
       this.field.point(
-        this.rowZigzag,
+        this.rowStage,
         i,
         x,
-        y,
+        y + tooth * amp,
         z,
-        0.9 + pulse * 1.2,
+        0.9 + pulse * 1.1,
         mix(ink[0], rgb[0], pulse),
         mix(ink[1], rgb[1], pulse),
         mix(ink[2], rgb[2], pulse),
@@ -643,4 +716,32 @@ export class Threads {
     this.field.dispose();
     this.stars.dispose();
   }
+}
+
+function polylineLength(line: readonly Point[]) {
+  let length = 0;
+  for (let i = 1; i < line.length; i += 1) {
+    const a = line.at(i - 1);
+    const b = line.at(i);
+    if (a && b) length += Math.hypot(b[0] - a[0], b[1] - a[1]);
+  }
+  return length;
+}
+
+/** The point at share `u` of a polyline's length. */
+function pointOn(line: readonly Point[], u: number): Point {
+  const total = polylineLength(line);
+  let left = u * total;
+  for (let i = 1; i < line.length; i += 1) {
+    const a = line.at(i - 1);
+    const b = line.at(i);
+    if (!a || !b) continue;
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (left <= length || i === line.length - 1) {
+      const k = length > 0 ? Math.min(1, left / length) : 0;
+      return [mix(a[0], b[0], k), mix(a[1], b[1], k)];
+    }
+    left -= length;
+  }
+  return line.at(0) ?? [0, 0];
 }
