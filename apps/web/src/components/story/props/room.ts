@@ -53,6 +53,7 @@ import type { StoryLoaderLike, StoryTier } from "../assets/types";
  *
  * Usage:
  *   const room = await loadRoom(assets, tier);
+ *   room.setLayer(STORY_LAYERS.behind); // the meshes only; the rig's lights stay on every layer
  *   rootScene.add(room.root);     // before the first compile: the rig's lights count
  *   await room.prepare(renderer); // in the loader, before compiling: the env map
  *   room.setGrade("dark");        // or "light"; amount blends from the other grade
@@ -181,7 +182,10 @@ export type RoomAnchors = Readonly<{
 export type StoryRoom = {
   /** Add once to the story's root scene. Keep it visible; hide with `setPhase("hidden")`. */
   readonly root: Group;
-  /** The lights for unbaked props. Their number never changes (no recompiles). */
+  /**
+   * The lights for unbaked props. Their number never changes (no recompiles), and they stay on
+   * every layer so that a pass on any one layer counts the same lights.
+   */
   readonly rig: Group;
   readonly anchors: RoomAnchors;
   readonly tier: StoryTier;
@@ -204,6 +208,12 @@ export type StoryRoom = {
   /** `amount` blends from the other scheme's grade (0) to this one (1). */
   setGrade(scheme: RoomScheme, amount?: number): void;
   setPhase(phase: RoomPhase): void;
+  /**
+   * Puts every room mesh on this one object layer (the stage's `behind` layer, so the page
+   * backdrop can hide the room). The rig's lights stay on all layers. Use this rather than a
+   * traverse of `root`, which would also move the lights. `prepare()` sees the room on any layer.
+   */
+  setLayer(layer: number): void;
   /**
    * How much the room's light reaches the unbaked props (the rig), 0 to 1.
    * The backdrop reveal owns the room's own visibility.
@@ -894,6 +904,7 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
   tv.name = "room_tv";
   tv.position.copy(v3(anchors.tv.centre)).addScaledVector(v3(anchors.tv.normal), 0.3);
   rig.add(key, key.target, rim, fill, fill.target, hemi, tv);
+  for (const light of [key, rim, fill, hemi, tv]) light.layers.enableAll();
 
   // Visibility by phase.
   const phases = new Map<RoomPhase, ReadonlySet<string>>();
@@ -989,6 +1000,70 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
   applyLight();
   applyPhase();
 
+  // The env capture: the room rendered from the table in a scene of its own (an object has one
+  // parent) into linear half-float targets, a program variant of its own. PMREM's cube camera sees
+  // layer 0 only, so the meshes go on every layer for the capture and back to theirs after.
+  // compileAsync builds the programs synchronously inside the call and only polls afterwards, so
+  // the shared state (the render target, the meshes' parent, layers and phase) is put back before
+  // the wait: anything that renders meanwhile (the loader, another prop's warm-up) sees the room as
+  // it was.
+  async function capture(renderer: WebGLRenderer) {
+    for (const t of textures) renderer.initTexture(t);
+    const scene = new Scene();
+    const probeTarget = new WebGLRenderTarget(4, 4, { type: HalfFloatType });
+    const previous = renderer.getRenderTarget();
+    const takeRoom = () => {
+      const was = phase;
+      const masks = new Map<Mesh, number>();
+      for (const mesh of nodes.values()) {
+        masks.set(mesh, mesh.layers.mask);
+        mesh.layers.enableAll();
+      }
+      phase = "all";
+      applyPhase();
+      scene.add(meshesGroup);
+      return () => {
+        root.add(meshesGroup);
+        for (const [mesh, mask] of masks) mesh.layers.mask = mask;
+        phase = was;
+        applyPhase();
+      };
+    };
+    let compiled: Promise<unknown> = Promise.resolve();
+    let giveBack = takeRoom();
+    renderer.setRenderTarget(probeTarget);
+    try {
+      compiled = renderer.compileAsync(scene, new PerspectiveCamera(90, 1, 0.04, 20));
+    } finally {
+      renderer.setRenderTarget(previous);
+      giveBack();
+    }
+    try {
+      await compiled;
+    } finally {
+      probeTarget.dispose();
+    }
+    giveBack = takeRoom();
+    const pmrem = new PMREMGenerator(renderer);
+    let target: WebGLRenderTarget;
+    try {
+      target = pmrem.fromScene(scene, 0, 0.04, 20, {
+        size: low ? 64 : 128,
+        position: v3(anchors.probe),
+      });
+    } finally {
+      pmrem.dispose();
+      giveBack();
+    }
+    if (envTarget) envTarget.dispose();
+    envTarget = target;
+    envMap = target.texture;
+    for (const m of envMaterials) {
+      m.envMap = target.texture;
+      m.needsUpdate = true;
+    }
+  }
+
   const room: StoryRoom = {
     root,
     rig,
@@ -999,56 +1074,11 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
     get envMap() {
       return envMap;
     },
-    async prepare(renderer) {
-      for (const t of textures) renderer.initTexture(t);
-      // The capture renders the room from the table in a scene of its own (an object has one
-      // parent) into linear half-float targets, a program variant of its own. compileAsync builds
-      // those programs synchronously inside the call and only polls afterwards, so the shared state
-      // (the render target, the meshes' parent, the phase) is put back before the wait: anything
-      // that renders meanwhile (the loader, another prop's warm-up) sees the room as it was.
-      const capture = new Scene();
-      const probeTarget = new WebGLRenderTarget(4, 4, { type: HalfFloatType });
-      const previous = renderer.getRenderTarget();
-      const takeRoom = () => {
-        const was = phase;
-        phase = "all";
-        applyPhase();
-        capture.add(meshesGroup);
-        return () => {
-          root.add(meshesGroup);
-          phase = was;
-          applyPhase();
-        };
-      };
-      let compiled: Promise<unknown> = Promise.resolve();
-      let giveBack = takeRoom();
-      renderer.setRenderTarget(probeTarget);
-      try {
-        compiled = renderer.compileAsync(capture, new PerspectiveCamera(90, 1, 0.04, 20));
-      } finally {
-        renderer.setRenderTarget(previous);
-        giveBack();
-      }
-      try {
-        await compiled;
-      } finally {
-        probeTarget.dispose();
-      }
-      giveBack = takeRoom();
-      const pmrem = new PMREMGenerator(renderer);
-      const target = pmrem.fromScene(capture, 0, 0.04, 20, {
-        size: low ? 64 : 128,
-        position: v3(anchors.probe),
-      });
-      pmrem.dispose();
-      giveBack();
-      if (envTarget) envTarget.dispose();
-      envTarget = target;
-      envMap = target.texture;
-      for (const m of envMaterials) {
-        m.envMap = target.texture;
-        m.needsUpdate = true;
-      }
+    prepare(renderer) {
+      return capture(renderer);
+    },
+    setLayer(layer) {
+      for (const mesh of nodes.values()) mesh.layers.set(layer);
     },
     setGrade(scheme, amount = 1) {
       const t = clamp01(amount);
