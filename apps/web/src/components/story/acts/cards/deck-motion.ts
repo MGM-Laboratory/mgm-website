@@ -57,7 +57,7 @@ const UNROLL_FROM = 0.06;
 const UNROLL_TO = 0.32;
 const GATHER_IN = 0.8;
 /** How far the wheel behind the four recedes into the page. */
-const WHEEL_MIST = 0.66;
+const WHEEL_MIST = 0.76;
 
 const SPRING_START = beatOf("c-spring").start;
 const DRAW_START = beatOf("c-draw").start;
