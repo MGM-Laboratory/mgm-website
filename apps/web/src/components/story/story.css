@@ -101,14 +101,14 @@ html[data-story-mode="gl"] [data-storybook] {
 /*
  * The WebGL story, portrait and narrow screens: Godette stands in the top
  * of the screen, on the words (the act reads the title's place and stands
- * her on its capitals), and the action stays clear of the "Watch again"
- * control at the bottom left.
+ * her on its capitals), and the action keeps 24 px clear of the "Watch
+ * again" control at the bottom left (44 px tall, 24 px over the bottom).
  */
 .story-finale-gl {
   position: relative;
   height: 100%;
   justify-content: flex-end;
-  padding: 0 1.5rem max(5.25rem, 9vh);
+  padding: 0 1.5rem max(5.75rem, 9vh);
 }
 
 /*
@@ -185,25 +185,41 @@ html[data-story-mode="gl"] [data-storybook] {
 }
 
 /*
- * Short portrait phones (320 x 568, 375 x 667): a smaller stack under her,
- * so she still keeps a good part of the screen.
+ * Shorter portrait phones (375 x 667, 360 x 740): a smaller stack under
+ * her, so she keeps half of the screen (SPEC 4.4: 50 to 60 %).
  */
-@media (orientation: portrait) and (max-height: 700px) {
-  .story-finale-gl {
-    padding-bottom: 4.75rem;
-  }
-
+@media (orientation: portrait) and (max-height: 760px) {
   .story-finale-gl .story-finale-title {
-    font-size: clamp(2.125rem, 10.6vw, 2.75rem);
+    font-size: clamp(2rem, 9vw, 2.375rem);
   }
 
   .story-finale-gl .story-finale-line {
-    margin-top: 0.625rem;
+    margin-top: 0.5rem;
     font-size: 0.875rem;
   }
 
   .story-finale-gl .story-finale-action-wrap {
-    margin-top: 1.125rem;
+    margin-top: 1rem;
+  }
+
+  .story-finale-gl .story-finale-action {
+    padding-block: 0.75rem;
+  }
+}
+
+/*
+ * The smallest phones (320 x 568): the line is read but not shown, and the
+ * title and action alone keep her at half of the screen.
+ */
+@media (orientation: portrait) and (max-height: 620px) {
+  .story-finale-gl .story-finale-line {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
