@@ -353,12 +353,15 @@ export function mixPose(out: FlightPose, a: FlightPose, b: FlightPose, w: number
  * in over `blend` before it. With `pivot`, the move into this shot swings
  * around that point (her) instead of a straight line, so a camera going from
  * behind her to ahead of her circles her rather than passing through her.
+ * Half way round, the aim leans toward the pivot by `centre` (0.45 by
+ * default), so she stays in frame while the camera is beside her.
  */
 export type ShotKey = Readonly<{
   at: number;
   blend: number;
   shot: (T: number, out: CameraShot) => void;
   pivot?: (T: number, out: Vector3) => Vector3;
+  centre?: number;
 }>;
 
 const orbitA = new Vector3();
@@ -368,7 +371,10 @@ const orbitB = new Vector3();
  * Like `mixShot`, with the camera swung around `pivot` on a cylinder: the
  * bearing around the vertical turns the short way, the distance and the
  * height mix, so a move from behind her to ahead of her goes round her like
- * a dolly on a curved track, never over her head.
+ * a dolly on a curved track, never over her head. The aim leans toward the
+ * pivot by `centre` at the middle of the swing (a sine bump, 0 at both
+ * ends): both shots' targets lead her, and a straight mix of them would aim
+ * past her while the camera is at her side.
  */
 export function orbitShot(
   out: CameraShot,
@@ -376,6 +382,7 @@ export function orbitShot(
   b: CameraShot,
   w: number,
   pivot: Vector3,
+  centre = 0.45,
 ) {
   orbitA.copy(a.position).sub(pivot);
   orbitB.copy(b.position).sub(pivot);
@@ -394,6 +401,7 @@ export function orbitShot(
     pivot.y + orbitA.y + (orbitB.y - orbitA.y) * w,
     pivot.z + Math.sin(ang) * r,
   );
+  if (centre > 0) out.target.lerp(pivot, centre * Math.sin(Math.PI * w));
   return out;
 }
 
@@ -435,7 +443,8 @@ export class ShotTrack {
     if (next && T > next.at - next.blend) {
       next.shot(T, this.b);
       const w = ease01(T, next.at - next.blend, next.at);
-      if (next.pivot) return orbitShot(out, this.a, this.b, w, next.pivot(T, this.pivot));
+      if (next.pivot)
+        return orbitShot(out, this.a, this.b, w, next.pivot(T, this.pivot), next.centre);
       return mixShot(out, this.a, this.b, w);
     }
     return copyShot(out, this.a);

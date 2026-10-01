@@ -686,7 +686,8 @@ export class PaperTide extends World {
         },
       },
       {
-        // Establishing: wide and low from her left, the sun ahead over her shoulder.
+        // Establishing: wide and low from her left and behind, her on the right third, the
+        // sun on the left third over her shoulder (the aim is 28 degrees off her heading).
         at: 1.15,
         blend: 0.55,
         shot: (T, out) => {
@@ -694,14 +695,14 @@ export class PaperTide extends World {
           a.copy(right).negate();
           out.position
             .copy(her)
-            .addScaledVector(a, 8.5)
-            .addScaledVector(dir, -2.5)
+            .addScaledVector(a, 6.6)
+            .addScaledVector(dir, -7.2)
             .addScaledVector(up, 1.3);
           out.target
             .copy(her)
-            .addScaledVector(dir, 10)
-            .addScaledVector(right, 1.6)
-            .addScaledVector(up, 0.9);
+            .addScaledVector(dir, 6.9)
+            .addScaledVector(right, 0.9)
+            .addScaledVector(up, 1.9);
           out.fov = 44;
           out.roll = 0.03;
           out.shake = 0.003;
