@@ -119,4 +119,17 @@ test.describe("homepage story", () => {
     // The page underneath is usable at once.
     await expect(page.getByRole("button", { name: "Toggle theme" })).toBeVisible();
   });
+
+  test("the loader gives up by itself when the scripts never run", async ({ page }) => {
+    // A failed deploy chunk, a blocked script: the boot script alone must free the page.
+    await page.route(/\/_next\/static\/chunks\/.*\.js(\?.*)?$/, (route) => route.abort());
+    await page.goto("/?loader=1");
+    await expect(page.locator("html")).toHaveAttribute("data-loader", "active");
+    await expect(page.locator("[data-site-loader]")).toBeHidden({ timeout: 15_000 });
+    await expect(page.locator("html")).toHaveAttribute("data-loader", "done");
+    // The storybook is server HTML: it works without the bundle.
+    await expect(page.locator("html")).toHaveAttribute("data-story-mode", "dom");
+    await page.locator("#story").scrollIntoViewIfNeeded();
+    await expect(page.locator("[data-storybook]")).toBeVisible();
+  });
 });

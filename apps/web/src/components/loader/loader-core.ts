@@ -1,4 +1,10 @@
-import { LOADER_KEY, STORY_KEY, readBoot, updateBoot } from "@/components/loader/boot";
+import {
+  LOADER_KEY,
+  STORY_KEY,
+  markBootLive,
+  readBoot,
+  updateBoot,
+} from "@/components/loader/boot";
 import { hardwareWebGL2 } from "@/components/reel/gl/webgl-probe";
 import { LOADER_COPY } from "@/data/story";
 import { NAV_ITEMS } from "@/data/nav";
@@ -114,6 +120,8 @@ class LoaderCore {
 
   /** Starts once per document (the root layout mounts the loader once). */
   start(pathname: string, prefetch: PrefetchRoute) {
+    // The bundle runs: the boot script's own give-up timer is no longer needed.
+    markBootLive();
     if (this.started) return;
     this.started = true;
     this.pathname = pathname;
