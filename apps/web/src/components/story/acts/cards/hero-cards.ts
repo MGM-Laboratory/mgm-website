@@ -97,6 +97,8 @@ export class HeroCards {
   readonly faceUp = new Float32Array(4);
   private snapStart = -10;
   private snapArmed = true;
+  /** Each card's timed snap face down (0..1): rises in its domino slot, unwinds on the way back. */
+  private readonly snap = new Float32Array(4);
   private readonly frontOn = new Uint8Array(4);
 
   constructor(
@@ -116,12 +118,17 @@ export class HeroCards {
     const dt = ctx.clock.dt;
     const portrait = layout.portrait;
 
-    // The gather's snap face down: a domino wave at real speed, latched on a calm forward crossing.
-    if (beats.gather <= 0.004) this.snapArmed = true;
+    // The gather's snap face down: a domino wave at real speed, latched on a calm forward
+    // crossing; back before the gather it unwinds on the clock, so nothing flips in one frame.
+    if (beats.gather <= 0.004) {
+      this.snapArmed = true;
+      this.snapStart = -10;
+    }
     if (this.snapArmed && beats.gather > 0.004 && beats.gather < 0.06) {
       this.snapArmed = false;
       this.snapStart = Math.abs(velocity) < 4 ? time : -10;
     }
+    const snapping = this.snapStart > 0;
 
     for (let k = 0; k < 4; k += 1) {
       const pose = this.view.heroPoses.at(k);
@@ -131,13 +138,17 @@ export class HeroCards {
       const [a, b] = turnWindow(k, portrait);
       const x = fit(beats.turn, a, b, 0, 1);
       let face = 0;
+      if (beats.draw >= 1) face = portrait ? turnCurve(fit(x, 0.14, 0.62, 0, 1)) : turnCurve(x);
+      const snapNow = this.snap.at(k) ?? 0;
+      const snapK = snapping
+        ? Math.max(snapNow, saturate((time - this.snapStart - 0.06 * k) / 0.15))
+        : Math.max(0, snapNow - dt / 0.32);
+      this.snap.set([snapK], k);
       if (beats.gather > 0) {
         const scrub = fit(beats.gather, 0.006 + 0.022 * k, 0.07 + 0.022 * k, 0, 1);
-        const timed = this.snapStart > 0 ? saturate((time - this.snapStart - 0.06 * k) / 0.15) : 0;
-        face = 1 - cubicInOut(Math.max(scrub, timed));
-      } else if (beats.draw >= 1) {
-        face = portrait ? turnCurve(fit(x, 0.14, 0.62, 0, 1)) : turnCurve(x);
+        face = Math.min(face, 1 - cubicInOut(scrub));
       }
+      face = Math.min(face, 1 - cubicInOut(snapK));
       if (pose.visible && beats.drop <= 0 && (beats.draw > 0 || beats.gather > 0)) {
         if (beats.draw >= 1 && beats.gather <= 0) {
           this.turnPose(k, x, pose, layout, portrait);
