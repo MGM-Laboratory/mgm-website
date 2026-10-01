@@ -19,6 +19,7 @@ import {
   ShaderMaterial,
   SkinnedMesh,
   SphereGeometry,
+  Texture,
   Vector3,
   type AnimationAction,
   type Bone,
@@ -29,7 +30,6 @@ import {
   type Interpolant,
   type Material,
   type Object3D,
-  type Texture,
 } from "three";
 import { random, randomBetween } from "@/lib/random";
 import type { StoryLoaderLike, StoryTier } from "../assets/types";
@@ -1563,6 +1563,21 @@ export async function loadGodette(
       for (const clip of clipsOwned) mixer.uncacheClip(clip);
       mixer.uncacheRoot(gltf.scene);
       for (const m of proxies) m.removeFromParent();
+      // the parsed files stay in the story cache, so a later load reuses them: this frees their GPU copies (three
+      // uploads them again on the next render that needs them) and leaves the objects whole
+      const geometries = new Set<BufferGeometry>([
+        geometry,
+        haloGeo,
+        shadow.geometry,
+        ...proxyGeos,
+      ]);
+      const mats = new Set<Material>([material, haloMat, shadowMat, proxyMat]);
+      standGltf.scene.traverse((o) => {
+        if (!(o instanceof Mesh)) return;
+        geometries.add(o.geometry as BufferGeometry);
+        const m = o.material as Material | Material[];
+        for (const x of Array.isArray(m) ? m : [m]) mats.add(x);
+      });
       gltf.scene.removeFromParent();
       standGltf.scene.removeFromParent();
       restoreBindPose(mesh.skeleton.bones);
@@ -1570,26 +1585,14 @@ export async function loadGodette(
       shadow.removeFromParent();
       stand.removeFromParent();
       halo.removeFromParent();
-      haloGeo.dispose();
-      const mats = new Set<Material>([material, haloMat, shadowMat, proxyMat]);
-      stand.traverse((o) => {
-        if (o instanceof Mesh) {
-          (o.geometry as BufferGeometry).dispose();
-          const m = o.material as Material | Material[];
-          if (Array.isArray(m)) for (const x of m) mats.add(x);
-          else mats.add(m);
-        }
-      });
+      const textures = new Set<Texture>([texture]);
       for (const m of mats) {
-        if (m instanceof MeshStandardMaterial) {
-          m.map?.dispose();
-        }
+        for (const value of Object.values(m)) if (value instanceof Texture) textures.add(value);
         m.dispose();
       }
-      geometry.dispose();
-      shadow.geometry.dispose();
-      for (const g of proxyGeos) g.dispose();
-      texture.dispose();
+      for (const g of geometries) g.dispose();
+      for (const t of textures) t.dispose();
+      mesh.skeleton.dispose();
     },
   };
   return godette;
