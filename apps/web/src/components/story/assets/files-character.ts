@@ -43,7 +43,7 @@ export const CHARACTER_FILES: StoryFile[] = [
   },
   {
     url: "/story/v1/character/clips-flight.glb",
-    bytes: 401000,
+    bytes: 401480,
     kind: "gltf",
     group: "character",
     tiers: ["high", "medium", "low"],

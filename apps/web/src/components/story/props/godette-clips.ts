@@ -233,7 +233,7 @@ export const GODETTE_CLIP_LIST = [
     hold: null,
     rootMotion: false,
     pitch: 80,
-    note: "Prone glide. Pivot pitch about 80 deg; lookAt weight low (the neck is already bent back).",
+    note: "Prone glide, eyes ahead. Pivot pitch about 80 deg; lookAt weight low (the neck already lifts her gaze).",
   },
   {
     name: "fly_superhero",
