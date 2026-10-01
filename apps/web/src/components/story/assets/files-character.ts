@@ -8,7 +8,7 @@ import type { StoryFile } from "./types";
 export const CHARACTER_FILES: StoryFile[] = [
   {
     url: "/story/v1/character/godette.glb",
-    bytes: 424816,
+    bytes: 425328,
     kind: "gltf",
     group: "character",
     tiers: ["high", "medium", "low"],
