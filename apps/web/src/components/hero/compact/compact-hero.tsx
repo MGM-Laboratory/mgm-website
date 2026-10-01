@@ -7,6 +7,7 @@ import { Vibrate } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
+import { whenLoaderRevealed } from "@/components/loader/loader-core";
 import { motionAllowed, useMotionPreference } from "@/lib/reduced-motion";
 import { isRouteCoverActive, onRouteCoverChange } from "@/lib/route-reveal";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
@@ -201,7 +202,8 @@ export function CompactHero() {
     // After the first paint: the physics (and matter-js with it) is its own
     // chunk, fetched once the words are already on screen.
     const frame = requestAnimationFrame(() => {
-      Promise.all([import("./toybox-engine"), document.fonts.ready])
+      // On a first visit the toys wait for the site loader to open.
+      Promise.all([import("./toybox-engine"), document.fonts.ready, whenLoaderRevealed()])
         .then(([module]) => {
           if (cancelled) return;
           const wordEls = Array.from(words.querySelectorAll<HTMLElement>("[data-word]"));
