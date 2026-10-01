@@ -8,8 +8,10 @@ import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";
  * - Armed only by real input: a wheel (not a pinch, `ctrlKey`), a key that
  *   scrolls (arrows, Page Up and Down, Home and End, Space off a button or
  *   link), a touch drag, or a drag on the classic scrollbar (a mouse press
- *   at `clientX >= clientWidth`). Escape and lone modifiers are neutral;
- *   any other key (Tab) stands it down, and so does keyboard focus.
+ *   at `clientX >= clientWidth`). Escape and lone modifiers are neutral,
+ *   and so are Enter and Space on a button or a link (that activates the
+ *   control: "Watch again" must set off, not count as input); any other
+ *   key (Tab) stands it down, and so does keyboard focus.
  * - A scroll nobody asked for (a script, `scrollIntoView`, an anchor, an
  *   e2e spec) disarms it once 600 ms have passed since the last real input.
  *   Scroll events within 400 ms of a scroll lock change are ignored.
@@ -27,6 +29,8 @@ const KEY_DIRECTION = new Map<string, 1 | -1>([
   ["Home", -1],
 ]);
 const DISARM_AFTER_MS = 600;
+/** Controls whose Enter and Space activate them rather than scroll the page. */
+const CONTROL = "a[href], button, [role='button'], summary";
 const LOCK_GRACE_MS = 400;
 
 function isHtmlEditableTarget(target: EventTarget | null) {
@@ -207,12 +211,13 @@ export class ScrollIntent {
     if (isHtmlEditableTarget(event.target) || event.metaKey || event.altKey || event.ctrlKey)
       return;
     if (NEUTRAL_KEYS.has(event.key)) return;
-    let direction: 0 | 1 | -1 = KEY_DIRECTION.get(event.key) ?? 0;
-    if (event.key === " " || event.key === "Spacebar") {
+    const space = event.key === " " || event.key === "Spacebar";
+    if (space || event.key === "Enter") {
       const target = event.target;
-      if (target instanceof HTMLButtonElement || target instanceof HTMLAnchorElement) return;
-      direction = event.shiftKey ? -1 : 1;
+      if (target instanceof Element && target.closest(CONTROL)) return;
     }
+    let direction: 0 | 1 | -1 = KEY_DIRECTION.get(event.key) ?? 0;
+    if (space) direction = event.shiftKey ? -1 : 1;
     if (direction) {
       this.arm(direction);
       return;
