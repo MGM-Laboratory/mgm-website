@@ -86,8 +86,23 @@ export const STORY_HINTS = {
   holdToSlow: "Hold to slow time.",
 } as const;
 
-/** The toy letters on the coffee table, one line each. */
-export const STORY_LETTERS = ["We tell stories", "through interactive media."] as const;
+/**
+ * The toy letters on the coffee table, one row each, read top to bottom from
+ * the raised shot (the rows of the room's `anchors.letters`).
+ */
+export const STORY_LETTERS = ["We tell", "stories", "through", "interactive", "media."] as const;
+
+/** The table act: the hint at its rest and the names of the things you can touch. */
+export const STORY_TABLE = {
+  hint: "Keep scrolling. She is trying very hard to stay still.",
+  hotspots: {
+    toy: "Poke the toy",
+    letters: "Nudge the letters",
+    box: "Tap the card box",
+    spark: "Chase the spark",
+    tv: "Tap the TV",
+  },
+} as const;
 
 /** HUD captions at the start of each world. */
 export const STORY_WORLDS = [
