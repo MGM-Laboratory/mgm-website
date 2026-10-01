@@ -521,7 +521,7 @@ class RoomAct implements StoryAct {
     // of her dive read in profile against the TV (straight behind and above, a prone figure is only a
     // backpack and two boots). The aim's pull toward the screen is added in followAt. On a narrow frame
     // the camera sits more squarely behind her.
-    const side = 0.2 * MathUtils.lerp(0.25, 1, saturate((aspect - 0.5) / 0.9));
+    const side = 0.08 * MathUtils.lerp(0.4, 1, saturate((aspect - 0.5) / 0.9));
     this.follow = new CameraPath([
       { t: at("r-dragged", 0), pose: first },
       // The yank: from below, tilting up with her, a Dutch tilt.
@@ -547,9 +547,9 @@ class RoomAct implements StoryAct {
       { t: at("r-learn", 1), pose: rel(0.42, -0.035, 0.05, 0, 0.012, 0, f * 0.9, 0) },
       { t: at("r-tv", 0.18), pose: rel(0.42, -0.03, 0.05, 0, 0.012, 0, f * 0.92, 0) },
       // She turns to the TV: the camera rises behind her shoulder.
-      { t: at("r-tv", 0.45), pose: rel(0.37, 0.05, side * 0.7, -0.05, 0.0, 0, f * 1.02, 0) },
-      { t: at("r-tv", 0.75), pose: rel(0.26, 0.05, side, -0.12, -0.01, 0, f * 1.15, 0) },
-      { t: at("r-tv", 1), pose: rel(0.27, 0.05, side, -0.12, -0.01, 0, f * 1.17, 0), stop: true },
+      { t: at("r-tv", 0.45), pose: rel(0.32, 0.07, side * 0.8, -0.08, -0.02, -0.01, f * 1.15, 0) },
+      { t: at("r-tv", 0.75), pose: rel(0.24, 0.06, side, -0.2, -0.03, -0.01, f * 1.38, 0) },
+      { t: at("r-tv", 1), pose: rel(0.24, 0.06, side, -0.2, -0.03, -0.01, f * 1.4, 0), stop: true },
     ]);
   }
 
