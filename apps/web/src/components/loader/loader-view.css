@@ -1,0 +1,1048 @@
+/*
+ * "The deal": the site loader's visuals (loader-view.tsx, docs in the
+ * loader package notes). Everything that moves before the bundle runs is a
+ * CSS animation on transform or opacity, so the first frames play on the
+ * compositor while the page hydrates. The show (loader-show.ts) adds Web
+ * Animations on the same two properties.
+ *
+ * Units: --u is one unit of the box artwork (1376 units = 63.5 mm) on
+ * screen. The sheet is 4300 x 3630 units.
+ */
+
+.ld {
+  --ld-line: #3a6dc5;
+  --ld-line-soft: rgb(58 109 197 / 0.5);
+  --ld-ink: var(--foreground);
+  --ld-ink-2: #3b4150;
+  --ld-grid: rgb(14 17 22 / 0.045);
+  --ld-grid-strong: rgb(14 17 22 / 0.075);
+  --ld-print: #3a6dc5;
+  --ld-inside: #2d318a;
+  --ld-card-edge: rgb(255 255 255 / 0);
+  --ld-paper: #fbfaf7;
+  --ld-shadow: rgb(14 17 22 / 0.16);
+  --ld-lift-c: rgb(14 17 22 / 0.2);
+  --ld-floor-c: rgb(14 17 22 / 0.3);
+  --ld-hair: 1px;
+  /* A small card back after the owner's design (navy, white linework, the mark). */
+  --ld-card-back: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 101'%3E%3Crect width='60' height='101' rx='5' fill='%232d318a'/%3E%3Cg fill='none' stroke='%23fff' stroke-linejoin='round'%3E%3Crect x='3.5' y='3.5' width='53' height='94' rx='3' stroke-width='.8'/%3E%3Cpath d='M8 9l22 11 22-11v83l-22-11-22 11z' stroke-width='.6' stroke-opacity='.8'/%3E%3Ccircle cx='30' cy='17' r='5.6' fill='%232d318a' stroke-width='.6'/%3E%3Ccircle cx='30' cy='84' r='5.6' fill='%232d318a' stroke-width='.6'/%3E%3Cpath d='M30 12.6l1.1 3.3 3.3 1.1-3.3 1.1-1.1 3.3-1.1-3.3-3.3-1.1 3.3-1.1zM30 79.6l1.1 3.3 3.3 1.1-3.3 1.1-1.1 3.3-1.1-3.3-3.3-1.1 3.3-1.1z' stroke-width='.5'/%3E%3C/g%3E%3Cpath d='M25 44.5l5-3.5 5 3.5-5 3.5z' fill='%23f7bf33'/%3E%3Cpath d='M23.2 47.6l4.6 3.1v9.3l-4.6-2.6z' fill='%233a6dc5'/%3E%3Cpath d='M36.8 47.6l-4.6 3.1v9.3l4.6-2.6z' fill='%23f94141'/%3E%3C/svg%3E");
+  /* The finished box: its front panel centred on the screen, turned to show a side and the lid. */
+  --ld-box-pose: translate(
+      calc(50cqw - var(--ld-sheet-left) - var(--u) * 858),
+      calc(50cqh - var(--ld-sheet-top) - var(--u) * 1812.5)
+    )
+    rotateX(-16deg) rotateY(-28deg) scale(1.08);
+  --ld-ease: cubic-bezier(0.35, 0, 0, 1);
+
+  /* Layout: the sheet above, the hub (the fan around the counter) below. */
+  --ld-aspect: 1.1846;
+  --ld-hub-space: clamp(250px, 34cqh, 330px);
+  --ld-sheet-w: min(58cqw, calc((100cqh - var(--ld-hub-space) - 40px) * var(--ld-aspect)), 900px);
+  --ld-sheet-h: calc(var(--ld-sheet-w) / var(--ld-aspect));
+  --ld-sheet-top: max(28px, calc((100cqh - var(--ld-hub-space) - var(--ld-sheet-h)) / 2 + 8px));
+  --ld-sheet-left: calc(50cqw - var(--ld-sheet-w) / 2);
+  --u: calc(var(--ld-sheet-w) / 4300);
+  --ld-card-w: clamp(24px, 2.5cqw, 38px);
+  --ld-card-h: calc(var(--ld-card-w) * 1.6833);
+  --ld-fan-r: clamp(80px, 7.8cqw, 116px);
+  --ld-hub-x: 50cqw;
+  --ld-hub-y: calc(100cqh - clamp(78px, 12.5cqh, 116px));
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+  color: var(--ld-ink);
+  background: var(--background);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+.dark .ld {
+  --ld-line: #7fa6e8;
+  --ld-line-soft: rgb(127 166 232 / 0.48);
+  --ld-ink-2: #b9bec8;
+  --ld-grid: rgb(237 237 237 / 0.04);
+  --ld-grid-strong: rgb(237 237 237 / 0.07);
+  --ld-card-edge: rgb(255 255 255 / 0.22);
+  --ld-shadow: rgb(0 0 0 / 0.4);
+  --ld-lift-c: rgb(0 0 0 / 0.5);
+  --ld-floor-c: rgb(0 0 0 / 0.62);
+}
+
+@media (orientation: portrait) {
+  .ld {
+    --ld-hub-space: clamp(270px, 40cqh, 360px);
+    --ld-sheet-w: min(94cqw, calc((100cqh - var(--ld-hub-space) - 48px) * var(--ld-aspect)));
+    --ld-sheet-top: max(56px, calc((100cqh - var(--ld-hub-space) - var(--ld-sheet-h)) / 2 + 20px));
+    --ld-card-w: clamp(24px, 7.4cqw, 38px);
+    --ld-fan-r: clamp(68px, 20cqw, 96px);
+    --ld-hub-y: calc(100cqh - clamp(140px, 21cqh, 210px));
+  }
+}
+
+/* Short landscape screens (phones on their side): the sheet left, the hub right. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .ld {
+    --ld-hub-space: 0px;
+    --ld-sheet-w: min(54cqw, calc((100cqh - 44px) * var(--ld-aspect)));
+    --ld-sheet-top: calc((100cqh - var(--ld-sheet-h)) / 2);
+    --ld-sheet-left: max(16px, calc(30cqw - var(--ld-sheet-w) / 2));
+    --ld-card-w: clamp(20px, 4.6cqh, 30px);
+    --ld-fan-r: clamp(50px, 14cqh, 74px);
+    --ld-hub-x: 77cqw;
+    --ld-hub-y: 64cqh;
+  }
+}
+
+/* The cutting mat: a fine grid that fades toward the edges. */
+.ld-mat {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--ld-grid-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ld-grid-strong) 1px, transparent 1px),
+    linear-gradient(var(--ld-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ld-grid) 1px, transparent 1px);
+  background-position: center;
+  background-size:
+    120px 120px,
+    120px 120px,
+    24px 24px,
+    24px 24px;
+  mask-image: radial-gradient(ellipse 70% 64% at 50% 46%, #000 30%, transparent 100%);
+  animation: ld-fade 0.9s ease-out both;
+}
+
+.ld-stage {
+  position: absolute;
+  inset: 0;
+  perspective: 1800px;
+}
+
+/* The net's shadow on the mat while it lifts off to fold (a blurred copy of its outline). */
+.ld-lift {
+  position: absolute;
+  left: var(--ld-sheet-left);
+  top: var(--ld-sheet-top);
+  width: var(--ld-sheet-w);
+  height: var(--ld-sheet-h);
+  overflow: visible;
+  fill: var(--ld-lift-c);
+  filter: blur(calc(var(--u) * 34));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The finished box's contact shadow (placed under its base by the show). */
+.ld-floor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--ld-floor-c), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ld-sheet {
+  position: absolute;
+  left: var(--ld-sheet-left);
+  top: var(--ld-sheet-top);
+  width: var(--ld-sheet-w);
+  height: var(--ld-sheet-h);
+  transform-style: preserve-3d;
+}
+
+/* The flat drawing: cut lines, folds, dimensions, marks. */
+.ld-print-sheet {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(1px);
+}
+
+.ld-cut,
+.ld-fold {
+  position: absolute;
+  height: var(--ld-hair);
+  margin-top: calc(var(--ld-hair) / -2);
+  transform-origin: 0 50%;
+  transform: rotate(var(--a));
+}
+
+.ld-cut {
+  background: var(--ld-line);
+  animation: ld-draw var(--t) linear var(--d) both;
+}
+
+.ld-fold::before,
+.ld-fold::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.ld-fold::before {
+  background: var(--ld-line-soft);
+  transform-origin: 0 50%;
+  animation:
+    ld-grow var(--t) var(--ld-ease) var(--d) both,
+    ld-out 0.3s ease-in calc(var(--d) + var(--t) + 0.08s) forwards;
+}
+
+.ld-fold::after {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--ld-line) 0 calc(var(--u) * 46),
+    transparent calc(var(--u) * 46) calc(var(--u) * 78)
+  );
+  opacity: 0;
+  animation: ld-in 0.3s ease-out calc(var(--d) + var(--t) + 0.04s) forwards;
+}
+
+.ld-arc {
+  position: absolute;
+  width: calc(var(--u) * 110);
+  height: calc(var(--u) * 110);
+  border: 0 solid var(--ld-line);
+  animation: ld-in 0.12s linear var(--d) both;
+}
+
+.ld-arc[data-corner="tl"] {
+  border-top-width: var(--ld-hair);
+  border-left-width: var(--ld-hair);
+  border-top-left-radius: 100%;
+}
+
+.ld-arc[data-corner="tr"] {
+  border-top-width: var(--ld-hair);
+  border-right-width: var(--ld-hair);
+  border-top-right-radius: 100%;
+}
+
+.ld-arc[data-corner="bl"] {
+  border-bottom-width: var(--ld-hair);
+  border-left-width: var(--ld-hair);
+  border-bottom-left-radius: 100%;
+}
+
+.ld-arc[data-corner="br"] {
+  border-bottom-width: var(--ld-hair);
+  border-right-width: var(--ld-hair);
+  border-bottom-right-radius: 100%;
+}
+
+.ld-dim {
+  position: absolute;
+  animation: ld-pop 0.42s var(--ld-ease) var(--d) both;
+}
+
+.ld-dim-line {
+  position: absolute;
+  inset: 0;
+}
+
+.ld-dim[data-axis="x"] .ld-dim-line {
+  top: 50%;
+  bottom: auto;
+  height: var(--ld-hair);
+  background: var(--ld-line);
+}
+
+.ld-dim[data-axis="y"] .ld-dim-line {
+  left: 50%;
+  right: auto;
+  width: var(--ld-hair);
+  background: var(--ld-line);
+}
+
+.ld-dim-line::before,
+.ld-dim-line::after {
+  position: absolute;
+  content: "";
+  background: var(--ld-line);
+}
+
+.ld-dim[data-axis="x"] .ld-dim-line::before,
+.ld-dim[data-axis="x"] .ld-dim-line::after {
+  top: calc(var(--u) * -34);
+  width: var(--ld-hair);
+  height: calc(var(--u) * 68);
+}
+
+.ld-dim[data-axis="x"] .ld-dim-line::before {
+  left: 0;
+}
+
+.ld-dim[data-axis="x"] .ld-dim-line::after {
+  right: 0;
+}
+
+.ld-dim[data-axis="y"] .ld-dim-line::before,
+.ld-dim[data-axis="y"] .ld-dim-line::after {
+  left: calc(var(--u) * -34);
+  width: calc(var(--u) * 68);
+  height: var(--ld-hair);
+}
+
+.ld-dim[data-axis="y"] .ld-dim-line::before {
+  top: 0;
+}
+
+.ld-dim[data-axis="y"] .ld-dim-line::after {
+  bottom: 0;
+}
+
+.ld-label {
+  position: absolute;
+  padding: 0 0.35em;
+  color: var(--ld-line);
+  background: var(--background);
+  font-size: max(10px, calc(var(--u) * 78));
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ld-dim[data-axis="x"] .ld-label {
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+}
+
+.ld-dim[data-axis="y"] .ld-label {
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  rotate: -90deg;
+}
+
+.ld-title-block {
+  position: absolute;
+  display: grid;
+  align-content: center;
+  gap: calc(var(--u) * 36);
+  padding: 0 calc(var(--u) * 60);
+  border: var(--ld-hair) solid var(--ld-line);
+  color: var(--ld-line);
+  font-size: max(9px, calc(var(--u) * 64));
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: ld-pop 0.5s var(--ld-ease) var(--d) both;
+}
+
+.ld-title-block strong {
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.ld-mark {
+  position: absolute;
+  width: calc(var(--u) * 120);
+  height: calc(var(--u) * 120);
+  margin: calc(var(--u) * -60) 0 0 calc(var(--u) * -60);
+  border: var(--ld-hair) solid var(--ld-line);
+  border-radius: 50%;
+  animation: ld-spin-in 0.6s var(--ld-ease) var(--d) both;
+}
+
+.ld-mark::before,
+.ld-mark::after {
+  position: absolute;
+  content: "";
+  background: var(--ld-line);
+}
+
+.ld-mark::before {
+  left: 50%;
+  top: -30%;
+  width: var(--ld-hair);
+  height: 160%;
+}
+
+.ld-mark::after {
+  top: 50%;
+  left: -30%;
+  width: 160%;
+  height: var(--ld-hair);
+}
+
+.ld-swatch {
+  position: absolute;
+  border: var(--ld-hair) solid var(--ld-line);
+  animation: ld-pop 0.4s var(--ld-ease) var(--d) both;
+}
+
+.ld-swatch > span {
+  position: absolute;
+  inset: 2px;
+  background: var(--c);
+  transform: scale(0);
+}
+
+.ld-swatch[data-on] > span {
+  transform: none;
+}
+
+/* Small screens: the drawing keeps its lines and drops the words. */
+@media (max-width: 560px), (max-height: 420px) {
+  .ld-label,
+  .ld-title-block,
+  .ld-swatch {
+    display: none;
+  }
+}
+
+/* A small light that keeps running along the cut line once it is drawn. */
+.ld-glint {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 1.5px var(--ld-line),
+    0 0 10px 3px rgb(247 191 51 / 0.75);
+  opacity: 0;
+  animation: ld-glint 6.5s linear 2.3s infinite;
+}
+
+/* The star that draws the sheet (the story's spark). */
+.ld-pen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  animation: ld-pen 1.5s linear both;
+}
+
+.ld-pen-star {
+  position: absolute;
+  left: calc(var(--ld-star) / -2);
+  top: calc(var(--ld-star) / -2);
+  width: var(--ld-star);
+  height: var(--ld-star);
+  --ld-star: clamp(20px, 2.4cqw, 30px);
+}
+
+.ld-star-shape {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ld-star-glow {
+  fill: var(--brand-yellow);
+  opacity: 0.45;
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  animation: ld-glow 1.2s ease-in-out infinite alternate;
+}
+
+.ld-star-core {
+  fill: var(--ld-line);
+}
+
+/* The folding net. */
+.ld-pose {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: calc(var(--u) * 858) calc(var(--u) * 1812.5) calc(var(--u) * -223);
+}
+
+.ld-p {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.ld-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.ld-ink {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform: translateY(101%);
+}
+
+.ld-ink-in {
+  position: absolute;
+  inset: 0;
+  background: var(--ld-print);
+  transform: translateY(-101%);
+}
+
+.ld-ink-in > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1px;
+  stroke-linejoin: round;
+}
+
+/* The bright edge of the print wipe (lit only while a panel takes its ink). */
+.ld-edge {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: #fff;
+  opacity: 0;
+}
+
+.ld-inked .ld-ink,
+.ld-inked .ld-ink-in {
+  transform: none;
+}
+
+.ld-shade {
+  position: absolute;
+  inset: 0;
+  background: var(--ld-shade-c, #000);
+  opacity: 0;
+}
+
+.ld-in {
+  background: var(--ld-inside);
+  transform: rotateY(180deg);
+  opacity: 0;
+}
+
+.ld-deck3d,
+.ld-eyes {
+  position: absolute;
+  opacity: 0;
+}
+
+/* Points on the front panel the show measures (the emblem the star comes out of, the base's centre). */
+.ld-point {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.ld-deck3d {
+  left: calc(var(--u) * 70);
+  width: calc(var(--u) * 1236);
+  height: calc(var(--u) * 1830);
+  top: calc(var(--u) * -1000);
+  border-radius: calc(var(--u) * 64);
+  background: var(--ld-card-back) center / 100% 100%;
+  transform: translateZ(calc(var(--u) * -223));
+}
+
+.ld-eyes {
+  left: 50%;
+  top: calc(var(--u) * -40);
+  display: flex;
+  gap: calc(var(--u) * 140);
+  transform: translateX(-50%) translateZ(calc(var(--u) * -70));
+}
+
+.ld-eye {
+  position: relative;
+  width: calc(var(--u) * 205);
+  height: calc(var(--u) * 255);
+  overflow: hidden;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.ld-pupil {
+  position: absolute;
+  left: 30%;
+  top: 32%;
+  width: 46%;
+  height: 46%;
+  border-radius: 50%;
+  background: #0e1116;
+}
+
+.ld-lash {
+  position: absolute;
+  inset: 0;
+  background: var(--ld-inside);
+  transform: translateY(-100%);
+}
+
+/* The hub: the dealt fan around the counter. */
+.ld-hub {
+  position: absolute;
+  left: var(--ld-hub-x);
+  top: var(--ld-hub-y);
+  width: 0;
+  height: 0;
+}
+
+.ld-fan {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.ld-card {
+  position: absolute;
+  left: calc(var(--ld-card-w) / -2);
+  top: calc(var(--ld-card-h) * -1);
+  width: var(--ld-card-w);
+  height: var(--ld-card-h);
+  transform-origin: 50% 100%;
+}
+
+.ld-card-lift {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+}
+
+.ld-card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: calc(var(--ld-card-w) * 0.085);
+  background: var(--ld-card-back) center / 100% 100%;
+  box-shadow:
+    0 0 0 1px var(--ld-card-edge),
+    0 1px 3px var(--ld-shadow);
+}
+
+/* The squared fan becomes one deck (a card back with the stack's edge), which flies to the box. */
+.ld-deck {
+  position: absolute;
+  left: calc(var(--ld-card-w) / -2);
+  top: calc((var(--ld-card-h) + var(--ld-fan-r) + 4px) * -1);
+  width: var(--ld-card-w);
+  height: var(--ld-card-h);
+  border-radius: calc(var(--ld-card-w) * 0.085);
+  background: var(--ld-card-back) center / 100% 100%;
+  box-shadow:
+    0 1px 0 #e9e6de,
+    0 2px 0 #2d318a,
+    0 3px 0 #e9e6de,
+    0 4px 3px var(--ld-shadow);
+  visibility: hidden;
+}
+
+.ld-hub[data-squared] .ld-card {
+  visibility: hidden;
+}
+
+.ld-hub[data-squared] .ld-deck {
+  visibility: visible;
+}
+
+/* Turned half a turn ahead, so it reads the right way round when the card has turned over. */
+.ld-card-front {
+  display: grid;
+  place-items: center;
+  background: var(--ld-paper);
+  opacity: 0;
+  transform: rotateY(180deg);
+}
+
+.ld-idx {
+  position: absolute;
+  color: #0e1116;
+  font-family: var(--font-hanken), ui-sans-serif, sans-serif;
+  font-size: calc(var(--ld-card-w) * 0.3);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ld-idx.ld-tl {
+  left: 11%;
+  top: 6%;
+}
+
+.ld-idx.ld-br {
+  right: 11%;
+  bottom: 6%;
+  transform: rotate(180deg);
+}
+
+.ld-card-logo {
+  width: 78%;
+  height: auto;
+  overflow: visible;
+}
+
+.ld-hub-star {
+  position: absolute;
+  --ld-star: clamp(18px, 2cqw, 26px);
+  left: calc(var(--ld-star) / -2);
+  top: calc(var(--ld-star) * -0.5 - var(--ld-fan-r) * 0.74);
+  width: var(--ld-star);
+  height: var(--ld-star);
+  animation:
+    ld-pop 0.45s var(--ld-ease) 1.36s both,
+    ld-breathe 2.4s ease-in-out 1.8s infinite;
+}
+
+.ld-count {
+  position: absolute;
+  left: 0;
+  top: calc(var(--ld-fan-r) * -0.3);
+  display: flex;
+  align-items: baseline;
+  gap: 0.18em;
+  color: var(--ld-ink);
+  font-size: clamp(22px, 2.3cqw, 34px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  translate: -50% -50%;
+  white-space: nowrap;
+}
+
+.ld-odo {
+  display: inline-flex;
+  height: 1.2em;
+  overflow: hidden;
+}
+
+.ld-digit {
+  display: flex;
+  flex-direction: column;
+}
+
+.ld-digit > span {
+  display: block;
+  height: 1.2em;
+  line-height: 1.2em;
+}
+
+.ld-of {
+  color: var(--ld-ink-2);
+}
+
+.ld-caption {
+  position: absolute;
+  left: 0;
+  top: 14px;
+  color: var(--ld-ink-2);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+.ld-status {
+  position: absolute;
+  left: var(--ld-hub-x);
+  top: calc(var(--ld-hub-y) + 40px);
+  min-width: 18em;
+  margin: 0;
+  color: var(--ld-ink-2);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+.ld-status-line {
+  display: block;
+  perspective: 300px;
+}
+
+.ld-status-char {
+  display: inline-block;
+  white-space: pre;
+}
+
+/* Small stars thrown by a tap. */
+.ld-spark {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* The star that pops out of the shut box's emblem before the page opens through it. */
+.ld-pop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ld-pop > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: var(--brand-yellow);
+}
+
+/* The edge of the star the page opens through (clipped to the star by the show). */
+.ld-iris {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--brand-yellow);
+  clip-path: polygon(50% 50%, 50% 50%, 50% 50%);
+  pointer-events: none;
+}
+
+/* The text bar for reduced motion. */
+.ld-bar {
+  position: absolute;
+  left: var(--ld-hub-x);
+  top: calc(var(--ld-hub-y) - 24px);
+  display: none;
+  margin: 0;
+  color: var(--ld-ink);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  translate: -50% 0;
+  white-space: pre;
+}
+
+/* Shapes to play with while it loads. */
+.ld-toys {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ld-toy {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  pointer-events: auto;
+  cursor: pointer;
+  animation: ld-pop 0.6s var(--ld-ease) var(--d) both;
+}
+
+.ld-toy-drift {
+  position: absolute;
+  inset: 0;
+  animation: ld-drift var(--dur) ease-in-out var(--d) infinite alternate;
+}
+
+.ld-toy-push,
+.ld-toy-play {
+  position: absolute;
+  inset: 0;
+}
+
+.ld-toy svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+@media (orientation: portrait) {
+  .ld-toy {
+    left: var(--px);
+    top: var(--py);
+  }
+
+  .ld-toy[data-wide] {
+    display: none;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .ld-toy {
+    left: var(--sx);
+    top: var(--sy);
+  }
+
+  .ld-toy[data-wide] {
+    display: none;
+  }
+}
+
+/* The fast path: a reload in the same tab starts on the finished box. */
+html[data-loader-fast] .ld-print-sheet,
+html[data-loader-fast] .ld-hub,
+html[data-loader-fast] .ld-mat {
+  display: none;
+}
+
+/* A reload that has to wait a moment says hello (the show sets data-talk). */
+html[data-loader-fast] .ld:not([data-talk]) .ld-status {
+  visibility: hidden;
+}
+
+html[data-loader-fast] .ld-ink,
+html[data-loader-fast] .ld-ink-in {
+  transform: none;
+}
+
+html[data-loader-fast] .ld-in {
+  opacity: 1;
+}
+
+html[data-loader-fast] .ld-p {
+  transform: var(--fold);
+}
+
+html[data-loader-fast] .ld-shade {
+  opacity: var(--shade-a);
+}
+
+html[data-loader-fast] .ld-pose {
+  transform: var(--ld-box-pose);
+}
+
+/*
+ * The glued flap sits inside the shut box, a hair behind the front: 3D
+ * sorting would draw it over the front panel, and nobody can see it there.
+ */
+html[data-loader-fast] [data-panel="glue"] > .ld-face {
+  visibility: hidden;
+}
+
+/* Reduced motion: a still drawing, a text bar, no deal and no fold. */
+@media (prefers-reduced-motion: reduce) {
+  .ld *,
+  .ld *::before,
+  .ld *::after {
+    animation: none !important;
+  }
+
+  .ld-fold::before {
+    opacity: 0;
+  }
+
+  .ld-fold::after {
+    opacity: 1;
+  }
+
+  .ld-hub-star {
+    display: none;
+  }
+
+  .ld-fan,
+  .ld-count,
+  .ld-caption,
+  .ld-pen {
+    display: none;
+  }
+
+  .ld-bar {
+    display: block;
+  }
+
+  .ld-toys,
+  .ld-lift,
+  .ld-floor,
+  .ld-deck,
+  .ld-pop {
+    display: none;
+  }
+}
+
+@keyframes ld-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ld-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ld-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes ld-draw {
+  from {
+    transform: rotate(var(--a)) scaleX(0);
+  }
+
+  to {
+    transform: rotate(var(--a)) scaleX(1);
+  }
+}
+
+@keyframes ld-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes ld-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes ld-spin-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.4);
+  }
+}
+
+@keyframes ld-glow {
+  from {
+    transform: scale(0.9);
+  }
+
+  to {
+    transform: scale(1.35);
+  }
+}
+
+@keyframes ld-breathe {
+  0%,
+  100% {
+    transform: scale(0.96);
+  }
+
+  50% {
+    transform: scale(1.06) rotate(8deg);
+  }
+}
+
+@keyframes ld-drift {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  to {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--dr));
+  }
+}
