@@ -133,7 +133,8 @@ export type DeckBox = {
   /**
    * The solved hinges, live: the lid's opening and each fold's bend
    * (radians), and the tease card's rise (metres). Read it to time things on
-   * what the box really does (the flap clears the rim near a 33 degree lid).
+   * what the box really does: the flap's tip clears the rim at a 31 degree
+   * lid and the flap swings free by 40 degrees.
    */
   readonly pose: Readonly<BoxPose>;
   /**
@@ -151,8 +152,10 @@ export type DeckBox = {
    * The tease, 0 in the box to 1 half out, one move: the lid lifts first
    * (0 to 0.4, to 50 degrees) and the flap slides out and flicks open (0.14
    * to 0.46), then the card rises (0.24 to 1) and pushes the lid a little
-   * further when it needs the room. A card only shows above the rim from
-   * about 0.32 on. It combines with `setLid` and `setFlap` (the larger
+   * further when it needs the room. The flap is out from about 0.26 and a
+   * card shows above the rim from about 0.31, so a small value (0.1 to 0.2)
+   * lifts the lid 10 to 25 degrees, not a hair: use `setLid` for a hover
+   * lift. It combines with `setLid` and `setFlap` (the larger
    * opening wins). Scrub it back to 0 for the card's return.
    */
   peek(amount: number): void;
