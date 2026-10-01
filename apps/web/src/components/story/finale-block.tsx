@@ -18,16 +18,18 @@ import { cn } from "@/lib/utils";
  * WebGL story keeps it at the end of the section (Godette stands on its
  * letters); the storybook ends on it too.
  *
- * The words are server HTML, letter by letter (each letter in a mask, with
- * an identical clone under it for the idle roll), with the plain sentence
- * for screen readers. After hydration:
+ * The words are server HTML, letter by letter (each letter in a mask; the
+ * idle roll's clone under it is a CSS `::after`, so the sentence copies and
+ * reads once), with the plain sentence for screen readers. After hydration:
  *
  * - In the WebGL story the letters rise out of their masks when the act
  *   latches the title on (`finaleSignal`), and sink back if the visitor
  *   scrolls above it: a time-driven play or reverse, lusion's end title.
  * - In the storybook they rise once, the first time the block comes into
  *   view.
- * - Then one random letter rolls over every 2 s, a pen stroke underlines
+ * - Then one random letter rolls over every 2 s inside a window cut to its
+ *   own ink (so a lowercase letter never floats through the empty ascender
+ *   space and nothing spills onto a second line), a pen stroke underlines
  *   the words on hover (it skips the descenders), and the action pulls
  *   toward the pointer and throws little stars.
  *
@@ -39,6 +41,45 @@ import { cn } from "@/lib/utils";
 /** The site's ease, cubic-bezier(0.35, 0, 0, 1). */
 const EASE = easeSettle;
 const DESCENDERS = new Set(["g", "j", "p", "q", "y", ","]);
+/** Letters the idle roll leaves alone: the descenders (their window would reach the next line) and punctuation. */
+const NO_ROLL = new Set([...DESCENDERS, ".", "'", "\u2019", "!", "?", ":", ";"]);
+/** Room around a rolling letter's ink inside its window, and between it and its clone, em. */
+const ROLL_MARGIN = 0.05;
+const ROLL_GAP = 0.06;
+
+type RollWindow = { top: number; bottom: number; step: number };
+
+/**
+ * The window a letter rolls in (px insets from the top and the bottom of its
+ * mask) and how far it rolls, from the glyph's own ink in the title's font:
+ * the mask is padded 0.1em above and 0.22em below its line box, and the
+ * baseline sits where the font's ascent and descent put it in that box.
+ */
+function rollWindow(
+  char: string,
+  mask: HTMLElement,
+  g: CanvasRenderingContext2D,
+  style: CSSStyleDeclaration,
+): RollWindow | null {
+  const size = Number.parseFloat(style.fontSize);
+  if (!(size > 0)) return null;
+  g.font = `${style.fontWeight} ${size}px ${style.fontFamily}`;
+  const m = g.measureText(char);
+  const ascent = m.fontBoundingBoxAscent;
+  const descent = m.fontBoundingBoxDescent;
+  if (!(ascent > 0)) return null;
+  const lineHeight = Number.parseFloat(style.lineHeight) || size;
+  const baseline = 0.1 * size + (lineHeight - (ascent + descent)) / 2 + ascent;
+  const inkTop = baseline - m.actualBoundingBoxAscent - ROLL_MARGIN * size;
+  const inkBottom = baseline + m.actualBoundingBoxDescent + ROLL_MARGIN * size;
+  const height = mask.offsetHeight;
+  if (height <= 0 || inkBottom <= inkTop) return null;
+  return {
+    top: Math.max(0, inkTop),
+    bottom: Math.max(0, height - inkBottom),
+    step: inkBottom - inkTop + ROLL_GAP * size,
+  };
+}
 const PEN_COLORS = ["var(--brand-blue)", "var(--brand-red)", "var(--brand-green)"];
 
 type Word = { text: string; chars: string[] };
@@ -92,6 +133,8 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
     const title = block.querySelector<HTMLElement>("[data-finale-title]");
     const rises = Array.from(block.querySelectorAll<HTMLElement>("[data-finale-rise]"));
     const rolls = Array.from(block.querySelectorAll<HTMLElement>("[data-finale-roll]"));
+    // the letters the idle roll may pick (no descenders, no punctuation)
+    const rollable = rolls.filter((el) => !NO_ROLL.has(el.dataset.char ?? ""));
     const lineWords = Array.from(block.querySelectorAll<HTMLElement>("[data-finale-line-word]"));
     const actionEl = block.querySelector<HTMLElement>("[data-finale-action]");
     const pen = block.querySelector<SVGSVGElement>("[data-finale-pen]");
@@ -151,11 +194,18 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
     // Only opacity hides the line and the action, so they stay in the accessibility tree and
     // focusable; whatever takes focus in the block finishes the entrance at once.
     let shown = false;
-    // A rolled letter shows its clone (the roll element rests at -130%). Before the letters
+    // A rolled letter shows its clone (the roll element rests a step up). Before the letters
     // rise or sink, every roll goes back to its original, so no letter rises in double.
+    const unclip = (el: HTMLElement) => {
+      const mask = el.closest<HTMLElement>("[data-finale-char]");
+      if (mask) mask.style.clipPath = "";
+      el.style.removeProperty("--roll-step");
+      delete el.dataset.rolling;
+    };
     const settleRolls = () => {
       gsap.killTweensOf(rolls);
-      gsap.set(rolls, { yPercent: 0 });
+      gsap.set(rolls, { y: 0 });
+      rolls.forEach(unclip);
     };
     const show = (on: boolean) => {
       shown = on;
@@ -217,28 +267,50 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
       nearObserver.disconnect();
     });
 
-    // ---- one letter rolls over every 2 s (an identical clone rolls in from below)
+    // ---- one letter rolls over every 2 s (its clone follows it up inside the letter's window)
     let last = -1;
+    const measure = document.createElement("canvas").getContext("2d");
+    const rollOne = (el: HTMLElement) => {
+      const mask = el.closest<HTMLElement>("[data-finale-char]");
+      if (!mask || !measure) return;
+      const win = rollWindow(el.dataset.char ?? "", mask, measure, getComputedStyle(title));
+      if (!win) return;
+      el.style.setProperty("--roll-step", `${win.step.toFixed(2)}px`);
+      el.dataset.rolling = "";
+      mask.style.clipPath = `inset(${win.top.toFixed(2)}px 0 ${win.bottom.toFixed(2)}px 0)`;
+      gsap.fromTo(
+        el,
+        { y: 0 },
+        {
+          y: -win.step,
+          duration: 0.9,
+          ease: EASE,
+          overwrite: true,
+          immediateRender: false,
+          onComplete: () => {
+            // the clone sits exactly where the letter was: swap back without a visible change
+            gsap.set(el, { y: 0 });
+            unclip(el);
+          },
+        },
+      );
+      const r = mask.getBoundingClientRect();
+      finaleSignal.rolled(r.left + r.width / 2, r.top + r.height / 2);
+    };
     const roll = () => {
-      if (near && shown && tl.progress() > 0.98 && !document.hidden && rolls.length > 0) {
-        let pick = Math.floor(random() * rolls.length);
-        if (pick === last) pick = (pick + 1) % rolls.length;
+      if (near && shown && tl.progress() > 0.98 && !document.hidden && rollable.length > 0) {
+        let pick = Math.floor(random() * rollable.length);
+        if (pick === last) pick = (pick + 1) % rollable.length;
         last = pick;
-        const el = rolls.at(pick);
-        if (el) {
-          gsap.fromTo(
-            el,
-            { yPercent: 0 },
-            { yPercent: -130, duration: 1, ease: EASE, overwrite: true, immediateRender: false },
-          );
-        }
+        const el = rollable.at(pick);
+        if (el) rollOne(el);
       }
       rollCall = gsap.delayedCall(2, roll);
     };
     let rollCall = gsap.delayedCall(2.4, roll);
     cleanups.push(() => {
       rollCall.kill();
-      gsap.killTweensOf(rolls);
+      settleRolls();
     });
 
     // ---- the pen stroke: drawn under each word on hover, skipping the descenders
@@ -424,9 +496,8 @@ export function FinaleBlock({
                 {word.chars.map((char, i) => (
                   <span key={`${char}-${i}`} data-finale-char={char} className="story-finale-char">
                     <span data-finale-rise className="story-finale-rise">
-                      <span data-finale-roll className="story-finale-roll">
+                      <span data-finale-roll data-char={char} className="story-finale-roll">
                         {char}
-                        <span className="story-finale-clone">{char}</span>
                       </span>
                     </span>
                   </span>

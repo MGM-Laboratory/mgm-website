@@ -252,10 +252,16 @@ html[data-story-mode="gl"]
   position: relative;
 }
 
-/* The identical clone that rolls in from below, out of sight at rest. */
-.story-finale-clone {
+/*
+ * The identical clone that rolls in from below, only while a letter rolls.
+ * A pseudo-element, so the title copies, reads and indexes once. The block
+ * sets --roll-step (the letter's ink height plus a hair) and clips the mask
+ * to that ink for the roll.
+ */
+.story-finale-roll[data-rolling]::after {
+  content: attr(data-char);
   position: absolute;
-  top: 130%;
+  top: var(--roll-step);
   left: 0;
 }
 
