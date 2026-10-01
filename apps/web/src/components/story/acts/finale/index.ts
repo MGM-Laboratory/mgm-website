@@ -265,7 +265,9 @@ class FinaleAct implements StoryAct {
       state.arrived
     ) {
       this.scene.add(godette.root, godette.shadow);
-      godette.root.traverse((object) => object.layers.set(STORY_LAYERS.front));
+      godette.root.traverse((object) => {
+        object.layers.set(STORY_LAYERS.front);
+      });
       godette.shadow.layers.set(STORY_LAYERS.front);
       this.autoIdle = undefined;
     }
