@@ -33,6 +33,9 @@ import {
  * SHOT_LAND.
  */
 
+/** How far the lens cranes up over the box to look into it as it opens, radians. */
+const PEER_ANGLE = (18 * Math.PI) / 180;
+
 const position = new Vector3();
 const target = new Vector3();
 const crane = new Vector3();
@@ -72,7 +75,19 @@ export class CameraDirector {
     const lift = SPRING_LIFT * springFrame;
     const back = springPull(view) * springFrame;
     const distance = STAGE_DISTANCE - push + pull + back;
-    stageToWorld(this.driftV[0] * 0.012, this.driftV[1] * 0.008 + lift, distance, position);
+    // The opening: the lens cranes up over the box as the lid lifts, so the visitor looks into the
+    // open mouth (the lid's hinge, the flap, the deck's lit edges), and settles level again as the
+    // deck springs out.
+    const peer =
+      PEER_ANGLE *
+      cubicInOut(fit(state.beat("c-open"), 0.22, 0.62, 0, 1)) *
+      (1 - cubicInOut(fit(state.beat("c-spring"), 0.04, 0.6, 0, 1)));
+    stageToWorld(
+      this.driftV[0] * 0.012,
+      this.driftV[1] * 0.008 + lift + Math.sin(peer) * distance,
+      Math.cos(peer) * distance,
+      position,
+    );
     stageToWorld(0, lift, 0, target);
     let near = 0.01;
     let far = 40;
