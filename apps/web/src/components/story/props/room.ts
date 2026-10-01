@@ -80,7 +80,8 @@ export type RoomScheme = "light" | "dark";
  * mouse-parallax jitter in both aspects (anchors.json `phases`).
  * - `hidden`: the card act (the page backdrop covers the room). Rig lights off.
  * - `crane`: the drop from the card stage down to `a_land`.
- * - `land`: the landing shot and the dolly to the close-up.
+ * - `land`: `a_land`, and the moves from it to `b_letters` and `b_mcu` (and between those two).
+ * - `letters`: the `b_letters` hold, where the toy letters are read.
  * - `table`: the close-up (`b_mcu`) and the break-free beats.
  * - `takeoff`: `c_start` to `c_end`, the drag and the learning flight.
  * - `chase`: `d_start` to `d_mid`, over her shoulder toward the TV.
@@ -89,7 +90,16 @@ export type RoomScheme = "light" | "dark";
  * - `all`: everything (debug, env capture).
  */
 export type RoomPhase =
-  "hidden" | "crane" | "land" | "table" | "takeoff" | "chase" | "screen" | "fill" | "all";
+  | "hidden"
+  | "crane"
+  | "land"
+  | "letters"
+  | "table"
+  | "takeoff"
+  | "chase"
+  | "screen"
+  | "fill"
+  | "all";
 
 export type Vec3 = readonly [number, number, number];
 
@@ -122,18 +132,30 @@ export type RoomAnchors = Readonly<{
   }>;
   boxSpot: Readonly<{ position: Vec3; yawDeg: number }>;
   figureSpot: Readonly<{ position: Vec3; standRadius: number }>;
+  /**
+   * The toy letters (the deck's `loadToyLetters` with these `lines`, `capHeight` and `tracking`): five
+   * rows behind the box that read top to bottom from the `b_letters` shot. Checked against the table's
+   * 1 cm free-space raster with a 1 cm margin, clear of the box and of a 7.5 cm circle round the figure
+   * spot (room for her to step off). Line 0 is the back row. From the low shots (`a_land`, `b_mcu`) the
+   * rows overlap: the camera rises to `b_letters` to read them.
+   */
   letters: Readonly<{
-    /** Text runs along `direction` (camera right in the table shots, about -z). */
-    direction: Vec3;
+    /** The shot that frames the phrase and Godette at every aspect from 390x844 to 2560x1080. */
+    shot: "b_letters";
     capHeight: number;
-    /** Checked against the table's 1 cm free-space raster, clear of the box and the figure stand. */
-    lines: readonly Readonly<{
-      text: string;
-      start: Vec3;
-      end: Vec3;
-      length: number;
-      checkedFree: boolean;
-    }>[];
+    rowGap: number;
+    /** Extra space between letters as a share of the cap height (the deck's default). */
+    tracking: number;
+    /** The block's centre on the table top. */
+    centre: Vec3;
+    /** Turns the deck's letter frame (reading along +x, faces toward +z) to this layout, about +y. */
+    rotationYDeg: number;
+    /** The reading direction, and the way the letters face (toward `b_letters`). */
+    along: Vec3;
+    facing: Vec3;
+    /** Each row's centre on the table top (rows are centred) and its width with the deck's metrics. */
+    lines: readonly Readonly<{ text: string; centre: Vec3; width: number }>[];
+    checkedFree: boolean;
   }>;
   cardStage: Readonly<{ centre: Vec3; camera: RoomShot }>;
   /**
@@ -155,6 +177,11 @@ export type RoomAnchors = Readonly<{
     c_end: RoomShot;
     d_start: RoomShot;
     d_mid: RoomShot;
+    /**
+     * A raised, long-lens shot (the `r-figure` hold) that reads the toy letters with Godette and the box
+     * in frame at every aspect: caps at least 22 px tall from 390x844 to 2560x1080.
+     */
+    b_letters: RoomShot;
   }>;
   tv: Readonly<{
     centre: Vec3;

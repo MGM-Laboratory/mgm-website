@@ -21,24 +21,42 @@
     "standRadius": 0.039
   },
   "letters": {
-    "direction": [0, 0, -1],
-    "capHeight": 0.03,
+    "shot": "b_letters",
+    "capHeight": 0.027,
+    "rowGap": 0.08,
+    "tracking": 0.08,
+    "centre": [0.205, 0.4215, -0.46],
+    "rotationYDeg": 90,
+    "along": [0.0, 0, -1.0],
+    "facing": [1.0, 0, 0.0],
     "lines": [
       {
-        "text": "We tell stories",
-        "start": [0.5525, 0.4215, -0.68],
-        "end": [0.5525, 0.4215, -0.9621],
-        "length": 0.2821,
-        "checkedFree": true
+        "text": "We tell",
+        "centre": [0.045, 0.4215, -0.46],
+        "width": 0.1371
       },
       {
-        "text": "through interactive media.",
-        "start": [0.6001, 0.4215, -0.6664],
-        "end": [0.6001, 0.4215, -1.1788],
-        "length": 0.5124,
-        "checkedFree": true
+        "text": "stories",
+        "centre": [0.125, 0.4215, -0.46],
+        "width": 0.1354
+      },
+      {
+        "text": "through",
+        "centre": [0.205, 0.4215, -0.46],
+        "width": 0.1541
+      },
+      {
+        "text": "interactive",
+        "centre": [0.285, 0.4215, -0.46],
+        "width": 0.2141
+      },
+      {
+        "text": "media.",
+        "centre": [0.365, 0.4215, -0.46],
+        "width": 0.1292
       }
-    ]
+    ],
+    "checkedFree": true
   },
   "cardStage": {
     "centre": [0.4675, 1.22, -0.4335],
@@ -113,6 +131,14 @@
       "fov": {
         "landscape": 40,
         "portrait": 50
+      }
+    },
+    "b_letters": {
+      "position": [1.4175, 0.9875, -0.5184],
+      "target": [0.339, 0.4615, -0.5184],
+      "fov": {
+        "landscape": 16,
+        "portrait": 33.5
       }
     }
   },
@@ -257,6 +283,28 @@
         "room_dark_panel",
         "room_floor_polished",
         "room_lamp_glow",
+        "room_rug",
+        "shell_south",
+        "tv_body",
+        "tv_screen"
+      ]
+    },
+    {
+      "phase": "letters",
+      "nodes": [
+        "coffee_table_cup_saucer",
+        "coffee_table_magazine",
+        "coffee_table_pot_A",
+        "coffee_table_pot_B",
+        "coffee_table_pot_C",
+        "coffee_table_top",
+        "room_atlasA_sofa_table",
+        "room_atlasB_tv_cabinet",
+        "room_atlasC_plants",
+        "room_atlasD_lamps",
+        "room_concrete_walls",
+        "room_dark_panel",
+        "room_floor_polished",
         "room_rug",
         "tv_body",
         "tv_screen"
