@@ -129,3 +129,92 @@ export const PAPER_PALETTE = {
   navy: 0x2d318a,
   cardAvg: 0x5e5996,
 } as const;
+
+/** sRGB hex to linear RGB, as `new Color(hex)` stores it for the shaders' uniforms. */
+function linearRgb(hex: number): readonly [number, number, number] {
+  const f = (c: number) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return [f((hex >> 16) & 255), f((hex >> 8) & 255), f(hex & 255)];
+}
+
+const LIN = {
+  zenith: linearRgb(PAPER_PALETTE.zenith),
+  sky: linearRgb(PAPER_PALETTE.sky),
+  low: linearRgb(PAPER_PALETTE.low),
+  horizon: linearRgb(PAPER_PALETTE.horizon),
+  sun: linearRgb(PAPER_PALETTE.sun),
+  navy: linearRgb(PAPER_PALETTE.navy),
+  cardAvg: linearRgb(PAPER_PALETTE.cardAvg),
+};
+
+function smooth(a: number, b: number, x: number) {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+type Rgb = [number, number, number];
+
+function mixInto(out: Rgb, b: readonly number[], t: number) {
+  for (let i = 0; i < 3; i++) out[i] = (out[i] ?? 0) + ((b[i] ?? 0) - (out[i] ?? 0)) * t;
+  return out;
+}
+
+function skyBase(y: number): Rgb {
+  const col: Rgb = [...LIN.horizon];
+  mixInto(col, LIN.low, smooth(0, 0.07, y));
+  mixInto(col, LIN.sky, smooth(0.04, 0.22, y));
+  return mixInto(col, LIN.zenith, smooth(0.24, 0.9, y));
+}
+
+const SUN = { x: 0.18, y: 0.055, z: -1 };
+const SUN_LEN = Math.hypot(SUN.x, SUN.y, SUN.z);
+const SUN_FLAT = Math.hypot(SUN.x, SUN.z);
+
+function sky(dx: number, dy: number, dz: number): Rgb {
+  const col = skyBase(dy);
+  const c = (dx * SUN.x + dy * SUN.y + dz * SUN.z) / SUN_LEN;
+  const ang = Math.acos(Math.min(1, Math.max(-1, c)));
+  const flat = Math.hypot(dx, dz) || 1;
+  const facing = Math.max(0, (dx * SUN.x + dz * SUN.z) / (flat * SUN_FLAT));
+  const horizonGlow = Math.exp(-Math.abs(dy) * 10) * Math.pow(facing, 4);
+  mixInto(
+    col,
+    LIN.horizon.map((v) => v * 1.1),
+    horizonGlow * 0.55,
+  );
+  const glow = Math.exp(-ang * 4) * 0.45 + Math.exp(-ang * 14) * 0.5;
+  for (let i = 0; i < 3; i++) col[i] = (col[i] ?? 0) + (LIN.sun[i] ?? 0) * glow * 0.3;
+  if (ang < 0.078 && dy > -0.001) return [...LIN.sun];
+  return col;
+}
+
+/**
+ * The luminance (linear, 0..1) of Paper Tide's sky or far sea along the unit
+ * direction `d`, seen from a height `eyeY` above the water: a CPU twin of
+ * `paperSkyBase`, the sun and `paperSea`'s haze (no wind lines, glitter or
+ * swell). The act reads it under the world caption to choose the ink.
+ */
+export function paperLuminance(d: Readonly<{ x: number; y: number; z: number }>, eyeY: number) {
+  let col: Rgb;
+  if (d.y >= -0.0005) {
+    col = sky(d.x, d.y, d.z);
+  } else {
+    const t = Math.max(0, eyeY) / Math.max(-d.y, 1e-4);
+    // The far cards at a mid swell, deepened like the shader's far cards.
+    col = [LIN.cardAvg[0] * 0.66, LIN.cardAvg[1] * 0.68, LIN.cardAvg[2] * 0.85];
+    const fres = Math.pow(1 - Math.abs(d.y), 5);
+    mixInto(col, sky(d.x, -d.y, d.z), 0.05 + 0.3 * fres);
+    const deep = [...LIN.sky] as Rgb;
+    mixInto(deep, LIN.navy, 0.45);
+    const haze = [...LIN.horizon] as Rgb;
+    mixInto(
+      haze,
+      deep.map((v) => v * 0.85),
+      smooth(0.015, 0.3, -d.y),
+    );
+    mixInto(col, haze, Math.min(1, (1 - Math.exp(-t * 0.0019)) * 1.1));
+  }
+  return 0.2126 * col[0] + 0.7152 * col[1] + 0.0722 * col[2];
+}

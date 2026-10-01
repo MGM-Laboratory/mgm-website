@@ -543,7 +543,7 @@ class WorldsAct implements StoryAct {
       flashColor: 0xfff6e4,
     });
     const p = T / world.length;
-    this.hud.update(ctx, r.arrive || r.leave ? null : r.index, p);
+    this.hud.update(ctx, r.arrive || r.leave ? null : r.index, p, world.headerTone?.(T) ?? "dark");
     this.placeHotspot(ctx, camera);
   }
 

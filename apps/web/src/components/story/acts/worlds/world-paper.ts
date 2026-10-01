@@ -37,7 +37,7 @@ import {
   type FlightPose,
 } from "./common";
 import { Course, Walk } from "./course";
-import { PAPER_PALETTE, PAPER_SKY_GLSL } from "./paper-sky.glsl";
+import { PAPER_PALETTE, PAPER_SKY_GLSL, paperLuminance } from "./paper-sky.glsl";
 import { World, type WorldFrame } from "./world";
 
 /**
@@ -467,6 +467,12 @@ export class PaperTide extends World {
   private pointerSea = new Vector3(0, 0, 0);
   private tapAt = new Vector2(0, -9999);
   private tapTime = -100;
+  private tone: "light" | "dark" = "dark";
+  private toneWant: "light" | "dark" = "dark";
+  private toneSince = 0;
+  /** The brightest linear luminance behind the caption last frame (verification scripts read it). */
+  captionLuminance = 0;
+  private readonly probe = new Vector3();
 
   async build(ctx: StoryContext) {
     this.tier = ctx.tier;
@@ -909,6 +915,7 @@ export class PaperTide extends World {
     sea.uniforms.uFlowZ.value = flowZ;
     sky.aim(f.camera);
     (sea.uniforms.uCamPos.value as Vector3).copy(f.camera.position);
+    if (f.view === "main") this.judgeTone(ctx, f.camera);
     // The splash spot first (it walks the course), then her, which the rest uses.
     this.place(T_STUMBLE + 0.06, f.time);
     const splash = sea.uniforms.uSplash.value as Vector4;
@@ -958,6 +965,48 @@ export class PaperTide extends World {
       spray.uniforms.uAmount.value = skim * (0.7 + 0.6 * stumble);
       spray.uniforms.uScale.value = ctx.size.height * ctx.size.dpr * 0.5;
     }
+  }
+
+  /**
+   * The header's and the overlay's ink. The pale horizon sits under the world
+   * caption while the camera looks down at the sea from high up, and white
+   * ink would vanish there: the sky and sea colour behind the caption (the
+   * shaders' own maths, `paperLuminance`) picks dark ink over a bright
+   * background, with a band between the two. The ink changes once the
+   * background has stayed on the other side for 0.3 s of visible time, so
+   * the sun crossing behind the caption at speed never flickers it.
+   */
+  headerTone(): "light" | "dark" {
+    return this.tone;
+  }
+
+  private judgeTone(ctx: StoryContext, camera: WorldFrame["camera"]) {
+    const { width, height } = ctx.size;
+    // The caption: Geist Mono at the top left (story-overlay.tsx), about 190 px long.
+    const left = width >= 640 ? 40 : 24;
+    const y = 1 - (92 / Math.max(1, height)) * 2;
+    let bright = 0;
+    for (const dx of [12, 100, 190]) {
+      const x = Math.min(width - 1, left + dx);
+      this.probe
+        .set((x / Math.max(1, width)) * 2 - 1, y, 0.5)
+        .unproject(camera)
+        .sub(camera.position)
+        .normalize();
+      bright = Math.max(bright, paperLuminance(this.probe, camera.position.y));
+    }
+    this.captionLuminance = bright;
+    // The vignette darkens that corner to about 0.55 of this estimate. On screen, white ink at
+    // 80% and ink at 70% read equally well over a luminance of about 0.32.
+    let want = this.toneWant;
+    if (want === "dark" && bright > 0.6) want = "light";
+    else if (want === "light" && bright < 0.45) want = "dark";
+    const now = ctx.clock.time;
+    if (want !== this.toneWant) {
+      this.toneWant = want;
+      this.toneSince = now;
+    }
+    if (this.tone !== want && now - this.toneSince >= 0.3) this.tone = want;
   }
 
   /** Paper Tide's post: a gentle bloom on the sun and the varnish, a soft vignette. */

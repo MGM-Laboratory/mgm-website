@@ -23,14 +23,19 @@ export class WorldsHud {
     });
   }
 
-  /** Captions and the hint for world `index` (0..4) at its beat progress `p`, or nothing. */
-  update(ctx: StoryContext, index: number | null, p: number) {
+  /**
+   * Captions and the hint for world `index` (0..4) at its beat progress `p`,
+   * or nothing. `tone` is the world's header tone this frame, which also
+   * inks the overlay.
+   */
+  update(ctx: StoryContext, index: number | null, p: number, tone: "light" | "dark" = "dark") {
     if (ctx.director.held) this.held = true;
     if (index === null) return;
     const world = STORY_WORLDS.at(index);
     if (world && p > 0.03 && p < 0.42) ctx.overlay.setHud(world.caption);
-    // While the low middle of Paper Tide's frame is the dark sea (her wake turns cards white later).
-    if (index === 0 && !this.held && p > 0.04 && p < 0.24)
+    // While the low middle of Paper Tide's frame is the dark sea (her wake turns cards white
+    // later), and only in white ink: dark ink for a pale sky under the caption would sink into it.
+    if (index === 0 && !this.held && tone === "dark" && p > 0.04 && p < 0.3)
       ctx.overlay.setHint(STORY_HINTS.holdToSlow);
   }
 
