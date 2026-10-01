@@ -774,10 +774,13 @@ export function Hero() {
                   currentMobileSplit,
                 );
                 // On a first visit the site loader still covers the page: the
-                // entrance holds on its first frame until the loader opens.
+                // entrance holds on its first frame until the loader opens. A
+                // resize across the compact breakpoint reverts this context
+                // first, and a killed timeline must stay dead.
+                let alive = true;
                 tl.pause();
                 void whenLoaderRevealed().then(() => {
-                  tl.play();
+                  if (alive) tl.play();
                 });
                 tl.eventCallback("onComplete", () => {
                   startIdle();
@@ -800,6 +803,8 @@ export function Hero() {
                 }
 
                 return () => {
+                  alive = false;
+                  tl.eventCallback("onComplete", null);
                   tl.kill();
                   stopIdle();
                 };
