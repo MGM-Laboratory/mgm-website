@@ -49,8 +49,10 @@ import {
   drawBrushPuffs,
   drawDizzy,
   drawImpact,
+  drawSparkles,
   drawSpeedLines,
   finaleColors,
+  mixHex,
   type FinaleColors,
 } from "./fx";
 
@@ -224,6 +226,8 @@ class FinaleAct implements StoryAct {
   private readonly head = new Vector3();
   private readonly eyes = new Vector3();
   private blush = 0;
+  /** Her magic's rim on the light page, eased (0..1). */
+  private magic = 0;
   private readonly contact = new Vector3();
 
   /** A webfont that arrives late changes the title's cap line: measure it again. */
@@ -271,13 +275,14 @@ class FinaleAct implements StoryAct {
     this.scheme = scheme;
     this.colors = finaleColors(ctx.palette);
     const light = scheme === "light";
-    this.key.color.setHex(light ? 0xfff6ec : 0xffead6);
-    this.key.intensity = light ? 2.5 : 2.2;
+    this.key.color.setHex(light ? 0xfff6ec : 0xffe6d2);
+    this.key.intensity = light ? 2.5 : 2.75;
     this.rim.color.setHex(light ? 0xffffff : 0xbcd2ff);
     this.rim.intensity = light ? 1.4 : 3.2;
-    this.fill.color.setHex(light ? 0xf3f5ff : 0x8ea4d4);
-    this.fill.groundColor.setHex(light ? 0xe6ddd2 : 0x2a2521);
-    this.fill.intensity = light ? 1.25 : 0.95;
+    // dark: a fill warm enough that her face stays alive (a cool one greys her skin)
+    this.fill.color.setHex(light ? 0xf3f5ff : 0xc9b8c6);
+    this.fill.groundColor.setHex(light ? 0xe6ddd2 : 0x4a3830);
+    this.fill.intensity = light ? 1.25 : 1.15;
   }
 
   palette(ctx: StoryContext) {
@@ -400,14 +405,6 @@ class FinaleAct implements StoryAct {
       falling ? { velocity: { x: 0, y: -fallSpeed(A), z: 0 }, amount: 0.35 } : null,
     );
     const light = colors.light;
-    godette.setLook({
-      rim: light ? 0.14 : 0.42,
-      rimColor: light ? 0xffffff : 0xcddcff,
-      rimPower: light ? 3 : 2.6,
-      toy: 0,
-      lift: light ? 0.05 : 0.08,
-      glowColor: ctx.palette.yellow,
-    });
     godette.setShadow({
       y: 0,
       // the shadow grows and darkens as she nears the floor (the first sign of the bump)
@@ -420,7 +417,20 @@ class FinaleAct implements StoryAct {
     godette.setBody(plan.layers);
     godette.setFace(plan.face);
     godette.lookAt(plan.lookPoint, plan.lookWeight);
-    godette.setGlow(plan.glow);
+    // Her magic (the hero pose, the action's hover). On the dark page it is the glow and its halo;
+    // on the light page a halo can only go cream, so there it is a brand yellow rim on her outline
+    // and the sparkles around her, with only a trace of the glow.
+    this.magic = damp(this.magic, plan.glow, 10, dt);
+    const magic = Math.min(1, this.magic);
+    godette.setLook({
+      rim: light ? 0.14 + 0.95 * magic : 0.42,
+      rimColor: light ? mixHex(0xffffff, ctx.palette.yellow, Math.min(1, magic * 1.6)) : 0xcddcff,
+      rimPower: light ? 3 - 0.9 * magic : 2.6,
+      toy: 0,
+      lift: light ? 0.05 : 0.11,
+      glowColor: ctx.palette.yellow,
+    });
+    godette.setGlow(light ? plan.glow * 0.15 : plan.glow);
     // The yawn and stretch count time alone: set (which restarts her count) only when the
     // setting changes or the visitor moves the pointer.
     if (plan.autoIdle !== this.autoIdle || (plan.autoIdle !== null && movedPointer)) {
@@ -479,6 +489,10 @@ class FinaleAct implements StoryAct {
       colors,
     );
     this.bursts.draw(sprites, this.life, colors);
+    if (this.magic > 0.01) {
+      godette.socket("chest", this.tmp);
+      drawSparkles(sprites, this.tmp, Math.min(1, this.magic * 1.2), this.life, colors);
+    }
     sprites.end();
     strokes.end();
 

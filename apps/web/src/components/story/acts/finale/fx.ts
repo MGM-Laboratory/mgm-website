@@ -32,7 +32,8 @@ export type FinaleColors = Readonly<{
   light: boolean;
 }>;
 
-function mixHex(a: number, b: number, k: number) {
+/** Mixes two 0xRRGGBB colours (sRGB, per channel). */
+export function mixHex(a: number, b: number, k: number) {
   const ch = (shift: number) => {
     const x = (a >> shift) & 255;
     const y = (b >> shift) & 255;
@@ -49,7 +50,8 @@ export function finaleColors(palette: StoryPalette): FinaleColors {
     dust: light ? mixHex(palette.page, palette.ink, 0.085) : mixHex(palette.page, 0xffffff, 0.12),
     faint: light ? mixHex(palette.page, palette.ink, 0.5) : mixHex(palette.page, 0xffffff, 0.62),
     brand: [palette.yellow, palette.blue, palette.red, palette.green],
-    blush: mixHex(palette.red, 0xffc4cc, 0.45),
+    // on the dark page her lit skin is darker: a deeper rose there, not a light patch
+    blush: light ? mixHex(palette.red, 0xffc4cc, 0.45) : mixHex(palette.red, 0xc9707e, 0.6),
     light,
   };
 }
@@ -304,10 +306,15 @@ const WORLD_UP = new Vector3(0, 1, 0);
 /** The eyes socket sits this far below the head socket's line of sight (radians). */
 const SOCKET_TILT = Math.atan2(0.055, 0.1);
 
+const eyeAt = new Vector3();
+const across = new Vector3();
+
 /**
- * Her blush when she is shy: two soft pink glows on her cheeks, placed from
- * where her face points (the head and eyes sockets, so they follow every
- * turn and duck of the head), fading as a cheek turns away from the camera.
+ * Her blush when she is shy: two soft pink glows on her cheekbones, placed
+ * from where her face points (the head and eyes sockets, so they follow
+ * every turn and duck of the head). Each fades as its cheek turns away from
+ * the camera, as her head ducks (the cheeks slide up toward the eyes in the
+ * view) and wherever it would reach over an eye as seen from the camera.
  */
 export function drawBlush(
   sprites: SpriteBatch,
@@ -325,12 +332,15 @@ export function drawBlush(
   faceX.normalize();
   faceZ.applyAxisAngle(faceX, -SOCKET_TILT);
   faceY.crossVectors(faceZ, faceX).normalize();
+  // a duck of the head (pitch down) hides the cheeks under the eyes: fade and shrink with it
+  const duck = saturate(1 + Math.asin(Math.max(-1, Math.min(1, faceZ.y))) / 0.75);
+  if (duck <= 0.01) return;
   for (const side of [-1, 1]) {
     cheek
       .copy(eyes)
-      .addScaledVector(faceX, side * 0.056)
-      .addScaledVector(faceY, -0.04)
-      .addScaledVector(faceZ, -0.012);
+      .addScaledVector(faceX, side * 0.062)
+      .addScaledVector(faceY, -0.06)
+      .addScaledVector(faceZ, -0.016);
     cheekNormal
       .copy(faceZ)
       .addScaledVector(faceX, side * 0.75)
@@ -338,8 +348,72 @@ export function drawBlush(
     toEye.copy(camera.position).sub(cheek).normalize();
     const facing = saturate((cheekNormal.dot(toEye) - 0.1) / 0.5);
     if (facing <= 0) continue;
+    // the eye on this side, and how far the cheek sits from it across the view
+    eyeAt
+      .copy(eyes)
+      .addScaledVector(faceX, side * 0.036)
+      .addScaledVector(faceY, -0.008);
+    across.copy(cheek).sub(eyeAt);
+    across.addScaledVector(toEye, -across.dot(toEye));
+    const clear = saturate((across.length() - 0.034) / 0.022);
+    if (clear <= 0) continue;
     cheek.addScaledVector(toEye, 0.02);
-    sprites.push(cheek, 0.062, "soft", colors.blush, 0.55 * amount * facing);
+    const size = 0.054 * (0.75 + 0.25 * duck);
+    sprites.push(cheek, size, "soft", colors.blush, 0.5 * amount * facing * duck * clear);
+  }
+}
+
+const SPARKLES = (() => {
+  const random = seededRandom(9137);
+  return Array.from({ length: 16 }, () => ({
+    angle: random() * Math.PI * 2,
+    radius: 0.32 + random() * 0.3,
+    height: -0.55 + random() * 1.1,
+    period: 0.9 + random() * 0.6,
+    phase: random(),
+    size: 0.045 + random() * 0.045,
+    yellow: random() < 0.68,
+    tone: Math.floor(random() * 3) + 1,
+    spin: (random() - 0.5) * 6,
+  }));
+})();
+
+/**
+ * Her magic as sparkles: little four-point stars winking around her body
+ * and drifting up, mostly the spark's yellow (the hero pose, the action's
+ * hover). `centre` is her chest, `amount` 0..1, `time` the life clock.
+ * Some sit behind her (her body hides them), some in front.
+ */
+export function drawSparkles(
+  sprites: SpriteBatch,
+  centre: Readonly<Vector3>,
+  amount: number,
+  time: number,
+  colors: FinaleColors,
+) {
+  if (amount <= 0.01) return;
+  for (const spark of SPARKLES) {
+    const cycle = (time / spark.period + spark.phase) % 1;
+    // each one winks in, drifts up a little and winks out, then comes back elsewhere on its ring
+    const wink = Math.sin(cycle * Math.PI) ** 1.6;
+    const round = Math.floor(time / spark.period + spark.phase);
+    const angle = spark.angle + round * 2.39996;
+    tmpA.set(
+      centre.x + Math.cos(angle) * spark.radius,
+      centre.y + spark.height + cycle * 0.22,
+      centre.z + Math.sin(angle) * spark.radius * 0.7,
+    );
+    const color = spark.yellow
+      ? (colors.brand[0] ?? colors.ink)
+      : (colors.brand[spark.tone] ?? colors.ink);
+    sprites.push(
+      tmpA,
+      spark.size * (0.6 + 0.4 * wink),
+      "twinkle",
+      color,
+      amount * wink,
+      time * spark.spin,
+    );
   }
 }
 
