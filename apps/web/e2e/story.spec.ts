@@ -122,7 +122,10 @@ test.describe("homepage story", () => {
 
   test("the loader gives up by itself when the scripts never run", async ({ page }) => {
     // A failed deploy chunk, a blocked script: the boot script alone must free the page.
-    await page.route(/\/_next\/static\/chunks\/.*\.js(\?.*)?$/, (route) => route.abort());
+    await page.route(
+      (url) => url.pathname.startsWith("/_next/static/chunks/") && url.pathname.endsWith(".js"),
+      (route) => route.abort(),
+    );
     await page.goto("/?loader=1");
     await expect(page.locator("html")).toHaveAttribute("data-loader", "active");
     await expect(page.locator("[data-site-loader]")).toBeHidden({ timeout: 15_000 });
