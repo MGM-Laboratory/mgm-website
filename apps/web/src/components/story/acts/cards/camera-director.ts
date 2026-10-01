@@ -68,8 +68,7 @@ export class CameraDirector {
     // needs (stage-space.ts), then settles before the snake spreads over the screen.
     let fov = stageFov(aspect);
     const springFrame =
-      smoothstep(0.5, 0.95, state.beat("c-open")) *
-      (1 - smoothstep(0.1, 0.5, state.beat("c-snake")));
+      smoothstep(0.3, 1, state.beat("c-open")) * (1 - smoothstep(0.1, 0.5, state.beat("c-snake")));
     const lift = SPRING_LIFT * springFrame;
     const back = springPull(view) * springFrame;
     const distance = STAGE_DISTANCE - push + pull + back;
