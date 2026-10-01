@@ -101,7 +101,11 @@ export type DeckBoxDims = Readonly<{
   dustHalf: number;
 }>;
 
-/** The baked fall (Rapier, see the deck pipeline): a pose every 1/hz s in the room frame. */
+/**
+ * The baked fall (Rapier, see the deck pipeline): a pose every 1/hz s in the
+ * room frame. It opens with a 0.09 s flick, the box easing from its still
+ * pose into the tumble, so the act can map time to it linearly.
+ */
 export type DeckDrop = Readonly<{
   hz: number;
   duration: number;
