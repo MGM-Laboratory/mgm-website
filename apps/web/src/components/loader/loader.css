@@ -33,30 +33,3 @@ html[data-loader="active"] .site-loader {
   align-items: center;
   justify-content: center;
 }
-
-.site-loader-bar {
-  transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .site-loader-star {
-    animation: site-loader-spin 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-  }
-}
-
-@keyframes site-loader-spin {
-  0% {
-    rotate: 0deg;
-    scale: 1;
-  }
-
-  50% {
-    rotate: 45deg;
-    scale: 0.86;
-  }
-
-  100% {
-    rotate: 90deg;
-    scale: 1;
-  }
-}
