@@ -84,8 +84,8 @@ export type RoomScheme = "light" | "dark";
  * - `table`: the close-up (`b_mcu`) and the break-free beats.
  * - `takeoff`: `c_start` to `c_end`, the drag and the learning flight.
  * - `chase`: `d_start` to `d_mid`, over her shoulder toward the TV.
- * - `screen`: `d_mid` to `d_fill`, only the TV wall is left.
- * - `fill`: the screen covers the frame; only `tv_screen` draws.
+ * - `screen`: `d_mid` to the fill distance, only the TV wall is left.
+ * - `fill`: the camera at or inside `screenFillDistance()`; only `tv_screen` draws.
  * - `all`: everything (debug, env capture).
  */
 export type RoomPhase =
@@ -155,7 +155,6 @@ export type RoomAnchors = Readonly<{
     c_end: RoomShot;
     d_start: RoomShot;
     d_mid: RoomShot;
-    d_fill: RoomShot;
   }>;
   tv: Readonly<{
     centre: Vec3;
@@ -163,13 +162,11 @@ export type RoomAnchors = Readonly<{
     normal: Vec3;
     /** Width and height of the screen quad in metres. */
     size: readonly [number, number];
-    /** Seen from the room. UV (0, 0) is TL (v runs down, the glTF convention). */
+    /**
+     * Seen from the room. UV (0, 0) is TL (v runs down, the glTF convention). Where the screen
+     * covers the frame depends on the aspect: `screenFillDistance()`.
+     */
     corners: Readonly<{ tl: Vec3; tr: Vec3; br: Vec3; bl: Vec3 }>;
-    /** Distance along the normal where the screen exactly fills the frame. */
-    fill: Readonly<{
-      landscape: Readonly<{ fov: number; distance: number }>;
-      portrait: Readonly<{ fov: number; distance: number }>;
-    }>;
   }>;
   lamps: Readonly<{ pendant: LampAnchor; arc: LampAnchor; tripod: LampAnchor }>;
   window: Readonly<{ centre: Vec3; normal: Vec3; size: readonly [number, number] }>;
@@ -350,6 +347,42 @@ const TRIPOD_DIFFUSER_W = 14;
 const TV_RADIANCE = 6;
 
 const ANCHORS_URL = `${ROOM_BASE_URL}anchors.json`;
+
+/** The part of the screen a frame may use: its height, or its width over the aspect, less the slack. */
+function screenSpan(tv: RoomAnchors["tv"], aspect: number, slack: number) {
+  const [w, h] = tv.size;
+  return Math.max(0, Math.min(h - 2 * slack, (w - 2 * slack) / Math.max(aspect, 1e-3)));
+}
+
+/**
+ * How close the camera must be to the TV screen (metres along its normal, aimed at the screen's
+ * centre) for the screen to cover the whole frame, so that only `tv_screen` needs to draw
+ * (`setPhase("fill")`). `aspect` is the frame's width over its height and `fovDeg` the vertical
+ * FOV. The screen is 1.729:1, so a wider frame needs the camera closer: 0.736 m at 16:9 and
+ * 40 degrees, 0.552 m at 2560x1080. `slack` (metres) keeps the frame covered while the camera
+ * strays that far from the screen's axis in any direction (mouse parallax), whether its aim moves
+ * with it or stays on the screen's centre; ramp any larger drift down before the phase switches.
+ * Checked on the GPU from 390x844 to 2560x1080 with a slack of up to 6 cm.
+ */
+export function screenFillDistance(
+  tv: RoomAnchors["tv"],
+  aspect: number,
+  fovDeg: number,
+  slack = 0,
+) {
+  return screenSpan(tv, aspect, slack) / (2 * Math.tan((fovDeg * Math.PI) / 360));
+}
+
+/**
+ * The widest vertical FOV (degrees) at which the screen still covers the frame from `distance`
+ * metres: the FOV for lusion's window trick, where the screen keeps a constant size as the camera
+ * closes in.
+ */
+export function screenFillFov(tv: RoomAnchors["tv"], aspect: number, distance: number, slack = 0) {
+  return (
+    (2 * Math.atan(screenSpan(tv, aspect, slack) / (2 * Math.max(distance, 1e-4))) * 180) / Math.PI
+  );
+}
 
 function clamp01(v: number) {
   return v < 0 ? 0 : v > 1 ? 1 : v;
