@@ -35,17 +35,21 @@ const HERO_TITLE = "PROJECT";
 // letters' weight, and a frozen slot means a heavier letter never shoves
 // its neighbours (or the whole word) sideways. The glyph is centered in
 // its slot, so a heavier one grows evenly both ways.
-const SLOT_EM: Record<string, number> = {
-  P: 0.6066,
-  R: 0.6526,
-  O: 0.7978,
-  J: 0.6032,
-  E: 0.6326,
-  C: 0.7558,
-  T: 0.636,
-};
+const SLOT_EM: ReadonlyMap<string, number> = new Map([
+  ["P", 0.6066],
+  ["R", 0.6526],
+  ["O", 0.7978],
+  ["J", 0.6032],
+  ["E", 0.6326],
+  ["C", 0.7558],
+  ["T", 0.636],
+]);
+/** A letter's frozen slot width in em (an average advance for any letter not in the title). */
+function slotEm(char: string) {
+  return SLOT_EM.get(char) ?? 0.65;
+}
 const HERO_CHARS = HERO_TITLE.split("");
-const HERO_SLOTS = HERO_CHARS.map((char) => SLOT_EM[char]);
+const HERO_SLOTS = HERO_CHARS.map((char) => slotEm(char));
 // Letters lean and squash about the ink centre on the baseline (the slot
 // centre minus half the trailing tracking), so they stay planted on it.
 const GLYPH_PIVOT = "calc(50% - 0.025em) 0.9235em";
@@ -145,7 +149,7 @@ export function ProjectsHero({ count }: { count: number }) {
     const q = gsap.utils.selector(root);
     const chars = q(".projects-hero-char");
     const numberWrap = q(".projects-hero-number");
-    const numberText = q(".projects-hero-number-text")[0];
+    const numberText = q(".projects-hero-number-text").at(0);
     const arrow = q(".projects-hero-arrow");
     const arrowPath = q(".projects-hero-arrow-path");
     const arrowShaft = q(".projects-hero-arrow-shaft");
@@ -185,7 +189,9 @@ export function ProjectsHero({ count }: { count: number }) {
       markGridRevealStarted();
       showFinal();
       const stopReturnPlay = startHeroPlay(root, { slots: HERO_SLOTS, count });
-      return () => stopReturnPlay();
+      return () => {
+        stopReturnPlay();
+      };
     }
 
     // Hide the pre-hydration state right away so nothing peeks through the
@@ -200,7 +206,7 @@ export function ProjectsHero({ count }: { count: number }) {
     // The arrow is invisible (and does nothing) until the entrance has
     // drawn it, so keyboard focus skips it until then instead of ringing
     // an empty corner.
-    const arrowLink = q(".projects-hero-arrow-link")[0];
+    const arrowLink = q(".projects-hero-arrow-link").at(0);
     arrowLink?.setAttribute("tabindex", "-1");
 
     let cancelled = false;
@@ -443,7 +449,7 @@ export function ProjectsHero({ count }: { count: number }) {
             <span
               aria-hidden="true"
               className="projects-hero-char relative inline-flex justify-center will-change-transform motion-safe:opacity-0"
-              style={{ width: `${SLOT_EM[char]}em` }}
+              style={{ width: `${slotEm(char)}em` }}
               key={index}
             >
               <span
