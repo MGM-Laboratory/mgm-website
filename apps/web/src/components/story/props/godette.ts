@@ -67,7 +67,11 @@ export type { GodetteClip, GodetteClipGroup, GodetteClipSpec, GodetteFace };
 export const GODETTE_BASE = "/story/v1/character/";
 /** Sole to top bun, in model units. */
 export const GODETTE_HEIGHT = 1.848;
-/** Scale that makes her a 16.9 cm figure, 17.5 cm on her stand (real metres). */
+/**
+ * Scale that makes her a 16.9 cm figure, 17.5 cm on her stand (real metres). This is the one source of truth for
+ * her table size: the stand's foot pegs sit under her toy-pose feet at exactly this scale, so scenes and frame
+ * tables import it instead of keeping their own number.
+ */
 export const GODETTE_TABLE_SCALE = 0.0915;
 /** Height of her centre (pelvis) above the root, in model units. `pivot` sits here. */
 export const GODETTE_CENTRE = 1.0;
