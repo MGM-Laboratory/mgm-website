@@ -418,20 +418,27 @@ function Toys() {
   );
 }
 
-export function LoaderView({ state, onExited }: LoaderViewProps) {
+export function LoaderView({ state, onExited, onRevealing }: LoaderViewProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const showRef = useRef<LoaderShow | null>(null);
   const exitedRef = useRef(onExited);
+  const revealingRef = useRef(onRevealing);
 
   useLayoutEffect(() => {
     exitedRef.current = onExited;
+    revealingRef.current = onRevealing;
   });
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    const show = new LoaderShow(root, () => {
-      exitedRef.current();
+    const show = new LoaderShow(root, {
+      exited: () => {
+        exitedRef.current();
+      },
+      revealing: () => {
+        revealingRef.current?.();
+      },
     });
     showRef.current = show;
     return () => {

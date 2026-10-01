@@ -104,6 +104,8 @@ class LoaderCore {
   private last = 0;
   private prefetch: PrefetchRoute | null = null;
   private pathname = "/";
+  private revealed = false;
+  private readonly revealWaiters = new Set<() => void>();
 
   readonly subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -154,6 +156,22 @@ class LoaderCore {
   readonly exited = () => {
     if (this.snapshot.phase === "leaving") this.finish();
   };
+
+  /** The view starts to uncover the page (its reveal); the page's own entrance may start. */
+  readonly revealing = () => {
+    if (this.revealed) return;
+    this.revealed = true;
+    for (const resolve of [...this.revealWaiters]) resolve();
+    this.revealWaiters.clear();
+  };
+
+  /** Resolves when the page starts to show from under the loader, at once when there is none. */
+  whenRevealed(): Promise<void> {
+    if (this.revealed || !readBoot().loader) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.revealWaiters.add(resolve);
+    });
+  }
 
   private async work(story: boolean) {
     if (story) {
@@ -215,6 +233,7 @@ class LoaderCore {
 
   private finish() {
     window.clearInterval(this.clock);
+    this.revealing();
     this.set({ phase: "done" });
     updateBoot({ loader: false });
     try {
@@ -249,3 +268,13 @@ class LoaderCore {
 }
 
 export const siteLoader = new LoaderCore();
+
+/**
+ * For a page's entrance: resolves when the loader starts to uncover the
+ * page (the view's reveal), or at once when no loader shows (a client
+ * navigation, `navigator.webdriver`, a route without one). The homepage
+ * hero waits for it so its entrance is the first thing the visitor sees.
+ */
+export function whenLoaderRevealed() {
+  return siteLoader.whenRevealed();
+}

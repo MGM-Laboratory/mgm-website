@@ -144,7 +144,7 @@ export class LoaderShow {
 
   constructor(
     private readonly root: HTMLElement,
-    private readonly onExited: () => void,
+    private readonly hooks: Readonly<{ exited: () => void; revealing: () => void }>,
   ) {
     this.host = root.closest<HTMLElement>("[data-site-loader]") ?? root;
     this.q = <T extends HTMLElement>(name: string) => root.querySelector<T>(`[data-ld="${name}"]`);
@@ -644,7 +644,7 @@ export class LoaderShow {
     }
     if (state.phase === "leaving" && !this.leaving) {
       this.leaving = true;
-      this.onExited();
+      this.hooks.exited();
     }
   }
 
@@ -1026,11 +1026,12 @@ export class LoaderShow {
       });
     }
     mark("open");
+    this.hooks.revealing();
     const iris = this.animate(this.host, frames, { duration, easing: "linear" });
     this.animate(this.q("iris"), ring, { duration, easing: "linear" });
     await iris?.finished.catch(() => undefined);
     if (this.gone()) return;
     mark("exited");
-    this.onExited();
+    this.hooks.exited();
   }
 }
