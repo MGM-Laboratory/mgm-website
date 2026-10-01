@@ -271,6 +271,20 @@ export class RoomDof {
   }
 
   /**
+   * Allocates the targets for a `width` by `height` drawing buffer ahead of
+   * the first frame through the lens (the act calls it late in the card
+   * act's drop), so that frame does not stall on about 160 MB of new
+   * textures. A no-op while the targets already fit.
+   */
+  reserve(renderer: WebGLRenderer, width: number, height: number) {
+    if (this.sharp && width === this.width && height === this.height) return;
+    this.ensure(width, height);
+    for (const target of [this.sharp, this.halfA, this.halfB]) {
+      if (target) renderer.initRenderTarget(target);
+    }
+  }
+
+  /**
    * Renders `scene` through the lens for this frame and returns the scene
    * the stage should draw (the composite). `width` and `height` are the
    * drawing buffer's size; `background` is cleared behind the room.
@@ -331,7 +345,11 @@ export class RoomDof {
     return this.scene;
   }
 
-  /** Lets the targets go (they come back on the next frame through the lens). */
+  /**
+   * Lets the targets go (they come back on the next frame through the lens).
+   * The act keeps them while it is on screen and frees them only when it
+   * sleeps, at the cut to the worlds act, or when the tier drops to low.
+   */
   release() {
     this.sharp?.depthTexture?.dispose();
     this.sharp?.dispose();

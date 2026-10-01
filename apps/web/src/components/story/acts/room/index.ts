@@ -722,6 +722,12 @@ class RoomAct implements StoryAct {
     this.tv?.setLed(ctx.clock.time, 0);
     // Defaults the card act may override (it updates after us).
     const drop = state.beat("c-drop");
+    // The lens's targets, ready before the first frame through it (a few frames into r-land).
+    if (drop > 0.6 && ctx.tier !== "low" && this.dof) {
+      const w = Math.max(1, Math.round(ctx.size.width * ctx.size.dpr));
+      const h = Math.max(1, Math.round(ctx.size.height * ctx.size.dpr));
+      this.dof.reserve(ctx.stage.renderer, w, h);
+    }
     room.setPhase("crane");
     room.setGrade(ctx.palette.scheme);
     room.setPresence(smoothstep(0.2, 0.9, drop));
@@ -1604,10 +1610,9 @@ class RoomAct implements StoryAct {
   private lens(ctx: StoryContext, state: ActState, toy: ToyDirector) {
     const dof = this.dof;
     const t = state.t;
-    if (!dof || ctx.tier === "low" || t >= at("r-tv", 0.32)) {
-      dof?.release();
-      return;
-    }
+    // Past r-tv 0.32 (or with the aperture closed) the frame skips the lens, but its targets stay: a
+    // scroll back through the beat would otherwise free and reallocate about 160 MB each time.
+    if (!dof || ctx.tier === "low" || t >= at("r-tv", 0.32)) return;
     const camera = ctx.stage.camera;
     const forward = camera.getWorldDirection(this.tmp.v);
     const depth = (point: Vector3) =>
@@ -1642,10 +1647,7 @@ class RoomAct implements StoryAct {
     const lensK = Math.tan(MathUtils.degToRad(16)) / Math.tan(MathUtils.degToRad(camera.fov) / 2);
     // Opened from the bare frame the card act hands over, like the rest of the look.
     const aperture = a * MathUtils.clamp(lensK, 0.5, 2.4) * this.seam(state);
-    if (aperture < 0.01) {
-      dof.release();
-      return;
-    }
+    if (aperture < 0.01) return;
     const renderer = ctx.stage.renderer;
     const w = Math.max(1, Math.round(ctx.size.width * ctx.size.dpr));
     const h = Math.max(1, Math.round(ctx.size.height * ctx.size.dpr));
