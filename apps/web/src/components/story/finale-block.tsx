@@ -151,8 +151,15 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
     // Only opacity hides the line and the action, so they stay in the accessibility tree and
     // focusable; whatever takes focus in the block finishes the entrance at once.
     let shown = false;
+    // A rolled letter shows its clone (the roll element rests at -130%). Before the letters
+    // rise or sink, every roll goes back to its original, so no letter rises in double.
+    const settleRolls = () => {
+      gsap.killTweensOf(rolls);
+      gsap.set(rolls, { yPercent: 0 });
+    };
     const show = (on: boolean) => {
       shown = on;
+      settleRolls();
       if (on) tl.timeScale(1).play();
       else tl.timeScale(1.7).reverse();
     };
@@ -262,7 +269,8 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
       });
     const onEnter = () => {
       finaleSignal.setHover("title");
-      if (!shown) return;
+      // the pen waits for the words to be up
+      if (!shown || tl.progress() < 0.9) return;
       drawPen();
       strokes().forEach(({ path, length }, i) => {
         gsap.fromTo(
@@ -302,7 +310,9 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
     return () => {
       for (const off of cleanups.splice(0)) off();
       tl.kill();
-      gsap.set([...rises, ...lineWords, ...(actionEl ? [actionEl] : [])], { clearProps: "all" });
+      gsap.set([...rises, ...rolls, ...lineWords, ...(actionEl ? [actionEl] : [])], {
+        clearProps: "all",
+      });
       block.removeAttribute("data-finale-ready");
     };
   }, [root]);
