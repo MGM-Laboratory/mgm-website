@@ -62,8 +62,22 @@ function storybookAnchor(section: HTMLElement, t: number): HTMLElement | null {
   return panels.item(Math.max(0, index));
 }
 
+/** The story position from the section's rect: what is on screen, engine or not. */
+function sectionT(section: HTMLElement) {
+  const vh =
+    Number.parseFloat(getComputedStyle(section).getPropertyValue("--story-vh")) ||
+    window.innerHeight;
+  return -section.getBoundingClientRect().top / vh;
+}
+
+/**
+ * Switches the section to the storybook. Only a visitor already inside the
+ * tall WebGL section (`t > 0`) is moved, to the storybook's matching place:
+ * anywhere else the switch changes nothing above the viewport's top.
+ */
 function toStorybook(section: HTMLElement, t: number) {
   updateBoot({ story: "dom" });
+  if (!(t > 0)) return;
   const anchor = storybookAnchor(section, t);
   if (!anchor) return;
   // After the layout switch has been laid out.
@@ -102,16 +116,20 @@ export function StoryHost() {
     if (!section || !host || decideStoryMode() !== "gl") return;
 
     let disposed = false;
+    /** The visit switched to the storybook: a build that finishes later never attaches. */
+    let fellBack = false;
     let engine: StoryEngine | null = null;
     let running = false;
     const stopTitle = watchTitle(section);
 
     const fallback = () => {
-      if (disposed) return;
-      const t = engine?.director.t ?? 0;
+      if (disposed || fellBack) return;
+      fellBack = true;
+      const t = engine ? engine.director.t : sectionT(section);
       engine?.detach();
       engine = null;
       running = false;
+      window.clearInterval(failsafe);
       setOverlay(null);
       toStorybook(section, t);
     };
@@ -149,7 +167,7 @@ export function StoryHost() {
     import("@/components/story/engine/story-engine")
       .then(({ ensureStoryEngine }) => ensureStoryEngine())
       .then((built) => {
-        if (disposed) return;
+        if (disposed || fellBack) return;
         if (!built) {
           fallback();
           return;

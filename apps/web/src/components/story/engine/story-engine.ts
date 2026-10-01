@@ -122,6 +122,12 @@ export class StoryEngine {
 let engine: StoryEngine | null = null;
 let building: Promise<StoryEngine | null> | null = null;
 let failed: StoryFallbackReason | null = null;
+/**
+ * Bumped by every discard: a build that started under an older generation is
+ * stale (the visit already fell back), so it tears down what it made and
+ * resolves null instead of publishing an engine nobody will detach.
+ */
+let generation = 0;
 
 /** The engine if it is built. */
 export function currentStoryEngine() {
@@ -136,6 +142,7 @@ export function storyEngineFailure() {
 /** Tears the engine down for the rest of the visit (and the tab, when the renderer is to blame). */
 export function discardStoryEngine(reason: StoryFallbackReason) {
   failed = reason;
+  generation += 1;
   try {
     if (reason !== "failed") window.sessionStorage.setItem(STORY_KEY, "dom");
   } catch {
@@ -171,51 +178,104 @@ function emptyBytes(): StoryPreloadProgress {
   return { loadedBytes: 0, totalBytes: 0, done: 0, files: 0, failed: [] };
 }
 
+/** What a build has made so far, so a stale or failed build can take it all down. */
+type BuildParts = {
+  stage: StoryStage | null;
+  acts: StoryAct[];
+  props: StoryPropsImpl | null;
+  loaders: boolean;
+};
+
+function tearDown(parts: BuildParts) {
+  for (const act of parts.acts) {
+    try {
+      act.dispose();
+    } catch {
+      // Keep tearing down the rest.
+    }
+  }
+  parts.props?.dispose();
+  parts.stage?.dispose();
+  if (parts.loaders) disposeStoryLoaders();
+}
+
 async function build(
   onProgress?: (progress: StoryBuildProgress) => void,
 ): Promise<StoryEngine | null> {
+  const parts: BuildParts = { stage: null, acts: [], props: null, loaders: false };
+  try {
+    return await assemble(parts, onProgress);
+  } catch (error) {
+    // A throw half way must not leave a live context behind.
+    tearDown(parts);
+    throw error;
+  }
+}
+
+async function assemble(
+  parts: BuildParts,
+  onProgress?: (progress: StoryBuildProgress) => void,
+): Promise<StoryEngine | null> {
+  const mine = generation;
+  /** Still the visit's build: nothing discarded the engine since it started. */
+  const current = () => mine === generation;
+  const abandon = () => {
+    tearDown(parts);
+    return null;
+  };
+
   const tier: StoryTier = storyTierOverride(window.location.search) ?? guessStoryTier();
   let bytes = emptyBytes();
   const report = (phase: StoryBuildPhase, fraction: number) => {
-    onProgress?.({ phase, fraction, bytes });
+    if (current()) onProgress?.({ phase, fraction, bytes });
   };
   bytes = await preloadStory(tier, (progress) => {
     bytes = progress;
     const share = progress.totalBytes > 0 ? progress.loadedBytes / progress.totalBytes : 1;
     report("fetch", share * 0.8);
   });
+  if (!current()) return null;
   report("build", 0.82);
 
-  let stage: StoryStage | null = null;
   let ready: StoryEngine | null = null;
+  let stage: StoryStage;
   try {
     stage = new StoryStage({
       tier,
       onContextLost: () => {
         if (ready) ready.fail("context-lost");
-        else discardStoryEngine("context-lost");
+        else if (current()) discardStoryEngine("context-lost");
       },
     });
   } catch {
     discardStoryEngine("context-lost");
     return null;
   }
+  parts.stage = stage;
   stage.resize(document.documentElement.clientWidth, window.innerHeight);
   stage.compileSystems();
   const assets = createStoryAssets(stage.renderer, tier);
+  parts.loaders = true;
   await assets.warm();
+  if (!current()) return abandon();
   const props = new StoryPropsImpl();
+  parts.props = props;
   await props.ensure("labels", () => storyLabels);
   const overlay = new StoryOverlayStore();
   const acts = await loadActs();
+  parts.acts = acts;
+  if (!current()) return abandon();
   const director = new StoryDirector(stage, acts, assets, props, overlay, {
     onFallback: (reason) => {
       if (ready) ready.fail(reason);
     },
   });
-  for (const act of acts) await act.init(director.ctx);
+  for (const act of acts) {
+    await act.init(director.ctx);
+    if (!current()) return abandon();
+  }
   report("warm", 0.9);
-  if (stage.isLost()) return null;
+  if (stage.isLost()) return abandon();
 
   // Every beat once: every program and texture is on the GPU before anyone scrolls.
   for (const t of warmPositions()) director.renderAt(t);
@@ -233,9 +293,9 @@ async function build(
       `[story] warm frame ${verdict.frameMs.toFixed(1)} ms, tier ${verdict.tier ?? "none"}`,
     );
   }
+  if (!current()) return abandon();
   if (verdict.tier === null || stage.isLost()) {
-    ready = new StoryEngine(stage, director, overlay, acts, props);
-    engine = ready;
+    tearDown(parts);
     discardStoryEngine("slow");
     return null;
   }
