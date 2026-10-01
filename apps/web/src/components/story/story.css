@@ -48,6 +48,38 @@ html[data-story-mode="gl"] [data-storybook] {
   text-wrap: balance;
 }
 
+/*
+ * The title's letters (the cards act moves them with inline styles only):
+ * each is a mask (a clip, so its layout and baseline stay the text's own,
+ * with room for the descenders) over a roll that holds the letter and an
+ * identical clone below it. A slot roll moves the roll up by the clone's
+ * offset and snaps back, invisibly. The act locks each letter's width to
+ * its advance in the word, so a heavier weight under the cursor never
+ * reflows the title or the box placeholder measured from it.
+ */
+.story-letter {
+  position: relative;
+  display: inline-block;
+  perspective: 6em;
+  clip-path: inset(-0.12em -0.14em -0.2em -0.14em);
+}
+
+.story-letter-roll {
+  position: relative;
+  display: block;
+  transform-origin: 50% 88%;
+}
+
+.story-letter-clone {
+  position: absolute;
+  top: 125%;
+  left: 0;
+}
+
+.story-word {
+  display: inline-block;
+}
+
 /* ------------------------------------------------------------ the entrance */
 
 .story-intro {

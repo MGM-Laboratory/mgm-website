@@ -22,6 +22,21 @@ import { STORY_CARDS, STORY_INTRO, STORY_PANELS } from "@/data/story";
 const FINALE_VH = 1;
 const MIDDLE_VH = TIMELINE.end - ENTRANCE_VH - FINALE_VH;
 
+/**
+ * The title as letters (for the entrance's rise, its slot rolls and the
+ * cursor's lift, driven by the cards act) and the line as words. Split here,
+ * in the server markup, so nothing rewrites the HTML after hydration; the
+ * heading's text is read from an sr-only copy, the letters are hidden from
+ * assistive tech.
+ */
+const TITLE_LETTERS = Array.from(STORY_INTRO.title).map((char, i) => ({
+  char,
+  key: `${String(i)}-${char}`,
+}));
+const DESCRIPTION_WORDS = STORY_INTRO.description
+  .split(" ")
+  .map((text, i) => ({ text, key: `${String(i)}-${text}` }));
+
 export function StoryShell() {
   return (
     <div data-story-gl>
@@ -32,13 +47,28 @@ export function StoryShell() {
             data-story-title
             className="story-title mx-auto w-fit font-display font-semibold text-foreground"
           >
-            {STORY_INTRO.title}
+            <span className="sr-only">{STORY_INTRO.title}</span>
+            {TITLE_LETTERS.map((letter) => (
+              <span key={letter.key} aria-hidden className="story-letter" data-story-letter>
+                <span className="story-letter-roll" data-story-roll>
+                  {letter.char}
+                  <span className="story-letter-clone">{letter.char}</span>
+                </span>
+              </span>
+            ))}
           </h2>
           <p
             data-story-description
             className="story-description mx-auto mt-5 max-w-xl text-foreground/70"
           >
-            {STORY_INTRO.description}
+            {DESCRIPTION_WORDS.map((word, i) => (
+              <span key={word.key}>
+                {i > 0 ? " " : null}
+                <span className="story-word" data-story-word>
+                  {word.text}
+                </span>
+              </span>
+            ))}
           </p>
         </div>
         <div data-story-box aria-hidden className="story-box" />

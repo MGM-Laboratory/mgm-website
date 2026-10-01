@@ -25,6 +25,7 @@ import { DeckView } from "@/components/story/acts/cards/deck-view";
 import { HeroCards } from "@/components/story/acts/cards/hero-cards";
 import { Threads } from "@/components/story/acts/cards/threads";
 import { CardPlay } from "@/components/story/acts/cards/card-play";
+import { Entrance } from "@/components/story/acts/cards/entrance";
 import type { StreamExtent } from "@/components/story/acts/cards/deck-motion";
 import { swarmCountFor } from "@/components/story/props/card-mesh";
 import { smoothstep, window4 } from "@/components/story/engine/act";
@@ -77,6 +78,7 @@ class CardsAct implements StoryAct {
   private heroes: HeroCards | null = null;
   private threads: Threads | null = null;
   private play: CardPlay | null = null;
+  private readonly entrance = new Entrance();
   private readonly stream: StreamExtent = { head: 0, tail: 0, back: false, on: 0 };
   private readonly hover = [0, 0, 0, 0];
   private readonly beats = createBeats();
@@ -163,6 +165,7 @@ class CardsAct implements StoryAct {
       return;
     }
 
+    this.entrance.update(ctx, state);
     const drop = state.beat("c-drop");
     const motion = this.motion;
     const deck = this.deck;
@@ -256,6 +259,7 @@ class CardsAct implements StoryAct {
   sleep(ctx: StoryContext) {
     this.stage.visible = false;
     this.play?.sleep();
+    this.entrance.left(ctx.director.t);
     this.reveal?.sleep(ctx);
     if (this.boxDirector) this.boxDirector.hovered = false;
   }
@@ -270,6 +274,7 @@ class CardsAct implements StoryAct {
     this.threads = null;
     this.play?.dispose();
     this.play = null;
+    this.entrance.reset();
     this.pageFall.dispose();
     this.studio?.dispose();
     this.studio = null;
