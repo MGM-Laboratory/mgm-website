@@ -69,8 +69,10 @@ import type { StoryLoaderLike, StoryTier } from "../assets/types";
  * - The first frame after compiling still builds GPU pipelines (about 200 ms on
  *   a cold cache), so the loader renders one warm-up frame of the room.
  * - The glTF loader needs KTX2 (`KHR_texture_basisu` is required) and meshopt.
- * - The grades were tuned under AgX tone mapping at exposure 1. Under ACES the
- *   same values read with more contrast and deeper shadows.
+ * - The grades are tuned for the stage's renderer: NeutralToneMapping at exposure 1
+ *   with sRGB output. They were fitted in CIELAB to the look of the first bake under
+ *   AgX (warm lamp pools, a cool window, no clipped peach walls) and checked against
+ *   Cycles renders graded the same way. Under another tone mapping they read wrong.
  * - Baked surfaces receive no three.js shadows: contact shadows for the box and
  *   the figure are the acts' (a soft blob on the table top).
  */
@@ -362,38 +364,38 @@ type Grade = Readonly<{
 }>;
 
 const NIGHT: Grade = {
-  exposure: 0.7,
-  practical: [1.3, 0.56, 0.18],
-  pendant: [1.35, 0.76, 0.33],
-  sky: [0.045, 0.13, 0.46],
-  env: 0.5,
+  exposure: 0.615,
+  practical: [0.548, 0.375, 0.234],
+  pendant: [1.73, 1.161, 0.704],
+  sky: [0.096, 0.278, 0.776],
+  env: 1.102,
   skyTop: [0.003, 0.007, 0.024],
   skyHorizon: [0.028, 0.05, 0.115],
   mullion: [0.012, 0.012, 0.014],
-  glow: 2.4,
-  pivot: 1.7,
-  contrast: 0.75,
-  rim: 2.4,
-  fill: 0.45,
-  hemi: 0.3,
+  glow: 3.571,
+  pivot: 0.178,
+  contrast: 0.211,
+  rim: 12.278,
+  fill: 0.08,
+  hemi: 0.634,
   ground: 0.1,
 };
 
 const AFTERNOON: Grade = {
-  exposure: 0.85,
-  practical: [0.55, 0.34, 0.17],
-  pendant: [0.5, 0.34, 0.19],
-  sky: [1.8, 1.36, 0.9],
-  env: 0.65,
+  exposure: 1.063,
+  practical: [0.309, 0.211, 0.132],
+  pendant: [0.806, 0.551, 0.344],
+  sky: [1.471, 1.36, 1.16],
+  env: 1.324,
   skyTop: [0.55, 0.62, 0.8],
   skyHorizon: [1.6, 1.2, 0.8],
   mullion: [0.03, 0.03, 0.032],
-  glow: 2.4,
-  pivot: 1.5,
-  contrast: 0.3,
-  rim: 1.6,
-  fill: 0.7,
-  hemi: 0.45,
+  glow: 2.856,
+  pivot: 0.485,
+  contrast: 0.122,
+  rim: 8.075,
+  fill: 0.315,
+  hemi: 0.479,
   ground: 0.14,
 };
 
