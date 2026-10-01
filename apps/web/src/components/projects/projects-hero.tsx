@@ -104,9 +104,9 @@ function countInkOffsets(count: number) {
  * in last.
  *
  * The entrance must be SEEN, so it never plays behind the page-transition
- * curtain: a fresh page load plays it immediately, while internal navigation
- * waits for the curtain's reveal to finish (waitForRouteReveal) before
- * starting. Only reduced motion jumps straight to the end state.
+ * curtain or the site loader: both count as a route cover, and the entrance
+ * waits for the cover's reveal (waitForRouteReveal; a fresh load without a
+ * loader plays at once). Only reduced motion jumps straight to the end state.
  *
  * The entrance plays alone: from mount until it completes, the page is held
  * at the top with scrolling locked and the project list waits
@@ -371,8 +371,9 @@ export function ProjectsHero({ count }: { count: number }) {
       // revealed the page, so the entrance is actually visible.
       waitForRouteReveal().then(play);
     } else {
-      // Fresh page load (hard reload resets the boot tracker): play now.
-      play();
+      // Fresh page load (hard reload resets the boot tracker): play now, or,
+      // on a first visit, as the site loader opens (it counts as a cover).
+      void waitForRouteReveal().then(play);
     }
 
     return () => {
