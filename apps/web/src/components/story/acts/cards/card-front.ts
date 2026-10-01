@@ -17,10 +17,11 @@ import {
  * (so the logo, the title and the line stay printed on the card as it
  * turns, bends and catches the light). A white card in both schemes (it is
  * a physical object): a thin ink border, corner indices like a real
- * playing card (the division's initial over its logo, and the same turned
- * half way round), a faint rim at the card's edge, the logo as the major
- * visual over a soft tint of the division's colour in the top half, the
- * title in Hanken Grotesk, one line in Geist, and a small Geist Mono footer.
+ * playing card (the division's initial over its logo at the top left, the
+ * logo again, turned half way round, at the bottom right), a faint rim at
+ * the card's edge, the logo as the major visual over a soft tint of the
+ * division's colour in the top half, the title in Hanken Grotesk, one line
+ * in Geist, and a small Geist Mono footer.
  *
  * It wakes when the card lands face up: the logo plays its entrance (see
  * `logos.ts`), the title types in letter by letter with a small
@@ -389,35 +390,46 @@ export class CardFront {
     g.restore();
   }
 
+  /**
+   * The corner indices: the initial over the logo in miniature at the top
+   * left; at the bottom right the logo alone, a little larger, turned half
+   * way round like a real card's index (a letter turned over reads as
+   * another one: W and M swap, U turns into an arch).
+   */
   private drawIndices(g: CanvasRenderingContext2D) {
     const label = INDEX.get(this.card.id) ?? this.card.title.slice(0, 1);
+    g.save();
+    g.fillStyle = INK;
+    g.font = `600 70px ${this.fonts.display}`;
+    g.textAlign = "center";
+    g.textBaseline = "alphabetic";
+    g.fillText(label, 112, 152);
+    g.textAlign = "left";
+    g.restore();
+    this.drawMiniLogo(g, 112, 212, 64, false);
+    this.drawMiniLogo(g, UNIT_W - 112, UNIT_H - 170, 92, true);
+  }
+
+  private drawMiniLogo(
+    g: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    box: number,
+    turned: boolean,
+  ) {
     const art = this.art;
-    const corner = (rotated: boolean) => {
-      g.save();
-      if (rotated) {
-        g.translate(UNIT_W, UNIT_H);
-        g.rotate(Math.PI);
-      }
-      g.fillStyle = INK;
-      g.font = `600 70px ${this.fonts.display}`;
-      g.textAlign = "center";
-      g.textBaseline = "alphabetic";
-      g.fillText(label, 112, 152);
-      g.textAlign = "left";
-      if (art) {
-        const { scale, cx, cy } = logoFrame(art, 64);
-        g.translate(112, 212);
-        g.scale(scale, scale);
-        g.translate(-cx, -cy);
-        for (const piece of this.pieces) {
-          g.fillStyle = piece.fill;
-          g.fill(piece.path);
-        }
-      }
-      g.restore();
-    };
-    corner(false);
-    corner(true);
+    if (!art) return;
+    const { scale, cx, cy } = logoFrame(art, box);
+    g.save();
+    g.translate(x, y);
+    if (turned) g.rotate(Math.PI);
+    g.scale(scale, scale);
+    g.translate(-cx, -cy);
+    for (const piece of this.pieces) {
+      g.fillStyle = piece.fill;
+      g.fill(piece.path);
+    }
+    g.restore();
   }
 
   private drawTitle(g: CanvasRenderingContext2D, wake: number, time: number) {
