@@ -119,6 +119,7 @@ varying vec2 vUv;
 varying vec3 vWorld;
 varying vec3 vNormal;
 varying float vSeed;
+varying float vReach;
 ${GLSL_COMMON}
 ${PATH_GLSL}
 ${WAVES_GLSL}
@@ -138,6 +139,7 @@ void main() {
   // Flat toward the window's edge, where the sky layer's flat cards take over.
   vec2 rel = base.xz - uCamPos.xz;
   float reach = 1.0 - smoothstep(uReach * 0.55, uReach, length(rel * vec2(1.7, 1.0)));
+  vReach = 1.0 - smoothstep(uReach * 0.62, uReach * 0.94, length(rel * vec2(1.7, 1.0)));
   float t = uTime;
   float h = swell(base.xz, t) * reach;
   vec2 g = swellSlope(base.xz, t) * reach;
@@ -222,6 +224,8 @@ uniform float uTime;
 uniform float uFreeze;
 uniform vec3 uPaper;
 uniform vec3 uFrontInk;
+uniform float uFlowZ;
+varying float vReach;
 varying vec2 vUv;
 varying vec3 vWorld;
 varying vec3 vNormal;
@@ -262,6 +266,9 @@ void main() {
   float dist = length(vWorld - uCamPos);
   float fog = 1.0 - exp(-dist * 0.0019);
   col = mix(col, paperHaze(view), clamp(fog * 1.1, 0.0, 1.0));
+  // Toward the window's edge each card becomes exactly what the far sea paints along this ray,
+  // so the near field of cards has no visible border, even seen from high in the dive.
+  col = mix(paperWorld(uCamPos, view, uTime, uFlowZ), col, smoothstep(0.0, 0.85, vReach));
   col = freezeGrade(col, uFreeze);
   gl_FragColor = linearToOutputTexel(vec4(col, 1.0));
 }
@@ -693,7 +700,7 @@ export class PaperTide extends World {
           out.target
             .copy(her)
             .addScaledVector(dir, 10)
-            .addScaledVector(right, 3.5)
+            .addScaledVector(right, 1.6)
             .addScaledVector(up, 0.9);
           out.fov = 44;
           out.roll = 0.03;

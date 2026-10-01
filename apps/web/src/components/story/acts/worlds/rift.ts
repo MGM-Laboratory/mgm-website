@@ -142,7 +142,10 @@ export function riftChoreo(
   // The camera: three quarters behind her while she punches, then a push that
   // follows her through (crossing the plane at the cut), then the arrival chase.
   const near = ease01(Math.min(p, open - 0.06), 0, open);
-  const push = ease01(p, open - 0.06, RIFT_CUT);
+  // The push accelerates through the plane (ease in): a lens that slowed onto it would sit inside
+  // the near plane for the last frames and show the old world again under the flash.
+  const pushK = lin01(p, open - 0.06, RIFT_CUT);
+  const push = pushK * pushK * (1.6 - 0.6 * pushK);
   const ax = 2.2 - 1.1 * near;
   const ay = 0.4 - 0.3 * near;
   const az = 10 - 3.5 * near;
@@ -192,7 +195,7 @@ export function riftState(worldTail: number, p: number, spec: RiftSpec, out: Rif
   out.burst = p - contact;
   out.portal = p > contact + 0.02;
   out.light = Math.max(out.seed * 0.5, open);
-  out.surge = Math.exp(-Math.pow((p - RIFT_CUT) / 0.06, 2));
+  out.surge = Math.exp(-Math.pow((p - RIFT_CUT) / 0.05, 2));
   return out;
 }
 

@@ -29,7 +29,8 @@ export class WorldsHud {
     if (index === null) return;
     const world = STORY_WORLDS.at(index);
     if (world && p > 0.03 && p < 0.42) ctx.overlay.setHud(world.caption);
-    if (index === 0 && !this.held && p > 0.16 && p < 0.62)
+    // While the low middle of Paper Tide's frame is the dark sea (her wake turns cards white later).
+    if (index === 0 && !this.held && p > 0.04 && p < 0.24)
       ctx.overlay.setHint(STORY_HINTS.holdToSlow);
   }
 

@@ -402,11 +402,15 @@ class WorldsAct implements StoryAct {
       this.holeRig.key.target.position.copy(pose.position);
       this.holeRig.key.target.updateMatrixWorld();
       ctx.setHeaderTone("dark");
+      const freeze = ctx.director.freeze;
       ctx.stage.post.set({
-        bloom: 0.18 + 0.32 * ease01(r.p, 0.02, 0.14),
+        bloom:
+          0.18 +
+          0.32 * ease01(r.p, 0.02, 0.14) +
+          freeze * (0.16 + 0.07 * Math.sin(life.time * 2.4)),
         bloomThreshold: 0.64,
         bloomRadius: 0.42,
-        vignette: 0.45,
+        vignette: 0.45 + 0.12 * freeze,
         grain: 0.22,
         flash: Math.max(holeEntryFlash(r.p), throatFlash(r.p)),
         flashColor: 0xfff4dc,
@@ -505,10 +509,14 @@ class WorldsAct implements StoryAct {
     const look = world.post();
     const bloom = look.bloom ?? 0.5;
     const threshold = look.bloomThreshold ?? 0.66;
+    // Press and hold: the world goes quieter and cooler (in its shaders) and the light hums.
+    const freeze = ctx.director.freeze;
+    const hum = freeze * (0.16 + 0.07 * Math.sin(life.time * 2.4));
     ctx.stage.post.set({
       ...look,
-      bloom: bloom + surge * 1.6,
-      bloomThreshold: threshold - surge * 0.25,
+      bloom: bloom + surge * 1.6 + hum,
+      bloomThreshold: threshold - surge * 0.25 - 0.06 * freeze,
+      vignette: (look.vignette ?? 0.38) + 0.12 * freeze,
       flash: surge * 0.85,
       flashColor: 0xfff6e4,
     });
