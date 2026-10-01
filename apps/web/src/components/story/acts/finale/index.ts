@@ -147,6 +147,11 @@ function heroWeight(t: number) {
   return smooth(0, 0.4, t) * (1 - smooth(2.2, 2.6, t));
 }
 
+/** The hello again wave's share of her body, `t` seconds into it. */
+function greetWeight(t: number) {
+  return smooth(0, 0.28, t) * (1 - smooth(1.55, 2.0, t));
+}
+
 /** The hero pose's glow, `t` seconds into it (a quick flicker on a swell). */
 function heroGlow(t: number) {
   const glow = 1.15 * smooth(0.25, 0.6, t) * (1 - smooth(1.9, 2.5, t));
@@ -199,8 +204,8 @@ class FinaleAct implements StoryAct {
   private readonly ambientIn = new Latch();
   private titleOn = false;
   private special: Special | null = null;
-  /** A hero pose melting away because five quick clicks started the spin over it. */
-  private fading: { t: number; k: number } | null = null;
+  /** A hero pose or a hello again melting away because a click came over it. */
+  private fading: { kind: "hero" | "greet"; t: number; k: number } | null = null;
   private lastSpecial: Special["kind"] | null = null;
   private glance: Glance | null = null;
   private nextAutoGlance = 6;
@@ -690,7 +695,7 @@ class FinaleAct implements StoryAct {
         if (st > 3.5) this.special = null;
       } else {
         // hello again (the visitor came back): a small wave, then back to her idle
-        const e = smooth(0, 0.28, special.t) * (1 - smooth(1.55, 2.0, special.t));
+        const e = greetWeight(special.t);
         layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - e) }));
         layers.push({ clip: "wave_loop", weight: e, time: special.t + 0.2 });
         if (e > 0.4) face = "big_smile";
@@ -708,10 +713,15 @@ class FinaleAct implements StoryAct {
       if (fading.k <= 0) this.fading = null;
       else {
         const k = smooth(0, 1, fading.k);
-        const e = heroWeight(fading.t) * k;
+        const hero = fading.kind === "hero";
+        const e = (hero ? heroWeight(fading.t) : greetWeight(fading.t)) * k;
         layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - e) }));
-        layers.push({ clip: "superhero_pose", weight: e, time: fading.t });
-        glow = Math.max(glow, heroGlow(fading.t) * k);
+        if (hero) {
+          layers.push({ clip: "superhero_pose", weight: e, time: fading.t });
+          glow = Math.max(glow, heroGlow(fading.t) * k);
+        } else {
+          layers.push({ clip: "wave_loop", weight: e, time: fading.t + 0.2 });
+        }
       }
     }
 
@@ -859,9 +869,12 @@ class FinaleAct implements StoryAct {
     this.titleOn = false;
   }
 
-  /** The special playing now gives way (a hero pose melts away instead of snapping off). */
+  /** The special playing now gives way (a hero pose or a hello again melts away, no snap). */
   private fadeSpecial() {
-    if (this.special?.kind === "hero") this.fading = { t: this.special.t, k: 1 };
+    const special = this.special;
+    if (special && special.kind !== "spin") {
+      this.fading = { kind: special.kind, t: special.t, k: 1 };
+    }
     this.special = null;
   }
 
@@ -895,6 +908,8 @@ class FinaleAct implements StoryAct {
       this.bursts.fire(godette.socket("head", this.tmp2), now, 0.8);
       return;
     }
+    // a click is never lost to her hello again: it gives way to the click's reaction
+    if (this.special?.kind === "greet") this.fadeSpecial();
     if (this.special) return;
     if (quick || part === "head") {
       godette.react("poke");
@@ -932,12 +947,14 @@ class FinaleAct implements StoryAct {
   pointer(ctx: StoryContext, event: StoryPointerEvent) {
     const godette = this.godette;
     if (!godette) return false;
+    // A lifted finger leaves the page too: only a mouse or a pen going away (or the tab hiding)
+    // counts as the visitor being away.
     if (event.type === "leave") {
-      this.awayAt ??= performance.now();
+      if (event.pointerType !== "touch") this.awayAt ??= performance.now();
       return false;
     }
     if (event.type === "move") {
-      this.welcomeBack();
+      if (event.pointerType !== "touch") this.welcomeBack();
       return false;
     }
     if (event.type === "down") {
