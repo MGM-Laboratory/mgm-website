@@ -199,11 +199,16 @@ export class BoxDirector {
     const shiver =
       this.hover * Math.sin(time * 37) * Math.max(0, Math.sin(time * 2.3)) * 0.35 * DEG;
 
+    // The gather's last word: the lid shut, two taps on the stage (scrubbed, so it reverses).
+    const closing = fit(state.beat("c-gather"), 0.9, 0.99, 0, 1);
+    const finalTap = closing > 0 && closing < 1 ? tapHops(closing * 0.5) : 0;
+
     const H = box.dims.H;
     root.position.copy(this.base);
     root.position.y +=
       (tap * 0.002 + hopLift * H * 0.18 + this.hoverSpring[0] * H * 0.025 + enterLift * H) *
-      lifeWeight;
+        lifeWeight +
+      finalTap * 0.0022;
     eul.set(
       0,
       yaw + (this.lean[0] + shiver) * lifeWeight,

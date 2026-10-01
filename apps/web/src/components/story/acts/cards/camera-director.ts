@@ -58,7 +58,10 @@ export class CameraDirector {
 
     // The slow push: 0.8 m at the rest, a little closer through the show, back for the gather.
     const push = fit(t, 1, 8.6, 0, 1) * (1 - smoothstep(0, 0.5, state.beat("c-gather"))) * 0.05;
-    const distance = STAGE_DISTANCE - push;
+    // The gather pulls back a little so the stream fits as it pours into the box, then settles.
+    const gather = state.beat("c-gather");
+    const pull = smoothstep(0.05, 0.3, gather) * (1 - smoothstep(0.78, 0.98, gather)) * 0.08;
+    const distance = STAGE_DISTANCE - push + pull;
     stageToWorld(this.driftV[0] * 0.012, this.driftV[1] * 0.008, distance, position);
     target.copy(STAGE_ORIGIN);
     let fov = stageFov(aspect);
