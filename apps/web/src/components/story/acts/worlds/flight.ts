@@ -26,7 +26,7 @@ export class FlightDriver {
   private trailScene: Scene | null = null;
 
   constructor(readonly godette: Godette) {
-    this.trail = createMagicTrail({ points: 48, width: 0.16, life: 0.9, intensity: 1 });
+    this.trail = createMagicTrail({ points: 40, width: 0.1, life: 0.45, intensity: 1 });
     this.trail.mesh.frustumCulled = false;
     this.trail.mesh.renderOrder = 5;
   }

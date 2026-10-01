@@ -182,6 +182,7 @@ class WorldsAct implements StoryAct {
   private readonly tmpV = new Vector3();
   private readonly footL = new Vector3();
   private readonly footR = new Vector3();
+  private readonly trailLast = new Vector3();
   private trailScene: Scene | null = null;
   private lastScene: Scene | null = null;
   private hoverAt = -10;
@@ -659,7 +660,13 @@ class WorldsAct implements StoryAct {
     godette.socket("foot_R", this.footR);
     this.tmpV.copy(this.footL).add(this.footR).multiplyScalar(0.5);
     flight.trail.setColours(pose.glowColor, 0xffffff);
-    flight.trail.setIntensity(Math.min(1, pose.glow) * 0.9);
+    // Her real speed through the world: when it is huge (the wormhole, a dive) the trail would
+    // stretch into a beam at the lens, so it fades and the streaks carry the speed instead.
+    const dt = Math.max(1e-3, ctx.clock.dt);
+    const speed = this.trailLast.distanceTo(this.tmpV) / dt;
+    this.trailLast.copy(this.tmpV);
+    const fast = Math.min(1, Math.max(0, (speed - 40) / 90));
+    flight.trail.setIntensity(Math.min(1, pose.glow) * 0.8 * (1 - fast * fast * (3 - 2 * fast)));
     flight.trail.push(this.tmpV, this.life.time);
     flight.trail.update(this.life.time);
     // Hover: she smiles at the cursor (mouse only; a finger has no hover).
