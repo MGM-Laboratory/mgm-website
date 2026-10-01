@@ -30,6 +30,8 @@ import type {
   WebGLRenderer,
 } from "three";
 
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+
 import { ROOM_BASE_URL } from "../assets/files-room";
 import type { StoryLoaderLike, StoryTier } from "../assets/types";
 
@@ -220,8 +222,16 @@ export type StoryRoom = {
   readonly rig: Group;
   readonly anchors: RoomAnchors;
   readonly tier: StoryTier;
-  /** Every room mesh by glTF node name (`tv_screen`, `coffee_table_top`, `coffee_table_cup_saucer`...). */
+  /**
+   * Every room mesh by glTF node name (`tv_screen`, `coffee_table_top`, `coffee_table_cup_saucer`...).
+   * On the low tier, meshes that share a material and a lightmap are merged into one to save draw
+   * calls: the table's props into `coffee_table_top`, `tv_body` into `room_atlasB_tv_cabinet`, and
+   * the shell's closing pieces into `room_concrete_walls` and `room_dark_panel`. Their names are
+   * then missing here, and the merged meshes stay where they are.
+   */
   readonly nodes: ReadonlyMap<string, Mesh>;
+  /** The nodes an act may move (the cup, the pots, the TV...): fewer on the low tier, see `nodes`. */
+  readonly handles: ReadonlySet<string>;
   /** The TV screen quad. UV (0, 0) is its top left: sample a render target with `1.0 - vUv.y`. */
   readonly screen: Mesh;
   /**
@@ -292,6 +302,20 @@ const LIGHTMAP_GROUPS: ReadonlyMap<string, LightmapGroup> = new Map<string, Ligh
   ["room_atlasC_plants", "furniture"],
   ["room_atlasD_lamps", "furniture"],
 ]);
+/** Low tier: meshes merged into the first one of each list (same material clone, same lightmaps). */
+const LOW_MERGES: readonly (readonly string[])[] = [
+  [
+    "coffee_table_top",
+    "coffee_table_magazine",
+    "coffee_table_cup_saucer",
+    "coffee_table_pot_A",
+    "coffee_table_pot_B",
+    "coffee_table_pot_C",
+  ],
+  ["room_atlasB_tv_cabinet", "tv_body"],
+  ["room_concrete_walls", "shell_south", "shell_east"],
+  ["room_dark_panel", "shell_ne_block"],
+];
 /** Nodes that keep live transforms. */
 const HANDLES: ReadonlySet<string> = new Set([
   "coffee_table_top",
@@ -794,6 +818,30 @@ function isMesh(o: Object3D): o is Mesh {
   return o instanceof Mesh;
 }
 
+/**
+ * A mesh's geometry as plain floats in the room frame. The meshopt glTF stores quantized attributes
+ * (normalized integers that the node transform scales back), which a merge cannot mix.
+ */
+function worldGeometry(mesh: Mesh) {
+  const src = mesh.geometry;
+  const out = new BufferGeometry();
+  for (const [name, attribute] of Object.entries(src.attributes)) {
+    const size = attribute.itemSize;
+    const values = new Float32Array(attribute.count * size);
+    for (let i = 0; i < attribute.count; i++) {
+      const o = i * size;
+      values[o] = attribute.getX(i);
+      if (size > 1) values[o + 1] = attribute.getY(i);
+      if (size > 2) values[o + 2] = attribute.getZ(i);
+      if (size > 3) values[o + 3] = attribute.getW(i);
+    }
+    out.setAttribute(name, new BufferAttribute(values, size));
+  }
+  if (src.index) out.setIndex(src.index.clone());
+  out.applyMatrix4(mesh.matrixWorld);
+  return out;
+}
+
 function lightmapUrl(group: LightmapGroup, layer: LightLayer, low: boolean) {
   return `${ROOM_BASE_URL}${low ? "lm-low" : "lm"}/${group}-${layer}.ktx2`;
 }
@@ -931,14 +979,53 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
     }
     mesh.material = m;
   }
+  // Every geometry the room touches, for disposal: the cached glTF's and the merged ones.
+  const geometries = new Set<BufferGeometry>(found.map((mesh) => mesh.geometry));
+  // Low tier: meshes that share a material clone (so the same lightmaps) become one static mesh under
+  // the first part's name; a merged mesh shows when any of its parts is in the phase's set.
+  const partsOf = new Map<Mesh, readonly string[]>();
+  let placed: Mesh[] = found;
+  if (low) {
+    const mergedAway = new Set<Mesh>();
+    const merged: Mesh[] = [];
+    for (const names of LOW_MERGES) {
+      const parts = names.map((n) => nodes.get(n)).filter((m): m is Mesh => m !== undefined);
+      const first = parts.at(0);
+      if (!first || parts.length < 2 || parts.some((p) => p.material !== first.material)) continue;
+      const pieces = parts.map(worldGeometry);
+      // mergeGeometries returns null when the attributes disagree (its typings do not say so).
+      const geometry = mergeGeometries(pieces, false) as BufferGeometry | null;
+      for (const piece of pieces) piece.dispose();
+      if (!geometry) continue;
+      const mesh = new Mesh(geometry, first.material);
+      mesh.name = first.name;
+      geometries.add(geometry);
+      partsOf.set(
+        mesh,
+        parts.map((p) => p.name),
+      );
+      for (const p of parts) {
+        nodes.delete(p.name);
+        mergedAway.add(p);
+      }
+      nodes.set(mesh.name, mesh);
+      merged.push(mesh);
+    }
+    placed = [...found.filter((mesh) => !mergedAway.has(mesh)), ...merged];
+  }
+  const handles = new Set(
+    [...nodes.entries()]
+      .filter(([name, mesh]) => HANDLES.has(name) && !partsOf.has(mesh))
+      .map(([name]) => name),
+  );
   // Flatten into one group in the room frame. Props and the TV keep live transforms (an act may nudge
   // the cup or shake the TV); everything else is static.
-  for (const mesh of found) {
+  for (const mesh of placed) {
     mesh.removeFromParent();
     mesh.matrixWorld.decompose(mesh.position, mesh.quaternion, mesh.scale);
     meshesGroup.add(mesh);
     mesh.updateMatrix();
-    mesh.matrixAutoUpdate = HANDLES.has(mesh.name);
+    mesh.matrixAutoUpdate = handles.has(mesh.name);
   }
   if (!screen) throw new Error("room: tv_screen node missing");
   const screenMesh: Mesh = screen;
@@ -1111,7 +1198,8 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
     const set = phases.get(phase);
     meshesGroup.visible = phase !== "hidden";
     for (const [name, mesh] of nodes) {
-      mesh.visible = phase === "all" || phase === "hidden" || !set || set.has(name);
+      const parts = partsOf.get(mesh) ?? [name];
+      mesh.visible = phase === "all" || phase === "hidden" || !set || parts.some((p) => set.has(p));
     }
   }
 
@@ -1201,6 +1289,7 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
     anchors,
     tier,
     nodes,
+    handles,
     screen: screenMesh,
     get envMap() {
       return envMap;
@@ -1246,7 +1335,7 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
       for (const m of created) m.dispose();
       for (const m of sources) m.dispose();
       glowGeo.dispose();
-      for (const mesh of nodes.values()) mesh.geometry.dispose();
+      for (const geometry of geometries) geometry.dispose();
       for (const t of textures) t.dispose();
       if (envTarget) envTarget.dispose();
       envTarget = null;
