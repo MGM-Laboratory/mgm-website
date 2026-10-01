@@ -7,6 +7,7 @@ import { Vibrate } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { hasAppAlreadyBooted } from "@/lib/app-boot";
+import { whenLoaderGone, whenLoaderRevealed } from "@/components/loader/loader-core";
 import { motionAllowed, useMotionPreference } from "@/lib/reduced-motion";
 import { isRouteCoverActive, onRouteCoverChange } from "@/lib/route-reveal";
 import { SeeWorkButton } from "@/components/hero/see-work-button";
@@ -186,9 +187,11 @@ export function CompactHero() {
         if (visibleMs >= CTA_FAILSAFE_MS) revealCta(true);
       }, 250);
     };
-    armFailsafe();
-
     let cancelled = false;
+    // The CTA's failsafe counts from the moment the site loader opens (at once without one).
+    void whenLoaderRevealed().then(() => {
+      if (!cancelled) armFailsafe();
+    });
     let engine: Toybox | null = null;
     let splits: SplitText[] = [];
 
@@ -201,7 +204,9 @@ export function CompactHero() {
     // After the first paint: the physics (and matter-js with it) is its own
     // chunk, fetched once the words are already on screen.
     const frame = requestAnimationFrame(() => {
-      Promise.all([import("./toybox-engine"), document.fonts.ready])
+      // On a first visit the toys wait until the site loader has gone: their
+      // setup is a long task that would cost the loader's reveal its frames.
+      Promise.all([import("./toybox-engine"), document.fonts.ready, whenLoaderGone()])
         .then(([module]) => {
           if (cancelled) return;
           const wordEls = Array.from(words.querySelectorAll<HTMLElement>("[data-word]"));

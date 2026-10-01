@@ -23,6 +23,8 @@ export type LoaderViewProps = Readonly<{
   state: LoaderSnapshot;
   /** Call once the exit has played; the core then hides the loader. */
   onExited: () => void;
+  /** Call when the exit starts to show the page (the page's entrance may start then). */
+  onRevealing?: () => void;
 }>;
 
 export type LoaderViewComponent = (props: LoaderViewProps) => ReactNode;
@@ -55,7 +57,8 @@ export function SiteLoader({ View = LoaderView }: Readonly<{ View?: LoaderViewCo
     });
   }, []);
 
-  // While it shows, a wheel or a swipe over it must not scroll the page underneath.
+  // While it shows, a wheel or a swipe over it must not scroll the page
+  // underneath (the boot script keeps the keyboard off it, from the first frame).
   useEffect(() => {
     const root = rootRef.current;
     if (!root || state.phase === "done") return;
@@ -83,7 +86,7 @@ export function SiteLoader({ View = LoaderView }: Readonly<{ View?: LoaderViewCo
         aria-valuetext={`${percent} percent`}
         className="site-loader-body"
       >
-        <View state={state} onExited={siteLoader.exited} />
+        <View state={state} onExited={siteLoader.exited} onRevealing={siteLoader.revealing} />
       </div>
       <p aria-live="polite" className="sr-only">
         {state.announcement}

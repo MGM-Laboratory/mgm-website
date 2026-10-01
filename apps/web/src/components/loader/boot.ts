@@ -11,9 +11,19 @@
  * - `html[data-loader]`: "active" when the loading screen shows (a public
  *   route, not under `navigator.webdriver` unless `?loader=1`), else
  *   "done". Specs wait for `html[data-loader="done"]`.
+ * - `html[data-loader-fast]`: present while a loader shows that already
+ *   finished once in this tab (a reload), so its first paint can be the
+ *   short version.
  * - `--story-vh` on `<html>`: the viewport height in px, so the story's
  *   tall section has its real height before any script runs.
  *
+ * - While the loader covers the page, the keyboard must not reach the page
+ *   either, from the first frame (before the bundle runs): keys that scroll
+ *   or move focus (Space, Page Up and Down, Home, End, the arrows, Tab) and
+ *   Enter or Space on anything outside the loader do nothing. Focus stays
+ *   where it is (nothing in the loader takes it), shortcuts with Ctrl, Alt
+ *   or Meta pass, and every key works again the moment the reveal starts
+ *   (the host's `data-revealing`) or the loader is done.
  * - A failsafe that needs nothing but this script: when the app has not
  *   started after 12 s of visible time (a chunk that failed to load, a
  *   blocked script, a crash before hydration), it hides the loader and
@@ -46,7 +56,7 @@ export const LOADER_KEY = "mgm:loader";
 export const BOOT_GIVE_UP_MS = 12_000;
 export const STORY_KEY = "mgm:story";
 
-export const BOOT_SCRIPT = `(function(){var d=document.documentElement,w=window,b={story:"dom",storyDecided:false,loader:false,repeat:false,vh:w.innerHeight};try{var q=w.location.search,p=w.location.pathname,s=null;try{s=w.sessionStorage}catch(e){}if(s){b.repeat=s.getItem("${LOADER_KEY}")==="1"}d.style.setProperty("--story-vh",b.vh+"px");var calm=w.matchMedia("(prefers-reduced-motion: no-preference)").matches;if(p==="/")b.storyDecided=true;if(p==="/"&&calm&&!/[?&]nostory(=|&|$)/.test(q)&&!(s&&s.getItem("${STORY_KEY}")==="dom")){try{var c=document.createElement("canvas"),g=c.getContext("webgl2",{failIfMajorPerformanceCaveat:true});if(g){var x=g.getExtension("WEBGL_debug_renderer_info"),r=x?String(g.getParameter(x.UNMASKED_RENDERER_WEBGL)):"";if(!/swiftshader|llvmpipe|softpipe|software|basic render|mesa offscreen/i.test(r))b.story="gl";var l=g.getExtension("WEBGL_lose_context");if(l)l.loseContext()}}catch(e){}}var ex=/^\\/(admin|forms|s)(\\/|$)/.test(p);b.loader=!ex&&(/[?&]loader=1(&|$)/.test(q)||!navigator.webdriver)}catch(e){}d.setAttribute("data-story-mode",b.story);d.setAttribute("data-loader",b.loader?"active":"done");w.__mgmBoot=b;if(b.loader||b.story==="gl"){var v=0,t0=Date.now(),iv=setInterval(function(){var n=Date.now(),st=Math.min(n-t0,500);t0=n;if(w.__mgmLive){clearInterval(iv);return}if(!document.hidden)v+=st;if(v<${BOOT_GIVE_UP_MS})return;clearInterval(iv);b.loader=false;b.story="dom";d.setAttribute("data-loader","done");d.setAttribute("data-story-mode","dom")},250)}})()`;
+export const BOOT_SCRIPT = `(function(){var d=document.documentElement,w=window,b={story:"dom",storyDecided:false,loader:false,repeat:false,vh:w.innerHeight};try{var q=w.location.search,p=w.location.pathname,s=null;try{s=w.sessionStorage}catch(e){}if(s){b.repeat=s.getItem("${LOADER_KEY}")==="1"}d.style.setProperty("--story-vh",b.vh+"px");var calm=w.matchMedia("(prefers-reduced-motion: no-preference)").matches;if(p==="/")b.storyDecided=true;if(p==="/"&&calm&&!/[?&]nostory(=|&|$)/.test(q)&&!(s&&s.getItem("${STORY_KEY}")==="dom")){try{var c=document.createElement("canvas"),g=c.getContext("webgl2",{failIfMajorPerformanceCaveat:true});if(g){var x=g.getExtension("WEBGL_debug_renderer_info"),r=x?String(g.getParameter(x.UNMASKED_RENDERER_WEBGL)):"";if(!/swiftshader|llvmpipe|softpipe|software|basic render|mesa offscreen/i.test(r))b.story="gl";var l=g.getExtension("WEBGL_lose_context");if(l)l.loseContext()}}catch(e){}}var ex=/^\\/(admin|forms|s)(\\/|$)/.test(p);b.loader=!ex&&(/[?&]loader=1(&|$)/.test(q)||!navigator.webdriver)}catch(e){}d.setAttribute("data-story-mode",b.story);d.setAttribute("data-loader",b.loader?"active":"done");if(b.loader&&b.repeat)d.setAttribute("data-loader-fast","");w.__mgmBoot=b;if(b.loader){var K=/^( |Spacebar|PageUp|PageDown|Home|End|Arrow(Up|Down|Left|Right)|Tab)$/,A=/^(Enter| |Spacebar)$/,g=function(e){if(d.getAttribute("data-loader")!=="active"){w.removeEventListener("keydown",g,true);w.removeEventListener("keyup",g,true);return}var h=document.querySelector("[data-site-loader]");if(e.ctrlKey||e.metaKey||e.altKey||(h&&h.hasAttribute("data-revealing")))return;var i=h&&e.target instanceof Node&&h.contains(e.target);if((e.type==="keydown"&&K.test(e.key))||(!i&&A.test(e.key)))e.preventDefault()};w.addEventListener("keydown",g,true);w.addEventListener("keyup",g,true)}if(b.loader||b.story==="gl"){var v=0,t0=Date.now(),iv=setInterval(function(){var n=Date.now(),st=Math.min(n-t0,500);t0=n;if(w.__mgmLive){clearInterval(iv);return}if(!document.hidden)v+=st;if(v<${BOOT_GIVE_UP_MS})return;clearInterval(iv);b.loader=false;b.story="dom";d.setAttribute("data-loader","done");d.setAttribute("data-story-mode","dom")},250)}})()`;
 
 type BootWindow = Window & { __mgmBoot?: BootState; __mgmLive?: boolean };
 
@@ -84,6 +94,9 @@ export function reapplyBoot() {
     root.setAttribute("data-story-mode", boot.story);
   const loader = boot.loader ? "active" : "done";
   if (root.getAttribute("data-loader") !== loader) root.setAttribute("data-loader", loader);
+  const fast = boot.loader && boot.repeat;
+  if (root.hasAttribute("data-loader-fast") !== fast)
+    root.toggleAttribute("data-loader-fast", fast);
   if (!root.style.getPropertyValue("--story-vh"))
     root.style.setProperty("--story-vh", `${boot.vh}px`);
 }
