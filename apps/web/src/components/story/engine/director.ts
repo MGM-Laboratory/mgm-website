@@ -381,6 +381,11 @@ export class StoryDirector {
     this.attached = false;
     gsap.ticker.remove(this.tick);
     for (const off of this.offs.splice(0)) off();
+    window.clearTimeout(this.restoreTimer);
+    window.clearTimeout(this.restoreDeadline);
+    this.restoreTimer = 0;
+    this.restoreT = null;
+    this.awaitRefresh = false;
     this.sleep();
     this.intent.detach();
     this.pointer.detach();
@@ -737,6 +742,14 @@ export class StoryDirector {
 
   // ------------------------------------------------------------------ layout
 
+  /**
+   * Re-measures after a resize. When the width changed (the page above the
+   * story reflows, so the section's document top moves) or the story's
+   * viewport height changed (every beat's length moves), the story is put
+   * back at the position it showed before (SPEC 1.1). A phone's URL bar
+   * (same width, a small height change on a coarse pointer) changes
+   * neither, so a fling is never interrupted by a restore.
+   */
   private measureViewport(restore: boolean) {
     const section = this.section;
     if (!section) return;
@@ -744,37 +757,66 @@ export class StoryDirector {
     const height = window.innerHeight;
     const t = this.t;
     this.smoothed = detectSmoothed();
+    const widthChanged = this.vw > 0 && width !== this.vw;
     const vh = nextStoryVh(this.vh, width, this.vw, height);
+    const vhChanged = vh !== this.vh;
     this.vw = width;
     this.stage.resize(width, height);
     this.governor.rest();
-    if (vh !== this.vh) {
+    if (vhChanged) {
       this.vh = vh;
       section.style.setProperty("--story-vh", `${vh}px`);
-      if (restore && t > -ENTRANCE_VH && t < TIMELINE.end) {
-        this.restoreT = t;
-        this.restore();
-      }
+    }
+    if (restore && (widthChanged || vhChanged)) {
+      // The first resize of a burst holds the position from before it.
+      if (this.restoreT === null && t > -ENTRANCE_VH && t < TIMELINE.end) this.restoreT = t;
+      this.awaitRefresh = true;
+      this.restore(true);
     }
     this.forEachAct((act) => {
       act.resize?.(this.ctx);
     });
   }
 
+  /** The story position a resize burst must come back to (null when none is pending). */
   private restoreT: number | null = null;
+  /** A ScrollTrigger refresh (which may move the page again) is still to come. */
+  private awaitRefresh = false;
   private restoreTimer = 0;
+  private restoreDeadline = 0;
 
-  /** After a resize changed the story's height, puts the story back at the same `t`. */
-  private restore() {
+  /**
+   * Puts the story back at `restoreT`: now, after ScrollTrigger's refresh,
+   * and once more when the resizes have been quiet for 350 ms. The target
+   * is let go only when both have happened (or 2 s after the last resize).
+   */
+  private restore(resized = false) {
     const t = this.restoreT;
     if (t === null || !this.section) return;
     this.scrollToT(t);
+    if (!resized) {
+      this.awaitRefresh = false;
+      this.settleRestore();
+      return;
+    }
     window.clearTimeout(this.restoreTimer);
     this.restoreTimer = window.setTimeout(() => {
+      this.restoreTimer = 0;
       if (this.restoreT === null) return;
       this.scrollToT(this.restoreT);
-      this.restoreT = null;
+      this.settleRestore();
     }, 350);
+    window.clearTimeout(this.restoreDeadline);
+    this.restoreDeadline = window.setTimeout(() => {
+      this.awaitRefresh = false;
+      this.restoreT = null;
+    }, 2000);
+  }
+
+  private settleRestore() {
+    if (this.awaitRefresh || this.restoreTimer !== 0) return;
+    window.clearTimeout(this.restoreDeadline);
+    this.restoreT = null;
   }
 
   // ------------------------------------------------------------------ dev
