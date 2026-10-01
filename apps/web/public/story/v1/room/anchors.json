@@ -219,17 +219,17 @@
     {
       "group": "table",
       "layer": "pendant",
-      "k": 1.81928
+      "k": 1.81169
     },
     {
       "group": "table",
       "layer": "practical",
-      "k": 1.11339
+      "k": 1.11281
     },
     {
       "group": "table",
       "layer": "sky",
-      "k": 1.19086
+      "k": 1.18956
     }
   ],
   "phases": [
