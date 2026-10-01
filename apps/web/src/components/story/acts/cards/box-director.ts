@@ -1,4 +1,4 @@
-import { Euler, Vector3 } from "three";
+import { Euler, Mesh, Vector3, type Object3D } from "three";
 
 import {
   Latch,
@@ -47,6 +47,12 @@ export const REST_LEAN = 4 * DEG;
 const LID_HOLD = 108 / LID_OPEN_DEGREES;
 const LID_OVER = 112 / LID_OPEN_DEGREES;
 
+/** The box's meshes that are its printed card (`props/deck-box.ts`): the shell and the lid boards. */
+const BOX_SURFACES: ReadonlySet<string> = new Set(["box-wrap", "box-panels", "box-boards"]);
+/** The hover's warm seam at the lid: brighter over the dark page, a faint one over the light page. */
+const HOVER_GLOW_DARK = 0.16;
+const HOVER_GLOW_LIGHT = 0.07;
+
 const eul = new Euler(0, 0, 0, "YZX");
 const va = new Vector3();
 const vb = new Vector3();
@@ -80,8 +86,17 @@ export class BoxDirector {
   private readonly random = seededRandom(0x5eed);
   /** The box is under the pointer this frame (set by the act from a raycast). */
   hovered = false;
+  /** What the pointer can touch: the box's printed card (shell and lid), not its glow. */
+  readonly targets: Object3D[] = [];
+  /** The column of rays out of the open box (hidden over the light page, see `glowOnPage`). */
+  private readonly rays: Object3D | null;
 
-  constructor(readonly box: DeckBox) {}
+  constructor(readonly box: DeckBox) {
+    box.root.traverse((object) => {
+      if (object instanceof Mesh && BOX_SURFACES.has(object.name)) this.targets.push(object);
+    });
+    this.rays = box.root.getObjectByName("box-rays") ?? null;
+  }
 
   /** The pointer pressed on the box: a hop with a card popping up. */
   poke(time: number) {
@@ -219,8 +234,10 @@ export class BoxDirector {
     box.setFlap(flap);
     box.peek(Math.max(peek, hopPeek * lifeWeight));
     box.setStack(this.frame.stack);
-    box.setGlow(Math.max(glow, this.hover * 0.16 * lifeWeight));
-    box.setGlowPage(ctx.palette.scheme === "light" ? "light" : "dark");
+    const light = ctx.palette.scheme === "light";
+    const hoverGlow = (light ? HOVER_GLOW_LIGHT : HOVER_GLOW_DARK) * this.hover * lifeWeight;
+    box.setGlow(Math.max(glow, hoverGlow));
+    this.glowOnPage(light);
 
     // The glint: a sweep every 5 to 7 s; while hovered it follows the cursor like light on varnish.
     if (time > this.glintAt) {
@@ -247,9 +264,21 @@ export class BoxDirector {
     box.setStack(1);
     box.setGlow(0);
     box.setGlint(0, 0);
-    box.setGlowPage(ctx.palette.scheme === "light" ? "light" : "dark");
+    this.glowOnPage(ctx.palette.scheme === "light");
     box.update(ctx.clock.time);
     this.frame.position.copy(box.root.position);
+  }
+
+  /**
+   * The glow's look for the page behind the box. Over the light page the
+   * column of rays paints a tall amber plume on the paper, so it stays hidden
+   * there: the light inside the box (its walls, the deck's edges) and the
+   * seam along the opening carry the glow. Over the dark page the rays add
+   * light, as they should.
+   */
+  private glowOnPage(light: boolean) {
+    this.box.setGlowPage(light ? "light" : "dark");
+    if (light && this.rays) this.rays.visible = false;
   }
 
   /** Where the box rests once it has landed (the bake's last frame). */
