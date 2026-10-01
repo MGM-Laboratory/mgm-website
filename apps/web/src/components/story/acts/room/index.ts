@@ -80,6 +80,13 @@ const DIVE_FILL_FOV = 48;
 /** The spark's warm light. */
 const SPARK_COLOUR = 0xffd27a;
 const UP = new Vector3(0, 1, 0);
+/** The frame's corners in normalised device coordinates. */
+const FRAME_CORNERS = [
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1],
+] as const;
 /** Her front and her left on the stand (model +Z and +X turned by her yaw). */
 const TOY_FRONT = new Vector3(Math.sin(TOY_YAW), 0, Math.cos(TOY_YAW));
 const TOY_LEFT = new Vector3(Math.cos(TOY_YAW), 0, -Math.sin(TOY_YAW));
@@ -210,6 +217,13 @@ class RoomAct implements StoryAct {
   private followWide = 1;
   private tvCentre = new Vector3();
   private tvNormal = new Vector3(1, 0, 0);
+  private readonly cover = {
+    bl: new Vector3(),
+    across: new Vector3(),
+    up: new Vector3(),
+    dir: new Vector3(),
+    hit: new Vector3(),
+  };
 
   async init(ctx: StoryContext) {
     const [room, box, godette] = await Promise.all([
@@ -1222,12 +1236,36 @@ class RoomAct implements StoryAct {
     const room = this.room;
     const camera = ctx.stage.camera;
     if (!room || t < at("r-dive", 0)) return "chase";
-    const offset = this.tmp.v.copy(camera.position).sub(this.tvCentre);
-    const along = offset.dot(this.tvNormal);
-    const lateral = offset.addScaledVector(this.tvNormal, -along).length();
-    const fill = screenFillDistance(room.anchors.tv, ctx.size.aspect, camera.fov, 0.012 + lateral);
-    if (along <= fill) return "fill";
+    if (this.screenCoversFrame(camera, room)) return "fill";
     return camera.position.x < -0.17 ? "screen" : "chase";
+  }
+
+  /**
+   * Whether the screen covers the whole frame for this camera: each of the
+   * frame's corner rays lands on the screen, a hair in from its edge. Exact
+   * for any aspect and FOV (the dive's coverage is not monotonic on a very
+   * wide frame), so the "fill" set never opens a gap at the frame's edge.
+   */
+  private screenCoversFrame(camera: PerspectiveCamera, room: StoryRoom) {
+    const { corners } = room.anchors.tv;
+    const bl = this.cover.bl.set(...corners.bl);
+    const across = this.cover.across.set(...corners.br).sub(bl);
+    const up = this.cover.up.set(...corners.tl).sub(bl);
+    const n = this.tvNormal;
+    camera.updateMatrixWorld();
+    const origin = camera.position;
+    const inset = 0.002;
+    for (const [x, y] of FRAME_CORNERS) {
+      const dir = this.cover.dir.set(x, y, 0.5).unproject(camera).sub(origin);
+      const facing = dir.dot(n);
+      if (facing >= -1e-6) return false;
+      const reach = this.cover.hit.copy(bl).sub(origin).dot(n) / facing;
+      const local = this.cover.hit.copy(origin).addScaledVector(dir, reach).sub(bl);
+      const u = local.dot(across) / across.lengthSq();
+      const v = local.dot(up) / up.lengthSq();
+      if (u < inset || u > 1 - inset || v < inset || v > 1 - inset) return false;
+    }
+    return true;
   }
 
   /**
@@ -1330,7 +1368,11 @@ class RoomAct implements StoryAct {
     if (this.box) this.box.root.visible = !near;
     if (this.letters) this.letters.toy.group.visible &&= !near;
     this.shadows.mesh.visible = !near;
-    if (near) this.tablePool.mesh.visible = false;
+    if (near) {
+      this.tablePool.mesh.visible = false;
+      // Her glow's light on the table: she is in the screen by now, and the table out of frame.
+      this.pool.mesh.visible = false;
+    }
     if (this.motes) this.motes.points.visible &&= !near;
     if (this.godette) this.godette.stand.visible = !near;
   }
