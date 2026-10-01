@@ -688,3 +688,68 @@ export function barText(cards: number) {
   const filled = Math.round((cards / 52) * BAR_SLOTS);
   return `[${"=".repeat(filled)}${"-".repeat(BAR_SLOTS - filled)}]  ${String(cards).padStart(2, "0")} / 52`;
 }
+
+export type Craft = Readonly<{
+  /** The corner index, like a playing card's. */
+  letter: string;
+  /** The division's logo (`public/logo/*.svg`, 2000 x 2000), as [path, colour] pairs. */
+  shapes: readonly (readonly [string, string])[];
+}>;
+
+const Y = "var(--brand-yellow)";
+const R = "var(--brand-red)";
+const B = "var(--brand-blue)";
+
+/** The four crafts a tapped card can show (the cards act's fronts, in miniature). */
+export const CRAFTS: readonly Craft[] = [
+  {
+    letter: "W",
+    shapes: [
+      ["M483 681L1510 674L1508 1315Z", Y],
+      ["M1510 674L483 676L485 1316Z", R],
+      [circlePath(575, 753, 25), Y],
+      [circlePath(648, 753, 25), Y],
+      [circlePath(721, 753, 25), Y],
+      ["M487 1133H1003L847 1326H330Z", B],
+      ["M1512 1133H996L1152 1326H1669Z", B],
+    ],
+  },
+  {
+    letter: "M",
+    shapes: [
+      ["M1319 716L1319 1526H680Z", R],
+      ["M680 716L680 1526H1319Z", B],
+      ["M1319 1284L1319 474H680Z", Y],
+      ["M680 1284L680 474H1319Z", R],
+      [circlePath(832.5, 610.5, 67.5), Y],
+    ],
+  },
+  {
+    letter: "G",
+    shapes: [
+      ["M296 1266L683 569L1000 918V1192L571 1431Z", R],
+      ["M1704 1266L1317 569L1000 918V1192L1429 1431Z", B],
+      ["M1000 920L1317 570L683 569Z", Y],
+    ],
+  },
+  {
+    letter: "U",
+    shapes: [
+      [
+        "M1298 669C1328 721 1344 780 1343 840C1343 900 1327 959 1296 1011C1266 1063 1223 1106 1171 1136C1119 1166 1060 1181 999 1181L1000 838Z",
+        Y,
+      ],
+      [
+        "M999 1181C938 1181 878 1165 825 1133C773 1102 729 1057 700 1004C670 950 655 889 657 828C659 767 677 707 710 655L1000 838Z",
+        R,
+      ],
+      [
+        "M705 663C736 612 779 569 832 539C884 510 943 495 1003 495C1063 496 1122 512 1174 542C1226 573 1269 616 1298 668L1000 838Z",
+        B,
+      ],
+      ["M999 838L1416 1560H583Z", B],
+      ["M866 1070L793 919L509 1398L584 1560H866Z", Y],
+      ["M1133 1069L1206 919L1490 1397L1415 1559H1133Z", R],
+    ],
+  },
+];

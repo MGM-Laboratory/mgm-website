@@ -590,28 +590,39 @@
   box-shadow: none;
 }
 
+/* Turned half a turn ahead, so it reads the right way round when the card has turned over. */
 .ld-card-front {
   display: grid;
   place-items: center;
   background: var(--ld-paper);
   opacity: 0;
+  transform: rotateY(180deg);
 }
 
-.ld-card-front > b {
+.ld-idx {
   position: absolute;
-  left: 12%;
-  top: 6%;
   color: #0e1116;
   font-family: var(--font-hanken), ui-sans-serif, sans-serif;
-  font-size: calc(var(--ld-card-w) * 0.34);
+  font-size: calc(var(--ld-card-w) * 0.3);
   font-weight: 600;
   line-height: 1;
 }
 
-.ld-card-front > i {
-  width: 46%;
-  aspect-ratio: 1;
-  background: var(--c);
+.ld-idx.ld-tl {
+  left: 11%;
+  top: 6%;
+}
+
+.ld-idx.ld-br {
+  right: 11%;
+  bottom: 6%;
+  transform: rotate(180deg);
+}
+
+.ld-card-logo {
+  width: 78%;
+  height: auto;
+  overflow: visible;
 }
 
 .ld-hub-star {

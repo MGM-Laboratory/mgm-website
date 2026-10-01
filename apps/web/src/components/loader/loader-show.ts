@@ -1,5 +1,12 @@
 import type { LoaderSnapshot } from "@/components/loader/loader-core";
-import { DRAW, PANELS, barText, starPoints, type PanelId } from "@/components/loader/loader-net";
+import {
+  CRAFTS,
+  DRAW,
+  PANELS,
+  barText,
+  starPoints,
+  type PanelId,
+} from "@/components/loader/loader-net";
 import { LoaderToys } from "@/components/loader/loader-toys";
 import { LOADER_COPY } from "@/data/story";
 import { random } from "@/lib/random";
@@ -132,6 +139,7 @@ export class LoaderShow {
   private shownValue = 0;
   private printed = 0;
   private stalled = false;
+  private craft = -1;
   private wobble: Animation | null = null;
   private statusIndex = 0;
   private statusLine: string = LOADER_COPY.statuses[0];
@@ -586,53 +594,50 @@ export class LoaderShow {
     const card = this.cards.find((c) => c.el === el);
     if (!card || card.landsAt > now() || card.lift.dataset.picked !== undefined) return;
     card.lift.dataset.picked = "";
-    const crafts = [
-      { letter: "W", colour: "var(--brand-blue)" },
-      { letter: "M", colour: "var(--brand-red)" },
-      { letter: "G", colour: "var(--brand-green)" },
-      { letter: "U", colour: "var(--brand-yellow)" },
-    ];
-    const craft = crafts.at(Math.floor(random() * crafts.length));
+    // The four crafts in turn, from a random start: never the same twice in a row.
+    this.craft = this.craft < 0 ? Math.floor(random() * CRAFTS.length) : this.craft + 1;
+    const craft = CRAFTS.at(this.craft % CRAFTS.length);
     let front = card.lift.querySelector<HTMLElement>(".ld-card-front");
     if (!front) {
       front = document.createElement("div");
       front.className = "ld-card-face ld-card-front";
       card.lift.append(front);
     }
-    front.replaceChildren();
-    const letter = document.createElement("b");
-    letter.textContent = craft?.letter ?? "W";
-    const mark = document.createElement("i");
-    mark.style.setProperty("--c", craft?.colour ?? "var(--brand-blue)");
-    front.append(letter, mark);
+    front.replaceChildren(...this.cardFace(craft?.letter ?? "W", craft?.shapes ?? []));
     const back = card.lift.querySelector(".ld-card-face:not(.ld-card-front)");
     const duration = 1500;
     this.animate(
       card.lift,
+      // Eased per step, so the turns are edge on exactly halfway (0.23 and 0.89).
       [
-        { transform: "translateY(0) rotateY(0deg) scale(1)" },
-        { transform: "translateY(-34px) rotateY(0deg) scale(1.5)", offset: 0.16 },
+        { transform: "translateY(0) rotateY(0deg) scale(1)", easing: "ease-in-out" },
+        {
+          transform: "translateY(-34px) rotateY(0deg) scale(1.5)",
+          offset: 0.16,
+          easing: "ease-in-out",
+        },
         { transform: "translateY(-34px) rotateY(180deg) scale(1.5)", offset: 0.3 },
-        { transform: "translateY(-34px) rotateY(180deg) scale(1.5)", offset: 0.78 },
+        {
+          transform: "translateY(-34px) rotateY(180deg) scale(1.5)",
+          offset: 0.78,
+          easing: "ease-in-out",
+        },
         { transform: "translateY(0) rotateY(360deg) scale(1)" },
       ],
-      { duration, easing: "ease-in-out", fill: "none" },
+      { duration, fill: "none" },
     );
-    // Faces swap at the turn by opacity, so it reads right even where 3D is flattened.
-    this.animate(
-      back,
-      [{ opacity: 1 }, { opacity: 0, offset: 0.23 }, { opacity: 0, offset: 0.88 }, { opacity: 1 }],
-      {
-        duration,
-        easing: "steps(1, end)",
-        fill: "none",
-      },
-    );
-    const show = this.animate(
-      front,
-      [{ opacity: 0 }, { opacity: 1, offset: 0.23 }, { opacity: 1, offset: 0.88 }, { opacity: 0 }],
-      { duration, easing: "steps(1, end)", fill: "none" },
-    );
+    // Faces swap by opacity when the card is edge on, so it reads right even
+    // where 3D is flattened.
+    // The steps are per keyframe: an animation wide step would hold the
+    // first keyframe for the whole turn.
+    const swap = (from: number, to: number): Keyframe[] => [
+      { opacity: from, easing: "step-end" },
+      { opacity: to, offset: 0.23, easing: "step-end" },
+      { opacity: from, offset: 0.89 },
+      { opacity: from, offset: 1 },
+    ];
+    this.animate(back, swap(1, 0), { duration, fill: "none" });
+    const show = this.animate(front, swap(0, 1), { duration, fill: "none" });
     this.override = { line: LOADER_COPY.pick, until: now() + duration };
     this.changeStatus(LOADER_COPY.pick);
     void show?.finished
@@ -640,6 +645,27 @@ export class LoaderShow {
         delete card.lift.dataset.picked;
       })
       .catch(() => undefined);
+  }
+
+  /** A card front: the index in two corners and the craft's logo in the middle. */
+  private cardFace(letter: string, shapes: readonly (readonly [string, string])[]) {
+    const index = (corner: string) => {
+      const b = document.createElement("b");
+      b.className = `ld-idx ${corner}`;
+      b.textContent = letter;
+      return b;
+    };
+    const ns = "http://www.w3.org/2000/svg";
+    const logo = document.createElementNS(ns, "svg");
+    logo.setAttribute("viewBox", "250 400 1500 1250");
+    logo.setAttribute("class", "ld-card-logo");
+    for (const [d, colour] of shapes) {
+      const path = document.createElementNS(ns, "path");
+      path.setAttribute("d", d);
+      path.style.fill = colour;
+      logo.append(path);
+    }
+    return [index("ld-tl"), logo, index("ld-br")];
   }
 
   // Reduced motion ------------------------------------------------------
