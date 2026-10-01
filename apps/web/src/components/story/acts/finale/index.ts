@@ -96,6 +96,12 @@ const FOV = 30;
 const TITLE_T = WAVE.start + WAVE.vh * 0.42;
 /** Two strokes a loop: she waves this long before she settles. */
 const WAVE_SECONDS = 1.333 * 2 + 0.2;
+/**
+ * Half the width a portrait frame holds beside her, metres, at most. The
+ * sit is width bound on a narrow screen (her legs reach out to one side):
+ * this still holds them, and she is bigger on the act's funniest beat.
+ */
+const PORTRAIT_HALF_WIDTH = 0.68;
 /** The medium shot's bottom edge, metres above her floor: just above her knees. */
 const MEDIUM_CUT = 0.56;
 /** Beside the words she turns this far toward them (radians, toward screen right). */
@@ -387,7 +393,7 @@ class FinaleAct implements StoryAct {
         floorY: this.floorY + (closeFloor - this.floorY) * close,
         topY: this.topY,
         height,
-        halfWidth: framing.halfWidth,
+        halfWidth: landscape ? framing.halfWidth : Math.min(framing.halfWidth, PORTRAIT_HALF_WIDTH),
         fovDeg: FOV,
         // beside the words she has her own part of the frame, not all of it
         aspect: ctx.size.aspect * Math.min(1, 2 * Math.min(this.xFrac, 1 - this.xFrac)),
