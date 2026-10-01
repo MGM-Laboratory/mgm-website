@@ -598,7 +598,9 @@ class RoomAct implements StoryAct {
     const dusk = light ? 0.45 * smoothstep(0, 0.65, state.beat("r-land")) : 0;
     room.setGrade(ctx.palette.scheme, 1 - dusk);
     const pool = this.tmp.v.set(0.4, room.anchors.table.topY, -0.53);
-    this.tablePool.place(pool, 0.9, 0.6, 0, light ? 0.24 * this.seam(state) : 0);
+    // (Not on the low tier, where every draw counts: the grade and the fill carry the dusk there.)
+    const poolOn = light && ctx.tier !== "low";
+    this.tablePool.place(pool, 0.9, 0.6, 0, poolOn ? 0.24 * this.seam(state) : 0);
     room.setPresence(1);
     // The lamps finish warming as the box settles, and dim a little around the screen once it is on.
     const warm = LAMPS_AT_LAND + (1 - LAMPS_AT_LAND) * smoothstep(0, 0.65, state.beat("r-land"));
@@ -703,6 +705,7 @@ class RoomAct implements StoryAct {
     letters: TableLetters,
   ) {
     toy.onStand(ctx, 1, false);
+    if (this.box) this.showPeekCard(this.box, true);
     letters.pose(-1, this.letterTiming, this.shadows, 2);
     letters.toy.group.visible = false;
     this.writeBoxShadow(room, smoothstep(0.85, 1, state.beat("c-drop")));
@@ -783,6 +786,8 @@ class RoomAct implements StoryAct {
     );
     box.setFlap(0);
     box.peek(0.42 * pop);
+    // The card that pops up on a tap rests inside the shut box otherwise: off the draw list until it moves.
+    this.showPeekCard(box, pop > 0.001);
     box.setStack(1);
     // The warm glow inside as the spark leaves; it dies away once she is off the table.
     const after = 1 - smoothstep(0, 0.45, state.beat("r-dragged"));
@@ -802,6 +807,11 @@ class RoomAct implements StoryAct {
       ctx.stage.camera.fov,
       0.55,
     );
+  }
+
+  /** Shows or hides the box's peeking card (the box module draws it at rest too); the card act gets it back shown. */
+  private showPeekCard(box: DeckBox, on: boolean) {
+    box.peekCard.mesh.visible = on;
   }
 
   /** The box's mouth (the lid end, just under the lid's free edge), in the room. */
@@ -952,7 +962,10 @@ class RoomAct implements StoryAct {
       godette.setShadow(null);
       godette.shadow.visible = false;
     }
-    if (this.box) this.box.root.visible = false;
+    if (this.box) {
+      this.box.root.visible = false;
+      this.showPeekCard(this.box, true);
+    }
   }
 
   private setGodetteLayer(layer: number) {
@@ -1116,14 +1129,15 @@ class RoomAct implements StoryAct {
     const sparkle = smoothstep(0.02, 0.12, magic);
     const screen = state.span("r-tv", "r-dive");
     const on = this.seam(state);
-    // The low tier skips the bloom chain (eight passes): the spark, the glow and the screen carry their own halos.
-    const bloom = ctx.tier === "low" ? 0 : 1;
+    // The low tier skips the post path altogether (the bloom chain is eight passes, the vignette and the
+    // grain a full frame composite and a draw): the spark, the glow and the screen carry their own halos.
+    const full = ctx.tier === "low" ? 0 : 1;
     ctx.stage.post.set({
-      bloom: (0.16 + 0.3 * sparkle + 0.2 * smoothstep(0, 0.2, screen)) * on * bloom,
+      bloom: (0.16 + 0.3 * sparkle + 0.2 * smoothstep(0, 0.2, screen)) * on * full,
       bloomThreshold: MathUtils.lerp(0.82, 0.68, sparkle),
       bloomRadius: 0.55,
-      vignette: (ctx.palette.scheme === "light" ? 0.42 : 0.3) * on,
-      grain: 0.035 * on,
+      vignette: (ctx.palette.scheme === "light" ? 0.42 : 0.3) * on * full,
+      grain: 0.035 * on * full,
     });
   }
 
@@ -1150,7 +1164,9 @@ class RoomAct implements StoryAct {
   /** Which of the room's visibility sets this camera needs (research/room.md section 5). */
   private phaseFor(ctx: StoryContext, state: ActState): RoomPhase {
     const t = state.t;
-    if (t < at("r-break", 0.22)) return "land";
+    // Until the yank the camera stays at table height: the ceiling, its pipes and the walls behind the
+    // lens are never in frame, so they stay off the draw list (the low tier's budget is tight there).
+    if (t < at("r-dragged", 0.04)) return "land";
     if (t < at("r-learn", 0.45)) return "table";
     if (t < at("r-tv", 0.4)) return "takeoff";
     const room = this.room;
