@@ -75,6 +75,11 @@ export type ToyLettersOptions = {
   depth?: number;
   /** Distance between rows (line 2 stands behind line 1), metres. */
   rowGap?: number;
+  /**
+   * Each line's z in the group frame (metres), in place of the default `-line * rowGap`. A layout that
+   * reads from above puts its first line at the back: the room's `anchors.letters` rows, for one.
+   */
+  lineZ?: readonly number[];
   /** Extra space between letters as a share of the cap height (toy letters stand apart). */
   tracking?: number;
   colours?: readonly number[];
@@ -247,6 +252,12 @@ function createSlicer(budget: number) {
   };
 }
 
+/** How far the first and the last row stand apart, metres. */
+function lineSpan(count: number, rowGap: number, lineZ: readonly number[] | undefined) {
+  if (!lineZ || lineZ.length === 0) return (count - 1) * rowGap;
+  return Math.max(...lineZ) - Math.min(...lineZ);
+}
+
 export async function loadToyLetters(
   assets: StoryLoaderLike,
   options: ToyLettersOptions,
@@ -383,7 +394,8 @@ export async function loadToyLetters(
       const { box } = glyph;
       const left = item.x * capHeight;
       // The glyph's own left bearing: its box starts where the outline does, not at the pen.
-      const home = new Vector3(offset + left + (box.min.x + box.max.x) / 2, 0, -line * rowGap);
+      const z = options.lineZ?.at(line) ?? -line * rowGap;
+      const home = new Vector3(offset + left + (box.min.x + box.max.x) / 2, 0, z);
       const sizeVec = new Vector3(
         box.max.x - box.min.x,
         box.max.y - box.min.y,
@@ -501,7 +513,7 @@ export async function loadToyLetters(
     letters,
     capHeight,
     width: widest * capHeight,
-    depth: (lines.length - 1) * rowGap + depth,
+    depth: lineSpan(lines.length, rowGap, options.lineZ) + depth,
     commit,
     reset() {
       for (const letter of letters) {
