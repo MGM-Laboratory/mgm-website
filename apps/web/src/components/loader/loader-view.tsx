@@ -290,6 +290,7 @@ function Panel({ panel }: Readonly<{ panel: NetPanel }>) {
               <use href={`#ld-art-${panel.art}`} />
             </svg>
           </div>
+          <i className="ld-edge" />
         </div>
         <div className="ld-shade" style={shade} />
       </div>
@@ -302,9 +303,11 @@ function Panel({ panel }: Readonly<{ panel: NetPanel }>) {
           <div className="ld-deck3d" data-ld="deck3d" />
           <div className="ld-eyes" data-ld="eyes">
             <span className="ld-eye">
+              <span className="ld-pupil" />
               <span className="ld-lash" />
             </span>
             <span className="ld-eye">
+              <span className="ld-pupil" />
               <span className="ld-lash" />
             </span>
           </div>

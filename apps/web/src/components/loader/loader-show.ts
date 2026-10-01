@@ -32,6 +32,9 @@ const FLIGHT_MS = 400;
 const STALL_MS = 1600;
 const STATUS_MS = 2500;
 const QUARTER = 13;
+/** How far the lid closes while someone inside peeks out (90 is shut), and its tuck flap's angle then. */
+const PEEK_LID = 66;
+const PEEK_TUCK = 24;
 
 type Mode = "first" | "fast" | "still";
 
@@ -231,6 +234,13 @@ export class LoaderShow {
     if (!el || this.disposed) return null;
     const anim = el.animate(keyframes, { fill: "forwards", ...options });
     this.anims.add(anim);
+    // Ones that leave nothing behind need no cancelling later.
+    if (options.fill === "none") {
+      const drop = () => {
+        this.anims.delete(anim);
+      };
+      void anim.finished.then(drop).catch(drop);
+    }
     return anim;
   }
 
@@ -295,13 +305,14 @@ export class LoaderShow {
 
   // The deal ------------------------------------------------------------
 
-  private deal(target: number) {
+  /** Deals up to `target` cards; `quick` sends a backlog out fast (the outro is waiting). */
+  private deal(target: number, quick = false) {
     const fan = this.q("fan");
     const probe = this.probe;
     if (!fan || !probe) return;
     const t = now();
     const backlog = target - this.dealt;
-    const spacing = backlog >= 20 ? 15 : backlog >= 6 ? 32 : 70;
+    const spacing = quick || backlog >= 20 ? 14 : backlog >= 6 ? 32 : 70;
     if (this.nextSlot < t) this.nextSlot = t;
     for (let n = this.dealt; n < target; n += 1) {
       const delay = this.nextSlot - t;
@@ -438,7 +449,14 @@ export class LoaderShow {
       const el = this.panels.get(panel.id);
       const ink = el?.querySelector(":scope > .ld-out .ld-ink");
       const inner = el?.querySelector(":scope > .ld-out .ld-ink-in");
+      const edge = el?.querySelector(":scope > .ld-out .ld-edge");
       const d = delay + i * 60;
+      this.animate(edge, [{ opacity: 0.8 }, { opacity: 0.8, offset: 0.7 }, { opacity: 0 }], {
+        duration,
+        delay: d,
+        easing: "linear",
+        fill: "both",
+      });
       this.animate(ink, [{ transform: "translateY(101%)" }, { transform: "translateY(0%)" }], {
         duration,
         delay: d,
@@ -652,17 +670,17 @@ export class LoaderShow {
 
   private async leave(state: LoaderSnapshot) {
     if (this.mode === "fast") {
-      await this.reveal(true, true);
+      await this.reveal(true, 1);
       return;
     }
     mark("leave");
     const early = state.progress < 1;
     const status = early ? LOADER_COPY.rest : LOADER_COPY.done;
     this.override = { line: status, until: Infinity };
-    // Let the deal finish and the drawing land (never more than 0.9 s).
-    if (!early && this.dealt < CARDS) this.deal(CARDS);
+    // Let the deal finish and the drawing land (never more than 0.4 s).
+    if (!early && this.dealt < CARDS) this.deal(CARDS, true);
     const lastLand = this.cards.reduce((m, c) => Math.max(m, c.landsAt), 0);
-    const ready = Math.min(now() + 900, Math.max(lastLand, this.drawDoneAt));
+    const ready = Math.min(now() + 400, Math.max(lastLand, this.drawDoneAt));
     // Keep printing while the last cards land.
     while (now() < ready) {
       await this.wait(Math.min(100, ready - now()));
@@ -675,20 +693,20 @@ export class LoaderShow {
     mark("fold");
     await this.fold(early, long);
     if (this.gone()) return;
-    // After the peek's tap tap the box opens at once; otherwise it taps once first.
+    // Tap tap after a peek, a single tap otherwise; the star opens on the first landing.
     mark("shut");
-    await this.reveal(false, !long);
+    await this.reveal(false, long ? 2 : 1);
   }
 
   /** Close the fan, fold the net around the deck, shut the lid. */
   private async fold(quick: boolean, peek: boolean) {
     // The outro's clock, in ms from now (quick: the loader gave up waiting).
-    const k = quick ? 0.72 : 0.9;
+    const k = quick ? 0.66 : 0.8;
     const at = {
       walls: 140 * k,
       wallStep: 70 * k,
-      deck: 470 * k,
-      top: (quick ? 760 : 1040) * k,
+      deck: 380 * k,
+      top: 840 * k,
       topStep: 80 * k,
       flap: 420 * k,
       lid: 460 * k,
@@ -728,6 +746,7 @@ export class LoaderShow {
 
     // The fan squares up into a deck.
     const fanR = this.probe?.fanR ?? 70;
+    const t0 = now();
     this.cards.forEach((card, i) => {
       card.el.style.opacity = "1";
       this.animate(
@@ -736,7 +755,8 @@ export class LoaderShow {
           { transform: this.slot(card.index) },
           { transform: cardTransform(0, 0, 0, fanR + 4 - i * 0.18, 1) },
         ],
-        { duration: 420 * k, delay: i * 3, easing: EASE_OUT },
+        // A card still in the air lands first.
+        { duration: 420 * k, delay: Math.max(i * 3, card.landsAt - t0), easing: EASE_OUT },
       );
     });
 
@@ -756,19 +776,28 @@ export class LoaderShow {
         : at.walls + panel.order * at.wallStep;
       const duration = lid ? at.lid : at.flap;
       // The tuck flap folds inside, out of sight: the box is shut when the lid lands.
-      if (panel.id !== "tuck") end = Math.max(end, delay + duration * (lid ? 0.74 : 1));
-      this.animate(
-        el,
-        lid
-          ? [
+      if (panel.id !== "tuck") end = Math.max(end, delay + duration * (lid ? 0.76 : 1));
+      let frames: Keyframe[] = [{ transform: "none" }, { transform: panel.fold }];
+      // While someone peeks, the tuck flap sticks out like a lip (peek() tucks it in).
+      if (peek && panel.id === "tuck") {
+        frames = [{ transform: "none" }, { transform: `rotateX(${PEEK_TUCK}deg)` }];
+      }
+      if (lid) {
+        // With a peek, someone inside holds the lid a crack open (peek() shuts it).
+        frames = peek
+          ? [{ transform: "none" }, { transform: `rotateX(${PEEK_LID}deg)` }]
+          : [
               { transform: "none" },
               { transform: "rotateX(97deg)", offset: 0.72 },
               { transform: "rotateX(87deg)", offset: 0.88 },
               { transform: panel.fold },
-            ]
-          : [{ transform: "none" }, { transform: panel.fold }],
-        { duration, delay, easing: lid ? "ease-in" : EASE_OUT },
-      );
+            ];
+      }
+      this.animate(el, frames, {
+        duration,
+        delay,
+        easing: lid ? (peek ? EASE_OUT : "ease-in") : EASE_OUT,
+      });
       this.animate(shade, [{ opacity: 0 }, { opacity: Math.abs(panel.shade) }], {
         duration,
         delay,
@@ -793,7 +822,10 @@ export class LoaderShow {
     const left = foldEnd - now();
     if (left > 0) await this.wait(left);
     if (this.gone()) return;
-    if (peek) await this.peek(target);
+    if (peek) {
+      mark("peek");
+      await this.peek();
+    }
   }
 
   /** The box pose: the front panel centred on the screen, turned to show a side and the lid. */
@@ -859,9 +891,10 @@ export class LoaderShow {
     );
     await fly?.finished.catch(() => undefined);
     if (this.gone()) return;
-    // Hand over to the deck inside the box (the front panel hides its lower half).
-    this.animate(fan, [{ opacity: 1 }, { opacity: 0 }], { duration: 90 });
-    this.animate(deck3d, [{ opacity: 0 }, { opacity: 1 }], { duration: 60 });
+    // Hand over to the deck inside the box in one frame: both stand in the same
+    // place, so a cut reads as one deck (a crossfade showed a ghost card).
+    this.animate(fan, [{ opacity: 0 }, { opacity: 0 }], { duration: 1 });
+    this.animate(deck3d, [{ opacity: 1 }, { opacity: 1 }], { duration: 1 });
     const slide = this.animate(
       deck3d,
       [
@@ -889,103 +922,101 @@ export class LoaderShow {
     await slide?.finished.catch(() => undefined);
   }
 
-  /** The lid lifts a crack, two eyes look out, blink, and duck back in. */
-  private async peek(target: string) {
+  /**
+   * The lid stands a crack open: two eyes rise into the gap, glance left and
+   * right, blink, and duck; the lid snaps shut on them.
+   */
+  private async peek() {
     const lid = this.panels.get("lid");
     const eyes = this.q("eyes");
-    const pose = this.q("pose");
-    if (!lid || !eyes || !pose) return;
-    const lift = this.animate(
-      lid,
-      [
-        { transform: "rotateX(90deg)" },
-        { transform: "rotateX(66deg)", offset: 0.25 },
-        { transform: "rotateX(66deg)", offset: 0.75 },
-        { transform: "rotateX(90deg)" },
-      ],
-      { duration: 900, easing: "ease-in-out" },
-    );
+    if (!lid || !eyes) return;
+    const duration = 720;
+    const at = (y: number) =>
+      `translateX(-50%) translateZ(calc(var(--u) * -90)) translateY(calc(var(--u) * ${y}))`;
     this.animate(
       eyes,
       [
-        {
-          opacity: 0,
-          transform:
-            "translateX(-50%) translateZ(calc(var(--u) * -70)) translateY(calc(var(--u) * 200))",
-        },
-        {
-          opacity: 1,
-          transform: "translateX(-50%) translateZ(calc(var(--u) * -70)) translateY(0)",
-          offset: 0.3,
-        },
-        {
-          opacity: 1,
-          transform: "translateX(-50%) translateZ(calc(var(--u) * -70)) translateY(0)",
-          offset: 0.68,
-        },
-        {
-          opacity: 0,
-          transform:
-            "translateX(-50%) translateZ(calc(var(--u) * -70)) translateY(calc(var(--u) * 200))",
-          offset: 0.82,
-        },
-        {
-          opacity: 0,
-          transform:
-            "translateX(-50%) translateZ(calc(var(--u) * -70)) translateY(calc(var(--u) * 200))",
-        },
+        { opacity: 0, transform: at(200) },
+        { opacity: 1, transform: at(-96), offset: 0.2 },
+        { opacity: 1, transform: at(-90), offset: 0.74 },
+        { opacity: 0, transform: at(200), offset: 0.9 },
+        { opacity: 0, transform: at(200) },
       ],
-      { duration: 900, easing: "ease-in-out" },
+      { duration, easing: "ease-in-out" },
     );
+    for (const pupil of eyes.querySelectorAll(".ld-pupil")) {
+      this.animate(
+        pupil,
+        [
+          { transform: "translateX(0)" },
+          { transform: "translateX(0)", offset: 0.24 },
+          { transform: "translateX(-34%)", offset: 0.34 },
+          { transform: "translateX(-34%)", offset: 0.44 },
+          { transform: "translateX(30%)", offset: 0.52 },
+          { transform: "translateX(30%)", offset: 0.6 },
+          { transform: "translateX(0) translateY(10%)", offset: 0.68 },
+          { transform: "translateX(0) translateY(10%)" },
+        ],
+        { duration, easing: "ease-out", fill: "none" },
+      );
+    }
     for (const lash of eyes.querySelectorAll(".ld-lash")) {
       this.animate(
         lash,
         [
           { transform: "translateY(-100%)" },
-          { transform: "translateY(-100%)", offset: 0.4 },
-          { transform: "translateY(0)", offset: 0.46 },
-          { transform: "translateY(-100%)", offset: 0.53 },
+          { transform: "translateY(-100%)", offset: 0.62 },
+          { transform: "translateY(0)", offset: 0.66 },
+          { transform: "translateY(-100%)", offset: 0.71 },
           { transform: "translateY(-100%)" },
         ],
-        { duration: 900, easing: "linear", fill: "none" },
+        { duration, easing: "linear", fill: "none" },
       );
     }
-    await lift?.finished.catch(() => undefined);
-    // Tap tap.
-    const hop = this.animate(
-      pose,
-      [
-        { transform: target },
-        { transform: `translateY(-10px) ${target}`, offset: 0.25 },
-        { transform: target, offset: 0.5 },
-        { transform: `translateY(-6px) ${target}`, offset: 0.72 },
-        { transform: target },
-      ],
-      { duration: 380, easing: "ease-in-out" },
+    await this.wait(duration * 0.82);
+    if (this.gone()) return;
+    this.animate(
+      this.panels.get("tuck"),
+      [{ transform: `rotateX(${PEEK_TUCK}deg)` }, { transform: "rotateX(90deg)" }],
+      { duration: 160, easing: "ease-in" },
     );
-    await hop?.finished.catch(() => undefined);
+    const shut = this.animate(
+      lid,
+      [
+        { transform: `rotateX(${PEEK_LID}deg)` },
+        { transform: "rotateX(97deg)", offset: 0.55 },
+        { transform: "rotateX(87deg)", offset: 0.8 },
+        { transform: "rotateX(90deg)" },
+      ],
+      { duration: 280, easing: "ease-in" },
+    );
+    await shut?.finished.catch(() => undefined);
   }
 
   /** The page opens through a four-point star that grows from the box. */
-  private async reveal(fast: boolean, tap: boolean) {
+  private async reveal(fast: boolean, taps: 1 | 2) {
     const front = this.panels.get("front")?.querySelector<HTMLElement>(".ld-out");
     const pose = this.q("pose");
     const box = this.root.getBoundingClientRect();
     const r = front?.getBoundingClientRect();
     const cx = r ? r.left + r.width / 2 - box.left : box.width / 2;
     const cy = r ? r.top + r.height / 2 - box.top : box.height / 2;
-    if (tap && pose) {
+    if (pose) {
       const target = getComputedStyle(pose).transform;
-      this.animate(
-        pose,
-        [
-          { transform: target },
-          { transform: `translateY(-12px) ${target}`, offset: 0.4 },
-          { transform: target },
-        ],
-        { duration: 260, easing: "ease-in-out" },
-      );
-      await this.wait(150);
+      const hop = (y: number) => `translateY(${y}px) ${target}`;
+      const frames: Keyframe[] =
+        taps === 2
+          ? [
+              { transform: target },
+              { transform: hop(-10), offset: 0.22 },
+              { transform: target, offset: 0.46 },
+              { transform: hop(-6), offset: 0.7 },
+              { transform: target },
+            ]
+          : [{ transform: target }, { transform: hop(-12), offset: 0.45 }, { transform: target }];
+      this.animate(pose, frames, { duration: taps === 2 ? 340 : 240, easing: "ease-in-out" });
+      // The star opens as the (first) tap lands.
+      await this.wait(fast ? 20 : taps === 2 ? 150 : 110);
       if (this.gone()) return;
     }
     const far = Math.max(
@@ -995,7 +1026,7 @@ export class LoaderShow {
       Math.hypot(box.width - cx, box.height - cy),
     );
     const max = (far / 0.314) * 1.08;
-    const duration = fast ? 460 : 820;
+    const duration = fast ? 400 : 700;
     const frames: Keyframe[] = [];
     const ring: Keyframe[] = [];
     const steps = 18;

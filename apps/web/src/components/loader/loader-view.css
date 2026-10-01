@@ -439,6 +439,7 @@
 .ld-face {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -468,22 +469,18 @@
   stroke-linejoin: round;
 }
 
-.ld-ink::after {
+/* The bright edge of the print wipe (lit only while a panel takes its ink). */
+.ld-edge {
   position: absolute;
   inset: 0 0 auto;
   height: 2px;
-  content: "";
   background: #fff;
-  opacity: 0.7;
+  opacity: 0;
 }
 
 .ld-inked .ld-ink,
 .ld-inked .ld-ink-in {
   transform: none;
-}
-
-.ld-inked .ld-ink::after {
-  opacity: 0;
 }
 
 .ld-shade {
@@ -532,13 +529,12 @@
   background: #fff;
 }
 
-.ld-eye::after {
+.ld-pupil {
   position: absolute;
   left: 30%;
   top: 32%;
   width: 46%;
   height: 46%;
-  content: "";
   border-radius: 50%;
   background: #0e1116;
 }
@@ -808,10 +804,6 @@ html[data-loader-fast] .ld-mat {
 html[data-loader-fast] .ld-ink,
 html[data-loader-fast] .ld-ink-in {
   transform: none;
-}
-
-html[data-loader-fast] .ld-ink::after {
-  opacity: 0;
 }
 
 html[data-loader-fast] .ld-in {
