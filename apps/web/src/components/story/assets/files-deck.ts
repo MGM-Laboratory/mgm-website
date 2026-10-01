@@ -58,7 +58,7 @@ export const DECK_FILES: StoryFile[] = [
   },
   {
     url: "/story/v1/deck/box-drop.json",
-    bytes: 6844,
+    bytes: 7975,
     kind: "json",
     group: "deck",
     tiers: ["high", "medium", "low"],
