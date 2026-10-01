@@ -75,6 +75,9 @@ void main() {
   col = mix(col, uColour * 0.7, rim);
   float alpha = clamp(light + core + rim, 0.0, 1.0) * uIntensity * fadeEdge;
   gl_FragColor = vec4(col, alpha);
+  // The colours are linear (three converts uColour on the way in): encode them once for the target, sRGB on
+  // the canvas and in the stage's display target, so the star keeps the brand yellow of Godette's glow.
+  #include <colorspace_fragment>
 }
 `;
 
