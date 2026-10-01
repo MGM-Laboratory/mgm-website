@@ -341,6 +341,8 @@ export class EdgeWorld extends World {
     out.shake = 0;
     out.look = 0.02;
     out.widen = 1;
+    // Already framed on her (her face in the close-up): a narrow screen must not re-aim it.
+    out.hold = 0;
   }
 
   course(T: number, pose: FlightPose, shot: CameraShot, time: number) {
