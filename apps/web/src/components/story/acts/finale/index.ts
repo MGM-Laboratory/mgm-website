@@ -23,7 +23,12 @@ import {
 import { beatOf } from "@/components/story/engine/timeline";
 import { finaleSignal } from "@/components/story/finale-signal";
 import { ensureGodette } from "@/components/story/props/shared";
-import type { Godette, GodetteBodyLayer, GodetteFace } from "@/components/story/props/godette";
+import {
+  GODETTE_CENTRE,
+  type Godette,
+  type GodetteBodyLayer,
+  type GodetteFace,
+} from "@/components/story/props/godette";
 import { random, randomBetween } from "@/lib/random";
 
 import {
@@ -226,6 +231,9 @@ class FinaleAct implements StoryAct {
   private readonly head = new Vector3();
   private readonly eyes = new Vector3();
   private blush = 0;
+  /** The spin's arms-out share and its stagger step (metres sideways), this frame. */
+  private spinning = 0;
+  private stagger = 0;
   /** Her magic's rim on the light page, eased (0..1). */
   private magic = 0;
   private readonly contact = new Vector3();
@@ -391,9 +399,10 @@ class FinaleAct implements StoryAct {
     const rootY = fallHeight(A);
     const sy = squash(A);
     const sxz = 1 / Math.sqrt(sy);
-    godette.root.position.set(0, rootY, 0);
     // beside the words she turns a little toward them, her face still ours
-    godette.root.rotation.set(0, bodyYaw(A) + PRESENT_YAW * close, 0);
+    const yaw = bodyYaw(A) + PRESENT_YAW * close;
+    godette.root.position.set(0, rootY, 0);
+    godette.root.rotation.set(0, yaw, 0);
     godette.root.scale.set(sxz, sy, sxz);
     godette.setContext("ground");
     godette.setNervous(A < PHASE.landEnd ? 0.35 : 0);
@@ -414,6 +423,24 @@ class FinaleAct implements StoryAct {
 
     const plan = this.planLife(ctx, state, A, godette, life);
     godette.pivot.rotation.set(0, plan.spin, plan.roll);
+    // The pivot turns about her middle: a lean (her weight shifting, a wobble) would swing her feet
+    // the other way, so she moves to keep them where they stand, and sways about them instead.
+    const lean = Math.sin(plan.roll) * GODETTE_CENTRE * sxz;
+    const fx = lean * Math.cos(plan.spin);
+    const fz = -lean * Math.sin(plan.spin);
+    godette.root.position.set(
+      -(fx * Math.cos(yaw) + fz * Math.sin(yaw)) + this.stagger,
+      rootY - (1 - Math.cos(plan.roll)) * GODETTE_CENTRE * sy,
+      -(-fx * Math.sin(yaw) + fz * Math.cos(yaw)),
+    );
+    if (this.spinning > 0.05) {
+      // her hair trails the turn (it streams against the way the back of her head moves)
+      const turn = yaw + plan.spin;
+      godette.setFlight({
+        velocity: { x: -Math.cos(turn) * 3.2, y: 0, z: Math.sin(turn) * 3.2 },
+        amount: 0.45 * this.spinning,
+      });
+    }
     godette.setBody(plan.layers);
     godette.setFace(plan.face);
     godette.lookAt(plan.lookPoint, plan.lookWeight);
@@ -612,14 +639,31 @@ class FinaleAct implements StoryAct {
         if (e > 0.5) face = "big_smile";
         if (special.t > 2.6) this.special = null;
       } else {
-        const turn = smooth(0, 1.05, special.t);
-        spin = turn * Math.PI * 4;
-        const wob = smooth(0.9, 1.2, special.t) * (1 - smooth(2.4, 3, special.t));
-        roll = Math.sin(special.t * 5.5) * 0.07 * wob;
-        dizzy = smooth(0.85, 1.15, special.t) * (1 - smooth(2.5, 3.1, special.t));
-        if (special.t > 0.8 && special.t < 2.7) face = "dizzy";
-        if (special.t > 3.1) this.special = null;
+        const st = special.t;
+        // a wind-up the other way, two eased turns with her arms out and a lean, a little past
+        // and back, a stagger step and a wobble, then the stars
+        const wind = -0.42 * smooth(0, 0.24, st) * (1 - smooth(0.24, 0.5, st));
+        const over = 0.24 * Math.sin(smooth(1.3, 1.95, st) * Math.PI);
+        spin = wind + smoother(0.22, 1.45, st) * Math.PI * 4 + over;
+        const out = smooth(0.16, 0.42, st) * (1 - smooth(1.3, 1.75, st));
+        if (out > 0 && godette.hasClip("fly_play_spin")) {
+          layers = layers.map((layer) => ({ ...layer, weight: layer.weight * (1 - out * 0.85) }));
+          layers.push({ clip: "fly_play_spin", weight: out * 0.85, time: st });
+        }
+        roll = 0.085 * out;
+        this.spinning = out;
+        this.stagger = 0.075 * smooth(1.42, 1.62, st) * (1 - smooth(1.7, 2.3, st));
+        const wob = smooth(1.5, 1.8, st) * (1 - smooth(2.6, 3.2, st));
+        roll += Math.sin(st * 6.2) * 0.075 * wob;
+        dizzy = smooth(1.55, 1.85, st) * (1 - smooth(2.9, 3.5, st));
+        if (st > 0.24 && st < 1.45) face = "laugh";
+        else if (st >= 1.45 && st < 3.1) face = "dizzy";
+        if (st > 3.5) this.special = null;
       }
+    }
+    if (this.special?.kind !== "spin") {
+      this.spinning = 0;
+      this.stagger = 0;
     }
     const fading = this.fading;
     if (fading) {
@@ -744,6 +788,8 @@ class FinaleAct implements StoryAct {
     this.lastClickAt = -10;
     this.pokedAt = -10;
     this.hoverGrace = 0;
+    this.spinning = 0;
+    this.stagger = 0;
     this.bursts.clear();
     this.titleOn = false;
   }
