@@ -187,9 +187,11 @@ export function CompactHero() {
         if (visibleMs >= CTA_FAILSAFE_MS) revealCta(true);
       }, 250);
     };
-    armFailsafe();
-
     let cancelled = false;
+    // The CTA's failsafe counts from the moment the site loader opens (at once without one).
+    void whenLoaderRevealed().then(() => {
+      if (!cancelled) armFailsafe();
+    });
     let engine: Toybox | null = null;
     let splits: SplitText[] = [];
 
