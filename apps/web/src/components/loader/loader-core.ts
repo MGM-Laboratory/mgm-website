@@ -25,8 +25,11 @@ import { motionAllowed } from "@/lib/reduced-motion";
  * - It waits for the story's assets and warm-up on a device that can run
  *   the WebGL story (hardware WebGL2, motion allowed), otherwise only for
  *   the fonts, and never longer than 12 s of visible time: the rest keeps
- *   loading behind the page. A short minimum keeps it from flashing (shorter
- *   again on a repeat load in the same tab).
+ *   loading behind the page. A short minimum keeps it from flashing.
+ * - A repeat load in the same tab (a reload) is the fast path: it starts the
+ *   story's build but waits only for the fonts, so the view's short outro
+ *   is all the visitor sees; the build finishes behind the page (the story
+ *   section shows its own waiting state if someone gets there first).
  * - Every fetch it starts catches its own failure (no unhandled rejection).
  * - When it is done: `html[data-loader="done"]`, a `mgm:loader` flag for the
  *   fast path, and a full prefetch of the menu's routes at idle (skipped
@@ -54,10 +57,10 @@ export type LoaderSnapshot = Readonly<{
 
 export const LOADER_TIMING = {
   minVisibleMs: 900,
-  minVisibleRepeatMs: 450,
+  minVisibleRepeatMs: 150,
   capVisibleMs: 12_000,
-  /** How long a view's exit may take before the core hides it anyway. */
-  exitTimeoutMs: 1_200,
+  /** How long a view's exit may take before the core hides it anyway (the fold and the reveal). */
+  exitTimeoutMs: 3_000,
 } as const;
 
 const INITIAL: LoaderSnapshot = {
@@ -154,18 +157,9 @@ class LoaderCore {
 
   private async work(story: boolean) {
     if (story) {
-      try {
-        const { ensureStoryEngine } = await import("@/components/story/engine/story-engine");
-        await ensureStoryEngine((build) => {
-          this.set({
-            progress: Math.max(this.snapshot.progress, build.fraction),
-            loadedBytes: build.bytes.loadedBytes,
-            totalBytes: build.bytes.totalBytes,
-          });
-        });
-      } catch {
-        // The story decides again on `/`; the loader only waited for it.
-      }
+      const build = this.buildStory();
+      // The fast path leaves the build running behind the page.
+      if (!this.snapshot.repeat) await build;
     }
     try {
       await Promise.race([document.fonts.ready, wait(2000)]);
@@ -174,6 +168,23 @@ class LoaderCore {
     }
     this.workDone = true;
     this.set({ progress: 1 });
+  }
+
+  /** Starts (or joins) the story's build, reporting its progress; never rejects. */
+  private async buildStory() {
+    try {
+      const { ensureStoryEngine } = await import("@/components/story/engine/story-engine");
+      await ensureStoryEngine((build) => {
+        if (this.snapshot.phase !== "loading") return;
+        this.set({
+          progress: Math.max(this.snapshot.progress, build.fraction),
+          loadedBytes: build.bytes.loadedBytes,
+          totalBytes: build.bytes.totalBytes,
+        });
+      });
+    } catch {
+      // The story decides again on `/`; the loader only waited for it.
+    }
   }
 
   /** Visible time only (gotcha #18): a hidden tab does not count toward any limit. */
