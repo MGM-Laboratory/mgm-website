@@ -106,7 +106,44 @@ html[data-story-mode="gl"] [data-storybook] {
 .story-finale-gl {
   height: 100%;
   justify-content: flex-end;
-  padding: 0 1.5rem max(5.5rem, 9vh);
+  padding: 0 1.5rem max(5.25rem, 9vh);
+}
+
+/*
+ * Short landscape screens (a phone on its side): the words beside her, not
+ * under her, or they would take the whole height. The act reads this
+ * layout from the title's place.
+ */
+@media (orientation: landscape) and (max-height: 600px) {
+  .story-finale-gl {
+    align-items: flex-start;
+    justify-content: center;
+    padding: 4.5rem 6vw 3rem 50%;
+    text-align: left;
+  }
+
+  .story-finale-gl .story-finale-title {
+    font-size: clamp(2rem, 4.6vw, 3.5rem);
+  }
+
+  .story-finale-gl .story-finale-line {
+    margin-top: 0.75rem;
+  }
+
+  .story-finale-gl .story-finale-action-wrap {
+    margin-top: 1.25rem;
+  }
+}
+
+/* Phones: a tighter stack under her, so she keeps more of the screen. */
+@media (max-width: 639px) {
+  .story-finale-gl .story-finale-line {
+    margin-top: 0.875rem;
+  }
+
+  .story-finale-gl .story-finale-action-wrap {
+    margin-top: 1.5rem;
+  }
 }
 
 /* Before the motion is ready, the WebGL block shows nothing it would then hide. */
@@ -127,20 +164,25 @@ html[data-story-mode="gl"]
   margin-bottom: 1.25rem;
 }
 
-.story-finale-art img {
-  display: block;
-  width: 100%;
-  height: 100%;
+.story-finale-art .story-still {
   object-fit: contain;
   object-position: 50% 100%;
 }
 
-.story-finale-art .story-still-dark,
-.dark .story-finale-art .story-still-light {
+/* A still in the page's scheme (storybook/story-still.tsx): both are in the HTML, one shows. */
+.story-still {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.story-still-dark,
+.dark .story-still-light {
   display: none;
 }
 
-.dark .story-finale-art .story-still-dark {
+.dark .story-still-dark {
   display: block;
 }
 

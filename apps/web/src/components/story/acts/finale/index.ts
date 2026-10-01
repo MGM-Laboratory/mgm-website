@@ -43,10 +43,11 @@ import {
   storyLayers,
 } from "./acting";
 import { SpriteBatch, StrokeBatch } from "./batches";
-import { placeCamera, solveShot, type Shot } from "./framing";
+import { placeCamera, sideFor, solveShot, type Shot } from "./framing";
 import {
   AmbientStars,
   StarBursts,
+  drawBrushPuffs,
   drawDizzy,
   drawImpact,
   drawSpeedLines,
@@ -123,6 +124,9 @@ class FinaleAct implements StoryAct {
   private yaw = 0;
   private floorY = 0.62;
   private topY = 0.1;
+  /** Where she stands across the frame: centred over the words, or beside them on a short landscape screen. */
+  private xFrac = 0.5;
+  private splitX = 0.5;
   private titleEl: HTMLElement | null = null;
   private actionEl: HTMLElement | null = null;
   private metricsKey = "";
@@ -160,6 +164,8 @@ class FinaleAct implements StoryAct {
 
   async init(ctx: StoryContext) {
     this.ctx = ctx;
+    // Development only: `?storystill` renders her as a cut-out for the storybook's stills
+    // (transparent backdrop, the wave held, eyes on us).
     this.still =
       process.env.NODE_ENV !== "production" &&
       new URLSearchParams(window.location.search).has("storystill");
@@ -243,10 +249,12 @@ class FinaleAct implements StoryAct {
 
     // ---------------------------------------------------------------- camera
     this.measureLayout(ctx);
+    // beside the words, she steps aside only as they arrive (centred until then)
+    this.xFrac = 0.5 + (this.splitX - 0.5) * smooth(WAVE.start, TITLE_T + 0.12, t);
     const framing = framingAt(A);
     const life = A >= PHASE.waveInEnd || t >= WAVE_LIFE_T;
     const landscape = ctx.size.aspect >= 1;
-    const height = framing.height * (landscape ? 1 : 0.94);
+    const height = framing.height * (landscape ? 1 : 0.9);
     solveShot(
       {
         floorY: this.floorY,
@@ -254,10 +262,12 @@ class FinaleAct implements StoryAct {
         height,
         halfWidth: framing.halfWidth,
         fovDeg: FOV,
-        aspect: ctx.size.aspect,
+        // beside the words she has her own part of the frame, not all of it
+        aspect: ctx.size.aspect * Math.min(1, 2 * Math.min(this.xFrac, 1 - this.xFrac)),
       },
       this.shot,
     );
+    const side = sideFor(this.shot, this.xFrac, FOV, ctx.size.aspect);
     const pointer = ctx.pointer;
     const mouse = pointer.inside && pointer.type !== "touch";
     if (
@@ -268,10 +278,12 @@ class FinaleAct implements StoryAct {
       this.pointerSeenAt = this.life;
     }
     // The view swings a little toward the cursor, about her feet (the floor stays put).
-    const yawGoal = (mouse ? -pointer.ndc.x * 0.055 : 0) + Math.sin(this.life * 0.23) * 0.012;
+    const yawGoal = this.still
+      ? 0
+      : (mouse ? -pointer.ndc.x * 0.055 : 0) + Math.sin(this.life * 0.23) * 0.012;
     this.yaw = damp(this.yaw, yawGoal, 3.2, dt);
     const jolt = cameraJolt(A) * height;
-    placeCamera(stage.camera, this.shot, 0, 0, this.yaw, FOV, jolt);
+    placeCamera(stage.camera, this.shot, framing.centreX, 0, this.yaw, FOV, jolt, side);
     if (stage.camera.view?.enabled) stage.camera.clearViewOffset();
 
     // ---------------------------------------------------------------- body
@@ -329,6 +341,7 @@ class FinaleAct implements StoryAct {
     strokes.begin();
     drawSpeedLines(strokes, A, rootY, colors);
     godette.socket("hips", this.contact);
+    drawBrushPuffs(sprites, A, this.contact, colors);
     this.contact.y = 0;
     drawImpact(sprites, strokes, A, this.contact, stage.camera, colors);
     godette.socket("head", this.head);
@@ -484,10 +497,11 @@ class FinaleAct implements StoryAct {
       }
       lookWeight = 0.55;
     }
-    if (bye > 0.5) {
+    if (bye > 0.5 || this.still) {
       lookPoint = this.look.copy(camera.position);
       lookWeight = 0.9;
     }
+    if (this.still) face = "big_smile";
 
     // ---- hover: shy or curious while the pointer stays on her
     if (this.interactive && !this.special) {
@@ -658,9 +672,18 @@ class FinaleAct implements StoryAct {
       this.metricsKey = key;
       this.capOffset = this.capTop(style, size);
     }
-    const floor = offset + this.capOffset - size * 0.07;
-    this.floorY = Math.min(0.9, Math.max(0.3, floor / height));
     const header = 76;
+    // A short landscape screen puts the words beside her (story.css): she stands on the screen's
+    // floor in the left part, the words keep the right.
+    const split = titleRect.left - finaleRect.left > ctx.size.width * 0.38;
+    if (split) {
+      this.splitX = 0.27;
+      this.floorY = 0.86;
+    } else {
+      const floor = offset + this.capOffset - size * 0.07;
+      this.splitX = 0.5;
+      this.floorY = Math.min(0.9, Math.max(0.3, floor / height));
+    }
     this.topY = Math.min(this.floorY - 0.25, (header + height * 0.025) / height);
   }
 

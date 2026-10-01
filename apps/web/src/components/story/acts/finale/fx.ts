@@ -186,6 +186,37 @@ export function drawImpact(
 }
 
 /**
+ * Dusting off: each brush of her hands on her shorts knocks out a little
+ * puff (story: the clip's brush times, aged by the acting clock).
+ */
+export function drawBrushPuffs(
+  sprites: SpriteBatch,
+  A: number,
+  hips: Readonly<Vector3>,
+  colors: FinaleColors,
+) {
+  const clip = (A - PHASE.standEnd) * PHASE.dustRate;
+  if (clip < 0 || clip > 2.4) return;
+  const brushes = [0.38, 0.72, 1.08];
+  brushes.forEach((at, b) => {
+    const age = (clip - at) / 0.75;
+    if (age <= 0 || age >= 1) return;
+    const side = b % 2 === 0 ? -1 : 1;
+    for (let i = 0; i < 3; i += 1) {
+      const k = easeOut(age);
+      const spread = (i - 1) * 0.07;
+      tmpA.set(
+        hips.x + side * (0.2 + 0.18 * k) + spread,
+        hips.y - 0.06 + 0.12 * k + i * 0.025,
+        hips.z + 0.12,
+      );
+      const size = (0.05 + 0.07 * k) * Math.sin(Math.min(1, age * 1.2) * Math.PI) ** 0.6;
+      sprites.push(tmpA, size, "disc", colors.dust, 1);
+    }
+  });
+}
+
+/**
  * The dizzy constellation: five of the card back's small stars, linked by
  * thin lines, orbiting her head. `amount` is its presence (story), `scatter`
  * throws the stars off as she shakes her head, `time` turns it (life).

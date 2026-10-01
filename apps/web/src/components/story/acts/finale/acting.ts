@@ -184,8 +184,10 @@ export function framingAt(A: number) {
   const pushIn = smooth(P.bottomHit + 0.15, P.bottomHit + 1.1, A);
   const rise = smooth(P.dizzyEnd + 0.1, P.standEnd - 0.1, A);
   const height = (wide + (close - wide) * pushIn) * (1 - rise) + standing * rise;
-  const halfWidth = 0.62 + (0.55 - 0.62) * rise;
-  return { height, halfWidth };
+  // sitting turned, her legs reach out to one side: hold them, and centre on her, not her feet
+  const halfWidth = 0.95 + (0.55 - 0.95) * rise;
+  const centreX = -0.13 * (1 - rise);
+  return { height, halfWidth, centreX };
 }
 
 /** The dizzy constellation's presence (0..1): pops out after the bounce, fades as she stands. */

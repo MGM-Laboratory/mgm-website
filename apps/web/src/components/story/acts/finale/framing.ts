@@ -30,6 +30,12 @@ export type Framing = Readonly<{
 
 export type Shot = { distance: number; eye: number };
 
+/** The camera slide (metres) that puts the floor point at `xFrac` across the frame (0 left, 1 right). */
+export function sideFor(shot: Shot, xFrac: number, fovDeg: number, aspect: number) {
+  const tan = Math.tan((fovDeg * Math.PI) / 360);
+  return -(2 * xFrac - 1) * shot.distance * tan * aspect;
+}
+
 /** Distance along the view axis and camera height for `framing` (the floor point is the origin). */
 export function solveShot(framing: Framing, out: Shot): Shot {
   const tan = Math.tan((framing.fovDeg * Math.PI) / 360);
@@ -47,7 +53,8 @@ export function solveShot(framing: Framing, out: Shot): Shot {
  * Places `camera` for `shot`, turned `yaw` radians about the vertical axis
  * through the floor point (`x`, `z`): the floor point keeps its screen
  * place while the view swings around her. `lift` raises the camera and its
- * aim together (a jolt), in metres.
+ * aim together (a jolt), `side` slides both along the view's right axis
+ * (her place across the frame), in metres.
  */
 export function placeCamera(
   camera: PerspectiveCamera,
@@ -57,13 +64,17 @@ export function placeCamera(
   yaw: number,
   fovDeg: number,
   lift = 0,
+  side = 0,
 ) {
   const s = Math.sin(yaw);
   const c = Math.cos(yaw);
   const y = shot.eye + lift;
-  camera.position.set(x + s * shot.distance, y, z + c * shot.distance);
+  // `side` slides the camera along its own right axis (metres): she moves across the frame, level.
+  const rx = c * side;
+  const rz = -s * side;
+  camera.position.set(x + s * shot.distance + rx, y, z + c * shot.distance + rz);
   camera.up.set(0, 1, 0);
-  camera.lookAt(x, y, z);
+  camera.lookAt(x + rx, y, z + rz);
   camera.fov = fovDeg;
   camera.near = Math.max(0.05, shot.distance * 0.1);
   camera.far = shot.distance * 6 + 20;
