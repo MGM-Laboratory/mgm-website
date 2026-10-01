@@ -19,8 +19,12 @@ import {
   ShaderMaterial,
   SkinnedMesh,
   SphereGeometry,
+  SRGBColorSpace,
   Texture,
+  UnsignedByteType,
   Vector3,
+  Vector4,
+  WebGLRenderTarget,
   type AnimationAction,
   type Bone,
   type BufferGeometry,
@@ -28,6 +32,7 @@ import {
   type Scene,
   type WebGLRenderer,
   type Interpolant,
+  type Light,
   type Material,
   type Object3D,
 } from "three";
@@ -168,10 +173,21 @@ export interface Godette {
   rootMotion(clip: GodetteClip, time: number, target?: Vector3): Vector3;
   update(dt: number): void;
   /**
-   * Compile every program she can show (the halo, the shadow and the stand included) against `scene`'s
-   * lights, so nothing compiles on first sight. Call it once her scene is lit, during the loader.
+   * Readies everything she can show (the halo, the shadow and the stand included) so nothing stalls on first
+   * sight: compiles the programs against `scene`'s lights, uploads her textures, then draws her once into one
+   * pixel of each target, because the GPU builds a pipeline per program, target format and blend state on the
+   * first real draw (50 to 350 ms on Metal). Call it once her scene is lit, during the loader.
+   *
+   * `targets` are what the stage renders into this visit (`null` is the canvas). Omitted, she warms the canvas
+   * and a stand-in for the story stage's post target (RGBA8 display bytes, 4x MSAA); a stage that renders
+   * through other targets (the low tier's 0 samples) should pass them.
    */
-  compile(renderer: WebGLRenderer, camera: Camera, scene: Scene): Promise<void>;
+  compile(
+    renderer: WebGLRenderer,
+    camera: Camera,
+    scene: Scene,
+    targets?: readonly (WebGLRenderTarget | null)[],
+  ): Promise<void>;
   dispose(): void;
 }
 
@@ -444,6 +460,114 @@ function faceCue(spec: GodetteClipSpec, t: number): readonly [GodetteFace, numbe
     } else break;
   }
   return [face, weight];
+}
+
+/* ------------------------------------------------------------------------ */
+/* Warm-up draw                                                              */
+/* ------------------------------------------------------------------------ */
+
+/** A layer nothing else uses: the warm-up draw shows only her objects and the scene's lights. */
+const WARM_LAYER = 31;
+
+/** The story stage's post target, in one pixel: RGBA8 display bytes, three's XR flag (canvas programs), MSAA. */
+function stageLikeTarget(samples: number): WebGLRenderTarget {
+  const target = new WebGLRenderTarget(1, 1, {
+    type: UnsignedByteType,
+    samples,
+    depthBuffer: true,
+  });
+  target.texture.colorSpace = SRGBColorSpace;
+  target.texture.internalFormat = "RGBA8";
+  Object.assign(target, { isXRRenderTarget: true });
+  return target;
+}
+
+/** Puts `child` back under `parent` at its old index (or detaches it when it had no parent). */
+function reparent(child: Object3D, parent: Object3D | null, index: number) {
+  child.removeFromParent();
+  if (!parent) return;
+  parent.add(child);
+  const list = parent.children;
+  list.splice(list.indexOf(child), 1);
+  list.splice(Math.min(index, list.length), 0, child);
+}
+
+/**
+ * Draws `objects` once into a single pixel of every target, lit by `scene`'s lights, so each pipeline is built now.
+ * Everything it touches (layers, culling, parents, background, clear, scissor, the render target) is restored.
+ */
+function warmDraw(
+  renderer: WebGLRenderer,
+  camera: Camera,
+  scene: Scene,
+  objects: readonly Object3D[],
+  targets: readonly (WebGLRenderTarget | null)[],
+) {
+  const holder = new Group();
+  const homes = objects.map((o) => ({
+    o,
+    parent: o.parent,
+    index: o.parent ? o.parent.children.indexOf(o) : 0,
+  }));
+  const masks = new Map<Object3D, number>();
+  const culled = new Map<Object3D, boolean>();
+  const prev = {
+    target: renderer.getRenderTarget(),
+    autoClear: renderer.autoClear,
+    scissorTest: renderer.getScissorTest(),
+    scissor: renderer.getScissor(new Vector4()),
+    viewport: renderer.getViewport(new Vector4()),
+    background: scene.background,
+    cameraMask: camera.layers.mask,
+  };
+  for (const o of objects) holder.add(o);
+  scene.add(holder);
+  holder.traverse((o) => {
+    masks.set(o, o.layers.mask);
+    o.layers.enable(WARM_LAYER);
+    culled.set(o, o.frustumCulled);
+    o.frustumCulled = false;
+  });
+  scene.traverse((o) => {
+    if (!(o as Light).isLight || masks.has(o)) return;
+    masks.set(o, o.layers.mask);
+    o.layers.enable(WARM_LAYER);
+  });
+  camera.layers.set(WARM_LAYER);
+  scene.background = null;
+  renderer.autoClear = false;
+  try {
+    for (const target of targets) {
+      renderer.setRenderTarget(target);
+      if (target) {
+        const was = { test: target.scissorTest, scissor: target.scissor.clone() };
+        target.scissorTest = true;
+        target.scissor.set(0, 0, 1, 1);
+        renderer.setRenderTarget(target);
+        renderer.render(scene, camera);
+        target.scissorTest = was.test;
+        target.scissor.copy(was.scissor);
+      } else {
+        renderer.setScissorTest(true);
+        renderer.setScissor(0, 0, 1, 1);
+        renderer.render(scene, camera);
+        renderer.setScissorTest(prev.scissorTest);
+        renderer.setScissor(prev.scissor);
+      }
+    }
+  } finally {
+    camera.layers.mask = prev.cameraMask;
+    scene.background = prev.background;
+    renderer.autoClear = prev.autoClear;
+    for (const [o, mask] of masks) o.layers.mask = mask;
+    for (const [o, value] of culled) o.frustumCulled = value;
+    scene.remove(holder);
+    for (const home of homes) reparent(home.o, home.parent, home.index);
+    renderer.setRenderTarget(prev.target);
+    renderer.setScissorTest(prev.scissorTest);
+    renderer.setScissor(prev.scissor);
+    renderer.setViewport(prev.viewport);
+  }
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1543,20 +1667,38 @@ export async function loadGodette(
       return target.set(x, y, z);
     },
     update,
-    async compile(renderer, camera, scene) {
+    async compile(renderer, camera, scene, targets) {
       const was = [halo.visible, shadow.visible];
       halo.visible = true;
       shadow.visible = true;
+      const homes = [shadow, stand].map((o) => ({
+        o,
+        parent: o.parent,
+        index: o.parent ? o.parent.children.indexOf(o) : 0,
+      }));
       const holder = new Group();
-      const parents = [shadow.parent, stand.parent];
       holder.add(shadow, stand);
-      await renderer.compileAsync(root, camera, scene);
-      await renderer.compileAsync(holder, camera, scene);
-      holder.remove(shadow, stand);
-      if (parents[0]) parents[0].add(shadow);
-      if (parents[1]) parents[1].add(stand);
-      halo.visible = was[0];
-      shadow.visible = was[1];
+      const own = targets ? [] : [stageLikeTarget(4)];
+      try {
+        await renderer.compileAsync(root, camera, scene);
+        await renderer.compileAsync(holder, camera, scene);
+        for (const home of homes) reparent(home.o, home.parent, home.index);
+        const textures = new Set<Texture>([texture]);
+        stand.traverse((o) => {
+          if (!(o instanceof Mesh)) return;
+          const m = o.material as Material | Material[];
+          for (const x of Array.isArray(m) ? m : [m])
+            for (const value of Object.values(x)) if (value instanceof Texture) textures.add(value);
+        });
+        for (const t of textures) renderer.initTexture(t);
+        warmDraw(renderer, camera, scene, [root, shadow, stand], targets ?? [null, ...own]);
+      } finally {
+        for (const home of homes)
+          if (home.o.parent === holder) reparent(home.o, home.parent, home.index);
+        for (const t of own) t.dispose();
+        halo.visible = was[0];
+        shadow.visible = was[1];
+      }
     },
     dispose() {
       mixer.stopAllAction();
