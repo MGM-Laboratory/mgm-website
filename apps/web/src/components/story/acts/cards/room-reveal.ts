@@ -24,6 +24,8 @@ import type { StudioLights } from "@/components/story/acts/cards/lighting";
  */
 
 const ndc = new Vector3();
+/** The studio reflections' strength on the box over the page. */
+const STUDIO_ENV = 0.8;
 
 export class RoomReveal {
   private phase: RoomPhase | null = null;
@@ -61,7 +63,7 @@ export class RoomReveal {
     if (drop <= 0) {
       this.setPhase("hidden");
       this.studio.set(1, scheme);
-      this.setEnv(this.studio.env, 1);
+      this.setEnv(this.studio.env, STUDIO_ENV);
       if (state.t >= 0) ctx.stage.backdrop.set({ paint: 1, reveal: 0 });
       else ctx.stage.backdrop.set({ paint: 0, reveal: 0 });
       return;
@@ -76,7 +78,8 @@ export class RoomReveal {
     // The reflections: the studio's, dipping out, then the room's, rising in.
     const swap = 0.42;
     const roomEnv = this.room.envMap;
-    if (drop < swap || !roomEnv) this.setEnv(this.studio.env, 1 - smoothstep(0.2, swap, drop));
+    if (drop < swap || !roomEnv)
+      this.setEnv(this.studio.env, STUDIO_ENV * (1 - smoothstep(0.2, swap, drop)));
     else this.setEnv(roomEnv, smoothstep(swap, 0.7, drop));
 
     ndc.copy(boxPosition).project(ctx.stage.camera);

@@ -1,4 +1,4 @@
-import { Group } from "three";
+import { Group, MeshStandardMaterial } from "three";
 
 import {
   type ActState,
@@ -9,10 +9,21 @@ import {
 import { ensureCardKit, ensureDeckBox, ensureRoom } from "@/components/story/props/shared";
 import type { DeckBox } from "@/components/story/props/deck-box";
 import type { StoryRoom } from "@/components/story/props/room";
-import { BoxDirector } from "@/components/story/acts/cards/box-director";
+import { BoxDirector, REST_LEAN, REST_YAW } from "@/components/story/acts/cards/box-director";
 import { CameraDirector } from "@/components/story/acts/cards/camera-director";
 import { createStudioLights, type StudioLights } from "@/components/story/acts/cards/lighting";
 import { RoomReveal } from "@/components/story/acts/cards/room-reveal";
+import { DeckLayout } from "@/components/story/acts/cards/deck-layout";
+import {
+  DeckMotion,
+  createBeats,
+  heroIndices,
+  readBeats,
+} from "@/components/story/acts/cards/deck-motion";
+import { DeckView } from "@/components/story/acts/cards/deck-view";
+import { HeroCards } from "@/components/story/acts/cards/hero-cards";
+import { swarmCountFor } from "@/components/story/props/card-mesh";
+import { smoothstep, window4 } from "@/components/story/engine/act";
 import {
   STAGE_ORIGIN,
   STAGE_YAW,
@@ -54,9 +65,14 @@ class CardsAct implements StoryAct {
   private readonly camera = new CameraDirector();
   private reveal: RoomReveal | null = null;
   private readonly view: StageView = { tanHalf: 0.12, aspect: 1, width: 1, height: 1 };
+  private readonly layout = new DeckLayout();
+  private motion: DeckMotion | null = null;
+  private deck: DeckView | null = null;
+  private heroes: HeroCards | null = null;
+  private readonly beats = createBeats();
 
   async init(ctx: StoryContext) {
-    const [room, box] = await Promise.all([
+    const [room, box, kit] = await Promise.all([
       ensureRoom(ctx),
       ensureDeckBox(ctx),
       ensureCardKit(ctx),
@@ -80,11 +96,36 @@ class CardsAct implements StoryAct {
     room.setPhase("hidden");
     box.setEnvironment(studio.env, 1);
     this.boxDirector = new BoxDirector(box);
+    const count = swarmCountFor(ctx.tier);
+    this.motion = new DeckMotion({ count, heroes: heroIndices(count) });
+    const deck = new DeckView(kit, this.stage);
+    deck.setPage(ctx.palette.page);
+    // Printed paper takes a soft studio sheen; the light must not wash the fronts out.
+    for (const hero of deck.heroes) {
+      hero.card.material.envMap = studio.env;
+      hero.card.material.envMapIntensity = 0.42;
+    }
+    const swarmMaterial = deck.swarm.mesh.material;
+    if (swarmMaterial instanceof MeshStandardMaterial) {
+      swarmMaterial.envMap = studio.env;
+      swarmMaterial.envMapIntensity = 0.55;
+    }
+    this.deck = deck;
+    const heroes = new HeroCards(deck, ctx.tier);
+    this.heroes = heroes;
+    // Compile the live fronts too (a hero with a front texture is the same program as without).
+    deck.heroes.forEach((hero, k) => {
+      hero.card.setFront(heroes.fronts.at(k)?.texture ?? null);
+    });
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { __storyCards: this });
 
     // Compile with every object shown once (hidden objects are not compiled).
     box.warm(true);
+    deck.warm(true);
     await ctx.stage.compile();
     box.warm(false);
+    deck.warm(false);
+    for (const hero of deck.heroes) hero.card.setFront(null);
   }
 
   update(ctx: StoryContext, state: ActState) {
@@ -103,6 +144,14 @@ class CardsAct implements StoryAct {
     }
 
     const drop = state.beat("c-drop");
+    const motion = this.motion;
+    const deck = this.deck;
+    const box = this.box;
+    if (motion && box) {
+      this.layout.update(this.view, box, REST_YAW, REST_LEAN);
+      readBeats(state, this.beats);
+      director.frame.stack = motion.stackFill(this.beats, this.layout);
+    }
     if (drop > 0) {
       director.update(ctx, state, this.view);
       this.camera.update(ctx, state, director.frame.position);
@@ -111,6 +160,14 @@ class CardsAct implements StoryAct {
       director.update(ctx, state, this.view);
     }
     reveal.update(ctx, state, director.frame.position);
+    if (motion && deck) {
+      // The cursor parts the stream while it flows (not while the four are on show).
+      const parting =
+        window4(state.t, 1.9, 2.3, 5.0, 5.4) +
+        smoothstep(0.12, 0.3, this.beats.gather) * (1 - smoothstep(0.7, 0.85, this.beats.gather));
+      deck.update(ctx, motion, this.beats, this.layout, Math.min(1, parting));
+      this.heroes?.update(ctx, this.beats, this.layout, state.velocity);
+    }
   }
 
   pointer(ctx: StoryContext, event: StoryPointerEvent) {
@@ -130,6 +187,19 @@ class CardsAct implements StoryAct {
     return false;
   }
 
+  palette(ctx: StoryContext) {
+    this.deck?.setPage(ctx.palette.page);
+  }
+
+  resize() {
+    this.layout.invalidate();
+  }
+
+  tier(ctx: StoryContext) {
+    const count = swarmCountFor(ctx.tier);
+    this.motion?.setCount(count, heroIndices(count));
+  }
+
   sleep(ctx: StoryContext) {
     this.stage.visible = false;
     this.reveal?.sleep(ctx);
@@ -138,6 +208,10 @@ class CardsAct implements StoryAct {
 
   dispose() {
     this.stage.removeFromParent();
+    this.deck?.dispose();
+    this.deck = null;
+    this.heroes?.dispose();
+    this.heroes = null;
     this.studio?.dispose();
     this.studio = null;
     this.boxDirector = null;

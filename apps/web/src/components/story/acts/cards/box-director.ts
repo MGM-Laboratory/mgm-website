@@ -41,8 +41,8 @@ import {
 
 const DEG = Math.PI / 180;
 /** The rest pose on the card stage: a slight three quarter turn and a lean of the top toward us. */
-const REST_YAW = 8 * DEG;
-const REST_LEAN = 4 * DEG;
+export const REST_YAW = 8 * DEG;
+export const REST_LEAN = 4 * DEG;
 /** The lid at its open hold (108 degrees) and its overshoot (112). */
 const LID_HOLD = 108 / LID_OPEN_DEGREES;
 const LID_OVER = 112 / LID_OPEN_DEGREES;

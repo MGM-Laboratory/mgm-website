@@ -51,9 +51,9 @@ export function createStudioLights(renderer: WebGLRenderer, envSize: number): St
   for (const light of [key, fill, rim, sky]) light.layers.enableAll();
 
   const rigs: readonly Rig[] = [
-    { light: key, intensity: 2.3 },
-    { light: fill, intensity: 0.7 },
-    { light: rim, intensity: 1.5 },
+    { light: key, intensity: 1.75 },
+    { light: fill, intensity: 0.5 },
+    { light: rim, intensity: 1.25 },
   ];
 
   const pmrem = new PMREMGenerator(renderer);
@@ -74,7 +74,7 @@ export function createStudioLights(renderer: WebGLRenderer, envSize: number): St
       // Over the dark page the key carries a little more and the sky less, so the box keeps its blue.
       const dark = scheme === "dark";
       for (const rig of rigs) rig.light.intensity = rig.intensity * amount * (dark ? 1.08 : 1);
-      sky.intensity = (dark ? 0.55 : 0.75) * amount;
+      sky.intensity = (dark ? 0.4 : 0.5) * amount;
     },
     dispose() {
       group.removeFromParent();

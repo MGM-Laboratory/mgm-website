@@ -1,0 +1,225 @@
+import { Euler, Matrix4, Vector3 } from "three";
+
+import { CARD_H, CARD_W } from "@/components/story/props/card-mesh";
+import type { DeckBox } from "@/components/story/props/deck-box";
+import { DeckPath } from "@/components/story/acts/cards/deck-path";
+import {
+  STAGE_DISTANCE,
+  depthForHeight,
+  halfHeightAt,
+  halfWidthAt,
+  screenToStage,
+  type StageView,
+} from "@/components/story/acts/cards/stage-space";
+
+/**
+ * Where the deck goes, for the current viewport: the spring and snake path
+ * out of the box, the return path for the gather, the stack and pressure
+ * fan, the wheel behind the drawn four, and the four reveal slots (a row on
+ * landscape screens, 2 x 2 on portrait ones), plus the big centre spot a
+ * portrait reveal and the focus mode use. Everything is in the stage frame
+ * (x right, y up, z toward the camera), laid out from screen fractions at a
+ * depth so it fits any aspect. Rebuilt when the size changes.
+ */
+
+const DEG = Math.PI / 180;
+
+/** Screen fraction (x, y in -1..1) and depth (metres from the resting camera). */
+type ViewPoint = readonly [number, number, number];
+
+/** The snake on a landscape screen: up and right out of the box, a loop near the lens, a far meander, the pour. */
+const SNAKE_LANDSCAPE: readonly ViewPoint[] = [
+  [0.1, 0.5, 0.95],
+  [0.45, 0.66, 1.15],
+  [0.78, 0.3, 1.3],
+  [0.7, -0.4, 1.15],
+  [0.2, -0.66, 1.0],
+  [-0.45, -0.52, 1.05],
+  [-0.8, -0.05, 1.3],
+  [-0.62, 0.55, 1.6],
+  [-0.05, 0.72, 1.9],
+  [0.55, 0.55, 2.0],
+  [0.8, 0.0, 1.85],
+  [0.5, -0.5, 1.7],
+  [-0.2, -0.48, 1.6],
+  [-0.48, 0.12, 1.5],
+  [-0.05, 0.56, 1.36],
+  [0.24, 0.24, 1.2],
+];
+
+/** The snake on a portrait screen: the same story, stacked vertically. */
+const SNAKE_PORTRAIT: readonly ViewPoint[] = [
+  [0.3, 0.32, 0.95],
+  [0.7, 0.48, 1.1],
+  [0.55, 0.06, 1.2],
+  [-0.3, -0.18, 1.1],
+  [-0.72, -0.48, 1.15],
+  [-0.18, -0.72, 1.2],
+  [0.56, -0.62, 1.35],
+  [0.74, -0.14, 1.55],
+  [0.24, 0.26, 1.75],
+  [-0.56, 0.46, 1.8],
+  [-0.66, 0.78, 1.7],
+  [0.2, 0.72, 1.55],
+  [0.56, 0.32, 1.4],
+  [-0.3, 0.14, 1.25],
+];
+
+/** The gather's return: off the top of the wheel, a sweep around the frame, back down into the box. */
+const RETURN_LANDSCAPE: readonly ViewPoint[] = [
+  [-0.32, 0.8, 1.3],
+  [-0.78, 0.22, 1.45],
+  [-0.48, -0.55, 1.5],
+  [0.32, -0.58, 1.42],
+  [0.64, 0.12, 1.3],
+  [0.26, 0.6, 1.1],
+];
+
+const RETURN_PORTRAIT: readonly ViewPoint[] = [
+  [-0.3, 0.72, 1.3],
+  [-0.74, 0.2, 1.4],
+  [-0.4, -0.5, 1.45],
+  [0.4, -0.52, 1.38],
+  [0.66, 0.1, 1.25],
+  [0.22, 0.46, 1.05],
+];
+
+export type Slot = {
+  /** Centre, stage frame. */
+  readonly position: Vector3;
+  /** Card scale at the slot (1: the card's real size). */
+  scale: number;
+};
+
+export class DeckLayout {
+  readonly snake = new DeckPath();
+  readonly back = new DeckPath();
+  readonly slots: Slot[] = [0, 1, 2, 3].map(() => ({ position: new Vector3(), scale: 1 }));
+  /** The big spot at the centre: a portrait reveal, and the focus mode. */
+  readonly centre: Slot = { position: new Vector3(), scale: 1 };
+  /** The stack the snake pours into, and the fan's common pivot below it. */
+  readonly stack = new Vector3();
+  readonly pivot = new Vector3();
+  /** The wheel behind the drawn four. */
+  readonly ring = new Vector3();
+  ringRadius = 0.03;
+  ringScale = 0.86;
+  /** The fan's full spread, radians. */
+  fanSpread = 200 * DEG;
+  portrait = false;
+  /** Box frame to stage frame, at the box's rest pose on the card stage. */
+  readonly boxToStage = new Matrix4();
+  private key = "";
+
+  /** Recomputes for this viewport (cheap when nothing changed). */
+  update(view: StageView, box: DeckBox, restYaw: number, restLean: number) {
+    const key = `${view.width}x${view.height}`;
+    if (key === this.key) return false;
+    this.key = key;
+    this.portrait = view.aspect < 0.85;
+    const portrait = this.portrait;
+
+    // The box at rest on the stage: yaw about y, the top leaning toward us (about the box's z).
+    // Box frame: +x the front normal; stage frame: +z toward the camera, so a quarter turn.
+    const rest = new Matrix4().makeRotationFromEuler(new Euler(0, restYaw, -restLean, "YZX"));
+    this.boxToStage.makeRotationY(-Math.PI / 2).multiply(rest);
+
+    const H = box.dims.H;
+    const mouthIn = new Vector3(0, -0.012, 0).applyMatrix4(this.boxToStage);
+    const mouthOut = new Vector3(0, H / 2 + 0.03, 0).applyMatrix4(this.boxToStage);
+
+    // The fan and the wheel sit far enough back to fit the screen.
+    const spread = (portrait ? 140 : 200) * DEG;
+    this.fanSpread = spread;
+    const fanHalfWidth =
+      (spread > Math.PI ? CARD_H : CARD_H * Math.sin(spread / 2)) * 0.95 + CARD_W / 2;
+    const fanDepth = Math.max(1.04, fanHalfWidth / (0.86 * view.tanHalf * view.aspect));
+    this.ringRadius = 0.03;
+    this.ringScale = 0.86;
+    const ringOuter = this.ringRadius + CARD_H * this.ringScale;
+    const ringFit = portrait ? view.tanHalf * view.aspect : view.tanHalf;
+    const ringDepth = Math.max(1.12, ringOuter / (0.9 * ringFit));
+    screenToStage(view, 0, -0.04, fanDepth, this.stack);
+    this.stack.y -= CARD_H * 0.06;
+    this.pivot.copy(this.stack);
+    this.pivot.y -= CARD_H * 0.4;
+    screenToStage(view, 0, portrait ? 0.02 : 0.04, ringDepth, this.ring);
+
+    // The snake: out of the box mouth, through the screen, the pour into the stack.
+    const snake = [mouthIn, mouthOut];
+    for (const [nx, ny, d] of portrait ? SNAKE_PORTRAIT : SNAKE_LANDSCAPE) {
+      snake.push(screenToStage(view, nx, ny, d * (fanDepth / 1.04), new Vector3()));
+    }
+    snake.push(this.stack.clone().add(new Vector3(0, CARD_H * 0.32, 0)));
+    snake.push(this.stack.clone());
+    this.snake.build(snake);
+
+    // The return: from the wheel's top, around, into the box.
+    const top = this.ring.clone().add(new Vector3(0, this.ringRadius + CARD_H * 0.5, 0));
+    const back = [top];
+    for (const [nx, ny, d] of portrait ? RETURN_PORTRAIT : RETURN_LANDSCAPE) {
+      back.push(screenToStage(view, nx, ny, d, new Vector3()));
+    }
+    back.push(mouthOut.clone().add(new Vector3(0, 0.03, 0)));
+    back.push(mouthOut.clone());
+    back.push(mouthIn.clone());
+    this.back.build(back);
+
+    // The reveal slots.
+    const W = view.width;
+    const Hpx = view.height;
+    if (portrait) {
+      const cardPx = Math.min(0.4 * W, 0.31 * Hpx * (CARD_W / CARD_H));
+      const gap = Math.max(0.045 * W, 12);
+      const heightPx = (cardPx * CARD_H) / CARD_W;
+      const depth = depthForHeight(view, CARD_H, heightPx);
+      const dx = (cardPx + gap) / 2 / (W / 2);
+      const dy = (heightPx + gap) / 2 / (Hpx / 2);
+      const lift = 0.05;
+      this.slots.forEach((slot, k) => {
+        const col = k % 2;
+        const row = Math.floor(k / 2);
+        screenToStage(
+          view,
+          col === 0 ? -dx : dx,
+          (row === 0 ? dy : -dy) + lift,
+          depth,
+          slot.position,
+        );
+        slot.scale = 1;
+      });
+      const bigPx = 0.78 * W;
+      const bigDepth = depthForHeight(
+        view,
+        CARD_H,
+        Math.min((bigPx * CARD_H) / CARD_W, 0.66 * Hpx),
+      );
+      screenToStage(view, 0, 0.04, bigDepth, this.centre.position);
+    } else {
+      const cardPx = Math.min(0.19 * W, 0.54 * Hpx * (CARD_W / CARD_H));
+      const gap = Math.max(0.02 * W, 14);
+      const heightPx = (cardPx * CARD_H) / CARD_W;
+      const depth = depthForHeight(view, CARD_H, heightPx);
+      const step = (cardPx + gap) / (W / 2);
+      this.slots.forEach((slot, k) => {
+        screenToStage(view, (k - 1.5) * step, 0.06, depth, slot.position);
+        slot.scale = 1;
+      });
+      const bigDepth = depthForHeight(view, CARD_H, 0.7 * Hpx);
+      screenToStage(view, 0, 0.04, bigDepth, this.centre.position);
+    }
+    this.centre.scale = 1;
+    return true;
+  }
+
+  /** Forces a rebuild on the next update (the box or the tier changed). */
+  invalidate() {
+    this.key = "";
+  }
+}
+
+/** Half extents of the resting view at the stack's depth (for the cursor's reach). */
+export function viewHalf(view: StageView, z: number) {
+  const depth = STAGE_DISTANCE - z;
+  return { x: halfWidthAt(view, depth), y: halfHeightAt(view, depth) };
+}
