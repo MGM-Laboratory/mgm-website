@@ -121,6 +121,9 @@ html[data-story-mode="gl"] [data-storybook] {
   --story-accent: var(--brand-blue);
   /* The card scales like a real one: type and spacing follow its width. */
   container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   perspective: 900px;
 }
 
@@ -136,14 +139,23 @@ html[data-story-mode="gl"] [data-storybook] {
   --story-accent: var(--brand-yellow);
 }
 
-/* A real playing card: white in both schemes, a thin ink border, corner indices. */
+/*
+ * A real playing card: white in both schemes, a thin ink border, corner
+ * indices. It keeps a card's 63:88 shape wherever its words fit; on the
+ * narrowest phones (cards about 130 px wide) it grows taller rather than
+ * cut the line off (overflow: clip is not a scroll container, so the
+ * aspect ratio's automatic minimum height still follows the content), and
+ * the cards of a row grow to the tallest one's height. The bottom padding
+ * always clears the bottom corner index.
+ */
 .story-card-face {
   position: relative;
   display: flex;
+  flex: 1 0 auto;
   flex-direction: column;
   aspect-ratio: 63 / 88;
-  padding: 11cqw 10cqw 12cqw;
-  overflow: hidden;
+  padding: 11cqw 10cqw max(12cqw, calc(4.6cqw + 1.35rem));
+  overflow: clip;
   border: 1px solid rgb(14 17 22 / 0.16);
   border-radius: 1.1rem;
   background: #ffffff;
@@ -209,10 +221,10 @@ html[data-story-mode="gl"] [data-storybook] {
   background: var(--story-accent);
 }
 
-/* The major visual: the top half of the card. */
+/* The major visual: the top half of the card (44% of a 63:88 face, in card widths). */
 .story-card-visual {
   flex: none;
-  height: 44%;
+  height: 61.5cqw;
   padding: 0 4cqw 6cqw;
 }
 

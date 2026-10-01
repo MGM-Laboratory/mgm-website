@@ -31,7 +31,7 @@ export function StoryCard({ card }: Readonly<{ card: StoryCardData }>) {
       href={card.href}
       data-story-card={card.id}
       data-accent={card.accent}
-      className="story-card group block rounded-[1.1rem] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)]"
+      className="story-card group rounded-[1.1rem] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)]"
     >
       <div className="story-card-face">
         <div aria-hidden className="story-card-index story-card-index-top">
