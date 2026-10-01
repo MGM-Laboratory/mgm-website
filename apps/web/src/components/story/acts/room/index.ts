@@ -537,9 +537,11 @@ class RoomAct implements StoryAct {
     const dim =
       0.26 * smoothstep(0.1, 0.8, state.beat("r-tv")) +
       0.2 * smoothstep(0.2, 1, state.beat("r-dive"));
-    // A breath of flicker in the bulbs (clock life, under 2%).
+    // A breath of flicker in the bulbs (clock life, under 2%), eased in from the bare frame the card act
+    // hands over.
     const time = ctx.clock.time;
-    const flicker = 1 + 0.012 * Math.sin(time * 7.3) * Math.sin(time * 2.9 + 1.3);
+    const seam = this.seam(state);
+    const flicker = 1 + 0.012 * seam * Math.sin(time * 7.3) * Math.sin(time * 2.9 + 1.3);
     room.lamps((warm - dim) * flicker);
 
     // --- the box: the drop's end pose, rocked once as it settles; the lid pops for the spark
@@ -587,6 +589,9 @@ class RoomAct implements StoryAct {
     this.grade(ctx, state);
     this.props?.update(dt, smoothstep(0.6, 1, state.beat("r-tv")));
 
+    // --- the dust in the lamp light (before the TV, which hides it close to the screen)
+    this.motes?.update(ctx.clock.time, ctx.size.height, ctx.stage.camera.fov, 0.75 * seam);
+
     // --- the TV, and what the room shows for this camera
     const phase = this.phaseFor(ctx, state);
     room.setPhase(phase);
@@ -596,7 +601,6 @@ class RoomAct implements StoryAct {
     this.hover(ctx, state, still);
 
     // --- life
-    this.motes?.update(ctx.clock.time, ctx.size.height, ctx.stage.camera.fov, 0.75);
     const cheer = this.cheer;
     if (cheer) {
       cheer.update(ctx.clock.time, ctx.size.height * ctx.size.dpr);
@@ -1037,7 +1041,8 @@ class RoomAct implements StoryAct {
     this.fill.target.position.copy(this.tmp.pose.target);
     this.fill.target.updateMatrixWorld();
     const light = ctx.palette.scheme === "light" ? 0.5 : 0.28;
-    this.fill.intensity = light * (1 - 0.4 * state.beat("r-tv"));
+    // Eased in with the rest of the act's look: the card act hands over a frame without it.
+    this.fill.intensity = light * (1 - 0.4 * state.beat("r-tv")) * this.seam(state);
   }
 
   /** Which of the room's visibility sets this camera needs (research/room.md section 5). */
@@ -1460,7 +1465,8 @@ class RoomAct implements StoryAct {
         smoothstep(0, 0.4, state.beat("r-dragged")) *
         (1 - smoothstep(0, 0.3, state.beat("r-tv")));
     const lensK = Math.tan(MathUtils.degToRad(16)) / Math.tan(MathUtils.degToRad(camera.fov) / 2);
-    const aperture = a * MathUtils.clamp(lensK, 0.5, 2.4);
+    // Opened from the bare frame the card act hands over, like the rest of the look.
+    const aperture = a * MathUtils.clamp(lensK, 0.5, 2.4) * this.seam(state);
     if (aperture < 0.01) {
       dof.release();
       return;
