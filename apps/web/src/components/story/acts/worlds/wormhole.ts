@@ -480,12 +480,15 @@ export class WormholePass {
   /**
    * Resizes the feed so the TV stays sharp when it fills the screen. At full
    * cover a screen narrower than the TV sees its whole height (a slice of its
-   * width), and a wider one its whole width: the feed is sized so that slice
-   * has the act's own resolution, and the cut to `w-hole` keeps its sharpness.
+   * width), and a wider one its whole width. With `cover` the feed is sized so
+   * that slice has the act's own resolution, and the cut to `w-hole` keeps its
+   * sharpness on a tablet held upright; without it (the low tier, which keeps
+   * the table act's budget) it follows the screen's width.
    */
-  sizeFeed(ctx: StoryContext, scale: number) {
+  sizeFeed(ctx: StoryContext, scale: number, cover = true) {
     const px = ctx.size.dpr * scale;
-    const fill = Math.max(ctx.size.width * px, ctx.size.height * px * TV_ASPECT);
+    const across = ctx.size.width * px;
+    const fill = cover ? Math.max(across, ctx.size.height * px * TV_ASPECT) : across;
     const w = Math.max(512, Math.min(1400, Math.round(fill)));
     const h = Math.round(w / TV_ASPECT);
     if (this.feedTarget.width !== w || this.feedTarget.height !== h) this.feedTarget.setSize(w, h);
@@ -522,7 +525,7 @@ export function createTvFeed(
   pass: WormholePass,
   onAdvance: (ctx: StoryContext) => { time: number; flow: number; freeze: number },
   frames: () => { toPaper: Matrix4; eye: Vector3 },
-  scale: () => number,
+  scale: () => { scale: number; cover: boolean },
 ): StoryTvFeed & {
   readonly target: WebGLRenderTarget;
   dispose(): void;
@@ -538,7 +541,8 @@ export function createTvFeed(
     },
     draw(ctx: StoryContext, camera: Camera | null) {
       const life = onAdvance(ctx);
-      pass.sizeFeed(ctx, scale());
+      const size = scale();
+      pass.sizeFeed(ctx, size.scale, size.cover);
       pass.set(life.time, life.flow, life.freeze, 0);
       const f = frames();
       pass.aim(

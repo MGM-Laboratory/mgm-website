@@ -274,7 +274,7 @@ class WorldsAct implements StoryAct {
         this.paperEye.set(0, 0, 0).applyMatrix4(this.holeToPaper);
         return { toPaper: this.holeToPaper, eye: this.paperEye };
       },
-      () => backgroundScale(this.quality),
+      () => ({ scale: backgroundScale(this.quality), cover: this.quality !== "low" }),
     );
     this.feed = feed;
     await ctx.props.ensure("tvFeed", () => feed);
