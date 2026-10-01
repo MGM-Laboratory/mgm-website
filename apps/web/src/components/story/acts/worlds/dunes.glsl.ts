@@ -173,7 +173,7 @@ varying vec3 vNormal;
 varying vec3 vWorld;
 void main() {
   float age = uTime - uBounce[int(aPrim + 0.5)];
-  float b = age > 0.0 && age < 1.4 ? sin(age * 14.0) * exp(-age * 4.0) * 0.18 : 0.0;
+  float b = age > 0.0 && age < 1.6 ? sin(age * 13.0) * exp(-age * 3.4) * 0.3 : 0.0;
   vec3 local = (position - aPivot) * vec3(1.0 + b * 0.5, 1.0 - b, 1.0 + b * 0.5);
   vec3 world = aPivot + local;
   vWorld = world;

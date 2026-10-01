@@ -1013,12 +1013,14 @@ export class LeafWorld extends World {
       bounce.setX(hit.instanceId, time);
       bounce.needsUpdate = true;
       this.gust.set(hit.point.x, hit.point.y, hit.point.z, 0);
+      this.tapPoint = hit.point.clone();
     } else {
       const leafHit = this.leaves ? this.ray.intersectObject(this.leaves, false).at(0) : undefined;
       const p = leafHit
         ? leafHit.point
         : this.a.copy(this.ray.ray.origin).addScaledVector(this.ray.ray.direction, 12);
       this.gust.set(p.x, p.y, p.z, 0);
+      this.tapPoint = p.clone();
     }
     this.gustTime = time;
     return true;

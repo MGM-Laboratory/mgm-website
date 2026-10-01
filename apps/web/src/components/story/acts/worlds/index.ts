@@ -157,6 +157,7 @@ class WorldsAct implements StoryAct {
   private flight: FlightDriver | null = null;
   private godette: Godette | null = null;
   private burst: SparkleBurst | null = null;
+  private burstLight: SparkleBurst | null = null;
   private readonly rig = new CameraRig();
   private readonly hud = new WorldsHud();
   private readonly pose = createPose();
@@ -208,6 +209,17 @@ class WorldsAct implements StoryAct {
       life: 1.2,
     });
     this.burst.points.frustumCulled = false;
+    // The same stars for the bright worlds (light that adds up vanishes on sand and leaves).
+    this.burstLight = createSparkleBurst({
+      count: 40,
+      slots: 4,
+      size: 0.09,
+      speed: 3.2,
+      gravity: 0.6,
+      life: 1.2,
+      onLight: true,
+    });
+    this.burstLight.points.frustumCulled = false;
 
     // The wormhole and the TV feed.
     const lutStart = performance.now();
@@ -301,6 +313,7 @@ class WorldsAct implements StoryAct {
       world?.warm(true);
       rift.warm(true);
       scene.add(rift.group, rift.warp, flight.trail.mesh, burst.points);
+      if (this.burstLight) scene.add(this.burstLight.points);
       flight.trail.warm(true);
       const sceneStart = performance.now();
       await stage.compile(scene);
@@ -317,6 +330,7 @@ class WorldsAct implements StoryAct {
       rift.warp.removeFromParent();
       flight.trail.mesh.removeFromParent();
       burst.points.removeFromParent();
+      this.burstLight?.points.removeFromParent();
       world?.warm(false);
       const warmStart = performance.now();
       world?.warmTargets?.(renderer, camera);
@@ -679,6 +693,7 @@ class WorldsAct implements StoryAct {
       }
     }
     if (this.burst) this.burst.update(this.life.time, ctx.size.height * ctx.size.dpr);
+    this.burstLight?.update(this.life.time, ctx.size.height * ctx.size.dpr);
   }
 
   private placeHotspot(ctx: StoryContext, camera: PerspectiveCamera) {
@@ -701,7 +716,19 @@ class WorldsAct implements StoryAct {
     const r = route(ctx.director.t);
     if (r.kind !== "world") return false;
     const world = this.worlds.at(r.index);
-    return world?.pointer?.(ctx, event, this.life.time) ?? false;
+    if (!world?.pointer) return false;
+    world.tapPoint = null;
+    const used = world.pointer(ctx, event, this.life.time);
+    // Every tap the world takes leaves a little burst of stars where it landed, sized for the distance.
+    const at = world.tapPoint as Vector3 | null;
+    const light = (world.headerTone?.(r.T) ?? "dark") === "light";
+    const burst = light ? this.burstLight : this.burst;
+    if (used && at && burst && this.lastScene === world.scene) {
+      if (burst.points.parent !== world.scene) world.scene.add(burst.points);
+      const distance = at.distanceTo(ctx.stage.camera.position);
+      burst.fire(at, this.life.time, Math.min(10, Math.max(0.8, distance / 6)));
+    }
+    return used;
   }
 
   resize(ctx: StoryContext) {
@@ -725,6 +752,7 @@ class WorldsAct implements StoryAct {
     this.rift?.group.removeFromParent();
     this.rift?.warp.removeFromParent();
     this.burst?.points.removeFromParent();
+    this.burstLight?.points.removeFromParent();
     this.hud.place(ctx, ctx.stage.camera, null, 0);
   }
 
@@ -735,6 +763,7 @@ class WorldsAct implements StoryAct {
     this.rift?.dispose();
     this.flight?.dispose();
     this.burst?.dispose();
+    this.burstLight?.dispose();
     this.holeTarget?.dispose();
     this.portalTarget?.dispose();
     this.holeLayer?.material.dispose();

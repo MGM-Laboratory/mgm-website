@@ -995,10 +995,15 @@ export class CityWorld extends World {
     if (event.type !== "tap" || !this.towers) return false;
     this.ndc.set(event.ndc.x, event.ndc.y);
     this.ray.setFromCamera(this.ndc, ctx.stage.camera);
-    const hits = this.ray.intersectObject(this.towers, false);
-    const hit = hits.at(0);
-    if (hit) this.tapAt.copy(hit.point);
-    else this.tapAt.copy(this.ray.ray.origin).addScaledVector(this.ray.ray.direction, 80);
+    // The nearest of a tower and the street under the tap.
+    const hit = this.ray.intersectObject(this.towers, false).at(0);
+    const r = this.ray.ray;
+    const street = r.direction.y < -0.01 ? -r.origin.y / r.direction.y : Number.POSITIVE_INFINITY;
+    if (hit && hit.distance < street) this.tapAt.copy(hit.point);
+    else if (Number.isFinite(street))
+      this.tapAt.copy(r.origin).addScaledVector(r.direction, street);
+    else this.tapAt.copy(r.origin).addScaledVector(r.direction, 80);
+    this.tapPoint = hit || Number.isFinite(street) ? this.tapAt.clone() : null;
     this.tapTime = time;
     return true;
   }

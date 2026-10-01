@@ -132,6 +132,8 @@ void main() {
     float hover = uPointer.z * (1.0 - smoothstep(30.0, 150.0, pd));
     lit = max(lit, step(1.0 - hover, h.z));
     float ring = uTap.w >= 0.0 ? exp(-pow(length(vWorld - uTap.xyz) - uTap.w * uTapSpeed, 2.0) * 0.02) * exp(-uTap.w * 0.7) : 0.0;
+    // The ring switches rooms on as it passes, so it reads even where the city sleeps.
+    lit = max(lit, step(1.0 - ring * 0.9, h.x));
     // Inside a lit room: a ceiling light (brighter at the top), sometimes a curtain half drawn.
     vec3 tint = h.y > 0.93 ? uCool : h.y > 0.89 ? uRed : mix(uWarm, vec3(1.0, 0.93, 0.8), h.z * 0.7);
     tint = mix(tint, vec3(1.0, 0.96, 0.9), woke * 0.45);

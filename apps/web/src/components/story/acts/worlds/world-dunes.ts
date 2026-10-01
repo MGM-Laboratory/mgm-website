@@ -960,10 +960,17 @@ export class DunesWorld extends World {
     if (hit && id >= 0 && id < PRIM_MAX) {
       this.bounces.set([time], id);
       this.gust.set(hit.point.x, hit.point.z, 0, 0);
+      this.tapPoint = hit.point.clone();
     } else if (r.direction.y < -0.01) {
       const t = (3 - r.origin.y) / r.direction.y;
       this.gust.set(r.origin.x + r.direction.x * t, r.origin.z + r.direction.z * t, 0, 0);
+      this.tapPoint = new Vector3(
+        r.origin.x + r.direction.x * t,
+        duneHeight(this.gust.x, this.gust.y) + 0.3,
+        r.origin.z + r.direction.z * t,
+      );
     } else {
+      this.tapPoint = null;
       this.gust.set(r.origin.x + r.direction.x * 40, r.origin.z + r.direction.z * 40, 0, 0);
     }
     this.gustTime = time;

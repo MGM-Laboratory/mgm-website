@@ -123,6 +123,9 @@ export abstract class World {
   /** Targets she is drawn into besides the canvas and the stage's post target (her warm draws). */
   extraTargets?(): readonly WebGLRenderTarget[];
 
+  /** Where the last tap this world took landed (the act fires a sparkle there), or null. */
+  tapPoint: Vector3 | null = null;
+
   /** A tap or move while this world is on screen. Return true when consumed. */
   pointer?(ctx: StoryContext, event: StoryPointerEvent, time: number): boolean;
 

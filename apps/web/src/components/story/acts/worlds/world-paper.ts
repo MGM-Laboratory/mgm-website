@@ -968,6 +968,7 @@ export class PaperTide extends World {
     if (this.ray.ray.intersectPlane(this.plane, this.hit)) {
       this.tapAt.set(this.hit.x, this.hit.z);
       this.tapTime = time;
+      this.tapPoint = this.hit.clone().setY(0.6);
       return true;
     }
     return false;

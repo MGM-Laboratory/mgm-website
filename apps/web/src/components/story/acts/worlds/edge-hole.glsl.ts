@@ -45,6 +45,7 @@ uniform float uDiskIn;
 uniform float uDiskOut;
 uniform float uDiskGain;
 uniform vec4 uLens;
+uniform float uLensPulse;
 uniform vec4 uRipple;
 uniform float uRing;
 uniform vec3 uFilament;
@@ -104,7 +105,7 @@ void main() {
     float sl = length(side);
     if (sl > 1e-5 && th < 0.6) {
       side /= sl;
-      float E = 0.028 * uLens.w;
+      float E = (0.026 + 0.03 * uLensPulse) * uLens.w;
       float beta = th - E * E / max(th, 1e-4);
       view = normalize(L * cos(beta) + side * sin(beta));
     }

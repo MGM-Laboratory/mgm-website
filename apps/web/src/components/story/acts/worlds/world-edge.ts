@@ -146,6 +146,7 @@ export class EdgeWorld extends World {
       uDiskOut: { value: HOLE.diskOut },
       uDiskGain: { value: 1.25 },
       uLens: { value: new Vector4(0, 0, -1, 0) },
+      uLensPulse: { value: 0 },
       uRipple: { value: new Vector4(0, 0, 0, 0) },
       uRing: { value: 0.55 },
       uFilament: { value: new Color(0x2c3f7a) },
@@ -553,6 +554,9 @@ export class EdgeWorld extends World {
         this.lensDir.lerp(this.ray.ray.direction, 0.35).normalize();
       }
       this.lensOn += (lensTarget - this.lensOn) * 0.12;
+      // A tap swells the lens for a moment (a finger's only way to see it).
+      pu.uLensPulse.value =
+        tapAge >= 0 && tapAge < 1.6 ? Math.sin(Math.min(1, tapAge / 1.6) * Math.PI) : 0;
       const age = Math.max(0, tapAge);
       (pu.uRipple.value as Vector4).set(HOLE.diskIn + age * 3.4, age, age < 4 ? 1 : 0, 0);
       this.cursor.x = this.ndc.x;
