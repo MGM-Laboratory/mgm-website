@@ -609,7 +609,9 @@ class RoomAct implements StoryAct {
     }
 
     // --- overlay
-    if (state.current === "r-figure" && state.local > 0.985 && ctx.director.idle > 1.6) {
+    // At the rest itself `t` sits exactly on r-break's start, so the test reads the position, not the beat.
+    const rest = at("r-figure", 1);
+    if (t > at("r-figure", 0.985) && t <= rest + 1e-3 && ctx.director.idle > 1.6) {
       ctx.overlay.setHint(STORY_TABLE.hint);
     }
     this.placeHotspots(ctx, state);
@@ -1013,7 +1015,15 @@ class RoomAct implements StoryAct {
     const learn = state.beat("r-learn");
     const handheld = 0.0012 + 0.0075 * smoothstep(0, 0.1, drag) * (1 - smoothstep(0.2, 0.9, learn));
     const settle = (1 - smoothstep(0, 0.6, state.beat("r-dive"))) * this.seam(state);
-    const parallax = (state.current === "r-figure" ? 0.022 : 0.03) * settle;
+    // A little less while people read the phrase (the long lens magnifies it), eased both ways.
+    const reading = bump(
+      state.t,
+      at("r-figure", 0),
+      at("r-figure", 0.3),
+      at("r-break", 0),
+      at("r-break", 0.14),
+    );
+    const parallax = (0.03 - 0.008 * reading) * settle;
     return { parallax, handheld: handheld * settle, handheldRate: 1 + 1.4 * (1 - learn) * drag };
   }
 
