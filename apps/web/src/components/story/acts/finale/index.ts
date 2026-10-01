@@ -239,6 +239,12 @@ class FinaleAct implements StoryAct {
   /** The spin's arms-out share and its stagger step (metres sideways), this frame. */
   private spinning = 0;
   private stagger = 0;
+  /** Touch: she is shy until then (a press held on her, or a tap in her rotation). */
+  private shyUntil = -10;
+  /** This frame's life step (story time, or real time while a finger holds her shy). */
+  private frameDt = 0;
+  private touchTaps = 0;
+  private press: { at: number; shy: boolean } | null = null;
   /** When the visitor went away (the pointer left the page, the tab hid), ms. */
   private awayAt: number | null = null;
   /** Her magic's rim on the light page, eased (0..1). */
@@ -333,7 +339,13 @@ class FinaleAct implements StoryAct {
     stage.backdrop.set({ paint: this.still ? 0 : 1, reveal: 0 });
     ctx.setHeaderTone(null);
 
-    const dt = ctx.clock.storyDt;
+    // A finger held on her is her shy moment, not a slow motion hold: she plays it at real speed.
+    const press = this.press;
+    if (press && ctx.pointer.down && performance.now() / 1000 - press.at > 0.35) press.shy = true;
+    const holding = press?.shy === true && ctx.pointer.down;
+    if (holding) this.shyUntil = this.life + 0.5;
+    const dt = holding ? ctx.clock.dt : ctx.clock.storyDt;
+    this.frameDt = dt;
     this.life += dt;
     const t = state.t;
     // Her acting follows the scroll, at a watchable pace: a quick scroll still plays the gag.
@@ -538,7 +550,7 @@ class FinaleAct implements StoryAct {
   // ------------------------------------------------------------------ life
 
   private planLife(ctx: StoryContext, state: ActState, A: number, godette: Godette, life: boolean) {
-    const dt = ctx.clock.storyDt;
+    const dt = this.frameDt;
     const camera = ctx.stage.camera;
     let layers: GodetteBodyLayer[] = storyLayers(A);
     let face: GodetteFace | "auto" = "auto";
@@ -759,7 +771,7 @@ class FinaleAct implements StoryAct {
 
     // ---- hover: shy or curious while the pointer stays on her
     if (this.interactive && !this.special) {
-      const over = this.hoverPart !== null || this.helloFocused();
+      const over = this.hoverPart !== null || this.helloFocused() || this.life < this.shyUntil;
       if (over) this.hoverGrace = 0.15;
       else this.hoverGrace = Math.max(0, this.hoverGrace - dt);
       hover = this.hoverGrace > 0;
@@ -826,6 +838,8 @@ class FinaleAct implements StoryAct {
     this.lastClickAt = -10;
     this.pokedAt = -10;
     this.hoverGrace = 0;
+    this.shyUntil = -10;
+    this.press = null;
     this.spinning = 0;
     this.stagger = 0;
     this.hips.value = 0;
@@ -855,7 +869,7 @@ class FinaleAct implements StoryAct {
   // ------------------------------------------------------------------ input
 
   /** A press on her ("Say hello" or a tap that hit her). */
-  private clickHer(part: Part) {
+  private clickHer(part: Part, touch = false) {
     const godette = this.godette;
     if (!godette || !this.interactive) return;
     const now = this.life;
@@ -883,6 +897,14 @@ class FinaleAct implements StoryAct {
       return;
     }
     this.lastSpecial = null;
+    // a finger has no hover: every third plain tap makes her shy instead (and she blushes)
+    if (touch) {
+      this.touchTaps += 1;
+      if (this.touchTaps % 3 === 0) {
+        this.shyUntil = now + 1.7;
+        return;
+      }
+    }
     if (godette.react("click")) {
       this.bursts.fire(godette.socket("chest", this.tmp2), now, 0.6);
     }
@@ -909,10 +931,23 @@ class FinaleAct implements StoryAct {
       this.welcomeBack();
       return false;
     }
+    if (event.type === "down") {
+      // a finger held on her makes her shy (the touch answer to a hover)
+      const onHer =
+        event.pointerType === "touch" &&
+        this.interactive &&
+        this.partUnder(event.raycast(godette.hitProxy)) !== null;
+      this.press = onHer ? { at: performance.now() / 1000, shy: false } : null;
+      return false;
+    }
     if (event.type !== "tap") return false;
+    const held = this.press?.shy === true;
+    this.press = null;
+    // the shy reaction was that press: no click after it
+    if (held) return true;
     const part = this.partUnder(event.raycast(godette.hitProxy));
     if (this.interactive) {
-      if (part) this.clickHer(part);
+      if (part) this.clickHer(part, event.pointerType === "touch");
       else this.clickPage(ctx, event.ndc);
       return true;
     }
