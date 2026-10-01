@@ -232,7 +232,10 @@ export type StoryRoom = {
    * then missing here, and the merged meshes stay where they are.
    */
   readonly nodes: ReadonlyMap<string, Mesh>;
-  /** The nodes an act may move (the cup, the pots, the TV...): fewer on the low tier, see `nodes`. */
+  /**
+   * The nodes an act may move (the cup, the pots, the TV...): fewer on the low tier, see `nodes`.
+   * Each one's origin is the middle of its base, at scale 1, so it tips and shakes about where it stands.
+   */
   readonly handles: ReadonlySet<string>;
   /** The TV screen quad. UV (0, 0) is its top left: sample a render target with `1.0 - vUv.y`. */
   readonly screen: Mesh;
@@ -1036,7 +1039,26 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
   // the cup or shake the TV); everything else is static.
   for (const mesh of placed) {
     mesh.removeFromParent();
-    mesh.matrixWorld.decompose(mesh.position, mesh.quaternion, mesh.scale);
+    if (handles.has(mesh.name)) {
+      // The quantized glTF puts a node's origin and scale where its compression box is. A handle gets
+      // plain geometry around the middle of its base instead, at scale 1, so a tip or a shake turns
+      // about where the prop stands.
+      const geometry = worldGeometry(mesh);
+      geometry.computeBoundingBox();
+      const box = geometry.boundingBox;
+      const pivot = box
+        ? new Vector3((box.min.x + box.max.x) / 2, box.min.y, (box.min.z + box.max.z) / 2)
+        : new Vector3();
+      geometry.translate(-pivot.x, -pivot.y, -pivot.z);
+      geometry.computeBoundingSphere();
+      geometries.add(geometry);
+      mesh.geometry = geometry;
+      mesh.position.copy(pivot);
+      mesh.quaternion.identity();
+      mesh.scale.set(1, 1, 1);
+    } else {
+      mesh.matrixWorld.decompose(mesh.position, mesh.quaternion, mesh.scale);
+    }
     meshesGroup.add(mesh);
     mesh.updateMatrix();
     mesh.matrixAutoUpdate = handles.has(mesh.name);
