@@ -11,6 +11,11 @@ import type { StoryTier } from "@/components/story/assets/types";
  * (the articles world's `QualityGovernor` walking the story's own ladder)
  * and the hopeless watch that hands the visit to the storybook. No three.js.
  *
+ * The hopeless watch (SPEC 1.1, "Slow device"): any window with a median
+ * over 125 ms gives up at once (the articles world's limit, frames no ladder
+ * can fix), and once the governor stands on the ladder's last level, a
+ * median over 50 ms does too: sustained frames that slow get the storybook.
+ *
  * Pixel ratio caps by tier (SPEC section 2.2): high min(dpr, 1.75), medium
  * min(dpr, 1.4), low min(dpr, 1.15), and never more than 2560 x 1440 device
  * pixels in all. The governor steps the ratio down first, then the tier.
@@ -98,6 +103,25 @@ export function judgeWarmup(start: StoryTier, render: () => void, frames = 3): W
   if (frameMs > WARM_HOPELESS_MS) return { tier: null, frameMs };
   const steps = frameMs > WARM_VERY_SLOW_MS ? 2 : frameMs > WARM_SLOW_MS ? 1 : 0;
   return { tier: lowerTier(start, steps), frameMs };
+}
+
+/** Sustained median frame time (ms) at the ladder's last level that hands the visit to the storybook. */
+export const STORY_HOPELESS_MS = 50;
+
+/** Whether `level` is the ladder's last: nothing lower is left to try. */
+export function isLastStoryLevel(level: QualityLevel) {
+  const last = STORY_LADDER.at(-1);
+  return last !== undefined && level.tier === last.tier && level.pixelRatio === last.pixelRatio;
+}
+
+/** The articles world's limit, which the story keeps for every level. */
+const HOPELESS_MS_ANY_LEVEL = 125;
+
+/** The story's hopeless watch: 125 ms at any level, 50 ms once `level()` is the last one. */
+export function createStoryHopelessWatch(level: () => QualityLevel, onHopeless: () => void) {
+  return new HopelessWatch(onHopeless, {
+    thresholdMs: () => (isLastStoryLevel(level()) ? STORY_HOPELESS_MS : HOPELESS_MS_ANY_LEVEL),
+  });
 }
 
 /** The runtime governor on the story ladder, starting at `tier`. */

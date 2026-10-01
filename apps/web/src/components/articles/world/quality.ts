@@ -147,14 +147,33 @@ const HOPELESS_STALL_MS = 3000;
  * frames is still past `HOPELESS_MS` after the start, `onHopeless` runs
  * (once): the host hands the visit to the DOM list, as it does for a lost
  * context.
+ *
+ * Another stage may judge by its own limit (`thresholdMs`, read at each
+ * judgement): the homepage story gives up on sustained frames over 50 ms
+ * once its governor has nothing lower left to try.
  */
+export type HopelessOptions = {
+  /** The median frame time (ms) past which the renderer is hopeless; HOPELESS_MS when unset. */
+  thresholdMs?: () => number;
+};
+
 export class HopelessWatch {
   private grace = HOPELESS_GRACE_SECONDS;
   private readonly samples: number[] = [];
   private span = 0;
   private fired = false;
 
-  constructor(private readonly onHopeless: () => void) {}
+  constructor(
+    private readonly onHopeless: () => void,
+    private readonly options: HopelessOptions = {},
+  ) {}
+
+  /** Drops the frames so far and waits a moment (after a quality change, whose first frames compile). */
+  rest(seconds = 1) {
+    this.samples.length = 0;
+    this.span = 0;
+    this.grace = Math.max(this.grace, seconds);
+  }
 
   /** One rendered frame: `ms` since the previous one. */
   sample(ms: number) {
@@ -173,7 +192,7 @@ export class HopelessWatch {
     const median = [...this.samples].sort((a, b) => a - b)[count >> 1];
     this.samples.length = 0;
     this.span = 0;
-    if (median > HOPELESS_MS) {
+    if (median > (this.options.thresholdMs?.() ?? HOPELESS_MS)) {
       this.fired = true;
       this.onHopeless();
     }

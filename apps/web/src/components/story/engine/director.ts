@@ -28,9 +28,10 @@ import type { OverlaySkip, StoryOverlayStore } from "@/components/story/engine/o
 import { readStoryPalette, samePalette } from "@/components/story/engine/palette";
 import { StoryPointerImpl } from "@/components/story/engine/pointer";
 import {
-  HopelessWatch,
   createStoryGovernor,
+  createStoryHopelessWatch,
   levelOf,
+  type HopelessWatch,
   type QualityLevel,
 } from "@/components/story/engine/quality";
 import { ScrollIntent } from "@/components/story/engine/scroll-intent";
@@ -303,15 +304,20 @@ export class StoryDirector {
   }
 
   private createHopeless() {
-    return new HopelessWatch(() => {
-      this.fail("slow");
-    });
+    return createStoryHopelessWatch(
+      () => this.stage.level,
+      () => {
+        this.fail("slow");
+      },
+    );
   }
 
   /** Puts the stage at `level` and tells the acts when the tier changed. */
   private applyLevel(level: QualityLevel) {
     const before = this.stage.level.tier;
     this.stage.setLevel(level);
+    // Frames from before the change say nothing about the new level.
+    this.hopeless.rest();
     if (level.tier !== before)
       this.forEachAct((act) => {
         act.tier?.(this.ctx);
