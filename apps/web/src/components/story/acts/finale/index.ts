@@ -17,7 +17,6 @@ import {
   type ActState,
   type StoryAct,
   type StoryContext,
-  type StoryHotspot,
   type StoryPointerEvent,
   type StoryRect,
 } from "@/components/story/engine/act";
@@ -25,7 +24,6 @@ import { beatOf } from "@/components/story/engine/timeline";
 import { finaleSignal } from "@/components/story/finale-signal";
 import { ensureGodette } from "@/components/story/props/shared";
 import type { Godette, GodetteBodyLayer, GodetteFace } from "@/components/story/props/godette";
-import { STORY_FINALE } from "@/data/story";
 import { random, randomBetween } from "@/lib/random";
 
 import {
@@ -101,6 +99,15 @@ type Special = { kind: "hero" | "spin"; t: number };
 type Glance = { point: Vector3; until: number; face: GodetteFace | null; faceUntil: number };
 type Part = "head" | "body" | "legs" | "arms" | "hands" | null;
 
+/** The sockets that outline her for "Say hello". */
+const BOUND_SOCKETS = ["head", "hand_L", "hand_R", "foot_L", "foot_R", "hips", "chest"] as const;
+/** Around the head socket: [sideways, up] metres to the top of her hair and her buns. */
+const HAIR_REACH: readonly (readonly [number, number])[] = [
+  [0, 0.24],
+  [-0.2, 0.13],
+  [0.2, 0.13],
+];
+
 function smooth(a: number, b: number, x: number) {
   const k = saturate((x - a) / (b - a));
   return k * k * (3 - 2 * k);
@@ -130,7 +137,9 @@ class FinaleAct implements StoryAct {
   private readonly bursts = new StarBursts();
   private colors: FinaleColors | null = null;
   private scheme: "light" | "dark" | null = null;
-  private hotspot: StoryHotspot | null = null;
+  /** "Say hello" in the finale block: placed over her for the keyboard and screen readers. */
+  private helloEl: HTMLButtonElement | null = null;
+  private helloKey = "";
   private ctx: StoryContext | null = null;
   private still = false;
 
@@ -436,8 +445,8 @@ class FinaleAct implements StoryAct {
     sprites.end();
     strokes.end();
 
-    // ---------------------------------------------------------------- hotspot
-    this.placeHotspot(ctx, godette);
+    // ---------------------------------------------------------------- "Say hello"
+    this.placeHello(ctx, godette);
   }
 
   // ------------------------------------------------------------------ life
@@ -612,7 +621,7 @@ class FinaleAct implements StoryAct {
 
     // ---- hover: shy or curious while the pointer stays on her
     if (this.interactive && !this.special) {
-      const over = this.hoverPart !== null || this.hotspot?.focused === true;
+      const over = this.hoverPart !== null || this.helloFocused();
       if (over) this.hoverGrace = 0.15;
       else this.hoverGrace = Math.max(0, this.hoverGrace - dt);
       hover = this.hoverGrace > 0;
@@ -666,9 +675,9 @@ class FinaleAct implements StoryAct {
     this.special = null;
   }
 
-  /** Not on screen: nothing of hers to show, the title waits, the hotspot hides. */
+  /** Not on screen: nothing of hers to show, the title waits, "Say hello" hides. */
   private idleOut() {
-    this.hotspot?.place(null);
+    this.hideHello();
     this.hoverPart = null;
     if (this.ctx) {
       const t = this.ctx.director.t;
@@ -678,7 +687,7 @@ class FinaleAct implements StoryAct {
 
   // ------------------------------------------------------------------ input
 
-  /** A press on her (the hotspot or a tap that hit her). */
+  /** A press on her ("Say hello" or a tap that hit her). */
   private clickHer(part: Part) {
     const godette = this.godette;
     if (!godette || !this.interactive) return;
@@ -794,6 +803,7 @@ class FinaleAct implements StoryAct {
     if (!this.titleEl || !this.titleEl.isConnected) {
       this.titleEl = finale.querySelector<HTMLElement>("[data-finale-title]");
       this.actionEl = finale.querySelector<HTMLElement>("[data-finale-action]");
+      this.helloEl = finale.querySelector<HTMLButtonElement>("[data-finale-hello]");
     }
     const title = this.titleEl;
     const height = ctx.size.height;
@@ -839,63 +849,123 @@ class FinaleAct implements StoryAct {
     return baseline - (m.actualBoundingBoxAscent || size * 0.7);
   }
 
-  // ------------------------------------------------------------------ hotspot
+  // ------------------------------------------------------------------ "Say hello"
 
-  private placeHotspot(ctx: StoryContext, godette: Godette) {
+  /** Keyboard focus on "Say hello" (a pointer press passes through it, so this is the keyboard). */
+  private helloFocused() {
+    const el = this.helloEl;
+    return el !== null && document.activeElement === el && el.matches(":focus-visible");
+  }
+
+  private hideHello() {
+    const el = this.helloEl;
+    if (el && !el.hidden) el.hidden = true;
+    this.helloKey = "";
+    this.hoverPart = null;
+  }
+
+  /**
+   * Shows "Say hello" over her while she is interactive, its presses play a
+   * click reaction, and the pointer over her body (a raycast) is her hover.
+   */
+  private placeHello(ctx: StoryContext, godette: Godette) {
+    const presses = finaleSignal.takeHellos();
     if (!this.interactive) {
-      this.hotspot?.place(null);
-      this.hoverPart = null;
+      this.hideHello();
       ctx.pointer.setCursor(null);
       return;
     }
-    this.hotspot ??= ctx.overlay.hotspot({
-      id: "finale-godette",
-      label: STORY_FINALE.hello,
-      onActivate: () => {
-        const p = this.ctx?.pointer;
-        const part = p?.inside ? this.partUnder(p.raycast(godette.hitProxy)) : null;
-        this.clickHer(part ?? "body");
-      },
-    });
-    const rect = this.projectBounds(ctx, godette);
-    this.hotspot.place(rect);
+    for (let i = 0; i < presses; i += 1) this.clickHer("body");
     const hits = ctx.pointer.raycast(godette.hitProxy);
     this.hoverPart = this.partUnder(hits);
     ctx.pointer.setCursor(this.hoverPart ? "pointer" : null);
+    const el = this.helloEl;
+    const parent = el?.offsetParent;
+    if (!el || !parent) {
+      if (el) el.hidden = false;
+      return;
+    }
+    const rect = this.projectBounds(ctx, godette);
+    if (!rect) {
+      this.hideHello();
+      return;
+    }
+    // canvas px to the block's own box (both measured in the viewport this frame)
+    const box = parent.getBoundingClientRect();
+    const canvas = ctx.dom.canvasRect;
+    const x = rect.x + canvas.x - box.left;
+    const y = rect.y + canvas.y - box.top;
+    const key = `${Math.round(x)},${Math.round(y)},${Math.round(rect.width)},${Math.round(rect.height)}`;
+    if (key !== this.helloKey) {
+      this.helloKey = key;
+      el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      el.style.width = `${rect.width.toFixed(1)}px`;
+      el.style.height = `${rect.height.toFixed(1)}px`;
+    }
+    if (el.hidden) el.hidden = false;
   }
 
-  /** Her box on screen (canvas px), from her sockets, with a little room. */
+  /**
+   * Her silhouette's box on screen (canvas px): her sockets, plus her hair
+   * and its buns around the head, her boots under the ankles, a margin of
+   * her own height, clipped to the canvas.
+   */
   private projectBounds(ctx: StoryContext, godette: Godette): StoryRect | null {
     const camera = ctx.stage.camera;
     const { width, height } = ctx.size;
+    const e = camera.matrixWorld.elements;
+    const right = this.tmp2.set(e[0], e[1], e[2]).normalize();
     let x0 = Infinity;
     let y0 = Infinity;
     let x1 = -Infinity;
     let y1 = -Infinity;
-    const sockets = ["head", "hand_L", "hand_R", "foot_L", "foot_R", "hips", "chest"] as const;
-    for (const name of sockets) {
-      godette.socket(name, this.tmp);
-      if (name === "head") this.tmp.y += 0.22;
-      this.tmp.project(camera);
-      const x = (this.tmp.x * 0.5 + 0.5) * width;
-      const y = (0.5 - this.tmp.y * 0.5) * height;
+    const p = this.tmp;
+    const add = () => {
+      p.project(camera);
+      const x = (p.x * 0.5 + 0.5) * width;
+      const y = (0.5 - p.y * 0.5) * height;
       x0 = Math.min(x0, x);
       y0 = Math.min(y0, y);
       x1 = Math.max(x1, x);
       y1 = Math.max(y1, y);
+    };
+    for (const name of BOUND_SOCKETS) {
+      if (name === "head") {
+        // the hair over the head and the buns beside it
+        for (const [side, lift] of HAIR_REACH) {
+          godette.socket("head", p).addScaledVector(right, side);
+          p.y += lift;
+          add();
+        }
+      } else if (name === "foot_L" || name === "foot_R") {
+        // the boots, from the ankle down to the sole and out to the sides
+        for (const side of [-0.07, 0.07]) {
+          godette.socket(name, p).addScaledVector(right, side);
+          p.y -= 0.09;
+          add();
+        }
+      } else {
+        godette.socket(name, p);
+        add();
+      }
     }
     if (!Number.isFinite(x0)) return null;
-    const pad = Math.max(8, (x1 - x0) * 0.12);
-    const w = Math.max(48, x1 - x0 + pad * 2);
+    const tall = y1 - y0;
+    const pad = Math.max(8, tall * 0.035);
+    const w = Math.max(x1 - x0 + pad * 2, tall * 0.36);
     const cx = (x0 + x1) / 2;
-    return { x: cx - w / 2, y: y0 - pad, width: w, height: y1 - y0 + pad * 1.5 };
+    const left = Math.max(2, cx - w / 2);
+    const top = Math.max(2, y0 - pad);
+    const r = Math.min(width - 2, cx + w / 2);
+    const bottom = Math.min(height - 2, y1 + pad);
+    if (r - left < 24 || bottom - top < 24) return null;
+    return { x: left, y: top, width: r - left, height: bottom - top };
   }
 
   // ------------------------------------------------------------------ lifetime
 
   sleep() {
-    this.hotspot?.place(null);
-    this.hoverPart = null;
+    this.hideHello();
     finaleSignal.setTitle(false);
     finaleSignal.setHover(null);
     this.resetLife();
@@ -912,8 +982,8 @@ class FinaleAct implements StoryAct {
 
   dispose() {
     document.fonts.removeEventListener("loadingdone", this.onFonts);
-    this.hotspot?.dispose();
-    this.hotspot = null;
+    this.hideHello();
+    this.helloEl = null;
     finaleSignal.setTitle(false);
     const godette = this.godette;
     if (godette?.root.parent === this.scene) godette.root.removeFromParent();

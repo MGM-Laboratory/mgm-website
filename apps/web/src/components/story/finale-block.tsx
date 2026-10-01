@@ -459,6 +459,23 @@ export function FinaleBlock({
         ))}
       </p>
       <FinaleAction />
+      {/*
+       * Godette's own control for the keyboard and screen readers, right after the action in
+       * the tab order. The WebGL act shows it and places it over her every frame (a press plays
+       * one of her click reactions); the storybook has no Godette, so it stays hidden there.
+       * Pointer presses pass through it to her (the act raycasts her body).
+       */}
+      <button
+        type="button"
+        data-finale-hello
+        hidden
+        aria-label={STORY_FINALE.hello}
+        title={STORY_FINALE.hello}
+        className="story-finale-hello focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)]"
+        onClick={() => {
+          finaleSignal.sayHello();
+        }}
+      />
     </div>
   );
 }

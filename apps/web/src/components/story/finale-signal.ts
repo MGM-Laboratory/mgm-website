@@ -8,6 +8,9 @@
  *   block plays its letters in, or back out when the visitor scrolls back.
  * - The block reports the pointer over its title and its action
  *   (`setHover`), so she can look at what the visitor is looking at.
+ * - The block's "Say hello" button (keyboard and screen readers, placed
+ *   over her by the act) and its rolling letters (she may glance at one)
+ *   leave notes the act picks up on its next frame.
  */
 
 export type FinaleHoverTarget = "title" | "action";
@@ -56,6 +59,33 @@ class FinaleSignal {
   /** Seconds since the action was last pressed. */
   pressedSince() {
     return (performance.now() - this.pressedAt) / 1000;
+  }
+
+  private hellos = 0;
+  private roll: { x: number; y: number } | null = null;
+
+  /** The "Say hello" button was pressed (Enter, Space or a click). */
+  sayHello() {
+    this.hellos += 1;
+  }
+
+  /** Presses of "Say hello" since the last call. */
+  takeHellos() {
+    const n = this.hellos;
+    this.hellos = 0;
+    return n;
+  }
+
+  /** A title letter started its roll, at this viewport point (CSS px). */
+  rolled(x: number, y: number) {
+    this.roll = { x, y };
+  }
+
+  /** The letter that rolled since the last call, if any. */
+  takeRoll() {
+    const roll = this.roll;
+    this.roll = null;
+    return roll;
   }
 }
 
