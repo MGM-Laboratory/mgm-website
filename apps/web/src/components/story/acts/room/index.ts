@@ -1,4 +1,5 @@
 import {
+  Color,
   DirectionalLight,
   Group,
   MathUtils,
@@ -24,6 +25,8 @@ import {
   type StoryContext,
   type StoryHotspot,
   type StoryPointerEvent,
+  Latch,
+  expoOut,
 } from "@/components/story/engine/act";
 import { actOf } from "@/components/story/engine/timeline";
 import type { DeckBox } from "@/components/story/props/deck-box";
@@ -31,14 +34,20 @@ import { createMagicTrail, type MagicTrail } from "@/components/story/props/fx/m
 import { createSpark, type Spark } from "@/components/story/props/fx/spark";
 import { createSparkleBurst, type SparkleBurst } from "@/components/story/props/fx/sparkle-burst";
 import { GODETTE_STAND, type Godette } from "@/components/story/props/godette";
-import type { StoryRoom } from "@/components/story/props/room";
-import { ensureDeckBox, ensureGodette, ensureRoom } from "@/components/story/props/shared";
+import {
+  screenFillDistance,
+  screenFillFov,
+  type RoomPhase,
+  type StoryRoom,
+} from "@/components/story/props/room";
+import { ensureDeckBox, ensureGodette, ensureRoom, tvFeed } from "@/components/story/props/shared";
 
 import { CameraPath, RoomCameraRig, createPose, shotPose, type CamPose } from "./camera";
 import { ContactShadows, DustMotes, DustPuff, LightPool, setLayerDeep } from "./fx";
 import { TableLetters, type LetterTiming } from "./letters";
 import { at, beatSeconds, bump, ring } from "./script";
 import { TOY_YAW, ToyDirector } from "./toy";
+import { TvScreen } from "./tv";
 
 /**
  * Act 2, the table (SPEC section 1, `r-land` to `r-dive`). The box has just
@@ -60,6 +69,8 @@ const ROOM_RANGE = actOf("room");
 const LETTER_COUNT_MAX = 64;
 /** The lamps' warm-up: where `c-drop` hands them over, and they are full by mid r-land. */
 export const LAMPS_AT_LAND = 0.7;
+/** The vertical FOV the dive ends on, at the screen's full cover (degrees). */
+const DIVE_FILL_FOV = 48;
 /** The spark's warm light. */
 const SPARK_COLOUR = 0xffd27a;
 const UP = new Vector3(0, 1, 0);
@@ -121,6 +132,13 @@ class RoomAct implements StoryAct {
     q: new Quaternion(),
   };
   private warmTarget: WebGLRenderTarget | null = null;
+  private tv: TvScreen | null = null;
+  private readonly power = new Latch();
+  private lastT = -1;
+  private readonly glowColour = new Color();
+  private readonly start = createPose();
+  private tvCentre = new Vector3();
+  private tvNormal = new Vector3(1, 0, 0);
 
   async init(ctx: StoryContext) {
     const [room, box, godette] = await Promise.all([
@@ -200,6 +218,24 @@ class RoomAct implements StoryAct {
     scene.add(godette.root, godette.stand, godette.shadow);
     this.setGodetteLayer(STORY_LAYERS.behind);
 
+    // The TV: the picture's program, and its standby LED under the screen.
+    const tvAnchors = anchors.tv;
+    this.tvCentre.set(...tvAnchors.centre);
+    this.tvNormal.set(...tvAnchors.normal).normalize();
+    const ledAt = new Vector3(
+      (tvAnchors.corners.bl[0] + tvAnchors.corners.br[0]) / 2,
+      tvAnchors.corners.bl[1] - 0.013,
+      (tvAnchors.corners.bl[2] + tvAnchors.corners.br[2]) / 2,
+    ).addScaledVector(this.tvNormal, 0.012);
+    this.tv = new TvScreen(
+      tvAnchors.size[0] / tvAnchors.size[1],
+      this.tvCentre,
+      this.tvNormal,
+      ledAt,
+    );
+    this.group.add(this.tv.led);
+    setLayerDeep(this.tv.led, STORY_LAYERS.behind);
+
     this.buildPath(ctx);
     this.hotspots = [
       ctx.overlay.hotspot({
@@ -229,8 +265,11 @@ class RoomAct implements StoryAct {
     this.letters.toy.commit();
     this.warmTarget = stageLikeTarget(ctx.tier === "low" ? 0 : 4);
     box.warm(true);
+    room.screenMaterial(this.tv.material);
+    this.tv.led.visible = true;
     await godette.compile(ctx.stage.renderer, ctx.stage.camera, scene, [null, this.warmTarget]);
     await ctx.stage.compile(scene);
+    room.screenMaterial(null);
     box.warm(false);
     this.spark.warm(false);
     this.trail.warm(false);
@@ -387,10 +426,12 @@ class RoomAct implements StoryAct {
     // --- the room
     room.setGrade(ctx.palette.scheme);
     room.setPresence(1);
-    room.lamps(LAMPS_AT_LAND + (1 - LAMPS_AT_LAND) * smoothstep(0, 0.65, state.beat("r-land")));
-    room.tvGlow(0x000000, 0);
-    room.screenMaterial(null);
-    room.setPhase(this.phaseAt(t));
+    // The lamps finish warming as the box settles, and dim a little around the screen once it is on.
+    const warm = LAMPS_AT_LAND + (1 - LAMPS_AT_LAND) * smoothstep(0, 0.65, state.beat("r-land"));
+    const dim =
+      0.26 * smoothstep(0.1, 0.8, state.beat("r-tv")) +
+      0.2 * smoothstep(0.2, 1, state.beat("r-dive"));
+    room.lamps(warm - dim);
 
     // --- the box: the drop's end pose, rocked once as it settles; the lid pops for the spark
     this.directBox(ctx, state, box, room);
@@ -424,10 +465,15 @@ class RoomAct implements StoryAct {
     this.shadows.commit();
 
     // --- the camera
-    const pose = this.cameraAt(state, toy);
+    const pose = this.cameraAt(ctx, state, toy);
     this.rig.apply(ctx.stage.camera, pose, this.lifeAt(state), ctx.clock.time);
     this.aimFill(ctx, state);
     this.grade(ctx, state);
+
+    // --- the TV, and what the room shows for this camera
+    const phase = this.phaseFor(ctx, state);
+    room.setPhase(phase);
+    this.directTv(ctx, state, room, toy, phase);
 
     // --- the pointer (hover is ignored while the page scrolls, gotcha #20)
     this.hover(ctx, state, still);
@@ -465,6 +511,7 @@ class RoomAct implements StoryAct {
     this.trail?.setIntensity(0);
     this.burst?.clear();
     this.motes?.update(ctx.clock.time, ctx.size.height, ctx.stage.camera.fov, 0);
+    this.tv?.setLed(ctx.clock.time, 0);
     // Defaults the card act may override (it updates after us).
     const drop = state.beat("c-drop");
     room.setPhase("crane");
@@ -685,23 +732,86 @@ class RoomAct implements StoryAct {
 
   // ------------------------------------------------------------------ the camera
 
-  private cameraAt(state: ActState, toy: ToyDirector): CamPose {
+  private cameraAt(ctx: StoryContext, state: ActState, toy: ToyDirector): CamPose {
     const out = this.tmp.pose;
+    const dive = at("r-dive", 0);
+    if (state.t < dive) return this.followAt(state.t, toy, out);
+    // The dive starts where the follow leaves off.
+    this.followAt(dive, toy, this.start);
+    return this.diveAt(ctx, state.beat("r-dive"), this.start, out);
+  }
+
+  /** The keyed path before the flight, the operator after it. */
+  private followAt(t: number, toy: ToyDirector, out: CamPose) {
     const plan = toy.plan;
-    const tau = toy.frame.tau;
+    const tau = t - at("r-dragged", 0);
     if (!plan || tau < 0 || !this.follow) {
-      this.path?.evaluate(state.t, out);
+      this.path?.evaluate(t, out);
       return out;
     }
+    const flightTau = this.flightClock(t);
     // The operator: offsets from her centre, smoothed over a lag that shortens as she flies better.
-    this.follow.evaluate(state.t, out);
-    const lag = MathUtils.lerp(0.32, 0.16, plan.learned(tau));
-    const her = plan.smoothedCentre(tau, lag, this.tmp.v);
+    this.follow.evaluate(t, out);
+    const lag = MathUtils.lerp(0.32, 0.16, plan.learned(flightTau));
+    const her = plan.smoothedCentre(flightTau, lag, this.tmp.v);
     out.position.add(her);
     out.target.add(her);
     // In r-tv the aim moves past her to the screen.
-    const tv = this.tmp.w.set(...(this.room?.anchors.tv.centre ?? [0, 0, 0]));
-    out.target.lerp(tv, 0.55 * smoothstep(0.3, 0.85, state.beat("r-tv")));
+    const tvBeat = saturate((t - at("r-tv", 0)) / (at("r-dive", 0) - at("r-tv", 0)));
+    out.target.lerp(this.tvCentre, 0.55 * smoothstep(0.3, 0.85, tvBeat));
+    return out;
+  }
+
+  private flightClock(t: number) {
+    const toy = this.toy;
+    const plan = toy?.plan;
+    if (!plan) return 0;
+    // The same clock the toy uses: beat seconds from the start of r-dragged.
+    let seconds = 0;
+    for (const id of ["r-dragged", "r-learn", "r-tv", "r-dive"] as const) {
+      const p = saturate((t - at(id, 0)) / (at(id, 1) - at(id, 0)));
+      seconds += p * beatSeconds(id);
+      if (p < 1) break;
+    }
+    return seconds;
+  }
+
+  /**
+   * r-dive, lusion's window trick: a crash zoom onto the screen, then the
+   * camera flies at it with the FOV keyed to how much of the frame the
+   * screen should cover, so the picture in it holds still while its frame
+   * grows to the edges. It ends on the screen's axis, at the distance where
+   * the screen covers the whole frame (`screenFillDistance`).
+   */
+  private diveAt(ctx: StoryContext, p: number, from: CamPose, out: CamPose) {
+    const room = this.room;
+    if (!room) return out;
+    const tv = room.anchors.tv;
+    const aspect = ctx.size.aspect;
+    const n = this.tvNormal;
+    const c = this.tvCentre;
+    const offset = this.tmp.w.copy(from.position).sub(c);
+    const d0 = Math.max(0.2, offset.dot(n));
+    const lateral = offset.addScaledVector(n, -d0);
+    const span = Math.min(tv.size[1], tv.size[0] / Math.max(aspect, 1e-3));
+    const end = screenFillDistance(tv, aspect, DIVE_FILL_FOV, 0);
+    const tanHalf = (fov: number) => Math.tan(MathUtils.degToRad(fov) / 2);
+    const c0 = span / (2 * d0 * tanHalf(from.fov));
+    const c1 = Math.max(c0 * 1.75, 0.58);
+    const cover =
+      p < 0.22 ? c0 + (c1 - c0) * expoOut(p / 0.22) : c1 + (1 - c1) * smoothstep(0.22, 1, p);
+    const k = Math.pow(smoothstep(0.08, 1, p), 1.6);
+    const d = d0 + (end - d0) * k;
+    out.position
+      .copy(c)
+      .addScaledVector(n, d)
+      .addScaledVector(lateral, 1 - smoothstep(0, 0.82, p));
+    out.target.lerpVectors(from.target, c, smoothstep(0, 0.55, p));
+    let fov = MathUtils.radToDeg(2 * Math.atan(span / (2 * d * Math.max(0.05, cover))));
+    // Exactly the fill at the end, so nothing but the screen is in frame.
+    fov = MathUtils.lerp(fov, screenFillFov(tv, aspect, d, 0), smoothstep(0.9, 1, p));
+    out.fov = fov;
+    out.roll = from.roll * (1 - smoothstep(0, 0.4, p));
     return out;
   }
 
@@ -709,8 +819,9 @@ class RoomAct implements StoryAct {
     const drag = state.beat("r-dragged");
     const learn = state.beat("r-learn");
     const handheld = 0.0012 + 0.0075 * smoothstep(0, 0.1, drag) * (1 - smoothstep(0.2, 0.9, learn));
-    const parallax = state.current === "r-figure" ? 0.022 : 0.03;
-    return { parallax, handheld, handheldRate: 1 + 1.4 * (1 - learn) * drag };
+    const settle = 1 - smoothstep(0, 0.6, state.beat("r-dive"));
+    const parallax = (state.current === "r-figure" ? 0.022 : 0.03) * settle;
+    return { parallax, handheld: handheld * settle, handheldRate: 1 + 1.4 * (1 - learn) * drag };
   }
 
   /** The lens: a soft bloom that the spark, her glow and the screen push harder, a vignette, a little grain. */
@@ -737,10 +848,98 @@ class RoomAct implements StoryAct {
     this.fill.intensity = light * (1 - 0.4 * state.beat("r-tv"));
   }
 
-  private phaseAt(t: number) {
-    if (t < at("r-break", 0.22)) return "land" as const;
-    if (t < at("r-learn", 0.45)) return "table" as const;
-    return "takeoff" as const;
+  /** Which of the room's visibility sets this camera needs (research/room.md section 5). */
+  private phaseFor(ctx: StoryContext, state: ActState): RoomPhase {
+    const t = state.t;
+    if (t < at("r-break", 0.22)) return "land";
+    if (t < at("r-learn", 0.45)) return "table";
+    if (t < at("r-tv", 0.4)) return "takeoff";
+    const room = this.room;
+    const camera = ctx.stage.camera;
+    if (!room || t < at("r-dive", 0)) return "chase";
+    const offset = this.tmp.v.copy(camera.position).sub(this.tvCentre);
+    const along = offset.dot(this.tvNormal);
+    const lateral = offset.addScaledVector(this.tvNormal, -along).length();
+    const fill = screenFillDistance(room.anchors.tv, ctx.size.aspect, camera.fov, 0.012 + lateral);
+    if (along <= fill) return "fill";
+    return camera.position.x < -0.17 ? "screen" : "chase";
+  }
+
+  /**
+   * The TV: it wakes on the first forward crossing of r-tv (a latched
+   * power-on, played on the clock; a jump or a fling lands on the end
+   * state), shows the worlds act's feed or our own portal, lights the room
+   * in its colour, and takes her in with ripples as she dives through.
+   */
+  private directTv(
+    ctx: StoryContext,
+    state: ActState,
+    room: StoryRoom,
+    toy: ToyDirector,
+    phase: RoomPhase,
+  ) {
+    const tv = this.tv;
+    if (!tv) return;
+    const t = state.t;
+    const on = t >= at("r-tv", 0.06);
+    const jumped = this.lastT < 0 || Math.abs(t - this.lastT) > 0.4 || state.arrived;
+    this.lastT = t;
+    if (jumped || Math.abs(state.velocity) > 4) this.power.value = on ? 1 : 0;
+    else this.power.update(on, ctx.clock.dt, 1 / 0.95, 2.6);
+    const power = this.power.value;
+    const tvBeat = state.beat("r-tv");
+    const diveBeat = state.beat("r-dive");
+    // The room's light from the screen: a flash, the static's flicker, then the portal's cool glow.
+    const flicker = 0.75 + 0.25 * Math.sin(ctx.clock.time * 43) * Math.sin(ctx.clock.time * 17.3);
+    const staticAmt = smoothstep(0.12, 0.3, power) * (1 - smoothstep(0.42, 0.68, power));
+    const flash = smoothstep(0, 0.05, power) * (1 - smoothstep(0.1, 0.36, power));
+    const level =
+      power <= 0.001
+        ? 0
+        : 0.45 * smoothstep(0.4, 0.9, power) +
+          0.55 * flash +
+          0.35 * staticAmt * flicker +
+          0.35 * smoothstep(0.1, 0.8, tvBeat) +
+          0.4 * smoothstep(0.2, 1, diveBeat);
+    room.tvGlow(tv.averageColour(power, this.glowColour), level);
+    room.screenMaterial(power > 0.001 ? tv.material : null);
+    tv.setLed(ctx.clock.time, power);
+    // The feed: the worlds act's wormhole, drawn while the screen is on.
+    const feed = tvFeed(ctx);
+    if (feed && power > 0.001) feed.update(ctx, ctx.clock.dt);
+    // Her entry: where her centre crossed the screen, and how long ago (beat seconds).
+    const plan = toy.plan;
+    let entry: { x: number; y: number; strength: number; seconds: number } | null = null;
+    if (plan && toy.frame.tau > plan.times.enter - 0.05) {
+      const corners = room.anchors.tv.corners;
+      const bl = this.tmp.v.set(...corners.bl);
+      const across = this.tmp.w.set(...corners.br).sub(bl);
+      const up = this.tmp.u.set(...corners.tl).sub(bl);
+      const hit = plan.centre(plan.times.enter, new Vector3()).sub(bl);
+      entry = {
+        x: hit.dot(across) / across.lengthSq(),
+        y: hit.dot(up) / up.lengthSq(),
+        strength: 1,
+        seconds: toy.frame.tau - plan.times.enter,
+      };
+    }
+    tv.set({
+      time: ctx.clock.time,
+      power,
+      dive: smoothstep(0.35, 0.95, diveBeat),
+      warp: 0.15 * smoothstep(0.2, 1, tvBeat) + 0.85 * smoothstep(0.1, 1, diveBeat),
+      eye: ctx.stage.camera.position,
+      feed: feed ? feed.texture : null,
+      entry,
+      hover: 0,
+    });
+    // Close to the screen nothing but the TV wall shows: the table's things stand down.
+    const near = phase === "screen" || phase === "fill";
+    if (this.box) this.box.root.visible = !near;
+    if (this.letters) this.letters.toy.group.visible &&= !near;
+    this.shadows.mesh.visible = !near;
+    if (this.motes) this.motes.points.visible &&= !near;
+    if (this.godette) this.godette.stand.visible = !near;
   }
 
   // ------------------------------------------------------------------ the pointer
@@ -834,6 +1033,8 @@ class RoomAct implements StoryAct {
     this.releaseGodette();
     this.letters?.reset();
     this.sparkDodge.set(0, 0, 0);
+    this.power.value = 0;
+    this.lastT = -1;
   }
 
   dispose() {
@@ -848,6 +1049,7 @@ class RoomAct implements StoryAct {
     this.trail?.dispose();
     this.burst?.dispose();
     this.cheer?.dispose();
+    this.tv?.dispose();
     this.sparkLight.dispose();
     this.fill.dispose();
     this.warmTarget?.dispose();
