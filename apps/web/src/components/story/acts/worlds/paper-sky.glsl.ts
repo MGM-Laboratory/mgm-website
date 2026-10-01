@@ -1,3 +1,5 @@
+import { Color, Vector3 } from "three";
+
 /**
  * World 01's sky and its far sea, as GLSL: the same functions paint Paper
  * Tide's sky layer and the other side of the wormhole, so the view through
@@ -130,64 +132,54 @@ export const PAPER_PALETTE = {
   cardAvg: 0x5e5996,
 } as const;
 
-/** sRGB hex to linear RGB, as `new Color(hex)` stores it for the shaders' uniforms. */
-function linearRgb(hex: number): readonly [number, number, number] {
-  const f = (c: number) => {
-    const s = c / 255;
-    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  };
-  return [f((hex >> 16) & 255), f((hex >> 8) & 255), f(hex & 255)];
-}
-
+/** The palette in linear RGB: `new Color(hex)` holds what the shaders' uniforms hold. */
 const LIN = {
-  zenith: linearRgb(PAPER_PALETTE.zenith),
-  sky: linearRgb(PAPER_PALETTE.sky),
-  low: linearRgb(PAPER_PALETTE.low),
-  horizon: linearRgb(PAPER_PALETTE.horizon),
-  sun: linearRgb(PAPER_PALETTE.sun),
-  navy: linearRgb(PAPER_PALETTE.navy),
-  cardAvg: linearRgb(PAPER_PALETTE.cardAvg),
+  zenith: new Color(PAPER_PALETTE.zenith),
+  sky: new Color(PAPER_PALETTE.sky),
+  low: new Color(PAPER_PALETTE.low),
+  horizon: new Color(PAPER_PALETTE.horizon),
+  sun: new Color(PAPER_PALETTE.sun),
+  navy: new Color(PAPER_PALETTE.navy),
+  cardAvg: new Color(PAPER_PALETTE.cardAvg),
 };
+const HORIZON_GLOW = LIN.horizon.clone().multiplyScalar(1.1);
+const DEEP = LIN.sky.clone().lerp(LIN.navy, 0.45).multiplyScalar(0.85);
+const FAR_CARDS = new Color().setRGB(
+  LIN.cardAvg.r * 0.66,
+  LIN.cardAvg.g * 0.68,
+  LIN.cardAvg.b * 0.85,
+);
+const SUN = new Vector3(0.18, 0.055, -1).normalize();
+const SUN_FLAT = Math.hypot(SUN.x, SUN.z);
+const col = new Color();
+const sky = new Color();
+const glow = new Color();
+const haze = new Color();
 
 function smooth(a: number, b: number, x: number) {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 }
 
-type Rgb = [number, number, number];
-
-function mixInto(out: Rgb, b: readonly number[], t: number) {
-  for (let i = 0; i < 3; i++) out[i] = (out[i] ?? 0) + ((b[i] ?? 0) - (out[i] ?? 0)) * t;
-  return out;
+/** `paperSkyBase`: the gradient alone. */
+function skyBase(out: Color, y: number) {
+  return out
+    .copy(LIN.horizon)
+    .lerp(LIN.low, smooth(0, 0.07, y))
+    .lerp(LIN.sky, smooth(0.04, 0.22, y))
+    .lerp(LIN.zenith, smooth(0.24, 0.9, y));
 }
 
-function skyBase(y: number): Rgb {
-  const col: Rgb = [...LIN.horizon];
-  mixInto(col, LIN.low, smooth(0, 0.07, y));
-  mixInto(col, LIN.sky, smooth(0.04, 0.22, y));
-  return mixInto(col, LIN.zenith, smooth(0.24, 0.9, y));
-}
-
-const SUN = { x: 0.18, y: 0.055, z: -1 };
-const SUN_LEN = Math.hypot(SUN.x, SUN.y, SUN.z);
-const SUN_FLAT = Math.hypot(SUN.x, SUN.z);
-
-function sky(dx: number, dy: number, dz: number): Rgb {
-  const col = skyBase(dy);
-  const c = (dx * SUN.x + dy * SUN.y + dz * SUN.z) / SUN_LEN;
-  const ang = Math.acos(Math.min(1, Math.max(-1, c)));
+/** `paperSky` without the wind lines: the gradient, the horizon's warm glow and the sun. */
+function skyAlong(out: Color, dx: number, dy: number, dz: number) {
+  skyBase(out, dy);
+  const ang = Math.acos(Math.min(1, Math.max(-1, dx * SUN.x + dy * SUN.y + dz * SUN.z)));
+  if (ang < 0.078 && dy > -0.001) return out.copy(LIN.sun);
   const flat = Math.hypot(dx, dz) || 1;
   const facing = Math.max(0, (dx * SUN.x + dz * SUN.z) / (flat * SUN_FLAT));
-  const horizonGlow = Math.exp(-Math.abs(dy) * 10) * Math.pow(facing, 4);
-  mixInto(
-    col,
-    LIN.horizon.map((v) => v * 1.1),
-    horizonGlow * 0.55,
-  );
-  const glow = Math.exp(-ang * 4) * 0.45 + Math.exp(-ang * 14) * 0.5;
-  for (let i = 0; i < 3; i++) col[i] = (col[i] ?? 0) + (LIN.sun[i] ?? 0) * glow * 0.3;
-  if (ang < 0.078 && dy > -0.001) return [...LIN.sun];
-  return col;
+  out.lerp(HORIZON_GLOW, Math.exp(-Math.abs(dy) * 10) * Math.pow(facing, 4) * 0.55);
+  const g = Math.exp(-ang * 4) * 0.45 + Math.exp(-ang * 14) * 0.5;
+  return out.add(glow.copy(LIN.sun).multiplyScalar(g * 0.3));
 }
 
 /**
@@ -197,24 +189,17 @@ function sky(dx: number, dy: number, dz: number): Rgb {
  * swell). The act reads it under the world caption to choose the ink.
  */
 export function paperLuminance(d: Readonly<{ x: number; y: number; z: number }>, eyeY: number) {
-  let col: Rgb;
   if (d.y >= -0.0005) {
-    col = sky(d.x, d.y, d.z);
+    skyAlong(col, d.x, d.y, d.z);
   } else {
     const t = Math.max(0, eyeY) / Math.max(-d.y, 1e-4);
-    // The far cards at a mid swell, deepened like the shader's far cards.
-    col = [LIN.cardAvg[0] * 0.66, LIN.cardAvg[1] * 0.68, LIN.cardAvg[2] * 0.85];
-    const fres = Math.pow(1 - Math.abs(d.y), 5);
-    mixInto(col, sky(d.x, -d.y, d.z), 0.05 + 0.3 * fres);
-    const deep = [...LIN.sky] as Rgb;
-    mixInto(deep, LIN.navy, 0.45);
-    const haze = [...LIN.horizon] as Rgb;
-    mixInto(
-      haze,
-      deep.map((v) => v * 0.85),
-      smooth(0.015, 0.3, -d.y),
-    );
-    mixInto(col, haze, Math.min(1, (1 - Math.exp(-t * 0.0019)) * 1.1));
+    // The far cards at a mid swell, deepened like the shader's far cards, the sky in them,
+    // then the haze: the horizon's colour far away, a deep blue looking down.
+    col
+      .copy(FAR_CARDS)
+      .lerp(skyAlong(sky, d.x, -d.y, d.z), 0.05 + 0.3 * Math.pow(1 - Math.abs(d.y), 5));
+    haze.copy(LIN.horizon).lerp(DEEP, smooth(0.015, 0.3, -d.y));
+    col.lerp(haze, Math.min(1, (1 - Math.exp(-t * 0.0019)) * 1.1));
   }
-  return 0.2126 * col[0] + 0.7152 * col[1] + 0.0722 * col[2];
+  return 0.2126 * col.r + 0.7152 * col.g + 0.0722 * col.b;
 }
