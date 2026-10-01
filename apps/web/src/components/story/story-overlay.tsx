@@ -203,8 +203,9 @@ export function StoryOverlay({ store }: Readonly<{ store: StoryOverlayStore }>) 
       {snapshot.hotspots.map((spot) => {
         const common = {
           "data-hotspot": spot.id,
+          // No `title`: the accessible name is enough, and a native tooltip would sit over the GL
+          // object the visitor is playing with.
           "aria-label": spot.label,
-          title: spot.label,
           className:
             "story-hotspot pointer-events-auto absolute top-0 left-0 rounded-[0.9rem] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)]",
           onPointerEnter: () => {

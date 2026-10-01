@@ -247,7 +247,7 @@ export type StoryPointerEvent = Readonly<{
 export type StoryHotspotSpec = Readonly<{
   /** Stable id (one hotspot per id). */
   id: string;
-  /** The accessible name, also the focus tooltip. */
+  /** The accessible name (no native tooltip: the overlay draws its own focus ring). */
   label: string;
   /** A link target, or `onActivate` for a button. */
   href?: string;
