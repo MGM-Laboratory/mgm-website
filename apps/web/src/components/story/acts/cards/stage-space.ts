@@ -61,14 +61,29 @@ export type StageView = {
   /** CSS px of the canvas. */
   width: number;
   height: number;
+  /**
+   * The normalised screen height (-1..1, up) of the site header's bottom
+   * edge: the deck's sweeps stay below it (the header's glass would smear a
+   * card passing under it).
+   */
+  safeTop: number;
 };
+
+/** The site header's height, CSS px (the fixed glass bar over the story). */
+export const SITE_HEADER_PX = 64;
 
 export function stageView(size: StorySize, out: StageView): StageView {
   out.tanHalf = Math.tan(MathUtils.degToRad(stageFov(size.aspect)) / 2);
   out.aspect = size.aspect;
   out.width = size.width;
   out.height = size.height;
+  out.safeTop = 1 - (2 * SITE_HEADER_PX) / Math.max(1, size.height);
   return out;
+}
+
+/** A height on the whole screen (-1..1) mapped into the part of it under the header. */
+export function underHeader(view: StageView, ny: number) {
+  return -1 + ((ny + 1) * (view.safeTop + 1)) / 2;
 }
 
 /** Half the view height (metres) at `depth`. */
@@ -111,9 +126,13 @@ export function depthForHeight(view: StageView, worldHeight: number, px: number)
 export const SPRING_LIFT = 0.06;
 export const SPRING_TOP = 0.23;
 
-/** How far the camera pulls back for the spring, metres (0 when the view is tall enough). */
+/**
+ * How far the camera pulls back for the spring, metres (0 when the view is
+ * tall enough): the arc's top fits under the header.
+ */
 export function springPull(view: StageView) {
-  const needed = ((SPRING_TOP - SPRING_LIFT) * 1.08) / Math.max(1e-3, view.tanHalf);
+  const top = Math.max(0.2, view.safeTop);
+  const needed = ((SPRING_TOP - SPRING_LIFT) * 1.08) / Math.max(1e-3, view.tanHalf * top);
   return Math.max(0, needed - STAGE_DISTANCE);
 }
 

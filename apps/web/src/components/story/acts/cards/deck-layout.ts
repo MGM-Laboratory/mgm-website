@@ -10,6 +10,7 @@ import {
   halfHeightAt,
   halfWidthAt,
   screenToStage,
+  underHeader,
   type StageView,
 } from "@/components/story/acts/cards/stage-space";
 
@@ -35,9 +36,21 @@ type ViewPoint = readonly [number, number, number];
  */
 const SPRING_ARC: readonly ViewPoint[] = [
   [0.12, 0.1, 0.02],
-  [0.38, 0.17, 0.04],
-  [0.66, 0.08, 0.05],
-  [0.84, -0.12, 0.03],
+  [0.34, 0.17, 0.035],
+  [0.54, 0.1, 0.04],
+  [0.64, -0.08, 0.02],
+];
+
+/**
+ * The spring on a portrait screen: the screen is narrow and a card is a
+ * third of its half width, so the arc climbs, curls right and leaves away
+ * from the lens toward the snake's start, which lies deeper.
+ */
+const SPRING_ARC_PORTRAIT: readonly ViewPoint[] = [
+  [0.08, 0.1, 0.0],
+  [0.24, 0.24, -0.04],
+  [0.36, 0.27, -0.1],
+  [0.4, 0.14, -0.17],
 ];
 
 /**
@@ -45,13 +58,13 @@ const SPRING_ARC: readonly ViewPoint[] = [
  * near the lens, a far meander, the pour.
  */
 const SNAKE_LANDSCAPE: readonly ViewPoint[] = [
-  [0.78, 0.3, 1.3],
-  [0.7, -0.4, 1.15],
+  [0.66, 0.3, 1.3],
+  [0.64, -0.4, 1.15],
   [0.2, -0.66, 1.0],
   [-0.45, -0.52, 1.05],
   [-0.8, -0.05, 1.3],
-  [-0.62, 0.55, 1.6],
-  [-0.05, 0.72, 1.9],
+  [-0.62, 0.52, 1.6],
+  [-0.05, 0.66, 1.9],
   [0.55, 0.55, 2.0],
   [0.8, 0.0, 1.85],
   [0.5, -0.5, 1.7],
@@ -63,37 +76,37 @@ const SNAKE_LANDSCAPE: readonly ViewPoint[] = [
 
 /** The snake on a portrait screen after the spring's arc: the same story, stacked vertically. */
 const SNAKE_PORTRAIT: readonly ViewPoint[] = [
-  [0.55, 0.06, 1.2],
-  [-0.3, -0.18, 1.1],
-  [-0.72, -0.48, 1.15],
-  [-0.18, -0.72, 1.2],
-  [0.56, -0.62, 1.35],
-  [0.74, -0.14, 1.55],
-  [0.24, 0.26, 1.75],
-  [-0.56, 0.46, 1.8],
-  [-0.66, 0.78, 1.7],
-  [0.2, 0.72, 1.55],
-  [0.56, 0.32, 1.4],
-  [-0.3, 0.14, 1.25],
+  [0.42, 0.06, 1.2],
+  [-0.28, -0.18, 1.1],
+  [-0.58, -0.48, 1.15],
+  [-0.16, -0.7, 1.2],
+  [0.5, -0.62, 1.35],
+  [0.6, -0.14, 1.55],
+  [0.22, 0.26, 1.75],
+  [-0.5, 0.46, 1.8],
+  [-0.56, 0.74, 1.7],
+  [0.18, 0.7, 1.55],
+  [0.5, 0.32, 1.4],
+  [-0.26, 0.14, 1.25],
 ];
 
 /** The gather's return: off the top of the wheel, a sweep around the frame, back down into the box. */
 const RETURN_LANDSCAPE: readonly ViewPoint[] = [
-  [-0.32, 0.8, 1.3],
-  [-0.78, 0.22, 1.45],
+  [-0.32, 0.62, 1.3],
+  [-0.78, 0.16, 1.45],
   [-0.48, -0.55, 1.5],
   [0.32, -0.58, 1.42],
-  [0.64, 0.12, 1.3],
-  [0.26, 0.6, 1.1],
+  [0.62, 0.06, 1.3],
+  [0.24, 0.42, 1.1],
 ];
 
 const RETURN_PORTRAIT: readonly ViewPoint[] = [
-  [-0.3, 0.72, 1.3],
-  [-0.74, 0.2, 1.4],
-  [-0.4, -0.5, 1.45],
-  [0.4, -0.52, 1.38],
-  [0.66, 0.1, 1.25],
-  [0.22, 0.46, 1.05],
+  [-0.3, 0.56, 1.3],
+  [-0.6, 0.14, 1.4],
+  [-0.36, -0.5, 1.45],
+  [0.36, -0.52, 1.38],
+  [0.56, 0.06, 1.25],
+  [0.2, 0.36, 1.05],
 ];
 
 export type Slot = {
@@ -169,8 +182,11 @@ export class DeckLayout {
     this.ringRadius = 0.03;
     this.ringScale = 0.86;
     const ringOuter = this.ringRadius + CARD_H * this.ringScale;
-    const ringFit = portrait ? view.tanHalf * view.aspect : view.tanHalf;
-    const ringDepth = Math.max(1.12, ringOuter / (0.9 * ringFit));
+    // The wheel fits the width on a portrait screen, and the height under the header otherwise.
+    const ringFit = portrait
+      ? 0.86 * view.tanHalf * view.aspect
+      : Math.min(0.9, view.safeTop - 0.08) * view.tanHalf;
+    const ringDepth = Math.max(1.12, ringOuter / Math.max(1e-3, ringFit));
     screenToStage(view, 0, -0.04, fanDepth, this.stack);
     this.stack.y -= CARD_H * 0.06;
     this.pivot.copy(this.stack);
@@ -182,11 +198,13 @@ export class DeckLayout {
     const springDistance = STAGE_DISTANCE + springPull(view);
     const springHalfH = springDistance * view.tanHalf;
     const springHalfW = springHalfH * view.aspect;
-    for (const [ax, ay, az] of SPRING_ARC) {
+    for (const [ax, ay, az] of portrait ? SPRING_ARC_PORTRAIT : SPRING_ARC) {
       snake.push(mouthOut.clone().add(new Vector3(ax * springHalfW, ay * springHalfH, az)));
     }
+    // The sweeps are laid out on the whole screen and kept under the header.
     for (const [nx, ny, d] of portrait ? SNAKE_PORTRAIT : SNAKE_LANDSCAPE) {
-      snake.push(screenToStage(view, nx, ny, d * (fanDepth / 1.04), new Vector3()));
+      const depth = d * (fanDepth / 1.04);
+      snake.push(screenToStage(view, nx, underHeader(view, ny), depth, new Vector3()));
     }
     snake.push(this.stack.clone().add(new Vector3(0, CARD_H * 0.32, 0)));
     snake.push(this.stack.clone());
@@ -196,7 +214,7 @@ export class DeckLayout {
     const top = this.ring.clone().add(new Vector3(0, this.ringRadius + CARD_H * 0.5, 0));
     const back = [top];
     for (const [nx, ny, d] of portrait ? RETURN_PORTRAIT : RETURN_LANDSCAPE) {
-      back.push(screenToStage(view, nx, ny, d, new Vector3()));
+      back.push(screenToStage(view, nx, underHeader(view, ny), d, new Vector3()));
     }
     back.push(mouthOut.clone().add(new Vector3(0, 0.03, 0)));
     for (const point of [...exit].reverse()) back.push(point.clone());
@@ -239,13 +257,16 @@ export class DeckLayout {
       );
       screenToStage(view, 0, 0.1, focusDepth, this.focus.position);
     } else {
-      const cardPx = Math.min(0.19 * W, 0.54 * Hpx * (CARD_W / CARD_H));
+      // A row in the part of the screen under the header (a short landscape screen has little).
+      const usable = (Hpx * (view.safeTop + 1)) / 2;
+      const cardPx = Math.min(0.19 * W, 0.56 * usable * (CARD_W / CARD_H));
       const gap = Math.max(0.02 * W, 14);
       const heightPx = (cardPx * CARD_H) / CARD_W;
       const depth = depthForHeight(view, CARD_H, heightPx);
       const step = (cardPx + gap) / (W / 2);
+      const rowY = underHeader(view, 0.1);
       this.slots.forEach((slot, k) => {
-        screenToStage(view, (k - 1.5) * step, 0.06, depth, slot.position);
+        screenToStage(view, (k - 1.5) * step, rowY, depth, slot.position);
         slot.scale = 1;
       });
       const bigDepth = depthForHeight(view, CARD_H, 0.7 * Hpx);

@@ -74,7 +74,13 @@ class CardsAct implements StoryAct {
   private readonly camera = new CameraDirector();
   private reveal: RoomReveal | null = null;
   private readonly pageFall = new PageFall();
-  private readonly view: StageView = { tanHalf: 0.12, aspect: 1, width: 1, height: 1 };
+  private readonly view: StageView = {
+    tanHalf: 0.12,
+    aspect: 1,
+    width: 1,
+    height: 1,
+    safeTop: 0.86,
+  };
   private readonly layout = new DeckLayout();
   private motion: DeckMotion | null = null;
   private deck: DeckView | null = null;

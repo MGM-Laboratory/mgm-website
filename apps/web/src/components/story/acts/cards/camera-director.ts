@@ -33,6 +33,8 @@ import {
  * SHOT_LAND.
  */
 
+/** The least the camera pulls back while the deck pours back into the box, metres. */
+const GATHER_PULL = 0.1;
 /** How far the lens cranes up over the box to look into it as it opens, radians. */
 const PEER_ANGLE = (18 * Math.PI) / 180;
 
@@ -63,18 +65,21 @@ export class CameraDirector {
 
     // The slow push: 0.8 m at the rest, a little closer through the show, back for the gather.
     const push = fit(t, 1, 8.6, 0, 1) * (1 - smoothstep(0, 0.5, state.beat("c-gather"))) * 0.05;
-    // The gather pulls back a little so the stream fits as it pours into the box, then settles.
-    const gather = state.beat("c-gather");
-    const pull = smoothstep(0.05, 0.3, gather) * (1 - smoothstep(0.78, 0.98, gather)) * 0.08;
     // The spring: the frame rises so the box sits low and the cards rising out of it stay in view
     // (a card must rise its whole length to clear the rim), pulling back as far as the aspect
     // needs (stage-space.ts), then settles before the snake spreads over the screen.
     let fov = stageFov(aspect);
     const springFrame =
       smoothstep(0.3, 1, state.beat("c-open")) * (1 - smoothstep(0.1, 0.5, state.beat("c-snake")));
-    const lift = SPRING_LIFT * springFrame;
-    const back = springPull(view) * springFrame;
-    const distance = STAGE_DISTANCE - push + pull + back;
+    // The gather takes the same frame while the deck pours back in (the cards come down their
+    // whole length into the mouth, which sits low), pulling back a little more so the stream's
+    // sweep fits, then settles on the rest for the lid and the tap tap.
+    const gather = state.beat("c-gather");
+    const gatherFrame = smoothstep(0.04, 0.3, gather) * (1 - smoothstep(0.78, 0.96, gather));
+    const lift = SPRING_LIFT * Math.max(springFrame, gatherFrame);
+    const back =
+      springPull(view) * springFrame + Math.max(springPull(view), GATHER_PULL) * gatherFrame;
+    const distance = STAGE_DISTANCE - push + back;
     // The opening: the lens cranes up over the box as the lid lifts, so the visitor looks into the
     // open mouth (the lid's hinge, the flap, the deck's lit edges), and settles level again as the
     // deck springs out.
