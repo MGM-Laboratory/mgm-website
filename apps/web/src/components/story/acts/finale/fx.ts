@@ -188,9 +188,21 @@ export function drawImpact(
   }
 }
 
+/** One little cartoon cloud: disc offsets (x, y in puff radii) and sizes. */
+const PUFF_CLOUD: readonly (readonly [number, number, number])[] = [
+  [0, 0, 1],
+  [0.78, 0.18, 0.78],
+  [-0.62, 0.22, 0.72],
+  [0.22, 0.72, 0.66],
+  [1.32, -0.12, 0.5],
+  [-0.2, -0.42, 0.56],
+];
+
 /**
  * Dusting off: each brush of her hands on her shorts knocks out a little
- * puff (story: the clip's brush times, aged by the acting clock).
+ * cartoon cloud that billows out to that side, rises a little and shrinks
+ * away, with a speck or two flicked further (story: the clip's brush times,
+ * aged by the acting clock).
  */
 export function drawBrushPuffs(
   sprites: SpriteBatch,
@@ -202,19 +214,29 @@ export function drawBrushPuffs(
   if (clip < 0 || clip > 2.4) return;
   const brushes = [0.38, 0.72, 1.08];
   brushes.forEach((at, b) => {
-    const age = (clip - at) / 0.75;
+    const age = (clip - at) / 0.8;
     if (age <= 0 || age >= 1) return;
     const side = b % 2 === 0 ? -1 : 1;
-    for (let i = 0; i < 3; i += 1) {
-      const k = easeOut(age);
-      const spread = (i - 1) * 0.07;
+    const k = easeOut(age);
+    const radius = 0.045 + 0.03 * k;
+    const swell = Math.sin(Math.min(1, age * 1.25) * Math.PI) ** 0.55;
+    const cx = hips.x + side * (0.2 + 0.22 * k);
+    const cy = hips.y - 0.08 + 0.1 * k;
+    PUFF_CLOUD.forEach(([ox, oy, size], i) => {
+      // the cloud opens as it goes: its discs drift apart a little
+      const open = 1 + 0.35 * k;
+      tmpA.set(cx + side * ox * radius * open, cy + oy * radius * open, hips.z + 0.14 + i * 0.002);
+      sprites.push(tmpA, 2 * radius * size * swell, "disc", colors.dust, 1);
+    });
+    // specks flicked out ahead of the cloud
+    for (let i = 0; i < 2; i += 1) {
+      const fly = easeOut(Math.min(1, age * 1.4));
       tmpA.set(
-        hips.x + side * (0.2 + 0.18 * k) + spread,
-        hips.y - 0.06 + 0.12 * k + i * 0.025,
-        hips.z + 0.12,
+        cx + side * (0.12 + 0.2 * fly + i * 0.06),
+        cy + 0.05 + 0.1 * fly - 0.12 * age * age + i * 0.04,
+        hips.z + 0.15,
       );
-      const size = (0.05 + 0.07 * k) * Math.sin(Math.min(1, age * 1.2) * Math.PI) ** 0.6;
-      sprites.push(tmpA, size, "disc", colors.dust, 1);
+      sprites.push(tmpA, 0.026 * (1 - age), "disc", colors.dust, 1);
     }
   });
 }
