@@ -561,13 +561,7 @@ class WorldsAct implements StoryAct {
     const size = scaledSize(ctx, backgroundScale(this.quality));
     if (target.width !== size.width || target.height !== size.height)
       target.setSize(size.width, size.height);
-    hole.set(
-      this.life.time,
-      this.life.flow,
-      ctx.director.freeze,
-      holeStreak(p),
-      this.quality === "low" ? 3 : 6,
-    );
+    hole.set(this.life.time, this.life.flow, ctx.director.freeze, holeStreak(p));
     this.paperEye.set(0, 0, 0).applyMatrix4(this.holeToPaper);
     hole.aim(ctx.stage.camera, this.holeToPaper, this.paperEye, target.height);
     hole.render(ctx.stage.renderer, target);

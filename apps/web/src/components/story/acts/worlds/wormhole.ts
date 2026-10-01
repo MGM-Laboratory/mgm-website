@@ -184,7 +184,6 @@ uniform float uEll;
 uniform vec3 uAxis;
 uniform float uStreak;
 uniform vec3 uForward;
-uniform int uSamples;
 uniform mat3 uToPaper;
 uniform vec3 uPaperEye;
 uniform vec3 uSpace;
@@ -202,15 +201,8 @@ const float PI = 3.14159265;
 vec3 space(vec3 d) {
   vec3 col = nebula(d, uSpace, uSpaceBand, uStarBlue);
   // Stars, streaked toward where we fly when we fly fast.
-  vec3 acc = vec3(0.0);
   vec3 radial = d - uForward * dot(d, uForward);
-  for (int k = 0; k < 6; k++) {
-    if (k >= uSamples) break;
-    float s = float(k) / max(1.0, float(uSamples - 1));
-    vec3 dk = normalize(d - radial * uStreak * s);
-    acc = max(acc, stars(dk));
-  }
-  return col + acc;
+  return col + starsAlong(d, normalize(d - radial * uStreak));
 }
 
 void main() {
@@ -260,7 +252,6 @@ function holeUniforms(lut: DataTexture): Record<string, IUniform> {
     uStreak: { value: 0 },
     uForward: { value: new Vector3(0, 0, -1) },
     uPix: { value: 0.002 },
-    uSamples: { value: 4 },
     uToPaper: { value: new Matrix3() },
     uPaperEye: { value: new Vector3(0, 60, 0) },
     uSpace: { value: LINEAR(0x070a1f) },
@@ -478,13 +469,12 @@ export class WormholePass {
     this.state.restore(renderer);
   }
 
-  set(time: number, flow: number, freeze: number, streak: number, samples: number) {
+  set(time: number, flow: number, freeze: number, streak: number) {
     const u = this.material.uniforms;
     u.uTime.value = time;
     u.uFlow.value = flow;
     u.uFreeze.value = freeze;
     u.uStreak.value = streak;
-    u.uSamples.value = samples;
   }
 
   /** Resizes the feed so the TV stays sharp when it fills the screen. */
@@ -542,7 +532,7 @@ export function createTvFeed(
     draw(ctx: StoryContext, camera: Camera | null) {
       const life = onAdvance(ctx);
       pass.sizeFeed(ctx, scale());
-      pass.set(life.time, life.flow, life.freeze, 0, 2);
+      pass.set(life.time, life.flow, life.freeze, 0);
       const f = frames();
       pass.aim(
         camera instanceof PerspectiveCamera ? camera : pass.feedCamera,
