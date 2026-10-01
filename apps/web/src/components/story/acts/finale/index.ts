@@ -195,8 +195,14 @@ class FinaleAct implements StoryAct {
   private blush = 0;
   private readonly contact = new Vector3();
 
+  /** A webfont that arrives late changes the title's cap line: measure it again. */
+  private readonly onFonts = () => {
+    this.metricsKey = "";
+  };
+
   async init(ctx: StoryContext) {
     this.ctx = ctx;
+    document.fonts.addEventListener("loadingdone", this.onFonts);
     // Development only: `?storystill` renders her as a cut-out for the storybook's stills
     // (transparent backdrop, the wave held, eyes on us).
     this.still =
@@ -905,6 +911,7 @@ class FinaleAct implements StoryAct {
   }
 
   dispose() {
+    document.fonts.removeEventListener("loadingdone", this.onFonts);
     this.hotspot?.dispose();
     this.hotspot = null;
     finaleSignal.setTitle(false);
