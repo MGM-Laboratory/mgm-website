@@ -233,6 +233,7 @@ export class LoaderShow {
     for (const card of this.cards) card.el.remove();
     this.cards.length = 0;
     this.host.style.removeProperty("clip-path");
+    delete this.host.dataset.revealing;
   }
 
   // Building blocks -------------------------------------------------------
@@ -1107,6 +1108,8 @@ export class LoaderShow {
       });
     }
     mark("open");
+    // From here on the page under the loader takes taps and wheels again.
+    this.host.dataset.revealing = "";
     this.hooks.revealing();
     const iris = this.animate(this.host, frames, { duration, easing: "linear" });
     this.animate(this.q("iris"), ring, { duration, easing: "linear" });
