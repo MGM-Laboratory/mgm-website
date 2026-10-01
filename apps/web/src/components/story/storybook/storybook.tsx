@@ -46,7 +46,7 @@ export function Storybook() {
           </h2>
           <ol className="mt-6 grid grid-cols-1 gap-x-7 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {STORY_PANELS.map((panel, index) => (
-              <li key={panel.id} data-storybook-panel={index} className="story-panel">
+              <li key={panel.id} data-storybook-panel={panel.id} className="story-panel">
                 <div className="story-panel-art" data-panel={panel.id}>
                   <PanelArt id={panel.id} />
                 </div>

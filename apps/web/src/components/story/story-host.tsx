@@ -11,7 +11,7 @@ import { StoryWaiting } from "@/components/story/story-waiting";
 import type { StoryOverlayStore } from "@/components/story/engine/overlay-store";
 import type { StoryFallbackReason } from "@/components/story/engine/director";
 import type { StoryBuildPhase, StoryEngine } from "@/components/story/engine/story-engine";
-import { actOf, TIMELINE } from "@/components/story/engine/timeline";
+import { beatAt, TIMELINE, type BeatId } from "@/components/story/engine/timeline";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 
 /**
@@ -58,16 +58,36 @@ function decideStoryMode() {
   return story;
 }
 
-/** The storybook's place for story position `t`. */
+/**
+ * The storybook panel (`STORY_PANELS` id) that tells each beat after the
+ * cards are drawn. Beats before `c-gather` are the cards themselves, and
+ * the finale has its own block.
+ */
+const PANEL_OF_BEAT: ReadonlyMap<BeatId, string> = new Map<BeatId, string>([
+  ["c-gather", "table"],
+  ["c-drop", "table"],
+  ["r-land", "table"],
+  ["r-figure", "toy"],
+  ["r-break", "spark"],
+  ["r-spark", "spark"],
+  ["r-dragged", "spark"],
+  ["r-learn", "spark"],
+  ["r-tv", "screen"],
+  ["r-dive", "screen"],
+  ["w-loss", "fall"],
+  ["w-fall", "fall"],
+]);
+
+/** The storybook's place for story position `t`: the still that tells the same moment. */
 function storybookAnchor(section: HTMLElement, t: number): HTMLElement | null {
   if (t < 0) return null;
-  if (t < actOf("cards").end) return section.querySelector("[data-storybook-cards]");
   if (t >= TIMELINE.finaleStart) return section.querySelector("[data-storybook-finale]");
-  const from = actOf("room").start;
-  const to = actOf("worlds").end;
-  const panels = section.querySelectorAll<HTMLElement>("[data-storybook-panel]");
-  const index = Math.min(panels.length - 1, Math.floor(((t - from) / (to - from)) * panels.length));
-  return panels.item(Math.max(0, index));
+  const beat = beatAt(t);
+  if (!beat) return section.querySelector("[data-storybook-cards]");
+  // Every world and rift between w-hole and w-5 is "Five worlds".
+  const panel = PANEL_OF_BEAT.get(beat.id) ?? (beat.act === "worlds" ? "worlds" : null);
+  if (!panel) return section.querySelector("[data-storybook-cards]");
+  return section.querySelector(`[data-storybook-panel="${panel}"]`);
 }
 
 /** The story position from the section's rect: what is on screen, engine or not. */
@@ -87,13 +107,48 @@ function toStorybook(section: HTMLElement, t: number) {
   updateBoot({ story: "dom" });
   if (!(t > 0)) return;
   const anchor = storybookAnchor(section, t);
-  if (!anchor) return;
-  // After the layout switch has been laid out.
-  requestAnimationFrame(() => {
+  if (anchor) settleOn(anchor);
+}
+
+/** Space left above the anchor for the fixed header. */
+const ANCHOR_OFFSET_PX = 96;
+
+/**
+ * Brings `anchor` to the top of the screen once the section has collapsed
+ * to the storybook. ScrollSmoother takes a few frames to catch up with a
+ * page that just lost most of its height (its own scroll position is
+ * clamped against the old one), so the position is measured from the
+ * anchor itself and applied again on each frame until it has held for
+ * three frames in a row (at most half a second).
+ */
+function settleOn(anchor: HTMLElement) {
+  let frames = 0;
+  let steady = 0;
+  const step = () => {
+    frames += 1;
     const smoother = ScrollSmoother.get();
-    if (smoother) smoother.scrollTo(anchor, false, "top 96px");
-    else anchor.scrollIntoView({ block: "start", behavior: "instant" });
-  });
+    if (smoother) {
+      const current = smoother.scrollTop();
+      const target = Math.max(0, anchor.getBoundingClientRect().top + current - ANCHOR_OFFSET_PX);
+      if (Math.abs(current - target) > 1) {
+        steady = 0;
+        smoother.scrollTo(target, false);
+      } else {
+        steady += 1;
+      }
+    } else {
+      const top = anchor.getBoundingClientRect().top;
+      if (Math.abs(top - ANCHOR_OFFSET_PX) > 1) {
+        steady = 0;
+        window.scrollTo({ top: window.scrollY + top - ANCHOR_OFFSET_PX, behavior: "instant" });
+      } else {
+        steady += 1;
+      }
+    }
+    if (steady < 3 && frames < 30) requestAnimationFrame(step);
+  };
+  // After the layout switch has been laid out.
+  requestAnimationFrame(step);
 }
 
 /** The title's width, for the box placeholder (80% of it). */
