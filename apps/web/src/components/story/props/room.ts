@@ -382,14 +382,66 @@ function screenSpan(tv: RoomAnchors["tv"], aspect: number, slack: number) {
 }
 
 /**
+ * True when a camera `d` metres in front of the screen, strayed `slack` metres in any of eight
+ * directions, sees nothing but the screen: with its aim moved along (a shift) and with its aim kept
+ * on the screen's centre (an orbit, whose frame lands on the screen as a trapezoid). Screen frame:
+ * the quad in the plane z = 0, the camera on +z, y up.
+ */
+function screenCovers(
+  tv: RoomAnchors["tv"],
+  aspect: number,
+  tanV: number,
+  d: number,
+  slack: number,
+) {
+  const hw = tv.size[0] / 2;
+  const hh = tv.size[1] / 2;
+  const tanH = tanV * aspect;
+  const steps = slack > 0 ? 8 : 1;
+  for (let k = 0; k < steps; k++) {
+    const ox = slack * Math.cos((k * Math.PI) / 4);
+    const oy = slack * Math.sin((k * Math.PI) / 4);
+    for (const orbit of [false, true]) {
+      // forward f, right r = f x up, up u = r x f (up is +y)
+      let fx = 0;
+      let fy = 0;
+      let fz = -1;
+      if (orbit) {
+        const n = Math.hypot(ox, oy, d);
+        fx = -ox / n;
+        fy = -oy / n;
+        fz = -d / n;
+      }
+      const rn = Math.hypot(fz, fx);
+      const rx = -fz / rn;
+      const rz = fx / rn;
+      const ux = -rz * fy;
+      const uy = rz * fx - rx * fz;
+      const uz = rx * fy;
+      for (const sx of [-1, 1]) {
+        for (const sy of [-1, 1]) {
+          const dx = fx + sx * tanH * rx + sy * tanV * ux;
+          const dy = fy + sy * tanV * uy;
+          const dz = fz + sx * tanH * rz + sy * tanV * uz;
+          if (dz >= -1e-6) return false;
+          const t = -d / dz;
+          if (Math.abs(ox + t * dx) > hw || Math.abs(oy + t * dy) > hh) return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+/**
  * How close the camera must be to the TV screen (metres along its normal, aimed at the screen's
  * centre) for the screen to cover the whole frame, so that only `tv_screen` needs to draw
  * (`setPhase("fill")`). `aspect` is the frame's width over its height and `fovDeg` the vertical
  * FOV. The screen is 1.729:1, so a wider frame needs the camera closer: 0.736 m at 16:9 and
  * 40 degrees, 0.552 m at 2560x1080. `slack` (metres) keeps the frame covered while the camera
- * strays that far from the screen's axis in any direction (mouse parallax), whether its aim moves
- * with it or stays on the screen's centre; ramp any larger drift down before the phase switches.
- * Checked on the GPU from 390x844 to 2560x1080 with a slack of up to 6 cm.
+ * strays that far from the screen's axis in any direction, whether its aim moves with it or stays
+ * on the screen's centre: 0.075 covers a parallax of 6 cm across and 4 cm up at once. Ramp any
+ * larger drift down before the phase switches.
  */
 export function screenFillDistance(
   tv: RoomAnchors["tv"],
@@ -397,18 +449,24 @@ export function screenFillDistance(
   fovDeg: number,
   slack = 0,
 ) {
-  return screenSpan(tv, aspect, slack) / (2 * Math.tan((fovDeg * Math.PI) / 360));
+  const tanV = Math.tan((fovDeg * Math.PI) / 360);
+  let d = screenSpan(tv, aspect, slack) / (2 * tanV);
+  for (let i = 0; i < 80 && d > 0.01 && !screenCovers(tv, aspect, tanV, d, slack); i++) d *= 0.99;
+  return d;
 }
 
 /**
  * The widest vertical FOV (degrees) at which the screen still covers the frame from `distance`
- * metres: the FOV for lusion's window trick, where the screen keeps a constant size as the camera
- * closes in.
+ * metres, with the same `slack`: the FOV for lusion's window trick, where the screen keeps a
+ * constant size as the camera closes in.
  */
 export function screenFillFov(tv: RoomAnchors["tv"], aspect: number, distance: number, slack = 0) {
-  return (
-    (2 * Math.atan(screenSpan(tv, aspect, slack) / (2 * Math.max(distance, 1e-4))) * 180) / Math.PI
-  );
+  const d = Math.max(distance, 1e-4);
+  let tanV = screenSpan(tv, aspect, slack) / (2 * d);
+  for (let i = 0; i < 80 && tanV > 1e-3 && !screenCovers(tv, aspect, tanV, d, slack); i++) {
+    tanV *= 0.99;
+  }
+  return (2 * Math.atan(tanV) * 180) / Math.PI;
 }
 
 function clamp01(v: number) {
