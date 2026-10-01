@@ -164,6 +164,8 @@ class RoomAct implements StoryAct {
   private cheerUntil = 0;
   private hoverProp: Mesh | null = null;
   private letterPoke = 0;
+  /** This frame's focus came from the keyboard (`:focus-visible`), not a click or a tap. */
+  private keyboard = false;
   private readonly letterBox = new Box3();
   private readonly hitBox = new Box3();
   private readonly partBox = new Box3();
@@ -1312,18 +1314,19 @@ class RoomAct implements StoryAct {
   }
 
   /**
-   * Hotspots that are hovered or focused light their object up as a pointer
-   * would. A hover counts only while the page is still (gotcha #20: a hotspot
-   * sliding under a resting pointer during a scroll is not a hover).
+   * Keyboard focus on a hotspot lights its object up as a pointer would.
+   * Only keyboard focus: a mouse click or a tap focuses the button too, and
+   * that focus would otherwise linger and keep the object lit for the rest
+   * of the act. The pointer itself needs no help here: the ray finds the
+   * object under it, hotspot or not. Nothing lights while the page moves.
    */
   private litBySpots(still: boolean): Lit {
     const spots = this.spots;
-    const on = (spot: StoryHotspot | undefined) =>
-      !!spot && ((still && spot.hovered) || spot.focused);
+    this.keyboard = keyboardFocus();
+    const on = (spot: StoryHotspot | undefined) => !!spot && spot.focused && this.keyboard && still;
     return {
       toy: on(spots?.toy),
-      // The letters answer the pointer one by one (the ray finds the letter); focus walks the phrase.
-      letters: !!spots?.letters.focused,
+      letters: on(spots?.letters),
       box: on(spots?.box),
       spark: on(spots?.spark),
       tv: on(spots?.tv),
@@ -1354,7 +1357,7 @@ class RoomAct implements StoryAct {
     // it was, so a keyboard visitor does not lose their place. Out of its window: gone.
     const keep = (spot: StoryHotspot, rect: ReturnType<typeof projectBox>, inPlay: boolean) => {
       if (!inPlay) spot.place(null);
-      else if (rect || !spot.focused) spot.place(rect);
+      else if (rect || !(spot.focused && this.keyboard)) spot.place(rect);
     };
     // Her: the boxes of her hit capsules.
     let toyRect = null;
@@ -1541,6 +1544,18 @@ class RoomAct implements StoryAct {
     const spots = this.spots;
     if (spots) for (const spot of Object.values(spots)) spot.dispose();
     this.spots = null;
+  }
+}
+
+/** Whether the focused element got its focus from the keyboard (the browser's own judgement). */
+function keyboardFocus() {
+  if (typeof document === "undefined") return false;
+  const element = document.activeElement;
+  if (!element || element === document.body) return false;
+  try {
+    return element.matches(":focus-visible");
+  } catch {
+    return false;
   }
 }
 
