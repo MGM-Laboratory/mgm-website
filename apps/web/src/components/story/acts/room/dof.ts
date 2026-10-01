@@ -139,6 +139,8 @@ export type DofSettings = Readonly<{
   focus: number;
   /** 0 off (everything sharp) to about 1. */
   aperture: number;
+  /** The largest blur radius, as a share of the frame height (0.0125 when omitted). */
+  maxRadius?: number;
 }>;
 
 export class RoomDof {
@@ -301,7 +303,7 @@ export class RoomDof {
     camera.layers.mask = mask;
     renderer.toneMappingExposure = exposureBefore;
 
-    const maxRadius = height * 0.0125;
+    const maxRadius = height * (settings.maxRadius ?? 0.0125);
     for (const material of [this.prefilter, this.composite]) {
       const u = material.uniforms;
       u.uDepth.value = sharp.depthTexture;

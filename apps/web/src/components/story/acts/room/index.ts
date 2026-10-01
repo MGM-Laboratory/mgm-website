@@ -1513,13 +1513,20 @@ class RoomAct implements StoryAct {
     const h = Math.max(1, Math.round(ctx.size.height * ctx.size.dpr));
     const scene = ctx.stage.rootScene;
     const background = scene.background instanceof Color ? scene.background : null;
+    // On her close-ups the phrase behind her melts into soft colour (from table height its rows overlap
+    // into a half legible jumble): a longer reach for the blur than the far wall needs.
+    const reach =
+      0.0125 +
+      0.0065 *
+        smoothstep(0, BREAK.landed, state.beat("r-break")) *
+        (1 - smoothstep(0, 0.35, state.beat("r-dragged")));
     const lensScene = dof.render(
       renderer,
       scene,
       camera as PerspectiveCamera,
       w,
       h,
-      { focus, aperture },
+      { focus, aperture, maxRadius: reach },
       ctx.stage.post.params.exposure,
       background,
     );
