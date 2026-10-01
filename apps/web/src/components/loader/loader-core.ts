@@ -57,10 +57,15 @@ export type LoaderSnapshot = Readonly<{
 
 export const LOADER_TIMING = {
   minVisibleMs: 900,
-  minVisibleRepeatMs: 150,
+  minVisibleRepeatMs: 100,
   capVisibleMs: 12_000,
-  /** How long a view's exit may take before the core hides it anyway (the fold and the reveal). */
-  exitTimeoutMs: 3_000,
+  /**
+   * How long a view's exit may take before the core hides it anyway. The
+   * deal's longest outro (the last cards land, the fold, the peek, the
+   * reveal) is about 3.2 s; this is only the failsafe for a view that never
+   * calls `onExited`.
+   */
+  exitTimeoutMs: 5_000,
 } as const;
 
 const INITIAL: LoaderSnapshot = {
@@ -191,6 +196,10 @@ class LoaderCore {
   /** Starts (or joins) the story's build, reporting its progress; never rejects. */
   private async buildStory() {
     try {
+      // The bytes start at once, beside the engine's own (larger) chunk: the
+      // byte cache and the tier guess need no three.js, and the engine's
+      // preload joins this run (same tier, same groups).
+      void this.preloadBytes();
       const { ensureStoryEngine } = await import("@/components/story/engine/story-engine");
       await ensureStoryEngine((build) => {
         if (this.snapshot.phase !== "loading") return;
@@ -202,6 +211,27 @@ class LoaderCore {
       });
     } catch {
       // The story decides again on `/`; the loader only waited for it.
+    }
+  }
+
+  /** The story's byte download, reported as the fetch share of the build (0 to 0.8). */
+  private async preloadBytes() {
+    try {
+      const [{ preloadStory }, { guessStoryTier, storyTierOverride }] = await Promise.all([
+        import("@/components/story/assets/cache"),
+        import("@/components/story/engine/quality"),
+      ]);
+      const tier = storyTierOverride(window.location.search) ?? guessStoryTier();
+      await preloadStory(tier, (bytes) => {
+        if (this.snapshot.phase !== "loading" || bytes.totalBytes <= 0) return;
+        this.set({
+          progress: Math.max(this.snapshot.progress, (bytes.loadedBytes / bytes.totalBytes) * 0.8),
+          loadedBytes: bytes.loadedBytes,
+          totalBytes: bytes.totalBytes,
+        });
+      });
+    } catch {
+      // The engine's own build fetches them too.
     }
   }
 
