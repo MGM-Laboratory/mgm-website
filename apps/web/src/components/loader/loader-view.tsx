@@ -11,9 +11,12 @@ import {
   ART,
   ART_BOX,
   CUTS,
+  BOX,
   DIMENSIONS,
+  EMBLEM,
   FOLDS,
   MARKS,
+  OUTLINE_PATH,
   PANELS,
   PEN_PATH,
   SHEET,
@@ -301,6 +304,16 @@ function Panel({ panel }: Readonly<{ panel: NetPanel }>) {
       ))}
       {root ? (
         <>
+          <i
+            className="ld-point"
+            data-ld="emblem"
+            style={{ left: u(EMBLEM[0]), top: u(EMBLEM[1]) }}
+          />
+          <i
+            className="ld-point"
+            data-ld="foot"
+            style={{ left: u(BOX.W / 2), top: u(BOX.H), transform: `translateZ(${u(-BOX.D / 2)})` }}
+          />
           <div className="ld-deck3d" data-ld="deck3d" />
           <div className="ld-eyes" data-ld="eyes">
             <span className="ld-eye">
@@ -471,6 +484,14 @@ export function LoaderView({ state, onExited, onRevealing }: LoaderViewProps) {
       <ArtDefs />
       <div className="ld-mat" />
       <div className="ld-stage">
+        <svg
+          className="ld-lift"
+          data-ld="lift"
+          viewBox={`${SHEET.x0} ${SHEET.y0} ${SHEET.width} ${SHEET.height}`}
+        >
+          <path d={OUTLINE_PATH} />
+        </svg>
+        <i className="ld-floor" data-ld="floor" />
         <div className="ld-sheet" data-ld="sheet">
           <Blueprint />
           <div className="ld-pose" data-ld="pose">
@@ -483,6 +504,7 @@ export function LoaderView({ state, onExited, onRevealing }: LoaderViewProps) {
       <Toys />
       <div className="ld-hub" data-ld="hub">
         <div className="ld-fan" data-ld="fan" />
+        <div className="ld-deck" data-ld="deck" />
         <div className="ld-hub-star" data-ld="hub-star">
           <StarShape />
         </div>
@@ -492,6 +514,11 @@ export function LoaderView({ state, onExited, onRevealing }: LoaderViewProps) {
       <p className="ld-status" data-ld="status">
         {LOADER_COPY.statuses[0]}
       </p>
+      <div className="ld-pop" data-ld="pop">
+        <svg viewBox="0 0 100 100">
+          <path d={polyPath(starPoints(50, 50, 50))} />
+        </svg>
+      </div>
       <div className="ld-iris" data-ld="iris" />
       <p className="ld-bar" data-ld="bar">
         {barText(0)}

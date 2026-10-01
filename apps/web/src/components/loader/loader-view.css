@@ -21,6 +21,8 @@
   --ld-card-edge: rgb(255 255 255 / 0);
   --ld-paper: #fbfaf7;
   --ld-shadow: rgb(14 17 22 / 0.16);
+  --ld-lift-c: rgb(14 17 22 / 0.2);
+  --ld-floor-c: rgb(14 17 22 / 0.3);
   --ld-hair: 1px;
   /* A small card back after the owner's design (navy, white linework, the mark). */
   --ld-card-back: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 101'%3E%3Crect width='60' height='101' rx='5' fill='%232d318a'/%3E%3Cg fill='none' stroke='%23fff' stroke-linejoin='round'%3E%3Crect x='3.5' y='3.5' width='53' height='94' rx='3' stroke-width='.8'/%3E%3Cpath d='M8 9l22 11 22-11v83l-22-11-22 11z' stroke-width='.6' stroke-opacity='.8'/%3E%3Ccircle cx='30' cy='17' r='5.6' fill='%232d318a' stroke-width='.6'/%3E%3Ccircle cx='30' cy='84' r='5.6' fill='%232d318a' stroke-width='.6'/%3E%3Cpath d='M30 12.6l1.1 3.3 3.3 1.1-3.3 1.1-1.1 3.3-1.1-3.3-3.3-1.1 3.3-1.1zM30 79.6l1.1 3.3 3.3 1.1-3.3 1.1-1.1 3.3-1.1-3.3-3.3-1.1 3.3-1.1z' stroke-width='.5'/%3E%3C/g%3E%3Cpath d='M25 44.5l5-3.5 5 3.5-5 3.5z' fill='%23f7bf33'/%3E%3Cpath d='M23.2 47.6l4.6 3.1v9.3l-4.6-2.6z' fill='%233a6dc5'/%3E%3Cpath d='M36.8 47.6l-4.6 3.1v9.3l4.6-2.6z' fill='%23f94141'/%3E%3C/svg%3E");
@@ -67,6 +69,8 @@
   --ld-grid-strong: rgb(237 237 237 / 0.07);
   --ld-card-edge: rgb(255 255 255 / 0.22);
   --ld-shadow: rgb(0 0 0 / 0.4);
+  --ld-lift-c: rgb(0 0 0 / 0.5);
+  --ld-floor-c: rgb(0 0 0 / 0.62);
 }
 
 @media (orientation: portrait) {
@@ -117,6 +121,33 @@
   position: absolute;
   inset: 0;
   perspective: 1800px;
+}
+
+/* The net's shadow on the mat while it lifts off to fold (a blurred copy of its outline). */
+.ld-lift {
+  position: absolute;
+  left: var(--ld-sheet-left);
+  top: var(--ld-sheet-top);
+  width: var(--ld-sheet-w);
+  height: var(--ld-sheet-h);
+  overflow: visible;
+  fill: var(--ld-lift-c);
+  filter: blur(calc(var(--u) * 34));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The finished box's contact shadow (placed under its base by the show). */
+.ld-floor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--ld-floor-c), transparent);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ld-sheet {
@@ -502,6 +533,13 @@
   opacity: 0;
 }
 
+/* Points on the front panel the show measures (the emblem the star comes out of, the base's centre). */
+.ld-point {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
 .ld-deck3d {
   left: calc(var(--u) * 70);
   width: calc(var(--u) * 1236);
@@ -516,14 +554,14 @@
   left: 50%;
   top: calc(var(--u) * -40);
   display: flex;
-  gap: calc(var(--u) * 110);
+  gap: calc(var(--u) * 140);
   transform: translateX(-50%) translateZ(calc(var(--u) * -70));
 }
 
 .ld-eye {
   position: relative;
-  width: calc(var(--u) * 150);
-  height: calc(var(--u) * 190);
+  width: calc(var(--u) * 205);
+  height: calc(var(--u) * 255);
   overflow: hidden;
   border-radius: 50%;
   background: #fff;
@@ -586,8 +624,29 @@
     0 1px 3px var(--ld-shadow);
 }
 
-.ld-fan[data-deck] .ld-card-face {
-  box-shadow: none;
+/* The squared fan becomes one deck (a card back with the stack's edge), which flies to the box. */
+.ld-deck {
+  position: absolute;
+  left: calc(var(--ld-card-w) / -2);
+  top: calc((var(--ld-card-h) + var(--ld-fan-r) + 4px) * -1);
+  width: var(--ld-card-w);
+  height: var(--ld-card-h);
+  border-radius: calc(var(--ld-card-w) * 0.085);
+  background: var(--ld-card-back) center / 100% 100%;
+  box-shadow:
+    0 1px 0 #e9e6de,
+    0 2px 0 #2d318a,
+    0 3px 0 #e9e6de,
+    0 4px 3px var(--ld-shadow);
+  visibility: hidden;
+}
+
+.ld-hub[data-squared] .ld-card {
+  visibility: hidden;
+}
+
+.ld-hub[data-squared] .ld-deck {
+  visibility: visible;
 }
 
 /* Turned half a turn ahead, so it reads the right way round when the card has turned over. */
@@ -720,6 +779,26 @@
   pointer-events: none;
 }
 
+/* The star that pops out of the shut box's emblem before the page opens through it. */
+.ld-pop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ld-pop > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: var(--brand-yellow);
+}
+
 /* The edge of the star the page opens through (clipped to the star by the show). */
 .ld-iris {
   position: absolute;
@@ -807,9 +886,13 @@
 /* The fast path: a reload in the same tab starts on the finished box. */
 html[data-loader-fast] .ld-print-sheet,
 html[data-loader-fast] .ld-hub,
-html[data-loader-fast] .ld-status,
 html[data-loader-fast] .ld-mat {
   display: none;
+}
+
+/* A reload that has to wait a moment says hello (the show sets data-talk). */
+html[data-loader-fast] .ld:not([data-talk]) .ld-status {
+  visibility: hidden;
 }
 
 html[data-loader-fast] .ld-ink,
@@ -831,6 +914,14 @@ html[data-loader-fast] .ld-shade {
 
 html[data-loader-fast] .ld-pose {
   transform: var(--ld-box-pose);
+}
+
+/*
+ * The glued flap sits inside the shut box, a hair behind the front: 3D
+ * sorting would draw it over the front panel, and nobody can see it there.
+ */
+html[data-loader-fast] [data-panel="glue"] > .ld-face {
+  visibility: hidden;
 }
 
 /* Reduced motion: a still drawing, a text bar, no deal and no fold. */
@@ -864,7 +955,11 @@ html[data-loader-fast] .ld-pose {
     display: block;
   }
 
-  .ld-toys {
+  .ld-toys,
+  .ld-lift,
+  .ld-floor,
+  .ld-deck,
+  .ld-pop {
     display: none;
   }
 }

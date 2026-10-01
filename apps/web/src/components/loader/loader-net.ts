@@ -554,6 +554,12 @@ export const SWATCHES = {
 /** The front panel's centre on the sheet (where dealt cards leave from). */
 export const FRONT_CENTRE: Pt = [W / 2, H / 2];
 
+/** The circled compass star at the top of the front's artwork (the star the page opens through). */
+export const EMBLEM: Pt = [687, 380];
+
+/** The whole net's outline (the cut line), for the shadow it casts when it lifts off the mat. */
+export const OUTLINE_PATH = polyPath(CONTOUR);
+
 /** The sheet's own centre (where the star waits on the first frame). */
 export const SHEET_CENTRE: Pt = [SHEET.x0 + SHEET.width / 2, SHEET.y0 + SHEET.height / 2];
 
@@ -573,6 +579,11 @@ export const DRAW = {
   dims: 1.16,
   title: 1.3,
   swatches: 1.24,
+  /**
+   * The front panel's outline is complete (the trace's last stroke is its
+   * left edge, the folds' ninth its bottom): cards are dealt from it after this.
+   */
+  front: 1.38,
   /** Everything is on the sheet. */
   done: 1.62,
   /** The star reappears at the hub. */

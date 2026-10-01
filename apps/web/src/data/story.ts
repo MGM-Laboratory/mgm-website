@@ -217,6 +217,13 @@ export const LOADER_COPY = {
     "This card is stuck. Wiggling it loose.",
     "Thank you for waiting with us.",
   ],
+  /** A reload in the same tab that has to wait a moment for the story (the box is already shut). */
+  again: [
+    "Welcome back.",
+    "Good to see you again.",
+    "Back for another look?",
+    "The deck is right where you left it.",
+  ],
   /** A dealt card, tapped and turned over. */
   pick: "Is this your card?",
   /** All 52 dealt: the net folds into its box. */
