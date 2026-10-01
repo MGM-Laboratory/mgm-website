@@ -111,10 +111,12 @@ export type HeroSlot = {
 
 /**
  * Extra light on the printed fronts (the card material's `uPaperLift`), so
- * the white card reads as white paper in the studio light, at or above the
- * page, in both schemes. Its default is tuned for the generic face.
+ * the white card reads as white paper in the studio light, above the page,
+ * in both schemes. Its default is tuned for the generic face.
  */
 const HERO_PAPER_LIFT = 0.55;
+/** Over the light page the paper must sit a touch above the page's own white, never on it. */
+const HERO_PAPER_LIFT_LIGHT = 0.85;
 
 export class DeckView {
   readonly swarm: CardSwarm;
@@ -129,6 +131,9 @@ export class DeckView {
   readonly heroPoses: CardPose[] = [createPose(), createPose(), createPose(), createPose()];
   /** Whether each card (deck order) is out of the box this frame. */
   readonly visible = new Uint8Array(SWARM_CAPACITY);
+  private paperLift = HERO_PAPER_LIFT;
+  /** The four fronts' paper lift uniforms (reached once their programs compile). */
+  private readonly paperLifts: { value: number }[] = [];
 
   constructor(
     kit: CardKit,
@@ -147,7 +152,9 @@ export class DeckView {
       const mist: MistUniforms = { uMistColor: { value: this.pageColour }, uMist: { value: 0 } };
       addMist(card.material, false, mist, (shader) => {
         const lift = shader.uniforms.uPaperLift as { value: number } | undefined;
-        if (lift) lift.value = HERO_PAPER_LIFT;
+        if (!lift) return;
+        lift.value = this.paperLift;
+        if (!this.paperLifts.includes(lift)) this.paperLifts.push(lift);
       });
       card.mesh.name = `cards-hero-${k}`;
       stage.add(card.mesh);
@@ -155,9 +162,14 @@ export class DeckView {
     }
   }
 
-  /** The page colour the mist fades toward (sRGB bytes, as the DOM shows it). */
-  setPage(hex: number) {
+  /**
+   * The page colour the mist fades toward (sRGB bytes, as the DOM shows it),
+   * and the paper's lift for the page's scheme.
+   */
+  setPage(hex: number, scheme: "light" | "dark") {
     this.pageColour.set(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
+    this.paperLift = scheme === "light" ? HERO_PAPER_LIFT_LIGHT : HERO_PAPER_LIFT;
+    for (const lift of this.paperLifts) lift.value = this.paperLift;
   }
 
   /** Shows everything for a compile pass. */

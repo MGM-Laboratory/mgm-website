@@ -18,16 +18,17 @@ import {
  * turns, bends and catches the light). A white card in both schemes (it is
  * a physical object): a thin ink border, corner indices like a real
  * playing card (the division's initial over its logo, and the same turned
- * half way round), the logo as the major visual over a soft tint of the
- * division's colour in the top half, the title in Hanken Grotesk, one line
- * in Geist, and a small Geist Mono footer.
+ * half way round), a faint rim at the card's edge, the logo as the major
+ * visual over a soft tint of the division's colour in the top half, the
+ * title in Hanken Grotesk, one line in Geist, and a small Geist Mono footer.
  *
  * It wakes when the card lands face up: the logo plays its entrance (see
  * `logos.ts`), the title types in letter by letter with a small
- * overshoot, the line rises in. Asleep, the face shows the printed plate:
- * border, indices, the logo as a faint outline. Awake, it keeps living: an
- * idle flourish every few seconds, the hover personality, the pointer
- * followed by the logo, a ripple through the title on hover.
+ * overshoot, the line rises in. Asleep, the face shows the printed plate
+ * (border, indices, the tinted disc and the logo at 40 percent), so a face
+ * is never empty. Awake, it keeps living: an idle flourish every few
+ * seconds, the hover personality, the pointer followed by the logo, a
+ * ripple through the title on hover.
  *
  * Drawing happens only while something moves (a dirty test per frame), in
  * a 1000 unit wide space scaled to the canvas.
@@ -267,9 +268,14 @@ export class CardFront {
     this.measure(g);
     const wake = this.wake;
 
-    // Paper (the card's grain and sheen come from its material).
+    // Paper (the card's grain and sheen come from its material), with a faint rim at its very edge
+    // (the card's own rounded corner) so the white card keeps its silhouette on the light page.
     g.fillStyle = PAPER;
     g.fillRect(0, 0, UNIT_W, UNIT_H);
+    g.lineWidth = 8;
+    g.strokeStyle = "rgba(14,17,22,0.13)";
+    roundRect(g, 4, 4, UNIT_W - 8, UNIT_H - 8, CORNER_UNITS - 4);
+    g.stroke();
 
     // The border: a thin ink line, and a hairline in the accent that draws itself as it wakes.
     g.lineWidth = 3;
@@ -289,13 +295,14 @@ export class CardFront {
       g.restore();
     }
 
-    // The tinted disc behind the logo, and a dotted ring that turns slowly.
+    // The tinted disc behind the logo (printed on the plate, it swells as the face wakes), and a
+    // dotted ring that turns slowly.
     const disc = outBack(phase(wake, 0, 0.55), 1.4);
     g.save();
     g.fillStyle = this.accent;
-    g.globalAlpha = 0.04 + 0.05 * clamp01(disc);
+    g.globalAlpha = 0.075 + 0.025 * clamp01(disc);
     g.beginPath();
-    g.arc(LOGO_CENTRE_X, LOGO_CENTRE_Y, 300 * (0.72 + 0.28 * disc), 0, Math.PI * 2);
+    g.arc(LOGO_CENTRE_X, LOGO_CENTRE_Y, 300 * (0.86 + 0.14 * disc), 0, Math.PI * 2);
     g.fill();
     g.globalAlpha = 0.22 * clamp01(disc);
     g.strokeStyle = this.accent;
@@ -347,12 +354,16 @@ export class CardFront {
     g.translate(LOGO_CENTRE_X, LOGO_CENTRE_Y);
     g.scale(scale, scale);
     g.translate(-cx, -cy);
-    // Asleep: the printed plate, the logo as a faint outline.
-    const ghost = 1 - clamp01(wake / 0.35);
+    // Asleep: the printed plate, the logo in its own colours at 40 percent (a face is never
+    // empty, even before it wakes); the waking pieces gather on it as it fades.
+    const ghost = 1 - outCubic(clamp01(wake / 0.8));
     if (ghost > 0) {
-      g.lineWidth = 9;
-      g.strokeStyle = `rgba(14,17,22,${0.14 * ghost})`;
-      for (const piece of this.pieces) g.stroke(piece.path);
+      g.globalAlpha = 0.4 * ghost;
+      for (const piece of this.pieces) {
+        g.fillStyle = piece.fill;
+        g.fill(piece.path);
+      }
+      g.globalAlpha = 1;
     }
     if (wake > 0) {
       for (const piece of this.pieces) {
@@ -446,6 +457,8 @@ export class CardFront {
 
 // ------------------------------------------------------------------ layout of the face (canvas units)
 
+/** The card's corner radius in canvas units (card-mesh.ts: 50 of the back's 641 wide). */
+const CORNER_UNITS = Math.round((1000 * 50) / 641);
 const LOGO_CENTRE_X = 500;
 const LOGO_CENTRE_Y = 448;
 /** The logo's box: about 58 percent of the card's width. */

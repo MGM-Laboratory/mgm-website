@@ -130,7 +130,7 @@ class CardsAct implements StoryAct {
     const count = swarmCountFor(ctx.tier);
     this.motion = new DeckMotion({ count, heroes: heroIndices(count) });
     const deck = new DeckView(kit, this.stage);
-    deck.setPage(ctx.palette.page);
+    deck.setPage(ctx.palette.page, ctx.palette.scheme);
     // Printed paper takes a soft studio sheen; the light must not wash the fronts out.
     for (const hero of deck.heroes) {
       hero.card.material.envMap = studio.env;
@@ -297,7 +297,7 @@ class CardsAct implements StoryAct {
   }
 
   palette(ctx: StoryContext) {
-    this.deck?.setPage(ctx.palette.page);
+    this.deck?.setPage(ctx.palette.page, ctx.palette.scheme);
   }
 
   resize() {
