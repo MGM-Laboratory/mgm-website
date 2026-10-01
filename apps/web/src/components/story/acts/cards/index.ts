@@ -2,6 +2,7 @@ import { Group, MeshStandardMaterial, Vector3 } from "three";
 
 import {
   type ActState,
+  type BeatId,
   type StoryAct,
   type StoryContext,
   type StoryPointerEvent,
@@ -244,12 +245,16 @@ class CardsAct implements StoryAct {
     }
   }
 
-  /** The overlay's hint line at the two rests, once the visitor has been still a moment. */
+  /**
+   * The overlay's hint line at the two rests, once the visitor has been still a moment. A rest is
+   * a position (the end of its beat, give or take a hair either side), not the beat under `t`:
+   * the smoothed scroll settles on the boundary or just past it, where the next beat has begun.
+   */
   private hints(ctx: StoryContext, state: ActState) {
     const idle = ctx.director.idle;
-    const resting = (id: string) => state.current === id && state.local > 0.985;
-    if (resting("c-rise") && idle > 1.2) ctx.overlay.setHint(STORY_HINTS.deckWaiting);
-    else if (resting("c-turn") && idle > 1.5 && (this.play?.focus ?? -1) < 0)
+    const resting = (id: BeatId, next: BeatId) => state.beat(id) > 0.985 && state.beat(next) < 0.02;
+    if (resting("c-rise", "c-open") && idle > 1.2) ctx.overlay.setHint(STORY_HINTS.deckWaiting);
+    else if (resting("c-turn", "c-hold") && idle > 1.5 && (this.play?.focus ?? -1) < 0)
       ctx.overlay.setHint(
         this.touch || ctx.pointer.type === "touch" ? STORY_CARD_TAP_HINT : STORY_HINTS.cardsReady,
       );
