@@ -268,8 +268,7 @@ export class ToyDirector {
         return true;
       case "free": {
         // A whole spin is one second: not when she is about to reach the screen.
-        const plan = this.plan;
-        if (plan && this.frame.tau > plan.times.enter - 1) {
+        if (!this.reactsInFlight(this.frame.tau, 1)) {
           g.blink(true);
           return true;
         }
@@ -461,7 +460,11 @@ export class ToyDirector {
     // Place by the centre first; the hang then pins her wrist to the spark.
     this.v.set(0, GODETTE_CENTRE * GODETTE_TABLE_SCALE, 0).applyQuaternion(g.root.quaternion);
     g.root.position.copy(fp.centre).sub(this.v);
-    g.setContext("flight");
+    // Her runtime turns a click in flight into a whole spin. While she hangs from her wrist she is in the
+    // ground context instead (no reaction starts there), so a spin begun in free flight and carried back
+    // into the hang by a scroll back plays out as a small jolt, never a turn about the pinned wrist.
+    const hanging = fp.hang > 0.001;
+    g.setContext(hanging ? "ground" : "flight");
     g.setBody(this.flightLayers(tau, plan));
     g.setFace(tau > times.loopStart && tau < times.loopEnd + 0.2 ? "big_smile" : "auto");
     g.setNervous(0.5 * (1 - fp.learned) * smoothstep(0.6, 1.2, tau));
@@ -498,8 +501,8 @@ export class ToyDirector {
       size: 0.6,
     });
     // While she hangs from the spark her face is the scripted "oh no" and her wrist is pinned: no reaction.
-    this.where = fp.hang > 0.001 ? "hang" : "free";
-    if (hovered && this.where === "free" && tau < times.enter - 0.4) g.react("hover");
+    this.where = hanging ? "hang" : "free";
+    if (hovered && this.reactsInFlight(tau, 0.4)) g.react("hover");
     this.hopAt = -1;
     g.update(ctx.clock.storyDt);
     // The pin: her wrist on the spark while she hangs.
@@ -513,6 +516,17 @@ export class ToyDirector {
     this.frame.inside = tau > times.enter + 0.06;
     g.root.visible = !this.frame.inside;
     this.sockets();
+  }
+
+  /**
+   * Whether a reaction may start in free flight at flight clock `tau`: from
+   * half a second after the hang (so a short scroll back carries no smile
+   * into her "oh no") to `beforeEnter` seconds before she reaches the screen.
+   */
+  private reactsInFlight(tau: number, beforeEnter: number) {
+    const plan = this.plan;
+    if (!plan || this.where !== "free") return false;
+    return tau > plan.times.hangEnd + 0.5 && tau < plan.times.enter - beforeEnter;
   }
 
   /** Which clips play in flight, by the flight clock. */
