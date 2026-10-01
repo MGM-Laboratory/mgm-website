@@ -186,6 +186,8 @@ class RoomAct implements StoryAct {
   private warmTarget: WebGLRenderTarget | null = null;
   private tv: TvScreen | null = null;
   private readonly power = new Latch();
+  /** The power the screen shows: the latch, or the scrubbed floor near the cut. */
+  private powerShown = 0;
   private lastT = -1;
   private readonly glowColour = new Color();
   private readonly start = createPose();
@@ -1058,7 +1060,8 @@ class RoomAct implements StoryAct {
   /**
    * The TV: it wakes on the first forward crossing of r-tv (a latched
    * power-on, played on the clock; a jump or a fling lands on the end
-   * state), shows the worlds act's feed or our own portal, lights the room
+   * state, and a scrubbed floor from r-tv 0.45 makes sure it is fully on
+   * by the cut), shows the worlds act's feed or our own portal, lights the room
    * in its colour, and takes her in with ripples as she dives through.
    */
   private directTv(
@@ -1077,6 +1080,10 @@ class RoomAct implements StoryAct {
     this.lastT = t;
     if (jumped || Math.abs(state.velocity) > 4) this.power.value = on ? 1 : 0;
     else this.power.update(on, ctx.clock.dt, 1 / 0.95, 2.6);
+    // A scrubbed floor under the clock: however briskly the page arrives, the picture is fully on well
+    // before the full cover the worlds act cuts on. A hands-off crossing has finished its own power-on
+    // by r-tv 0.55, so the floor never shows there.
+    const floor = smoothstep(0.45, 1, state.beat("r-tv"));
     // A tap while it sleeps: a blip (the line opens into static and collapses), clock life only.
     const dt = ctx.clock.storyDt;
     let blip = 0;
@@ -1086,7 +1093,8 @@ class RoomAct implements StoryAct {
       blip = b < 0.14 ? 0.34 * smoothstep(0, 0.14, b) : 0.34 * (1 - smoothstep(0.45, 0.62, b));
       if (b > 0.7) this.tvBlip = -1;
     }
-    const power = Math.max(this.power.value, blip);
+    const power = Math.max(this.power.value, floor, blip);
+    this.powerShown = Math.max(this.power.value, floor);
     this.tvHover = damp(this.tvHover, this.hoverTv || focused ? 1 : 0, 8, ctx.clock.dt);
     let tap: { x: number; y: number; strength: number; seconds: number } | null = null;
     if (this.tvTap) {
@@ -1303,7 +1311,7 @@ class RoomAct implements StoryAct {
   /** A tap on the TV: asleep it blips and rocks (a smack on an old set); awake a ring runs from the finger. */
   private tapTv(ctx: StoryContext, uv: Vector2 | null) {
     void ctx;
-    const awake = this.power.value > 0.85;
+    const awake = this.powerShown > 0.85;
     if (!awake) {
       if (this.tvBlip < 0 || this.tvBlip > 0.7) this.tvBlip = 0;
       this.props?.knockTv(1);
@@ -1519,6 +1527,7 @@ class RoomAct implements StoryAct {
     this.tvHover = 0;
     this.sparkDodge.set(0, 0, 0);
     this.power.value = 0;
+    this.powerShown = 0;
     this.lastT = -1;
   }
 
