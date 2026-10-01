@@ -21,7 +21,7 @@ import {
 import { beatOf } from "@/components/story/engine/timeline";
 import { createSparkleBurst, type SparkleBurst } from "@/components/story/props/fx/sparkle-burst";
 import type { Godette } from "@/components/story/props/godette";
-import { ensureGodette } from "@/components/story/props/shared";
+import { ensureCardKit, ensureGodette } from "@/components/story/props/shared";
 
 import { CameraRig } from "./camera";
 import {
@@ -209,6 +209,8 @@ class WorldsAct implements StoryAct {
     // The wormhole and the TV feed.
     const hole = await WormholePass.create(fullscreen, yieldToMain);
     this.hole = hole;
+    const kit = await ensureCardKit(ctx);
+    hole.material.uniforms.tPaperBack.value = kit.back;
     const size = scaledSize(ctx, backgroundScale(ctx.tier));
     this.holeTarget = createDisplayTarget(size.width, size.height, false);
     this.holeLayer = createScreenLayer(fullscreen, this.holeTarget.texture);
@@ -420,9 +422,9 @@ class WorldsAct implements StoryAct {
       this.holeRig.key.target.updateMatrixWorld();
       ctx.setHeaderTone("dark");
       ctx.stage.post.set({
-        bloom: 0.45,
-        bloomThreshold: 0.62,
-        bloomRadius: 0.45,
+        bloom: 0.18 + 0.32 * ease01(r.p, 0.02, 0.14),
+        bloomThreshold: 0.64,
+        bloomRadius: 0.42,
         vignette: 0.45,
         grain: 0.22,
         flash: Math.max(holeEntryFlash(r.p), throatFlash(r.p)),
@@ -514,12 +516,13 @@ class WorldsAct implements StoryAct {
     if (herScene === world.scene) this.fly(ctx, world.scene, pose);
 
     ctx.setHeaderTone(world.id === "dunes" || world.id === "leaf" ? "light" : "dark");
+    const look = world.post();
+    const bloom = look.bloom ?? 0.5;
+    const threshold = look.bloomThreshold ?? 0.66;
     ctx.stage.post.set({
-      bloom: 0.55 + surge * 1.6,
-      bloomThreshold: 0.62 - surge * 0.25,
-      bloomRadius: 0.55,
-      vignette: 0.38,
-      grain: 0.2,
+      ...look,
+      bloom: bloom + surge * 1.6,
+      bloomThreshold: threshold - surge * 0.25,
       flash: surge * 0.85,
       flashColor: 0xfff6e4,
     });

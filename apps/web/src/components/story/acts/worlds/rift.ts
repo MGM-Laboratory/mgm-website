@@ -263,8 +263,8 @@ void main() {
   float web = smoothstep(0.93, 0.99, vnoise(p * 5.5 + uTime * 0.6)) * exp(-abs(d) * 3.0) * uCrack * (0.3 + uInstab);
   vec3 light = rim + uKey * (halo + seed * 0.6) + vec3(1.0) * (seed * 0.5 + crack * 1.6 + web * 0.9);
   // Burst: a ring of light runs out from the punch.
-  float ring = uBurst > 0.0 ? exp(-pow((r - uBurst * 40.0) * 3.0, 2.0)) * exp(-uBurst * 9.0) : 0.0;
-  light += uNext * ring * 1.5;
+  float ring = uBurst > 0.0 ? exp(-pow((r - uBurst * 26.0) * 5.0, 2.0)) * exp(-uBurst * 12.0) : 0.0;
+  light += mix(uNext, vec3(1.0), 0.5) * ring * 0.45;
   // Premultiplied: the portal replaces what is behind, the light adds on top.
   col += linearToOutputTexel(vec4(light, 1.0)).rgb;
   gl_FragColor = vec4(col, alpha);

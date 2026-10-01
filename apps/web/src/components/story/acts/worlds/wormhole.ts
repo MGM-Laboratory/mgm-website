@@ -130,7 +130,8 @@ function trace(psi: number, lc: number): [number, number, number] {
   }
   const rEnd = radiusAt(l);
   const tail = Math.asin(Math.min(1, b / Math.max(rEnd, 1e-3)));
-  const wind = Math.min(1, Math.max(0, (phi - 2.2) / 3));
+  // How far past a straight line the ray was bent (the Einstein ring is where this grows).
+  const wind = Math.min(1, Math.max(0, (phi - psi - 1.1) / 2.6));
   return [phi + tail, l >= 0 ? 1 : -1, wind];
 }
 
@@ -325,6 +326,8 @@ function holeUniforms(lut: DataTexture): Record<string, IUniform> {
     uPaperHorizon: { value: LINEAR(PAPER_PALETTE.horizon) },
     uPaperSun: { value: LINEAR(PAPER_PALETTE.sun) },
     uPaperNavy: { value: LINEAR(PAPER_PALETTE.navy) },
+    uPaperCardAvg: { value: LINEAR(PAPER_PALETTE.cardAvg) },
+    tPaperBack: { value: null },
     uPaperSunDir: { value: new Vector3(0.18, 0.055, -1).normalize() },
   };
 }
@@ -563,9 +566,15 @@ export function createTvFeed(
   onAdvance: (ctx: StoryContext) => { time: number; flow: number; freeze: number },
   frames: () => { toPaper: Matrix4; eye: Vector3 },
   scale: () => number,
-): StoryTvFeed & { dispose(): void; draw(ctx: StoryContext, camera: Camera | null): void } {
+): StoryTvFeed & {
+  readonly target: WebGLRenderTarget;
+  dispose(): void;
+  draw(ctx: StoryContext, camera: Camera | null): void;
+} {
   const feed = {
     texture: pass.feedTarget.texture,
+    /** The target behind `texture` (verification scripts read it back). */
+    target: pass.feedTarget,
     update(ctx: StoryContext) {
       feed.draw(ctx, null);
     },
@@ -591,5 +600,5 @@ export function createTvFeed(
 
 /** A small helper for callers: 0..1 into the dive's flash at the very start (the pop-in of her figure). */
 export function holeEntryFlash(p: number) {
-  return 0.12 * (1 - lin01(p, 0, 0.04));
+  return 0.06 * (1 - lin01(p, 0, 0.04));
 }

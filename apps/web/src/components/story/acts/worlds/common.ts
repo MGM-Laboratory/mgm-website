@@ -278,12 +278,53 @@ export function mixPose(out: FlightPose, a: FlightPose, b: FlightPose, w: number
   return out;
 }
 
-/** One shot of a world's camera grammar: from `at` (course time, vh), cutting in over `blend` before it. */
+/**
+ * One shot of a world's camera grammar: from `at` (course time, vh), easing
+ * in over `blend` before it. With `pivot`, the move into this shot swings
+ * around that point (her) instead of a straight line, so a camera going from
+ * behind her to ahead of her circles her rather than passing through her.
+ */
 export type ShotKey = Readonly<{
   at: number;
   blend: number;
   shot: (T: number, out: CameraShot) => void;
+  pivot?: (T: number, out: Vector3) => Vector3;
 }>;
+
+const orbitA = new Vector3();
+const orbitB = new Vector3();
+const orbitC = new Vector3();
+const orbitAxis = new Vector3();
+const orbitQ = new Quaternion();
+
+/** Like `mixShot`, with the camera position swung around `pivot` (slerp of the offsets, radius mixed). */
+export function orbitShot(
+  out: CameraShot,
+  a: CameraShot,
+  b: CameraShot,
+  w: number,
+  pivot: Vector3,
+) {
+  orbitA.copy(a.position).sub(pivot);
+  orbitB.copy(b.position).sub(pivot);
+  const ra = orbitA.length();
+  const rb = orbitB.length();
+  mixShot(out, a, b, w);
+  if (ra < 1e-4 || rb < 1e-4) return out;
+  orbitA.divideScalar(ra);
+  orbitB.divideScalar(rb);
+  const angle = Math.acos(Math.min(1, Math.max(-1, orbitA.dot(orbitB))));
+  orbitAxis.crossVectors(orbitA, orbitB);
+  if (orbitAxis.lengthSq() < 1e-8) orbitAxis.set(0, 1, 0);
+  orbitAxis.normalize();
+  orbitQ.setFromAxisAngle(orbitAxis, angle * w);
+  orbitC
+    .copy(orbitA)
+    .applyQuaternion(orbitQ)
+    .multiplyScalar(ra + (rb - ra) * w);
+  out.position.copy(pivot).add(orbitC);
+  return out;
+}
 
 /**
  * A world's shots in order. Between two keys the camera eases from one to
@@ -293,6 +334,7 @@ export type ShotKey = Readonly<{
 export class ShotTrack {
   private readonly a = createShot();
   private readonly b = createShot();
+  private readonly pivot = new Vector3();
 
   constructor(private readonly keys: readonly ShotKey[]) {}
 
@@ -308,6 +350,7 @@ export class ShotTrack {
     if (next && T > next.at - next.blend) {
       next.shot(T, this.b);
       const w = ease01(T, next.at - next.blend, next.at);
+      if (next.pivot) return orbitShot(out, this.a, this.b, w, next.pivot(T, this.pivot));
       return mixShot(out, this.a, this.b, w);
     }
     return copyShot(out, this.a);

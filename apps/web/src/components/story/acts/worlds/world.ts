@@ -12,7 +12,12 @@ import {
   type WebGLRenderTarget,
 } from "three";
 
-import type { StoryContext, StoryPointerEvent, StoryTier } from "@/components/story/engine/act";
+import type {
+  StoryContext,
+  StoryPointerEvent,
+  StoryPostParams,
+  StoryTier,
+} from "@/components/story/engine/act";
 
 import {
   createLightRig,
@@ -86,6 +91,11 @@ export abstract class World {
 
   /** Life and per-frame uniforms (sky, fields, set pieces) for course time `T`. */
   abstract frame(ctx: StoryContext, frame: WorldFrame): void;
+
+  /** The world's own post effects (the act adds the crossings' surges on top). */
+  post(): Partial<StoryPostParams> {
+    return { bloom: 0.5, bloomThreshold: 0.66, bloomRadius: 0.5, vignette: 0.38, grain: 0.18 };
+  }
 
   /** A tap or move while this world is on screen. Return true when consumed. */
   pointer?(ctx: StoryContext, event: StoryPointerEvent, time: number): boolean;

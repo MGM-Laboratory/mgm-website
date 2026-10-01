@@ -1,10 +1,13 @@
 import {
   BufferAttribute,
+  BufferGeometry,
   Color,
   DoubleSide,
   InstancedBufferGeometry,
   Mesh,
+  NormalBlending,
   Plane,
+  Points,
   Raycaster,
   ShaderMaterial,
   Vector2,
@@ -13,7 +16,12 @@ import {
   type Texture,
 } from "three";
 
-import type { StoryContext, StoryPointerEvent, StoryTier } from "@/components/story/engine/act";
+import type {
+  StoryContext,
+  StoryPointerEvent,
+  StoryPostParams,
+  StoryTier,
+} from "@/components/story/engine/act";
 import { ensureCardKit } from "@/components/story/props/shared";
 import { STAR_SDF_GLSL } from "@/components/story/props/fx/star-sdf.glsl";
 
@@ -102,21 +110,19 @@ uniform float uWake;
 uniform float uCurl;
 uniform float uCurlZ;
 uniform vec4 uSplash;
-uniform vec4 uPointerSea;
-uniform vec4 uTapSea;
+uniform vec3 uPointerSea;
+uniform vec3 uTapSea;
 uniform float uTapTime;
 uniform float uReach;
 attribute vec2 aCorner;
 varying vec2 vUv;
 varying vec3 vWorld;
 varying vec3 vNormal;
-varying float vEdge;
 varying float vSeed;
 ${GLSL_COMMON}
 ${PATH_GLSL}
 ${WAVES_GLSL}
 mat3 rotX(float a) { float c = cos(a); float s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
-mat3 rotY(float a) { float c = cos(a); float s = sin(a); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
 mat3 rotZ(float a) { float c = cos(a); float s = sin(a); return mat3(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0); }
 void main() {
   float id = float(gl_InstanceID);
@@ -130,9 +136,8 @@ void main() {
   vec3 seed = hash33(vec3(gx, gz, 11.0));
   vSeed = seed.x;
   // Flat toward the window's edge, where the sky layer's flat cards take over.
-  vec2 rel = (base.xz - uCamPos.xz);
-  float reach = 1.0 - smoothstep(uReach * 0.62, uReach, length(rel * vec2(1.6, 1.0)));
-  vEdge = reach;
+  vec2 rel = base.xz - uCamPos.xz;
+  float reach = 1.0 - smoothstep(uReach * 0.55, uReach, length(rel * vec2(1.7, 1.0)));
   float t = uTime;
   float h = swell(base.xz, t) * reach;
   vec2 g = swellSlope(base.xz, t) * reach;
@@ -140,55 +145,67 @@ void main() {
   // Her wake: cards flip to their white faces behind her, then settle back.
   float behind = base.z - uHer.z;
   float lateral = abs(base.x - pathX(base.z));
-  float wake = smoothstep(0.2, 2.2, behind) * (1.0 - smoothstep(7.0 + seed.y * 6.0, 26.0, behind))
-    * (1.0 - smoothstep(0.7, 3.4, lateral)) * uWake;
-  float flip = smoothstep(0.0, 1.0, wake * (1.15 + 0.3 * seed.z)) * 3.14159;
-  float hop = sin(clamp(wake * 1.2, 0.0, 1.0) * 3.14159) * (0.25 + 0.25 * seed.y);
+  float wake = smoothstep(0.2, 2.4, behind) * (1.0 - smoothstep(6.0 + seed.y * 7.0, 24.0, behind))
+    * (1.0 - smoothstep(0.5, 2.3 + seed.z * 0.6, lateral)) * uWake;
+  float flip = smoothstep(0.0, 1.0, wake * (1.1 + 0.35 * seed.z)) * 3.14159;
+  float hop = sin(clamp(wake * 1.2, 0.0, 1.0) * 3.14159) * (0.22 + 0.25 * seed.y);
 
   // The splash of her stumble: cards kicked up and spinning.
   vec2 sd = base.xz - uSplash.xy;
   float sr = length(sd);
   float age = uSplash.z;
-  float kick = age > 0.0 ? exp(-sr * sr * 0.18) * (1.0 - smoothstep(0.0, 1.6, age)) : 0.0;
-  float air = kick * (2.4 + 2.0 * seed.x) * sin(clamp(age * 2.3, 0.0, 3.14159));
+  float kick = age > 0.0 ? exp(-sr * sr * 0.16) * (1.0 - smoothstep(0.0, 1.6, age)) : 0.0;
+  float air = kick * (2.2 + 2.2 * seed.x) * sin(clamp(age * 2.3, 0.0, 3.14159));
 
-  // The cursor parts the cards a little; a tap sends a ring of flips outward.
+  // The cursor lifts the cards under it a little; a tap sends a ring of flips outward.
   float pd = length(base.xz - uPointerSea.xy);
-  float nudge = exp(-pd * pd * 0.35) * uPointerSea.z;
+  float nudge = exp(-pd * pd * 0.3) * uPointerSea.z;
   float tapAge = uTime - uTapTime;
   float ring = tapAge > 0.0 && tapAge < 3.0 ? exp(-pow(length(base.xz - uTapSea.xy) - tapAge * 9.0, 2.0) * 0.6) * (1.0 - tapAge / 3.0) : 0.0;
   flip = max(flip, smoothstep(0.1, 0.9, ring) * 3.14159);
-  hop += ring * 0.5 + nudge * 0.35;
+  hop += ring * 0.5 + nudge * 0.45;
 
-  // Card corner in its own plane: long side along z.
+  // The card in its own plane (long side along z), flipped, kicked, then tilted with the swell.
   vec3 local = vec3(aCorner.x * ${CARD.w.toFixed(2)}, 0.0, aCorner.y * ${CARD.h.toFixed(2)});
-  mat3 R = rotZ(flip + kick * seed.z * 9.0 * age) * rotX(kick * (seed.y - 0.5) * 8.0 * age + nudge * 0.4);
-  vec3 n = R * vec3(0.0, 1.0, 0.0);
-  local = R * local;
-  // Tilt with the swell.
+  mat3 R = rotZ(flip + kick * seed.z * 9.0 * age + nudge * (seed.y - 0.5) * 0.8) * rotX(kick * (seed.y - 0.5) * 8.0 * age);
   mat3 tilt = rotX(atan(g.y)) * rotZ(-atan(g.x));
-  local = tilt * local;
-  n = tilt * n;
-  vec3 p = base + vec3(0.0, h + hop + air, 0.0) + local;
+  vec3 n = tilt * (R * vec3(0.0, 1.0, 0.0));
+  vec3 p = base + vec3(0.0, h + hop + air, 0.0) + tilt * (R * local);
 
-  // The curl: on her left the sea rises into a wall that rolls over her into a tube.
+  // The curl: on her left the sea rises into a wave face that rolls over her into a tube.
+  // Arc-length preserving: the cards keep their spacing as they climb the face.
   float dzc = base.z - uCurlZ;
-  float curlZone = uCurl * smoothstep(-34.0, -12.0, dzc) * (1.0 - smoothstep(3.0, 14.0, dzc));
-  if (curlZone > 0.001) {
-    float px = pathX(base.z);
-    float e = px - base.x;
-    float tube = 3.1;
-    float theta = clamp((e - 0.6) / 8.6, 0.0, 1.0) * 3.75 * curlZone;
-    if (e > 0.6) {
-      vec2 arc = vec2(px - tube * sin(theta), tube * (1.0 - cos(theta)));
-      vec3 onArc = vec3(arc.x, arc.y, base.z);
-      vec3 flat0 = vec3(base.x, 0.0, base.z);
-      float k = smoothstep(0.0, 0.25, theta);
-      vec3 anchor = mix(flat0, onArc, k);
-      mat3 roll = rotZ(-theta);
-      vec3 l2 = roll * (R * vec3(aCorner.x * ${CARD.w.toFixed(2)}, 0.0, aCorner.y * ${CARD.h.toFixed(2)}));
-      p = anchor + vec3(0.0, h * (1.0 - k) + 0.05, 0.0) + l2;
-      n = roll * (R * vec3(0.0, 1.0, 0.0));
+  float zone = uCurl * smoothstep(-38.0, -12.0, dzc) * (1.0 - smoothstep(3.0, 15.0, dzc));
+  if (zone > 0.001) {
+    float px = pathX(base.z) - 0.35;
+    float s = px - base.x;
+    float tube = 3.25;
+    float smax = tube * 3.35;
+    if (s > 0.0) {
+      vec3 anchor;
+      float roll;
+      if (s < smax) {
+        float theta = (s / tube) * zone;
+        anchor = vec3(px - tube * sin(theta), tube * (1.0 - cos(theta)), base.z);
+        roll = -theta;
+      } else {
+        // The back of the wave: from the crest (the top of the wall) down to its own place in the sea.
+        float b = s - smax;
+        float back = 13.0;
+        float k = smoothstep(0.0, back, b);
+        vec2 crest = vec2(px - tube * 1.05, tube * 1.55);
+        vec2 flat1 = vec2(base.x, 0.0);
+        vec2 q = mix(crest, flat1, k);
+        anchor = vec3(mix(base.x, q.x, zone), q.y * zone, base.z);
+        float slope = (crest.y / back) * 6.0 * k * (1.0 - k);
+        roll = atan(slope) * zone;
+      }
+      float k = smoothstep(0.0, 0.2, zone);
+      mat3 Rc = rotZ(roll * k) * R;
+      vec3 flatP = p;
+      vec3 curlP = anchor + vec3(0.0, h * (1.0 - zone) + 0.04, 0.0) + Rc * local;
+      p = mix(flatP, curlP, k);
+      n = normalize(mix(n, Rc * vec3(0.0, 1.0, 0.0), k));
     }
   }
   vUv = aCorner + 0.5;
@@ -208,7 +225,6 @@ uniform vec3 uFrontInk;
 varying vec2 vUv;
 varying vec3 vWorld;
 varying vec3 vNormal;
-varying float vEdge;
 varying float vSeed;
 ${GLSL_COMMON}
 ${PAPER_SKY_GLSL}
@@ -223,33 +239,144 @@ void main() {
   if (d > 0.0) discard;
   vec3 n = normalize(vNormal);
   vec3 view = normalize(vWorld - uCamPos);
-  bool top = dot(n, -view) > 0.0;
-  if (!top) n = -n;
-  // The top side (its normal toward the sky when the card lies flat) shows the back.
-  bool backSide = gl_FrontFacing;
+  if (dot(n, -view) < 0.0) n = -n;
+  // The side that faces up when the card lies flat shows its back.
   vec3 col;
-  if (backSide) {
+  if (gl_FrontFacing) {
     col = texture2D(tBack, vec2(vUv.x, 1.0 - vUv.y)).rgb;
   } else {
-    // A white face with a thin navy frame and a small compass star.
+    // The face: warm paper, a thin navy frame and a small compass star.
     float frame = smoothstep(0.012, 0.004, abs(d + 0.03));
     float star = sdFill(sdStar4(q, 0.085, 0.314), 0.004);
-    col = mix(uPaper, uFrontInk, max(frame * 0.8, star * 0.85));
+    col = mix(uPaper, uFrontInk, max(frame * 0.75, star * 0.8));
   }
   vec3 sd = normalize(uPaperSunDir);
-  float lambert = 0.62 + 0.38 * max(dot(n, sd), 0.0) + 0.18 * n.y;
+  float lambert = 0.8 + 0.55 * (max(dot(n, sd), 0.0) - 0.055) + 0.2 * (n.y - 1.0);
   col *= lambert;
   // Varnish: a glint of the sun and a little sky.
   vec3 r = reflect(view, n);
   float spec = pow(max(dot(r, sd), 0.0), 70.0);
   float fres = pow(1.0 - abs(dot(n, -view)), 4.0);
-  col = mix(col, paperSky(r, uTime), 0.06 + 0.35 * fres);
-  col += uPaperSun * spec * 1.3;
+  col = mix(col, paperSky(r, uTime), 0.06 + 0.32 * fres);
+  col += uPaperSun * spec * 1.1;
   float dist = length(vWorld - uCamPos);
-  float fog = 1.0 - exp(-dist * 0.0045);
-  col = mix(col, mix(uPaperHorizon, uPaperLow, 0.35), clamp(fog * 1.15, 0.0, 1.0));
+  float fog = 1.0 - exp(-dist * 0.0019);
+  col = mix(col, paperHaze(view), clamp(fog * 1.1, 0.0, 1.0));
   col = freezeGrade(col, uFreeze);
   gl_FragColor = linearToOutputTexel(vec4(col, 1.0));
+}
+`;
+
+/**
+ * The flock: cards flying high over the sea like gulls, wings flapping (each
+ * card bends along its long axis), wheeling slowly on the clock.
+ */
+const FLOCK_VERTEX = /* glsl */ `
+uniform float uTime;
+uniform vec3 uCentre;
+uniform float uSpread;
+attribute vec3 aGrid;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vWorld;
+${GLSL_COMMON}
+void main() {
+  float id = float(gl_InstanceID);
+  vec3 h = hash33(vec3(id, 3.0, 7.0));
+  float t = uTime * (0.16 + 0.06 * h.x) + h.y * 6.2831;
+  vec3 orbit = vec3(sin(t) * (18.0 + 26.0 * h.z), 2.0 * sin(t * 2.3 + h.x * 4.0), cos(t * 0.8) * (10.0 + 18.0 * h.x));
+  vec3 centre = uCentre + vec3((h.x - 0.5) * uSpread, (h.y - 0.3) * 9.0, (h.z - 0.5) * uSpread * 0.6) + orbit;
+  // Heading along the orbit's motion.
+  vec3 vel = normalize(vec3(cos(t) * (18.0 + 26.0 * h.z), 2.3 * 2.0 * cos(t * 2.3), -sin(t * 0.8) * 0.8 * (10.0 + 18.0 * h.x)) + 1e-4);
+  vec3 side = normalize(cross(vec3(0.0, 1.0, 0.0), vel));
+  float flap = sin(uTime * (6.0 + 3.0 * h.y) + h.z * 20.0) * 0.75;
+  // aGrid.x across the card (-0.5..0.5), the wings bend up and down about the spine.
+  float w = aGrid.x;
+  float lift = abs(w) * sin(flap) * 0.55;
+  vec3 local = side * w * 0.56 * cos(flap * abs(w) * 1.4) + vel * aGrid.y * 0.94 + vec3(0.0, lift, 0.0);
+  vec3 p = centre + local * 1.4;
+  vWorld = p;
+  vNormal = normalize(cross(vel, side) + side * sign(w) * -sin(flap) * 0.8);
+  vUv = vec2(w + 0.5, aGrid.y + 0.5);
+  gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
+}
+`;
+
+const FLOCK_FRAGMENT = /* glsl */ `
+uniform sampler2D tBack;
+uniform vec3 uCamPos;
+uniform float uTime;
+uniform float uFreeze;
+uniform vec3 uPaper;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vWorld;
+${GLSL_COMMON}
+${PAPER_SKY_GLSL}
+void main() {
+  vec3 col = gl_FrontFacing ? texture2D(tBack, vec2(vUv.x, 1.0 - vUv.y)).rgb : uPaper * 0.92;
+  vec3 n = normalize(vNormal);
+  float light = 0.75 + 0.35 * max(dot(n, normalize(uPaperSunDir)), 0.0);
+  col *= light;
+  float dist = length(vWorld - uCamPos);
+  vec3 view = normalize(vWorld - uCamPos);
+  vec3 haze = paperSky(view, uTime);
+  col = mix(col, haze, clamp(1.0 - exp(-dist * 0.006), 0.0, 0.85));
+  col = freezeGrade(col, uFreeze);
+  gl_FragColor = linearToOutputTexel(vec4(col, 1.0));
+}
+`;
+
+/**
+ * Spray: flecks of white and navy kicked up by her feet while she skims,
+ * streaming back along her wake. Each particle is a pure function of its
+ * index, her feet and the clock (born, flies back and up, falls, fades).
+ */
+const SPRAY_VERTEX = /* glsl */ `
+uniform float uTime;
+uniform vec3 uFeet;
+uniform vec3 uBack;
+uniform float uAmount;
+uniform float uScale;
+attribute float aSeed;
+varying float vAlpha;
+varying float vTone;
+varying float vSpin;
+${GLSL_COMMON}
+void main() {
+  vec3 h = hash33(vec3(aSeed * 97.0, 5.0, 1.0));
+  float life = 0.55 + 0.4 * h.x;
+  float age = fract(uTime / life + h.y) * life;
+  vec3 side = normalize(cross(vec3(0.0, 1.0, 0.0), uBack));
+  vec3 p = uFeet + uBack * age * (7.0 + 8.0 * h.z) + side * (h.x - 0.5) * age * 6.0;
+  p.y += age * (3.2 + 2.4 * h.y) - 4.9 * age * age;
+  p.y = max(p.y, 0.05);
+  vec4 mv = viewMatrix * vec4(p, 1.0);
+  gl_Position = projectionMatrix * mv;
+  float k = age / life;
+  vAlpha = (1.0 - k) * smoothstep(0.0, 0.08, k) * uAmount;
+  vTone = h.z;
+  vSpin = h.x * 6.2831 + age * (6.0 + 10.0 * h.y);
+  gl_PointSize = uScale * (0.035 + 0.045 * h.y) * projectionMatrix[1][1] / max(-mv.z, 0.1);
+}
+`;
+
+const SPRAY_FRAGMENT = /* glsl */ `
+uniform vec3 uPaper;
+uniform vec3 uNavy;
+varying float vAlpha;
+varying float vTone;
+varying float vSpin;
+void main() {
+  vec2 q = gl_PointCoord * 2.0 - 1.0;
+  float c = cos(vSpin);
+  float s = sin(vSpin);
+  q = mat2(c, -s, s, c) * q;
+  // A tiny card, tumbling: its width shrinks as it turns edge-on.
+  float d = max(abs(q.x) / (0.38 + 0.3 * abs(c)), abs(q.y) / 0.62);
+  float a = (1.0 - smoothstep(0.85, 1.0, d)) * vAlpha;
+  vec3 col = vTone > 0.35 ? uPaper : uNavy;
+  gl_FragColor = linearToOutputTexel(vec4(col * a, a));
 }
 `;
 
@@ -274,7 +401,7 @@ function gridFor(tier: StoryTier) {
 
 const GRID_MAX = gridFor("high");
 
-function paperUniforms() {
+function paperUniforms(back: Texture) {
   return {
     uPaperZenith: { value: new Color(PAPER_PALETTE.zenith) },
     uPaperSky: { value: new Color(PAPER_PALETTE.sky) },
@@ -282,6 +409,8 @@ function paperUniforms() {
     uPaperHorizon: { value: new Color(PAPER_PALETTE.horizon) },
     uPaperSun: { value: new Color(PAPER_PALETTE.sun) },
     uPaperNavy: { value: new Color(PAPER_PALETTE.navy) },
+    uPaperCardAvg: { value: new Color(PAPER_PALETTE.cardAvg) },
+    tPaperBack: { value: back },
     uPaperSunDir: { value: new Vector3(0.18, 0.055, -1).normalize() },
   };
 }
@@ -294,6 +423,14 @@ export const PAPER_ENTRY = { at: new Vector3(0, 70, 260), forward: new Vector3(0
 const PAPER_EXIT = { at: new Vector3(0, 6, -165), forward: new Vector3(0, 0, -1) };
 
 const T_STUMBLE = 2.12;
+const FLOCK_MAX = 46;
+const SPRAY_MAX = 160;
+
+/** 1 inside [a, b] with soft edges a tenth of the span wide. */
+function window01(t: number, a: number, b: number) {
+  const e = (b - a) * 0.1;
+  return ease01(t, a, a + e) * (1 - ease01(t, b - e, b));
+}
 const T_CURL_IN = 3.3;
 const T_CURL_OUT = 4.4;
 
@@ -303,6 +440,10 @@ export class PaperTide extends World {
   readonly length = 5.5;
   private sea: Mesh | null = null;
   private seaMaterial: ShaderMaterial | null = null;
+  private flock: Mesh | null = null;
+  private flockMaterial: ShaderMaterial | null = null;
+  private spray: Points | null = null;
+  private sprayMaterial: ShaderMaterial | null = null;
   private sky: ReturnType<typeof createSkyLayer> | null = null;
   private walk: Walk | null = null;
   private track: ShotTrack | null = null;
@@ -325,7 +466,7 @@ export class PaperTide extends World {
     this.setBackground(PAPER_PALETTE.low);
     this.setFrames(PAPER_ENTRY.at, PAPER_ENTRY.forward, PAPER_EXIT.at, PAPER_EXIT.forward);
     const kit = await ensureCardKit(ctx);
-    const paper = paperUniforms();
+    const paper = paperUniforms(kit.back);
     const fullscreen = fullscreenGeometry();
     this.geometries.push(fullscreen);
 
@@ -358,6 +499,8 @@ export class PaperTide extends World {
     this.sea = new Mesh(geometry, this.seaMaterial);
     this.sea.frustumCulled = false;
     this.scene.add(this.sea);
+    this.buildFlock(kit.back, paper);
+    this.buildSpray();
     this.setTier(ctx.tier);
 
     // Lights for her: a warm low sun ahead, sky fill above, the deep navy sea below.
@@ -398,6 +541,78 @@ export class PaperTide extends World {
       side: DoubleSide,
       toneMapped: false,
     });
+  }
+
+  private buildFlock(back: Texture, paper: ReturnType<typeof paperUniforms>) {
+    // A card split in four strips across its width, so its halves bend like wings.
+    const grid: number[] = [];
+    const index: number[] = [];
+    const cols = 4;
+    for (let c = 0; c <= cols; c += 1) {
+      const x = c / cols - 0.5;
+      grid.push(x, -0.5, 0, x, 0.5, 0);
+    }
+    for (let c = 0; c < cols; c += 1) {
+      const a = c * 2;
+      index.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+    }
+    const geometry = new InstancedBufferGeometry();
+    geometry.setAttribute("aGrid", new BufferAttribute(new Float32Array(grid), 3));
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(grid), 3));
+    geometry.setIndex(index);
+    geometry.instanceCount = FLOCK_MAX;
+    this.geometries.push(geometry);
+    this.flockMaterial = new ShaderMaterial({
+      vertexShader: FLOCK_VERTEX,
+      fragmentShader: FLOCK_FRAGMENT,
+      uniforms: {
+        ...paper,
+        tBack: { value: back },
+        uTime: this.uniforms.uTime,
+        uFreeze: this.uniforms.uFreeze,
+        uCentre: { value: new Vector3(0, 30, -120) },
+        uSpread: { value: 90 },
+        uCamPos: { value: new Vector3() },
+        uPaper: { value: new Color(0xfbfaf6) },
+      },
+      side: DoubleSide,
+      toneMapped: false,
+    });
+    this.materials.push(this.flockMaterial);
+    this.flock = new Mesh(geometry, this.flockMaterial);
+    this.flock.frustumCulled = false;
+    this.scene.add(this.flock);
+  }
+
+  private buildSpray() {
+    const geometry = new BufferGeometry();
+    const seeds = new Float32Array(SPRAY_MAX);
+    for (let i = 0; i < SPRAY_MAX; i += 1) seeds.set([i], i);
+    geometry.setAttribute("aSeed", new BufferAttribute(seeds, 1));
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(SPRAY_MAX * 3), 3));
+    this.geometries.push(geometry);
+    this.sprayMaterial = new ShaderMaterial({
+      vertexShader: SPRAY_VERTEX,
+      fragmentShader: SPRAY_FRAGMENT,
+      uniforms: {
+        uTime: this.uniforms.uTime,
+        uFeet: { value: new Vector3() },
+        uBack: { value: new Vector3(0, 0, 1) },
+        uAmount: { value: 0 },
+        uScale: { value: 600 },
+        uPaper: { value: new Color(0xfbfaf6) },
+        uNavy: { value: new Color(PAPER_PALETTE.navy) },
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: NormalBlending,
+      premultipliedAlpha: true,
+      toneMapped: false,
+    });
+    this.materials.push(this.sprayMaterial);
+    this.spray = new Points(geometry, this.sprayMaterial);
+    this.spray.frustumCulled = false;
+    this.scene.add(this.spray);
   }
 
   private buildCourse() {
@@ -565,9 +780,13 @@ export class PaperTide extends World {
         },
       },
       {
-        // Leading: ahead of her, looking back at her grin as she rides out.
-        at: T_CURL_OUT + 0.15,
-        blend: 0.35,
+        // Leading: ahead of her, looking back at her grin as she rides out (the move swings round her).
+        at: T_CURL_OUT + 0.2,
+        blend: 0.45,
+        pivot: (T, out) => {
+          at(T);
+          return out.copy(her).addScaledVector(up, 1.0);
+        },
         shot: (T, out) => {
           at(T);
           out.position
@@ -586,7 +805,11 @@ export class PaperTide extends World {
       {
         // Behind her again as she climbs toward the light ahead.
         at: 5.12,
-        blend: 0.4,
+        blend: 0.42,
+        pivot: (T, out) => {
+          at(T);
+          return out.copy(her).addScaledVector(up, 1.0);
+        },
         shot: (T, out) => {
           at(T);
           out.position
@@ -709,6 +932,26 @@ export class PaperTide extends World {
     this.rig.key.position.copy(this.her).addScaledVector(SUN_DIR, 30);
     this.rig.key.target.position.copy(this.her);
     this.rig.key.target.updateMatrixWorld();
+    // The flock wheels high ahead of her; the spray streams from her feet while she skims.
+    const flock = this.flockMaterial;
+    if (flock) {
+      (flock.uniforms.uCentre.value as Vector3).set(this.her.x * 0.4, 26, this.her.z - 110);
+      (flock.uniforms.uCamPos.value as Vector3).copy(f.camera.position);
+    }
+    const spray = this.sprayMaterial;
+    if (spray) {
+      (spray.uniforms.uFeet.value as Vector3).copy(this.her).add(this.a.set(0, 0.15, 0));
+      (spray.uniforms.uBack.value as Vector3).copy(this.dir).negate();
+      const skim = ease01(f.T, 0.7, 1.0) * (1 - ease01(f.T, 4.35, 4.7));
+      const stumble = window01(f.T, T_STUMBLE - 0.1, T_STUMBLE + 0.6);
+      spray.uniforms.uAmount.value = skim * (0.7 + 0.6 * stumble);
+      spray.uniforms.uScale.value = ctx.size.height * ctx.size.dpr * 0.5;
+    }
+  }
+
+  /** Paper Tide's post: a gentle bloom on the sun and the varnish, a soft vignette. */
+  post(): Partial<StoryPostParams> {
+    return { bloom: 0.32, bloomThreshold: 0.74, bloomRadius: 0.5, vignette: 0.48, grain: 0.16 };
   }
 
   pointer(ctx: StoryContext, event: StoryPointerEvent, time: number) {
@@ -732,5 +975,10 @@ export class PaperTide extends World {
     (mesh.geometry as InstancedBufferGeometry).instanceCount = grid.x * grid.z;
     (material.uniforms.uGrid.value as Vector2).set(grid.x, grid.z);
     material.uniforms.uReach.value = grid.z * CELL.z * 0.6;
+    if (this.flock) {
+      (this.flock.geometry as InstancedBufferGeometry).instanceCount =
+        tier === "low" ? 18 : tier === "medium" ? 30 : FLOCK_MAX;
+    }
+    if (this.spray) this.spray.geometry.setDrawRange(0, tier === "low" ? 70 : SPRAY_MAX);
   }
 }
