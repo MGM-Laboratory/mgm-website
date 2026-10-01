@@ -146,6 +146,7 @@ class FinaleAct implements StoryAct {
   private nextAutoGlance = 6;
   private clicks: number[] = [];
   private lastClickAt = -10;
+  private pokedAt = -10;
   private hoverPart: Part = null;
   private hoverGrace = 0;
   private pointerSeenAt = -10;
@@ -405,6 +406,23 @@ class FinaleAct implements StoryAct {
       this.interactive = false;
       this.special = null;
       this.hoverPart = null;
+      // Down but not out: from the landing on, her eyes find the cursor (the clips own her head),
+      // a tap on her jolts her, a tap on the page throws stars she glances at.
+      const awake = A > PHASE.bottomHit + 0.3 && shake === 0;
+      const pointer = ctx.pointer;
+      const pointerActive = pointer.inside && this.life - this.pointerSeenAt < 3.5;
+      if (awake && this.glance && this.life < this.glance.until) {
+        lookPoint = this.look.copy(this.glance.point);
+        lookWeight = Math.max(lookWeight, 0.35);
+      } else if (awake && pointerActive && this.pointerPoint(ctx, this.tmp)) {
+        lookPoint = this.look.copy(this.tmp);
+        lookWeight = Math.max(lookWeight * 0.6, 0.25);
+      }
+      const poked = this.life - this.pokedAt;
+      if (poked < 0.6) {
+        const jolt = Math.sin(poked * 26) * Math.exp(-poked * 7);
+        roll += jolt * 0.07;
+      }
       return { layers, face, lookPoint, lookWeight, glow, spin, roll, dizzy, autoIdle, hover };
     }
 
@@ -587,7 +605,6 @@ class FinaleAct implements StoryAct {
 
   /** A tap on the page around her: a burst of little stars, and she looks. */
   private clickPage(ctx: StoryContext, ndc: Readonly<{ x: number; y: number }>) {
-    if (!this.interactive) return;
     this.ndc.set(ndc.x, ndc.y);
     this.ray.setFromCamera(this.ndc, ctx.stage.camera);
     const point = new Vector3();
@@ -598,14 +615,24 @@ class FinaleAct implements StoryAct {
 
   pointer(ctx: StoryContext, event: StoryPointerEvent) {
     const godette = this.godette;
-    if (!godette || !this.interactive) return false;
-    if (event.type === "tap") {
-      const part = this.partUnder(event.raycast(godette.hitProxy));
+    if (!godette || event.type !== "tap") return false;
+    const part = this.partUnder(event.raycast(godette.hitProxy));
+    if (this.interactive) {
       if (part) this.clickHer(part);
       else this.clickPage(ctx, event.ndc);
       return true;
     }
-    return false;
+    // Before the wave: she is busy getting up, but she notices
+    const A = actingTime(ctx.director.t);
+    if (A < PHASE.bottomHit + 0.3) return false;
+    if (part) {
+      this.pokedAt = this.life;
+      this.bursts.fire(godette.socket("head", this.tmp2), this.life, 0.7);
+      godette.blink(true);
+    } else {
+      this.clickPage(ctx, event.ndc);
+    }
+    return true;
   }
 
   private partUnder(hits: readonly { object: Object3D }[]): Part {
