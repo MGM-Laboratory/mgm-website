@@ -6,9 +6,11 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { STORY_KEY, readBoot, reapplyBoot, updateBoot } from "@/components/loader/boot";
 import { hardwareWebGL2 } from "@/components/reel/gl/webgl-probe";
 import { StoryOverlay } from "@/components/story/story-overlay";
+import { StoryWaiting } from "@/components/story/story-waiting";
 // Types only: the engine and three.js stay in the dynamic import.
 import type { StoryOverlayStore } from "@/components/story/engine/overlay-store";
-import type { StoryEngine } from "@/components/story/engine/story-engine";
+import type { StoryFallbackReason } from "@/components/story/engine/director";
+import type { StoryBuildPhase, StoryEngine } from "@/components/story/engine/story-engine";
 import { actOf, TIMELINE } from "@/components/story/engine/timeline";
 import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
 
@@ -21,14 +23,20 @@ import { motionAllowed, onReducedMotion } from "@/lib/reduced-motion";
  *   imported, never in a first chunk) and attached while `/` is mounted.
  *   Layout effects, so the director lets go in the same commit that leaves
  *   the page, before the root layout's scroll reset (gotcha #13).
- * - A start failsafe: if the engine is not drawing after 6 s of visible
- *   time with the section on screen, the visit gets the storybook.
+ * - While the engine is on the way, a small "Shuffling the deck" with the
+ *   build's progress shows over the section (`story-waiting.tsx`).
+ * - Start failsafes: 10 s of visible time spent waiting inside the section
+ *   for the downloads gives this visit the storybook; 6 s near the section
+ *   for the build and warm-up (the device's own work) gives it to the tab.
  * - Any fallback (a lost context, a renderer that cannot keep up, reduced
  *   motion switched on) flips `html[data-story-mode]` to "dom" and scrolls
  *   to the storybook's matching place.
  */
 
+/** Visible time near the section the build and warm-up may take on this device. */
 const START_FAILSAFE_MS = 6000;
+/** Visible time spent waiting inside the section for the downloads. */
+const NETWORK_FAILSAFE_MS = 10_000;
 
 /**
  * The boot script probes only on a hard load of `/`. A visit that started on
@@ -105,9 +113,12 @@ function watchTitle(section: HTMLElement) {
   };
 }
 
+type Waiting = Readonly<{ section: HTMLElement; fraction: number | null }>;
+
 export function StoryHost() {
   const markerRef = useRef<HTMLSpanElement>(null);
   const [overlay, setOverlay] = useState<StoryOverlayStore | null>(null);
+  const [waiting, setWaiting] = useState<Waiting | null>(null);
 
   useLayoutEffect(() => {
     reapplyBoot();
@@ -120,7 +131,18 @@ export function StoryHost() {
     let fellBack = false;
     let engine: StoryEngine | null = null;
     let running = false;
+    /** Where the build is: "load" while the engine's own code is still downloading. */
+    let phase: StoryBuildPhase | "idle" | "load" = "load";
+    let offStatus = () => {};
     const stopTitle = watchTitle(section);
+
+    const discard = (reason: StoryFallbackReason) => {
+      import("@/components/story/engine/story-engine")
+        .then(({ discardStoryEngine }) => {
+          discardStoryEngine(reason);
+        })
+        .catch(() => undefined);
+    };
 
     const fallback = () => {
       if (disposed || fellBack) return;
@@ -130,42 +152,61 @@ export function StoryHost() {
       engine = null;
       running = false;
       window.clearInterval(failsafe);
+      offStatus();
       setOverlay(null);
+      setWaiting(null);
       toStorybook(section, t);
     };
 
-    // Visible time only (gotcha #18), and only while the section is near.
+    // Visible time only (gotcha #18). Two clocks:
+    // - downloading (the engine's code or the story's bytes): only the time a
+    //   visitor spends inside the section, waiting on it, counts; past 10 s
+    //   the visit gets the storybook, and the next visit tries again;
+    // - building and warming up (the device's own work): any time near the
+    //   section counts; past 6 s the tab gets the storybook.
     let waited = 0;
+    let waitedInside = 0;
     let last = performance.now();
     const failsafe = window.setInterval(() => {
       const now = performance.now();
-      const step = now - last;
+      const step = Math.min(now - last, 500);
       last = now;
       if (running || document.hidden) return;
       const rect = section.getBoundingClientRect();
-      if (rect.top > window.innerHeight * 1.5 || rect.bottom < 0) return;
-      waited += Math.min(step, 500);
-      if (waited < START_FAILSAFE_MS) return;
-      window.clearInterval(failsafe);
-      import("@/components/story/engine/story-engine")
-        .then(({ discardStoryEngine }) => {
-          discardStoryEngine("slow");
-        })
-        .catch(() => undefined);
+      const height = window.innerHeight;
+      if (phase === "load" || phase === "idle" || phase === "fetch") {
+        if (rect.top < 0 && rect.bottom > height) waitedInside += step;
+        if (waitedInside < NETWORK_FAILSAFE_MS) return;
+        discard("network");
+      } else {
+        if (rect.top > height * 1.5 || rect.bottom < 0) return;
+        waited += step;
+        if (waited < START_FAILSAFE_MS) return;
+        discard("slow");
+      }
       fallback();
     }, 250);
 
     const offReduced = onReducedMotion(() => {
-      import("@/components/story/engine/story-engine")
-        .then(({ discardStoryEngine }) => {
-          discardStoryEngine("failed");
-        })
-        .catch(() => undefined);
+      discard("failed");
       fallback();
     });
 
+    setWaiting({ section, fraction: null });
     import("@/components/story/engine/story-engine")
-      .then(({ ensureStoryEngine }) => ensureStoryEngine())
+      .then(({ ensureStoryEngine, onStoryBuildStatus }) => {
+        if (disposed || fellBack) return null;
+        offStatus = onStoryBuildStatus((status) => {
+          phase = status.phase;
+          if (status.phase === "idle") return;
+          setWaiting((current) =>
+            current && current.fraction !== status.fraction
+              ? { section, fraction: status.fraction }
+              : current,
+          );
+        });
+        return ensureStoryEngine();
+      })
       .then((built) => {
         if (disposed || fellBack) return;
         if (!built) {
@@ -175,8 +216,10 @@ export function StoryHost() {
         engine = built;
         running = true;
         window.clearInterval(failsafe);
+        offStatus();
         built.attach(section, host, fallback);
         setOverlay(built.overlay);
+        setWaiting(null);
       })
       .catch(() => {
         fallback();
@@ -185,6 +228,7 @@ export function StoryHost() {
     return () => {
       disposed = true;
       window.clearInterval(failsafe);
+      offStatus();
       offReduced();
       stopTitle();
       engine?.detach();
@@ -196,6 +240,9 @@ export function StoryHost() {
     <>
       <span ref={markerRef} hidden />
       {overlay ? <StoryOverlay store={overlay} /> : null}
+      {waiting && !overlay ? (
+        <StoryWaiting section={waiting.section} fraction={waiting.fraction} />
+      ) : null}
     </>
   );
 }

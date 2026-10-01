@@ -41,6 +41,36 @@ export type StoryBuildProgress = Readonly<{
 
 const STORY_KEY = "mgm:story";
 
+/** Where the visit's build stands, for anyone who did not start it (the story section). */
+export type StoryBuildStatus = Readonly<{
+  phase: StoryBuildPhase | "idle";
+  /** 0..1 over the whole build. */
+  fraction: number;
+}>;
+
+let status: StoryBuildStatus = { phase: "idle", fraction: 0 };
+const statusListeners = new Set<(status: StoryBuildStatus) => void>();
+
+function setStatus(next: StoryBuildStatus) {
+  if (next.phase === status.phase && Math.abs(next.fraction - status.fraction) < 0.005) return;
+  status = next;
+  for (const listener of [...statusListeners]) listener(status);
+}
+
+/** The build's phase and progress now. */
+export function storyBuildStatus() {
+  return status;
+}
+
+/** Calls `listener` with the status now and on every change; returns the unsubscribe. */
+export function onStoryBuildStatus(listener: (status: StoryBuildStatus) => void) {
+  statusListeners.add(listener);
+  listener(status);
+  return () => {
+    statusListeners.delete(listener);
+  };
+}
+
 async function loadActs(): Promise<StoryAct[]> {
   const [cards, room, worlds, finale] = await Promise.all([
     import("@/components/story/acts/cards"),
@@ -162,7 +192,8 @@ export function discardStoryEngine(reason: StoryFallbackReason) {
   failed = reason;
   generation += 1;
   try {
-    if (reason !== "failed") window.sessionStorage.setItem(STORY_KEY, "dom");
+    if (reason === "slow" || reason === "context-lost")
+      window.sessionStorage.setItem(STORY_KEY, "dom");
   } catch {
     // Storage may be unavailable (a private window): the visit still falls back.
   }
@@ -245,8 +276,11 @@ async function assemble(
   const tier: StoryTier = storyTierOverride(window.location.search) ?? guessStoryTier();
   let bytes = emptyBytes();
   const report = (phase: StoryBuildPhase, fraction: number) => {
-    if (current()) onProgress?.({ phase, fraction, bytes });
+    if (!current()) return;
+    setStatus({ phase, fraction });
+    onProgress?.({ phase, fraction, bytes });
   };
+  report("fetch", 0);
   bytes = await preloadStory(tier, (progress) => {
     bytes = progress;
     const share = progress.totalBytes > 0 ? progress.loadedBytes / progress.totalBytes : 1;

@@ -282,3 +282,72 @@ html[data-story-mode="gl"] [data-storybook] {
 .story-panel-art[data-panel="worlds"] {
   --panel-tone: var(--brand-green);
 }
+
+/* ------------------------------------------------------------ while the engine is on the way */
+
+.story-waiting {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.story-waiting[data-shown="true"] {
+  opacity: 1;
+}
+
+.story-waiting-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.story-waiting-star {
+  width: 2rem;
+  height: 2rem;
+  fill: var(--brand-blue);
+}
+
+/* The spark's yellow reads better than blue on the dark page. */
+.dark .story-waiting-star {
+  fill: var(--brand-yellow);
+}
+
+.story-waiting-count {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .story-waiting-star {
+    animation: story-waiting-turn 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+}
+
+@keyframes story-waiting-turn {
+  0% {
+    rotate: 0deg;
+    scale: 1;
+  }
+
+  50% {
+    rotate: 45deg;
+    scale: 0.82;
+  }
+
+  100% {
+    rotate: 90deg;
+    scale: 1;
+  }
+}

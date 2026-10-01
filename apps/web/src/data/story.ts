@@ -151,6 +151,8 @@ export const STORY_FINALE = {
 export const STORY_CONTROLS = {
   skip: "Skip the story",
   replay: "Watch again",
+  /** Over the story while its scenes are still on the way. */
+  waiting: "Shuffling the deck",
 } as const;
 
 /** The site loader's words. The loader's own design adds its status lines. */

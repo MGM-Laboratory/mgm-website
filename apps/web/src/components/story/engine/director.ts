@@ -80,7 +80,12 @@ import { acquireThemeLock, releaseThemeLock } from "@/lib/theme-lock";
  *   the header's tone, the overlay's hint, HUD and skip control.
  */
 
-export type StoryFallbackReason = "context-lost" | "slow" | "failed";
+/**
+ * Why the visit switched to the storybook. "slow" (the device) and
+ * "context-lost" hold for the rest of the tab; "failed" (a bug) and
+ * "network" (the bytes took too long to arrive) only for this visit.
+ */
+export type StoryFallbackReason = "context-lost" | "slow" | "failed" | "network";
 
 export type DirectorHooks = {
   onFallback(reason: StoryFallbackReason): void;
