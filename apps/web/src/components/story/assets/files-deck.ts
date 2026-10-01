@@ -2,8 +2,8 @@ import type { StoryFile } from "@/components/story/assets/types";
 
 /**
  * The deck's shipped files (the card box, the card back, the baked fall), with
- * their exact sizes on disk. Generated from the files themselves by the deck
- * pipeline; the box textures and the card back come in a high set (high and
+ * their exact sizes on disk, read from the files themselves by the deck
+ * pipeline. The box textures and the card back come in a high set (high and
  * medium tiers) and a low set.
  */
 export const DECK_FILES: StoryFile[] = [
