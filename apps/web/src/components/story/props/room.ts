@@ -203,6 +203,7 @@ export type StoryRoom = {
    * room). Await it once during the loader, before compiling the story's
    * programs, and again after a grade change if the reflections should follow.
    * Order in the loader: `root` in the scene, `await prepare()`, compile, one warm-up frame.
+   * Calls run one after another; after `dispose()` a pending call ends without rendering.
    */
   prepare(renderer: WebGLRenderer): Promise<void>;
   /** `amount` blends from the other scheme's grade (0) to this one (1). */
@@ -1000,6 +1001,9 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
   applyLight();
   applyPhase();
 
+  let disposed = false;
+  let queue: Promise<void> = Promise.resolve();
+
   // The env capture: the room rendered from the table in a scene of its own (an object has one
   // parent) into linear half-float targets, a program variant of its own. PMREM's cube camera sees
   // layer 0 only, so the meshes go on every layer for the capture and back to theirs after.
@@ -1043,6 +1047,8 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
     } finally {
       probeTarget.dispose();
     }
+    // A dispose() during the wait wins: rendering the room now would upload it all again.
+    if (disposed) return;
     giveBack = takeRoom();
     const pmrem = new PMREMGenerator(renderer);
     let target: WebGLRenderTarget;
@@ -1075,7 +1081,10 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
       return envMap;
     },
     prepare(renderer) {
-      return capture(renderer);
+      // One capture at a time: a call made while another waits runs after it, so the last call's
+      // grade is the one the reflections keep.
+      queue = queue.catch(() => undefined).then(() => (disposed ? undefined : capture(renderer)));
+      return queue;
     },
     setLayer(layer) {
       for (const mesh of nodes.values()) mesh.layers.set(layer);
@@ -1107,6 +1116,7 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
       applyLight();
     },
     dispose() {
+      disposed = true;
       root.removeFromParent();
       for (const m of created) m.dispose();
       for (const m of sources) m.dispose();
