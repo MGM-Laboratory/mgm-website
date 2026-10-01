@@ -28,6 +28,7 @@ import { Threads } from "@/components/story/acts/cards/threads";
 import { CardPlay } from "@/components/story/acts/cards/card-play";
 import { Entrance } from "@/components/story/acts/cards/entrance";
 import { Sparkles } from "@/components/story/acts/cards/sparkles";
+import { CardShadows } from "@/components/story/acts/cards/card-shadows";
 import type { StreamExtent } from "@/components/story/acts/cards/deck-motion";
 import { swarmCountFor } from "@/components/story/props/card-mesh";
 import { smoothstep, window4 } from "@/components/story/engine/act";
@@ -89,6 +90,7 @@ class CardsAct implements StoryAct {
   private play: CardPlay | null = null;
   private readonly entrance = new Entrance();
   private sparkles: Sparkles | null = null;
+  private shadows: CardShadows | null = null;
   /** The box's mouth from its centre, in the stage frame (at its rest pose). */
   private readonly boxTop = new Vector3();
   private readonly cheerAt = new Vector3();
@@ -147,6 +149,8 @@ class CardsAct implements StoryAct {
     this.play = play;
     const sparkles = new Sparkles(this.stage, ctx.tier);
     this.sparkles = sparkles;
+    const shadows = new CardShadows(this.stage);
+    this.shadows = shadows;
     play.onOpen = () => {
       sparkles.cheer(
         this.cheerAt.copy(this.layout.focus.position).setZ(this.layout.focus.position.z + 0.02),
@@ -165,9 +169,11 @@ class CardsAct implements StoryAct {
     this.pageFall.warm(true);
     play.warm(true);
     sparkles.warm(true);
+    shadows.warm(true);
     await ctx.stage.compile();
     play.warm(false);
     sparkles.warm(false);
+    shadows.warm(false);
     box.warm(false);
     deck.warm(false);
     this.threads.warm(false);
@@ -219,6 +225,9 @@ class CardsAct implements StoryAct {
       const play = this.play;
       play?.update(ctx, this.beats, state.t, state.velocity);
       heroes?.update(ctx, this.beats, this.layout, state.velocity);
+      if (heroes) {
+        this.shadows?.update(deck.heroPoses, heroes.life, this.beats, ctx.palette.scheme);
+      }
       play?.place(ctx, this.layout, this.view);
       if (box) this.boxTop.set(0, box.dims.H / 2 + 0.008, 0).applyMatrix4(this.layout.boxToStage);
       this.sparkles?.update(
@@ -302,6 +311,7 @@ class CardsAct implements StoryAct {
 
   sleep(ctx: StoryContext) {
     this.stage.visible = false;
+    if (this.shadows) this.shadows.mesh.visible = false;
     this.play?.sleep();
     this.sparkles?.sleep();
     this.entrance.left(ctx.director.t);
@@ -321,6 +331,8 @@ class CardsAct implements StoryAct {
     this.play = null;
     this.sparkles?.dispose();
     this.sparkles = null;
+    this.shadows?.dispose();
+    this.shadows = null;
     this.entrance.reset();
     this.pageFall.dispose();
     this.studio?.dispose();
