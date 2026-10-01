@@ -400,7 +400,7 @@ export class ToyDirector {
   }
 
   /** r-dragged to r-dive: the hang, the tow, the learning, the loop, the proud hover, the dive. */
-  inFlight(ctx: StoryContext, state: ActState, hovered: boolean) {
+  inFlight(ctx: StoryContext, state: ActState, hovered: boolean, glowScale = 1) {
     const g = this.godette;
     const plan = this.plan;
     if (!plan) return;
@@ -437,7 +437,7 @@ export class ToyDirector {
       amount: MathUtils.lerp(0.35, 1, fp.learned),
     });
     const glow = smoothstep(times.release + 0.1, times.releaseEnd, tau);
-    g.setGlow(0.78 * glow);
+    g.setGlow(0.78 * glow * glowScale);
     this.baseLook(0);
     g.setLook({ glowColor: 0xf7bf33, lift: 0.035 + 0.05 * glow });
     g.setBlinkRate(1);

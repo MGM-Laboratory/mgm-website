@@ -195,6 +195,9 @@ class RoomAct implements StoryAct {
   private readonly start = createPose();
   /** The operator stands further off on a narrow frame (portrait), so her swings stay in it. */
   private followScale = 1;
+  private followFov = 1;
+  /** 1 on a wide frame, less on a narrow one: how far the over the shoulder shot may set her off centre. */
+  private followWide = 1;
   private tvCentre = new Vector3();
   private tvNormal = new Vector3(1, 0, 0);
 
@@ -397,7 +400,11 @@ class RoomAct implements StoryAct {
     read.position.z -= 0.025 * wide;
     read.position.lerp(read.target, 0.02 * wide);
     read.target.z -= 0.012 * wide;
+    // On a narrow frame the operator stands further off (her swings and her open arms stay in the narrow
+    // width) and zooms in a little, so she still holds about a fifth to a third of the frame's height.
     this.followScale = 1 + 0.32 * (1 - saturate(aspect));
+    this.followFov = MathUtils.lerp(0.86, 1, saturate((aspect - 0.5) / 0.9));
+    this.followWide = MathUtils.lerp(0.25, 1, saturate((aspect - 0.5) / 0.9));
     const close = shotPose(shots.b_mcu, aspect);
     // While she breaks the pose: a slow push in on the close-up.
     const breaking = shotPose(shots.b_mcu, aspect);
@@ -449,16 +456,21 @@ class RoomAct implements StoryAct {
       { t: at("r-spark", 0.8), pose: sparkClose },
       { t: at("r-spark", 1), pose: reach },
     ]);
-    this.buildFollow(reach);
+    this.buildFollow(reach, aspect);
   }
 
   /**
    * From r-dragged on the camera is an operator following her: each key is
    * an offset from her smoothed centre (where it sits, where it aims), so
    * the frame keeps her whatever the path does. The first key is exactly
-   * where the keyed path leaves off.
+   * where the keyed path leaves off. The operator moves round her, never
+   * through her: from behind the yank, up the climb with the room in frame,
+   * ahead of her and to her right for the learning glide (her face), behind
+   * her right shoulder for the loop (its whole circle), round to the front
+   * for the proud hover, and over her shoulder at the TV. On a narrow frame the sideways offsets shrink, so she
+   * stays near the middle where a portrait frame has room for her.
    */
-  private buildFollow(from: CamPose) {
+  private buildFollow(from: CamPose, aspect: number) {
     const plan = this.toy?.plan;
     if (!plan) return;
     const c0 = plan.centre(0, new Vector3());
@@ -484,6 +496,11 @@ class RoomAct implements StoryAct {
     first.target.copy(from.target).sub(c0);
     first.fov = from.fov;
     const f = from.fov;
+    // Over her shoulder: behind her left shoulder, a little above her, so her head, shoulder and the line
+    // of her dive read in profile against the TV (straight behind and above, a prone figure is only a
+    // backpack and two boots). The aim's pull toward the screen is added in followAt. On a narrow frame
+    // the camera sits more squarely behind her.
+    const side = 0.2 * MathUtils.lerp(0.25, 1, saturate((aspect - 0.5) / 0.9));
     this.follow = new CameraPath([
       { t: at("r-dragged", 0), pose: first },
       // The yank: from below, tilting up with her, a Dutch tilt.
@@ -493,19 +510,25 @@ class RoomAct implements StoryAct {
       { t: at("r-dragged", 0.62), pose: rel(0.3, -0.02, 0.33, 0, 0, -0.02, f * 1.1, 6) },
       // The whip pan as she swings back.
       { t: at("r-dragged", 0.74), pose: rel(0.36, -0.06, -0.12, 0, 0, 0.02, f * 1.12, -8) },
-      // The climb: low, looking up at her.
-      { t: at("r-dragged", 1), pose: rel(0.3, -0.2, 0.13, 0, 0.02, 0, f * 1.18, -4) },
-      // Learning: beside her, steadier and level.
-      { t: at("r-learn", 0.3), pose: rel(0.4, -0.06, 0.09, 0, 0, 0, f * 1.12, 0) },
-      // The loop: back far enough to see all of it.
-      { t: at("r-learn", 0.5), pose: rel(0.55, -0.02, 0.1, -0.04, 0.03, 0, f * 1.12, 0) },
-      { t: at("r-learn", 0.78), pose: rel(0.5, -0.01, 0.07, -0.02, 0.02, 0, f * 1.08, 0) },
+      // The climb: a little below her, the lamps and the TV wall behind her (not the bare ceiling).
+      { t: at("r-dragged", 1), pose: rel(0.4, -0.085, 0.04, 0, 0.035, 0, f * 1.12, -4) },
+      { t: at("r-learn", 0.12), pose: rel(0.3, -0.05, -0.2, 0, 0.015, 0, f * 1.08, -2) },
+      // Learning: ahead of her and to her right, looking back at her face as she wobbles and opens her arms
+      // (the display cabinet and the reading lamp behind her).
+      { t: at("r-learn", 0.26), pose: rel(0.12, -0.012, -0.33, 0, 0.012, 0, f * 1.06, 0) },
+      { t: at("r-learn", 0.42), pose: rel(0.1, -0.006, -0.34, 0, 0.01, 0, f * 1.06, 0) },
+      // The loop: from behind her right shoulder, back far enough for the whole circle.
+      { t: at("r-learn", 0.56), pose: rel(0.33, 0.03, -0.38, -0.04, 0.06, 0, f * 1.1, 0) },
+      { t: at("r-learn", 0.74), pose: rel(0.36, 0.02, -0.34, -0.02, 0.04, 0, f * 1.08, 0) },
+      // Round to the front as she comes out of it, turning to us.
+      { t: at("r-learn", 0.88), pose: rel(0.4, -0.01, -0.18, 0, 0.01, 0, f * 0.96, 0) },
       // Proud: a medium shot from a touch below, the TV dark behind her.
       { t: at("r-learn", 1), pose: rel(0.42, -0.035, 0.05, 0, 0.012, 0, f * 0.9, 0) },
       { t: at("r-tv", 0.18), pose: rel(0.42, -0.03, 0.05, 0, 0.012, 0, f * 0.92, 0) },
-      // Over her shoulder, looking past her at the TV.
-      { t: at("r-tv", 0.7), pose: rel(0.27, 0.04, 0.07, -0.3, -0.012, 0, f * 1.05, 0) },
-      { t: at("r-tv", 1), pose: rel(0.3, 0.036, 0.045, -0.4, -0.014, 0, f * 1.08, 0), stop: true },
+      // She turns to the TV: the camera rises behind her shoulder.
+      { t: at("r-tv", 0.45), pose: rel(0.37, 0.05, side * 0.7, -0.05, 0.0, 0, f * 1.02, 0) },
+      { t: at("r-tv", 0.75), pose: rel(0.26, 0.05, side, -0.12, -0.01, 0, f * 1.15, 0) },
+      { t: at("r-tv", 1), pose: rel(0.27, 0.05, side, -0.12, -0.01, 0, f * 1.17, 0), stop: true },
     ]);
   }
 
@@ -564,6 +587,10 @@ class RoomAct implements StoryAct {
     // --- the box: the drop's end pose, rocked once as it settles; the lid pops for the spark
     this.directBox(ctx, state, box, room, lit.box);
 
+    // --- the camera's pose for this frame (a pure function of the story position; the rig's life is added
+    // below): her glow needs to know how close the lens is
+    const pose = this.cameraAt(ctx, state, toy);
+
     // --- Godette, then the spark that leads her
     const sparkAt = this.tmp.u;
     const sparkOn = this.sparkBeforeFlight(state, box, toy, sparkAt);
@@ -580,7 +607,10 @@ class RoomAct implements StoryAct {
         sparkAt.lerp(this.tmp.w, smoothstep(0.8, 1, sp));
       }
     } else {
-      toy.inFlight(ctx, state, hovered);
+      // Close behind her (the over the shoulder shot) her glow would bloom into a white blob: it dims.
+      const tau = this.flightClock(t);
+      const near = toy.plan ? pose.position.distanceTo(toy.plan.centre(tau, this.tmp.w)) : 1;
+      toy.inFlight(ctx, state, hovered, MathUtils.lerp(0.4, 1, smoothstep(0.28, 0.5, near)));
     }
     this.directSpark(ctx, state, toy, box, sparkAt, sparkOn);
 
@@ -599,7 +629,6 @@ class RoomAct implements StoryAct {
     this.shadows.commit();
 
     // --- the camera
-    const pose = this.cameraAt(ctx, state, toy);
     this.rig.apply(ctx.stage.camera, pose, this.lifeAt(state), ctx.clock.time);
     ctx.stage.camera.updateProjectionMatrix();
     this.aimFill(ctx, state);
@@ -950,13 +979,14 @@ class RoomAct implements StoryAct {
     const lag = MathUtils.lerp(0.32, 0.16, plan.learned(flightTau));
     const backOff = smoothstep(at("r-dragged", 0), at("r-dragged", 0.15), t);
     out.position.multiplyScalar(1 + (this.followScale - 1) * backOff);
+    out.fov *= 1 + (this.followFov - 1) * backOff;
     const her = plan.smoothedCentre(flightTau, lag, this.tmp.v);
     out.position.add(her);
     const aim = plan.smoothedCentre(flightTau, lag * 0.35, this.tmp.w);
     out.target.add(aim);
     // In r-tv the aim moves past her to the screen.
     const tvBeat = saturate((t - at("r-tv", 0)) / (at("r-dive", 0) - at("r-tv", 0)));
-    out.target.lerp(this.tvCentre, 0.55 * smoothstep(0.3, 0.85, tvBeat));
+    out.target.lerp(this.tvCentre, 0.18 * this.followWide * smoothstep(0.25, 0.75, tvBeat));
     return out;
   }
 
