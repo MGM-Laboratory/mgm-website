@@ -781,8 +781,8 @@ export class PaperTide extends World {
       },
       {
         // Leading: ahead of her, looking back at her grin as she rides out (the move swings round her).
-        at: T_CURL_OUT + 0.2,
-        blend: 0.45,
+        at: T_CURL_OUT + 0.25,
+        blend: 0.75,
         pivot: (T, out) => {
           at(T);
           return out.copy(her).addScaledVector(up, 1.0);
@@ -804,8 +804,8 @@ export class PaperTide extends World {
       },
       {
         // Behind her again as she climbs toward the light ahead.
-        at: 5.12,
-        blend: 0.42,
+        at: 5.35,
+        blend: 0.7,
         pivot: (T, out) => {
           at(T);
           return out.copy(her).addScaledVector(up, 1.0);

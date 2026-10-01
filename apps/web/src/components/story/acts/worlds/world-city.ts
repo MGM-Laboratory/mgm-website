@@ -52,6 +52,7 @@ import {
   ease01,
   fullscreenGeometry,
   lin01,
+  yieldToMain,
   type CameraShot,
   type FlightPose,
 } from "./common";
@@ -131,6 +132,7 @@ export class CityWorld extends World {
   private readonly right = new Vector3();
   private readonly a = new Vector3();
   private readonly b = new Vector3();
+  private readonly c = new Vector3();
   private readonly flowOffset = new Vector3();
   private readonly ray = new Raycaster();
   private readonly ndc = new Vector2();
@@ -182,8 +184,9 @@ export class CityWorld extends World {
     this.materials.push(this.sky.material);
     this.scene.add(this.sky.mesh);
     this.buildGround();
+    await yieldToMain();
     this.buildTowers();
-    await Promise.resolve();
+    await yieldToMain();
     this.buildTraffic();
     this.buildRibbons();
     this.buildBeams();
@@ -251,6 +254,17 @@ export class CityWorld extends World {
       this.path.push(new Vector4(this.a.x, this.a.y, this.a.z, T));
     }
     this.track = this.shots();
+  }
+
+  /** The general line of her course around `T` (a chord over 0.6 vh), level, unit. */
+  private chordAt(T: number, out: Vector3) {
+    const walk = this.walk;
+    if (!walk) return out.set(0, 0, -1);
+    walk.course.at(walk.u(Math.max(0, T - 0.3)), this.c);
+    walk.course.at(walk.u(Math.min(this.length, T + 0.3)), out);
+    out.sub(this.c).setY(0);
+    if (out.lengthSq() < 1e-6) out.set(this.dir.x, 0, this.dir.z);
+    return out.normalize();
   }
 
   private place(T: number) {
@@ -342,8 +356,8 @@ export class CityWorld extends World {
       },
       {
         // The corner: a whip pan out to the side of the turn (blurred by the speed, sold by the roll).
-        at: M.turn + 0.14,
-        blend: 0.12,
+        at: M.turn + 0.16,
+        blend: 0.18,
         pivot: (T, out) => {
           at(T);
           return out.copy(her).addScaledVector(UP, 1);
@@ -364,8 +378,12 @@ export class CityWorld extends World {
       },
       {
         // The skim: from the street side, the facade and its windows streaming past behind her.
-        at: M.skim + 0.14,
-        blend: 0.22,
+        at: M.skim + 0.16,
+        blend: 0.28,
+        pivot: (T, out) => {
+          at(T);
+          return out.copy(her).addScaledVector(UP, 1);
+        },
         shot: (T, out) => {
           at(T);
           out.position
@@ -386,8 +404,8 @@ export class CityWorld extends World {
       },
       {
         // The climb: from above and ahead, she rises toward us out of the lit city.
-        at: M.climb + 0.1,
-        blend: 0.28,
+        at: M.climb + 0.3,
+        blend: 0.55,
         pivot: (T, out) => {
           at(T);
           return out.copy(her).addScaledVector(UP, 1);
@@ -409,8 +427,8 @@ export class CityWorld extends World {
       },
       {
         // The roll: level with her, beside her, the camera turning a little with her; time slows.
-        at: M.roll + 0.04,
-        blend: 0.26,
+        at: M.roll + 0.08,
+        blend: 0.36,
         pivot: (T, out) => {
           at(T);
           return out.copy(her).addScaledVector(UP, 1);
@@ -432,18 +450,21 @@ export class CityWorld extends World {
       },
       {
         // The glide out: a leading shot, ahead of her looking back; she is in control now.
-        at: M.glide + 0.3,
-        blend: 0.4,
+        at: M.glide + 0.4,
+        blend: 0.62,
         pivot: (T, out) => {
           at(T);
           return out.copy(her).addScaledVector(UP, 1);
         },
         shot: (T, out) => {
           at(T);
+          // Along the general line of her course (a chord), so her curve does not swing the lens.
+          this.chordAt(T, this.b);
+          this.c.crossVectors(this.b, UP).normalize();
           a.copy(her)
-            .addScaledVector(dir, 7.5)
+            .addScaledVector(this.b, 7.5)
             .addScaledVector(UP, 1.6)
-            .addScaledVector(right, 2.4);
+            .addScaledVector(this.c, 2.4);
           out.position.copy(a);
           out.target.copy(her).addScaledVector(UP, 0.9);
           out.fov = 42;
@@ -454,8 +475,8 @@ export class CityWorld extends World {
       },
       {
         // Behind her again for the punch at the rift.
-        at: 5.05,
-        blend: 0.32,
+        at: 5.3,
+        blend: 0.6,
         pivot: (T, out) => {
           at(T);
           return out.copy(her).addScaledVector(UP, 1);

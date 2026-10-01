@@ -47,6 +47,7 @@ import {
   ease01,
   fullscreenGeometry,
   lin01,
+  yieldToMain,
   type CameraShot,
   type FlightPose,
 } from "./common";
@@ -133,6 +134,8 @@ export class LeafWorld extends World {
   private readonly right = new Vector3();
   private readonly flat = new Vector3();
   private readonly loopUp = new Vector3();
+  /** Where her eyes go under the leaf (its own vector: nothing else writes it). */
+  private readonly lookAt = new Vector3();
   private readonly a = new Vector3();
   private readonly b = new Vector3();
   private readonly fallMatrix = new Matrix4();
@@ -193,8 +196,9 @@ export class LeafWorld extends World {
     this.materials.push(this.sky.material);
     this.scene.add(this.sky.mesh);
     this.buildStems();
-    await Promise.resolve();
+    await yieldToMain();
     this.buildLeaves();
+    await yieldToMain();
     this.buildShafts();
     this.motes = new Motes(
       {
@@ -364,8 +368,8 @@ export class LeafWorld extends World {
       },
       {
         // Under the falling leaf: low and to her side, the leaf a green ceiling over her.
-        at: m.under + 0.05,
-        blend: 0.32,
+        at: m.under + 0.12,
+        blend: 0.5,
         pivot,
         shot: (T, out) => {
           at(T);
@@ -383,7 +387,7 @@ export class LeafWorld extends World {
       },
       {
         // The loop and the rack focus: locked off just behind the dew drop, she loops beyond it.
-        at: m.loop - 0.12,
+        at: m.loop + 0.04,
         blend: 0.3,
         shot: (_T, out) => {
           out.position.copy(RACK_CAMERA);
@@ -396,8 +400,8 @@ export class LeafWorld extends World {
       },
       {
         // Out of the loop: the lens follows her out from behind, then settles into a chase.
-        at: m.loopEnd + 0.05,
-        blend: 0.4,
+        at: m.loopEnd + 0.18,
+        blend: 0.6,
         shot: (T, out) => {
           at(T);
           out.position
@@ -414,8 +418,8 @@ export class LeafWorld extends World {
       },
       {
         // The glide: a leading shot, ahead of her looking back; she is calm now.
-        at: m.loopEnd + 0.62,
-        blend: 0.42,
+        at: m.loopEnd + 0.75,
+        blend: 0.6,
         pivot,
         shot: (T, out) => {
           at(T);
@@ -432,8 +436,8 @@ export class LeafWorld extends World {
         },
       },
       {
-        at: 5.05,
-        blend: 0.32,
+        at: 5.35,
+        blend: 0.6,
         pivot,
         shot: (T, out) => {
           at(T);
@@ -886,7 +890,7 @@ export class LeafWorld extends World {
     pose.rim = 0.8;
     pose.rimColor = 0xfff3c8;
     pose.lift = 0.06;
-    pose.look = under > 0.3 ? this.b.copy(this.her).addScaledVector(UP, 4) : null;
+    pose.look = under > 0.3 ? this.lookAt.copy(this.her).addScaledVector(UP, 4) : null;
     pose.lookWeight = 0.5 * under;
     pose.nervous = 0;
     pose.visible = true;

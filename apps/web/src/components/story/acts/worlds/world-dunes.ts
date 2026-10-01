@@ -41,6 +41,7 @@ import {
   ease01,
   fullscreenGeometry,
   lin01,
+  yieldToMain,
   type CameraShot,
   type FlightPose,
 } from "./common";
@@ -318,6 +319,9 @@ export class DunesWorld extends World {
   private readonly dir = new Vector3();
   private readonly right = new Vector3();
   private readonly flat = new Vector3();
+  private readonly chord = new Vector3();
+  /** Her course's general right (across the chord), for shots that should not swing with the weave. */
+  private readonly side = new Vector3();
   private readonly a = new Vector3();
   private readonly ray = new Raycaster();
   private readonly ndc = new Vector2();
@@ -369,8 +373,9 @@ export class DunesWorld extends World {
     this.materials.push(this.sky.material);
     this.scene.add(this.sky.mesh);
     this.buildGround();
-    await Promise.resolve();
-    this.buildPrimitives();
+    await yieldToMain();
+    await this.buildPrimitives();
+    await yieldToMain();
     this.buildWind();
     this.motes = new Motes(
       {
@@ -444,7 +449,13 @@ export class DunesWorld extends World {
     walk.course.at(u, this.her);
     walk.course.tangent(u, this.dir);
     this.right.crossVectors(this.dir, UP).normalize();
-    this.flat.set(this.dir.x, 0, this.dir.z).normalize();
+    // The lens follows her course's general line (a chord across the weave), not each swerve.
+    walk.course.at(walk.u(Math.max(0, T - 0.3)), this.a);
+    walk.course.at(walk.u(Math.min(this.length, T + 0.3)), this.chord);
+    this.chord.sub(this.a).setY(0);
+    if (this.chord.lengthSq() < 1e-6) this.chord.set(this.dir.x, 0, this.dir.z);
+    this.flat.copy(this.chord).normalize();
+    this.side.crossVectors(this.flat, UP).normalize();
   }
 
   private shots(): ShotTrack {
@@ -493,8 +504,9 @@ export class DunesWorld extends World {
       },
       {
         // The slalom: tracking alongside on her right, low; the pillars wipe across the lens.
-        at: m.slalom + 0.12,
-        blend: 0.42,
+        at: m.slalom + 0.2,
+        blend: 0.6,
+        pivot,
         shot: (T, out) => {
           at(T);
           out.position.set(her.x + 9.5, her.y + 0.9, her.z + 1.5);
@@ -507,15 +519,15 @@ export class DunesWorld extends World {
       },
       {
         // She banks hard toward us: a low leading shot, ahead and to her left.
-        at: (m.slalom + m.slalomEnd) / 2 + 0.35,
-        blend: 0.38,
+        at: (m.slalom + m.slalomEnd) / 2 + 0.25,
+        blend: 0.65,
         pivot,
         shot: (T, out) => {
           at(T);
           out.position
             .copy(her)
-            .addScaledVector(flat, 7.5)
-            .addScaledVector(right, -3.2)
+            .addScaledVector(flat, 6.5)
+            .addScaledVector(this.side, -4.2)
             .addScaledVector(UP, 0.4);
           out.target.copy(her).addScaledVector(UP, 1.05);
           out.fov = 40;
@@ -526,8 +538,8 @@ export class DunesWorld extends World {
       },
       {
         // Under the arch, the ring framed ahead.
-        at: m.arch - 0.25,
-        blend: 0.32,
+        at: m.arch - 0.15,
+        blend: 0.6,
         pivot,
         shot: (T, out) => {
           at(T);
@@ -629,7 +641,7 @@ export class DunesWorld extends World {
     this.scene.add(this.ground);
   }
 
-  private buildPrimitives() {
+  private async buildPrimitives() {
     const all = primitives();
     this.primMaterial = new ShaderMaterial({
       vertexShader: PRIM_VERTEX,
@@ -652,7 +664,8 @@ export class DunesWorld extends World {
     const colour = new Color();
     const parts: BufferGeometry[] = [];
     const shapes = new Map<Kind, BufferGeometry>();
-    all.forEach((prim, id) => {
+    for (const [id, prim] of all.entries()) {
+      if (id % 12 === 11) await yieldToMain();
       const kind = prim.kind;
       let shape = shapes.get(kind);
       if (!shape) {
@@ -716,7 +729,8 @@ export class DunesWorld extends World {
                 : new Vector4(prim.r, prim.h ?? prim.r, 0, 0);
         this.shadowList.push({ base, dims, near: Math.abs(p.x - dunesPathX(p.z)) });
       }
-    });
+    }
+    await yieldToMain();
     const merged = mergeGeometries(parts);
     for (const part of parts) part.dispose();
     for (const shape of shapes.values()) shape.dispose();

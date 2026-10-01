@@ -24,7 +24,6 @@ import {
   LifeClock,
   RendererState,
   backgroundScale,
-  copyPose,
   createDisplayTarget,
   createLightRig,
   createPose,
@@ -36,6 +35,7 @@ import {
   mixPose,
   mixShot,
   scaledSize,
+  yieldToMain,
   type CameraShot,
   type FlightPose,
 } from "./common";
@@ -186,6 +186,8 @@ class WorldsAct implements StoryAct {
   private hoverAt = -10;
   private feed: ReturnType<typeof createTvFeed> | null = null;
   private quality: StoryContext["tier"] = "high";
+  /** Start and wall time of each piece of `init`, ms (read by verification scripts through the dev handle). */
+  private readonly buildTimes = new Map<string, readonly [number, number]>();
 
   async init(ctx: StoryContext) {
     this.quality = ctx.tier;
@@ -205,7 +207,12 @@ class WorldsAct implements StoryAct {
     this.burst.points.frustumCulled = false;
 
     // The wormhole and the TV feed.
+    const lutStart = performance.now();
     const hole = await WormholePass.create(fullscreen, yieldToMain);
+    this.buildTimes.set("wormhole", [
+      Math.round(lutStart),
+      Math.round(performance.now() - lutStart),
+    ]);
     this.hole = hole;
     const kit = await ensureCardKit(ctx);
     hole.material.uniforms.tPaperBack.value = kit.back;
@@ -229,7 +236,9 @@ class WorldsAct implements StoryAct {
     this.worlds = [paper, dunes, city, leaf, edge];
     for (const world of this.worlds) {
       await yieldToMain();
+      const start = performance.now();
       await world.build(ctx);
+      this.buildTimes.set(world.id, [Math.round(start), Math.round(performance.now() - start)]);
     }
     this.holeToPaper.copy(paper.entry);
 
@@ -259,7 +268,12 @@ class WorldsAct implements StoryAct {
       this.cheer();
     });
 
+    const compileStart = performance.now();
     await this.compile(ctx);
+    this.buildTimes.set("compile", [
+      Math.round(compileStart),
+      Math.round(performance.now() - compileStart),
+    ]);
     // Development only: the act for verification scripts (its worlds, their landmarks).
     if (process.env.NODE_ENV !== "production") Object.assign(window, { __storyWorlds: this });
   }
@@ -285,7 +299,9 @@ class WorldsAct implements StoryAct {
       rift.warm(true);
       scene.add(rift.group, rift.warp, flight.trail.mesh, burst.points);
       flight.trail.warm(true);
+      const sceneStart = performance.now();
       await stage.compile(scene);
+      const stageDone = performance.now();
       const extra = world?.extraTargets?.() ?? [];
       await godette.compile(
         renderer,
@@ -299,7 +315,21 @@ class WorldsAct implements StoryAct {
       flight.trail.mesh.removeFromParent();
       burst.points.removeFromParent();
       world?.warm(false);
+      const warmStart = performance.now();
       world?.warmTargets?.(renderer, camera);
+      const name = world?.id ?? "hole";
+      this.buildTimes.set(`stage:${name}`, [
+        Math.round(sceneStart),
+        Math.round(stageDone - sceneStart),
+      ]);
+      this.buildTimes.set(`godette:${name}`, [
+        Math.round(stageDone),
+        Math.round(warmStart - stageDone),
+      ]);
+      this.buildTimes.set(`targets:${name}`, [
+        Math.round(warmStart),
+        Math.round(performance.now() - warmStart),
+      ]);
     }
     // One draw into each of the act's own targets (Metal builds a pipeline per target on the first draw).
     const hole = this.hole;
@@ -579,13 +609,12 @@ class WorldsAct implements StoryAct {
       if (!spec || !prev) return;
       riftChoreo(1, spec, a, s, this.life.time, prev.key, world.key);
     }
-    transformPose(a, null, world.entry);
+    // Everything eases over, her heading and the lens included, so the first frame of the
+    // world is the last frame of the crossing.
+    transformPose(a, s, world.entry);
     const w = ease01(T, 0, ARRIVE_BLEND);
-    const keep = copyPose(createPoseScratch(), this.pose);
-    mixPose(this.pose, a, keep, w);
-    this.pose.position.copy(keep.position);
-    this.pose.heading.copy(keep.heading);
-    this.pose.velocity.copy(keep.velocity);
+    mixPose(this.pose, a, this.pose, w);
+    mixShot(this.shot, s, this.shot, w);
   }
 
   /** She slows and rights herself into the punch pose; the camera settles on the rift shot. */
@@ -693,13 +722,6 @@ class WorldsAct implements StoryAct {
   }
 }
 
-let poseScratch: FlightPose | null = null;
-
-function createPoseScratch() {
-  poseScratch ??= createPose();
-  return poseScratch;
-}
-
 /** The flash of the throat crossing in `w-hole` (a white-out peaking at the cut). */
 function throatFlash(p: number) {
   const up = ease01(p, HOLE_CUT - 0.1, HOLE_CUT);
@@ -710,18 +732,6 @@ function throatFlash(p: number) {
 /** Share of the canvas the view through a rift renders at. */
 function portalScale(tier: StoryContext["tier"]) {
   return tier === "low" ? 0.34 : tier === "medium" ? 0.42 : 0.5;
-}
-
-/** Yields to the browser between pieces of `init`, so the build never blocks the page. */
-function yieldToMain(): Promise<void> {
-  return new Promise((resolve) => {
-    const channel = new MessageChannel();
-    channel.port1.onmessage = () => {
-      channel.port1.close();
-      resolve();
-    };
-    channel.port2.postMessage(null);
-  });
 }
 
 export function createAct(): StoryAct {

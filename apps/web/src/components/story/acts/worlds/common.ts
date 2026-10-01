@@ -330,11 +330,13 @@ export type ShotKey = Readonly<{
 
 const orbitA = new Vector3();
 const orbitB = new Vector3();
-const orbitC = new Vector3();
-const orbitAxis = new Vector3();
-const orbitQ = new Quaternion();
 
-/** Like `mixShot`, with the camera position swung around `pivot` (slerp of the offsets, radius mixed). */
+/**
+ * Like `mixShot`, with the camera swung around `pivot` on a cylinder: the
+ * bearing around the vertical turns the short way, the distance and the
+ * height mix, so a move from behind her to ahead of her goes round her like
+ * a dolly on a curved track, never over her head.
+ */
 export function orbitShot(
   out: CameraShot,
   a: CameraShot,
@@ -344,22 +346,21 @@ export function orbitShot(
 ) {
   orbitA.copy(a.position).sub(pivot);
   orbitB.copy(b.position).sub(pivot);
-  const ra = orbitA.length();
-  const rb = orbitB.length();
   mixShot(out, a, b, w);
-  if (ra < 1e-4 || rb < 1e-4) return out;
-  orbitA.divideScalar(ra);
-  orbitB.divideScalar(rb);
-  const angle = Math.acos(Math.min(1, Math.max(-1, orbitA.dot(orbitB))));
-  orbitAxis.crossVectors(orbitA, orbitB);
-  if (orbitAxis.lengthSq() < 1e-8) orbitAxis.set(0, 1, 0);
-  orbitAxis.normalize();
-  orbitQ.setFromAxisAngle(orbitAxis, angle * w);
-  orbitC
-    .copy(orbitA)
-    .applyQuaternion(orbitQ)
-    .multiplyScalar(ra + (rb - ra) * w);
-  out.position.copy(pivot).add(orbitC);
+  const ra = Math.hypot(orbitA.x, orbitA.z);
+  const rb = Math.hypot(orbitB.x, orbitB.z);
+  if (ra < 1e-3 || rb < 1e-3) return out;
+  const angA = Math.atan2(orbitA.z, orbitA.x);
+  let turn = Math.atan2(orbitB.z, orbitB.x) - angA;
+  if (turn > Math.PI) turn -= Math.PI * 2;
+  if (turn < -Math.PI) turn += Math.PI * 2;
+  const ang = angA + turn * w;
+  const r = ra + (rb - ra) * w;
+  out.position.set(
+    pivot.x + Math.cos(ang) * r,
+    pivot.y + orbitA.y + (orbitB.y - orbitA.y) * w,
+    pivot.z + Math.sin(ang) * r,
+  );
   return out;
 }
 
@@ -373,7 +374,21 @@ export class ShotTrack {
   private readonly b = createShot();
   private readonly pivot = new Vector3();
 
-  constructor(private readonly keys: readonly ShotKey[]) {}
+  private readonly keys: readonly ShotKey[];
+
+  /**
+   * Keys in time order. A key's blend never reaches back past the key before
+   * it (the move into it starts no earlier than that key's own time), so a
+   * crowded sequence cannot jump.
+   */
+  constructor(keys: readonly ShotKey[]) {
+    const sorted = [...keys].sort((a, b) => a.at - b.at);
+    this.keys = sorted.map((key, i) => {
+      const prev = sorted.at(i - 1);
+      if (i === 0 || !prev) return key;
+      return { ...key, blend: Math.min(key.blend, Math.max(0, key.at - prev.at)) };
+    });
+  }
 
   sample(T: number, out: CameraShot) {
     let index = 0;
@@ -863,4 +878,16 @@ export function wobble(t: number, seed: number) {
     0.3 * Math.sin(t * 2.31 + seed * 4.1) +
     0.2 * Math.sin(t * 3.97 + seed * 2.3)
   );
+}
+
+/** Yields to the browser between pieces of a build (a message, so a background tab keeps building). */
+export function yieldToMain(): Promise<void> {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(null);
+  });
 }
