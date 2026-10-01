@@ -6,7 +6,6 @@ import {
   PerspectiveCamera,
   Quaternion,
   Scene,
-  TorusGeometry,
   Vector3,
   type BufferGeometry,
   type WebGLRenderTarget,
@@ -53,6 +52,7 @@ import {
   riftState,
   type RiftState,
 } from "./rift";
+import { EdgeWorld } from "./world-edge";
 import { SketchWorld } from "./world-sketch";
 import { PaperTide } from "./world-paper";
 import { World, transformPose } from "./world";
@@ -85,8 +85,6 @@ const WORLD_BEATS = [beatOf("w-1"), beatOf("w-2"), beatOf("w-3"), beatOf("w-4"),
 const RIFT_BEATS = [beatOf("w-1r"), beatOf("w-2r"), beatOf("w-3r"), beatOf("w-4r")];
 const LOSS_BEAT = beatOf("w-loss");
 const FALL_BEAT = beatOf("w-fall");
-/** The last world's course runs on through the loss and the fall. */
-const EDGE_TAIL = LOSS_BEAT.vh + FALL_BEAT.vh;
 /** Course time before a world's end over which she slows and rights herself for the punch. */
 const EXIT_BLEND = 0.45;
 /** Course time after an arrival over which her flying style turns into the world's own. */
@@ -273,24 +271,9 @@ class WorldsAct implements StoryAct {
         entry: new Vector3(0, 6, 0),
         exit: new Vector3(0, 8, -220),
       }),
-      new SketchWorld({
-        id: "edge",
-        key: 0xffe6a6,
-        length: WORLD_BEATS.at(4)?.vh ?? 4,
-        tail: EDGE_TAIL,
-        zenith: 0x05050a,
-        horizon: 0x2d318a,
-        ground: 0x05050a,
-        colours: [0xffffff, 0xf7bf33, 0xf94141],
-        geometry: () => new TorusGeometry(2, 0.12, 6, 40),
-        clip: "fly_glide",
-        pitchDeg: 80,
-        face: "smile",
-        entry: new Vector3(0, 0, 0),
-        exit: null,
-      }),
     ];
-    this.worlds = [paper, ...sketches];
+    const edge = new EdgeWorld(WORLD_BEATS.at(4)?.vh ?? 4, LOSS_BEAT.vh, FALL_BEAT.vh);
+    this.worlds = [paper, ...sketches, edge];
     for (const world of this.worlds) {
       await yieldToMain();
       await world.build(ctx);
@@ -355,6 +338,7 @@ class WorldsAct implements StoryAct {
       flight.trail.mesh.removeFromParent();
       burst.points.removeFromParent();
       world?.warm(false);
+      world?.warmTargets?.(renderer);
     }
     // One draw into each of the act's own targets (Metal builds a pipeline per target on the first draw).
     const hole = this.hole;
@@ -393,9 +377,8 @@ class WorldsAct implements StoryAct {
   }
 
   update(ctx: StoryContext, state: ActState) {
-    const flowRate = 1;
-    this.life.advance(ctx, flowRate);
     if (!state.active) {
+      this.life.advance(ctx, 1);
       this.hud.place(ctx, ctx.stage.camera, null, 0);
       return;
     }
@@ -405,6 +388,12 @@ class WorldsAct implements StoryAct {
     if (!flight || !hole || !rift) return;
     if (state.arrived) this.rig.reset();
     const r = route(state.t);
+    // Life runs at the world's rate (a speed ramp, the hang time), in the last input direction.
+    let rate = 1;
+    if (r.kind === "world" && !r.arrive && !r.leave) {
+      rate = this.worlds.at(r.index)?.timeRate?.(r.T) ?? 1;
+    }
+    this.life.advance(ctx, rate);
     const life = this.life;
     const camera = ctx.stage.camera;
     const pose = this.pose;
@@ -489,7 +478,8 @@ class WorldsAct implements StoryAct {
     const next = this.worlds.at(r.index + 1);
     const spec = RIFTS.at(r.index);
     rift.group.removeFromParent();
-    world.rig.spill.intensity = 0;
+    // The rift's light spill belongs to the act in worlds that open one; the last world keeps its own.
+    if (world.exit) world.rig.spill.intensity = 0;
     let herScene = world.scene;
     if (world.exit && next && spec && (r.leave || T > world.length * 0.82)) {
       const tail = r.leave ? 1 : lin01(T, world.length * 0.82, world.length);
@@ -515,7 +505,7 @@ class WorldsAct implements StoryAct {
 
     if (herScene === world.scene) this.fly(ctx, world.scene, pose);
 
-    ctx.setHeaderTone(world.id === "dunes" || world.id === "leaf" ? "light" : "dark");
+    ctx.setHeaderTone(world.headerTone?.(T) ?? "dark");
     const look = world.post();
     const bloom = look.bloom ?? 0.5;
     const threshold = look.bloomThreshold ?? 0.66;

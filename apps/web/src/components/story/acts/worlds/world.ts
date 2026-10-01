@@ -10,6 +10,7 @@ import {
   type PerspectiveCamera,
   type Texture,
   type WebGLRenderTarget,
+  type WebGLRenderer,
 } from "three";
 
 import type {
@@ -96,6 +97,20 @@ export abstract class World {
   post(): Partial<StoryPostParams> {
     return { bloom: 0.5, bloomThreshold: 0.66, bloomRadius: 0.5, vignette: 0.38, grain: 0.18 };
   }
+
+  /**
+   * The life clock's rate at course time `T` (a speed ramp: the top of a
+   * barrel roll, the hang time before the fall), 1 (real time) when absent.
+   * It scales life only (loops, particles, the treadmill), never the scroll
+   * mapping.
+   */
+  timeRate?(T: number): number;
+
+  /** The header's ink over this world at `T` ("dark" over a dark scene, light ink); "dark" when absent. */
+  headerTone?(T: number): "light" | "dark";
+
+  /** One draw into each render target the world owns (pipelines are built on a first draw). */
+  warmTargets?(renderer: WebGLRenderer): void;
 
   /** A tap or move while this world is on screen. Return true when consumed. */
   pointer?(ctx: StoryContext, event: StoryPointerEvent, time: number): boolean;

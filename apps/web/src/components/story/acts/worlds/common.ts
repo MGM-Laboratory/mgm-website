@@ -10,8 +10,10 @@ import {
   Matrix4,
   Mesh,
   NoBlending,
+  OrthographicCamera,
   PointLight,
   Quaternion,
+  Scene,
   ShaderMaterial,
   SRGBColorSpace,
   UnsignedByteType,
@@ -130,6 +132,13 @@ export type CameraShot = {
   shake: number;
   /** How far the cursor steers the view, radians. */
   look: number;
+  /**
+   * 0..1: how much a narrow (portrait) viewport widens the lens. Shots are
+   * authored on 16:9; at 1 a phone held upright sees the same subject with
+   * a taller lens (`portraitFov`), at 0 the lens is exactly `fov` (the
+   * wormhole's first frame must match the TV's crop).
+   */
+  widen: number;
 };
 
 export function createShot(): CameraShot {
@@ -140,6 +149,7 @@ export function createShot(): CameraShot {
     roll: 0,
     shake: 0,
     look: 0.03,
+    widen: 1,
   };
 }
 
@@ -150,6 +160,7 @@ export function copyShot(out: CameraShot, from: CameraShot) {
   out.roll = from.roll;
   out.shake = from.shake;
   out.look = from.look;
+  out.widen = from.widen;
   return out;
 }
 
@@ -161,6 +172,7 @@ export function mixShot(out: CameraShot, a: CameraShot, b: CameraShot, w: number
   out.roll = a.roll + (b.roll - a.roll) * w;
   out.shake = a.shake + (b.shake - a.shake) * w;
   out.look = a.look + (b.look - a.look) * w;
+  out.widen = a.widen + (b.widen - a.widen) * w;
   return out;
 }
 
@@ -557,6 +569,89 @@ export function createSkyLayer(
     (all.uCamPos.value as Vector3).copy(camera.position);
   };
   return { mesh, material, uniforms: all, aim };
+}
+
+/**
+ * A world's expensive background (a lensed black hole, a sky full of
+ * moving light) drawn by a full-screen shader at a share of the canvas
+ * resolution into a display target, and shown in the world's scene by a
+ * screen layer behind everything (`layer`). Two targets, so the world can
+ * be on screen (`main`) or seen through a rift (`portal`, smaller) without
+ * reallocating. The shader gets the camera as `uCamRot` (camera to world),
+ * `uTan` (tan of the half FOVs), `uCamPos` and `uPix` (one output pixel's
+ * angle); it ends with `linearToOutputTexel`. Call `draw()` once a frame
+ * from the world's `frame()`, with the camera that will render the scene.
+ */
+export class BackgroundPass {
+  readonly layer: { mesh: Mesh; material: ShaderMaterial };
+  readonly material: ShaderMaterial;
+  readonly uniforms: Record<string, IUniform>;
+  private readonly scene = new Scene();
+  private readonly camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  private readonly main: WebGLRenderTarget;
+  private readonly portal: WebGLRenderTarget;
+  private readonly state = new RendererState();
+
+  constructor(
+    geometry: BufferGeometry,
+    fragmentShader: string,
+    uniforms: Record<string, IUniform>,
+  ) {
+    this.uniforms = {
+      ...uniforms,
+      uCamRot: { value: new Matrix3() },
+      uTan: { value: new Vector2(1, 1) },
+      uCamPos: { value: new Vector3() },
+      uPix: { value: 0.002 },
+    };
+    const pass = createScreenPass(geometry, fragmentShader, this.uniforms);
+    this.material = pass.material;
+    this.scene.add(pass.mesh);
+    this.main = createDisplayTarget(2, 2, false);
+    this.portal = createDisplayTarget(2, 2, false);
+    this.layer = createScreenLayer(geometry, this.main.texture);
+  }
+
+  /** Renders the background for `camera` into the view's target and points the layer at it. */
+  draw(ctx: StoryContext, camera: PerspectiveCamera, view: "main" | "portal", scale: number) {
+    const target = view === "main" ? this.main : this.portal;
+    const size = scaledSize(ctx, scale);
+    if (target.width !== size.width || target.height !== size.height) {
+      target.setSize(size.width, size.height);
+    }
+    camera.updateMatrixWorld();
+    skyRot.setFromMatrix4(camera.matrixWorld);
+    const u = this.uniforms;
+    (u.uCamRot.value as Matrix3).copy(skyRot);
+    const tanV = Math.tan((camera.fov * Math.PI) / 360) / Math.max(1e-3, camera.zoom);
+    (u.uTan.value as Vector2).set(tanV * camera.aspect, tanV);
+    (u.uCamPos.value as Vector3).copy(camera.position);
+    u.uPix.value = (2 * tanV) / Math.max(64, size.height);
+    this.render(ctx.stage.renderer, target);
+    this.layer.material.uniforms.tMap.value = target.texture;
+  }
+
+  /** One draw into each target (pipelines are built on a first draw), for the loader. */
+  warm(renderer: WebGLRenderer) {
+    this.render(renderer, this.main);
+    this.render(renderer, this.portal);
+  }
+
+  private render(renderer: WebGLRenderer, target: WebGLRenderTarget) {
+    this.state.save(renderer);
+    renderer.setRenderTarget(target);
+    renderer.setClearColor(0x000000, 1);
+    renderer.clear(true, false, false);
+    renderer.render(this.scene, this.camera);
+    this.state.restore(renderer);
+  }
+
+  dispose() {
+    this.material.dispose();
+    this.layer.material.dispose();
+    this.main.dispose();
+    this.portal.dispose();
+  }
 }
 
 /** Everything a render into a target changes, so a draw inside another act's frame leaves no trace. */

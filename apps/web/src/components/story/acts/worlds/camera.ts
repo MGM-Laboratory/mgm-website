@@ -1,8 +1,26 @@
 import type { PerspectiveCamera } from "three";
 
 import type { StoryContext } from "@/components/story/engine/act";
+import { fovForAspect } from "@/components/story/engine/frame";
 
 import { wobble, type CameraShot } from "./common";
+
+/** How much taller the lens gets on a 9:16 screen than on 16:9 (capped at `PORTRAIT_MAX`). */
+const PORTRAIT_GAIN = 1.42;
+const PORTRAIT_MAX = 84;
+
+/**
+ * The vertical FOV for a shot authored on 16:9, on a screen of `aspect`.
+ * A phone held upright keeps the subject and some of the world around her:
+ * the lens opens on a log-aspect scale (`fovForAspect`), weighted by
+ * `widen` (0 keeps `fov` exactly).
+ */
+export function portraitFov(fov: number, aspect: number, widen = 1) {
+  if (widen <= 0) return fov;
+  const tall = Math.min(PORTRAIT_MAX, Math.max(fov, fov * PORTRAIT_GAIN));
+  const wide = fovForAspect(fov, tall, aspect);
+  return fov + (wide - fov) * Math.min(1, widen);
+}
 
 /**
  * Puts a `CameraShot` on the stage camera: the scrubbed pose (position,
@@ -24,6 +42,7 @@ export class CameraRig {
     this.yaw += ((mouse ? -pointer.ndc.x * shot.look : 0) - this.yaw) * k;
     this.pitch += ((mouse ? pointer.ndc.y * shot.look * 0.6 : 0) - this.pitch) * k;
     place(camera, shot, time, this.yaw, this.pitch);
+    camera.fov = portraitFov(shot.fov, ctx.size.aspect, shot.widen);
     camera.near = near;
     camera.far = far;
     camera.aspect = ctx.size.aspect;

@@ -10,11 +10,9 @@ import {
   PerspectiveCamera,
   RGBAFormat,
   Scene,
-  SRGBColorSpace,
-  UnsignedByteType,
   Vector2,
   Vector3,
-  WebGLRenderTarget,
+  type WebGLRenderTarget,
   type BufferGeometry,
   type Camera,
   type IUniform,
@@ -25,10 +23,13 @@ import {
 import type { StoryContext } from "@/components/story/engine/act";
 import type { StoryTvFeed } from "@/components/story/props/shared";
 
+import { beatOf } from "@/components/story/engine/timeline";
+
 import {
   ARRIVAL_CHASE,
   GLSL_COMMON,
   RendererState,
+  createDisplayTarget,
   createScreenPass,
   ease01,
   lin01,
@@ -36,6 +37,7 @@ import {
   type FlightPose,
 } from "./common";
 import { PAPER_PALETTE, PAPER_SKY_GLSL } from "./paper-sky.glsl";
+import { SPACE_GLSL } from "./space.glsl";
 
 /**
  * The wormhole (`w-hole`): the TV's portal grown to the whole screen. A
@@ -65,6 +67,8 @@ export const HOLE_CUT = 0.86;
 export const TV_ASPECT = 0.9522 / 0.5508;
 /** The feed camera's vertical FOV, degrees. */
 export const FEED_FOV = 40;
+/** Where the act takes the frame (the feed stops drawing from here). */
+const HOLE_BEAT_START = beatOf("w-hole").start;
 
 // Shape of the wormhole, in units of the throat radius.
 const SHAPE_A = 0.015;
@@ -181,77 +185,23 @@ uniform float uEll;
 uniform vec3 uAxis;
 uniform float uStreak;
 uniform vec3 uForward;
-uniform float uPix;
 uniform int uSamples;
 uniform mat3 uToPaper;
 uniform vec3 uPaperEye;
 uniform vec3 uSpace;
 uniform vec3 uSpaceBand;
-uniform vec3 uStarBlue;
-uniform vec3 uStarYellow;
 uniform vec3 uRing;
 uniform float uFlipY;
 varying vec2 vUv;
 ${GLSL_COMMON}
+${SPACE_GLSL}
 ${PAPER_SKY_GLSL}
 
 const float PI = 3.14159265;
 
-float vnoise3(vec3 p) {
-  vec3 i = floor(p);
-  vec3 f = fract(p);
-  vec3 u = f * f * (3.0 - 2.0 * f);
-  float n000 = hash31(i);
-  float n100 = hash31(i + vec3(1.0, 0.0, 0.0));
-  float n010 = hash31(i + vec3(0.0, 1.0, 0.0));
-  float n110 = hash31(i + vec3(1.0, 1.0, 0.0));
-  float n001 = hash31(i + vec3(0.0, 0.0, 1.0));
-  float n101 = hash31(i + vec3(1.0, 0.0, 1.0));
-  float n011 = hash31(i + vec3(0.0, 1.0, 1.0));
-  float n111 = hash31(i + vec3(1.0, 1.0, 1.0));
-  return mix(mix(mix(n000, n100, u.x), mix(n010, n110, u.x), u.y), mix(mix(n001, n101, u.x), mix(n011, n111, u.x), u.y), u.z);
-}
-
-// Stars on a cube-face grid: a soft dot per lit cell, brand tinted.
-vec3 starCell(vec3 d, float scale, float density, float salt) {
-  vec3 a = abs(d);
-  vec2 uv;
-  float face;
-  if (a.x > a.y && a.x > a.z) { uv = d.yz / a.x; face = d.x > 0.0 ? 0.0 : 1.0; }
-  else if (a.y > a.z) { uv = d.xz / a.y; face = d.y > 0.0 ? 2.0 : 3.0; }
-  else { uv = d.xy / a.z; face = d.z > 0.0 ? 4.0 : 5.0; }
-  vec2 g = uv * scale;
-  vec2 cell = floor(g);
-  vec3 h = hash33(vec3(cell, face * 7.0 + salt));
-  if (h.z < 1.0 - density) return vec3(0.0);
-  vec2 pos = 0.15 + 0.7 * h.xy;
-  float dist = length(fract(g) - pos) / scale;
-  float size = uPix * (0.55 + 0.9 * h.x * h.x);
-  float glint = exp(-dist * dist / (size * size));
-  float tw = 0.75 + 0.25 * sin(uTime * (1.5 + 3.0 * h.y) + h.x * 40.0);
-  vec3 tint = h.y > 0.86 ? uStarYellow : h.y > 0.52 ? uStarBlue : vec3(1.0);
-  return tint * glint * tw * (0.25 + 1.1 * h.y * h.y * h.y);
-}
-
-vec3 stars(vec3 d) {
-  return starCell(d, 22.0, 0.12, 1.0) + starCell(d, 55.0, 0.08, 2.0) * 0.7 + starCell(d, 130.0, 0.06, 3.0) * 0.45;
-}
-
 // Our side of the wormhole: navy space, a brand nebula, guilloche filaments and stars.
 vec3 space(vec3 d) {
-  float n = vnoise3(d * 2.2 + vec3(0.0, uTime * 0.01, 0.0)) * 0.6 + vnoise3(d * 5.1) * 0.4;
-  float band = exp(-abs(d.y + 0.25 * d.x) * 2.6);
-  vec3 col = mix(uSpace, uSpaceBand, clamp(band * n * n * 0.9, 0.0, 0.7));
-  float fil = 0.0;
-  for (int i = 0; i < 3; i++) {
-    float fi = float(i);
-    vec3 axis = normalize(vec3(sin(fi * 2.1 + 0.4), 0.55 + 0.2 * fi, cos(fi * 1.7)));
-    float lat = dot(d, axis);
-    float lon = atan(dot(d, cross(axis, vec3(0.0, 0.0, 1.0))), dot(d, vec3(0.0, 0.0, 1.0)));
-    float w = lat - 0.07 * sin(lon * (4.0 + fi) + uTime * 0.04 + fi);
-    fil += exp(-abs(w) * 260.0) * 0.16;
-  }
-  col += uStarBlue * fil;
+  vec3 col = nebula(d, uSpace, uSpaceBand, uStarBlue);
   // Stars, streaked toward where we fly when we fly fast.
   vec3 acc = vec3(0.0);
   vec3 radial = d - uForward * dot(d, uForward);
@@ -407,6 +357,8 @@ export function holeChoreo(
   shot.roll = 0.05 * Math.sin(p * 4.2) * drift;
   shot.shake = 0.002 + 0.004 * ease01(p, 0.4, HOLE_THROAT) * (1 - ease01(p, HOLE_THROAT, HOLE_CUT));
   shot.look = 0.03;
+  // The first frame is the TV's exact crop; a phone's taller lens eases in after it.
+  shot.widen = ease01(p, 0.02, 0.3);
 
   pose.heading.set(0, 0, -1);
   pose.pitch = (85 * Math.PI) / 180;
@@ -468,15 +420,9 @@ export class WormholePass {
     this.feedCamera.position.set(0, 0, HOLE_START);
     this.feedCamera.lookAt(0, 0, 0);
     this.feedCamera.updateMatrixWorld(true);
-    // A standard sRGB target: linear contents in SRGB8_ALPHA8 storage, what three's materials expect to sample.
-    this.feedTarget = new WebGLRenderTarget(640, Math.round(640 / TV_ASPECT), {
-      type: UnsignedByteType,
-      depthBuffer: false,
-      minFilter: LinearFilter,
-      magFilter: LinearFilter,
-      generateMipmaps: false,
-    });
-    this.feedTarget.texture.colorSpace = SRGBColorSpace;
+    // A display-byte target (like the act's own view): the same program writes the same
+    // bytes the canvas would show, so the TV at full cover and w-hole's first frame match.
+    this.feedTarget = createDisplayTarget(640, Math.round(640 / TV_ASPECT), false);
     this.feedTarget.texture.name = "worlds-tv-feed";
   }
 
@@ -551,15 +497,18 @@ export class WormholePass {
  * `update()` while the screen is on and maps `texture` on `tv_screen`.
  *
  * Contract (docs: state/worlds-docs.md):
- * - `texture` is a plain render target: sample it at (vUv.x, 1.0 - vUv.y)
- *   on the screen quad (whose UV origin is its top left). It is a standard
- *   sRGB texture with linear contents: a built-in material shows it as it
- *   is; in a ShaderMaterial the sample is linear (end with
- *   `linearToOutputTexel`, `toneMapped: false`).
+ * - `texture` is a render target stored bottom up: sample it at
+ *   (vUv.x, 1.0 - vUv.y) on the screen quad (whose UV origin is its top
+ *   left). It holds display bytes (RGBA8 storage tagged sRGB, the stage's
+ *   post target recipe): write the sample as it is, with
+ *   `toneMapped: false` and no encode (room/tv.ts `tvFeedMode` detects
+ *   it). A built-in material would show it too bright.
  * - The picture is the wormhole seen by the camera the worlds act starts
  *   from at `w-hole` 0 (FOV `FEED_FOV` at the screen's aspect), so a dive
  *   that ends with the screen exactly covering the viewport
  *   (`screenFillDistance(tv, aspect, fov, 0)`) cuts on the same picture.
+ * - `update()` draws only before `w-hole` starts: from there the worlds act
+ *   owns the frame and the screen is behind the camera.
  */
 export function createTvFeed(
   pass: WormholePass,
@@ -576,6 +525,7 @@ export function createTvFeed(
     /** The target behind `texture` (verification scripts read it back). */
     target: pass.feedTarget,
     update(ctx: StoryContext) {
+      if (ctx.director.t >= HOLE_BEAT_START) return;
       feed.draw(ctx, null);
     },
     draw(ctx: StoryContext, camera: Camera | null) {

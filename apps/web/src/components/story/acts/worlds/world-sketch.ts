@@ -230,6 +230,10 @@ export class SketchWorld extends World {
     ]);
   }
 
+  headerTone(): "light" | "dark" {
+    return this.id === "dunes" || this.id === "leaf" ? "light" : "dark";
+  }
+
   private place(T: number) {
     const walk = this.walk;
     if (!walk) return;
