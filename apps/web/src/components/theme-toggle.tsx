@@ -60,7 +60,9 @@ export function ThemeToggle({ className }: { className?: string }) {
         const request = {
           next,
           origin: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
-          commit: () => setTheme(next),
+          commit: () => {
+            setTheme(next);
+          },
         } as const;
         // A page may stage the switch (the articles library plays a wave
         // from here); otherwise it applies at once.
