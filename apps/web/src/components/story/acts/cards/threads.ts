@@ -146,7 +146,8 @@ export class Threads {
     this.cursor.y = mix(this.cursor.y, ctx.pointer.ndc.y, 1 - Math.exp(-dt * 10));
     this.cursor.strength = mix(this.cursor.strength, inside ? 1 : 0, 1 - Math.exp(-dt * 4));
 
-    const shown = input.entrance > 0 && input.drop < 0.6;
+    // Gone once the page breaks under the falling box (page-fall.ts lets go at 0.08).
+    const shown = input.entrance > 0 && input.drop < 0.2;
     field.mesh.visible = shown;
     this.stars.points.visible = shown;
     if (!shown) return;
@@ -172,7 +173,7 @@ export class Threads {
       0.75 * window4(beats.u, 0, 0.8, 2.6, 3.4) +
       0.35 * window4(beats.gather, 0.05, 0.25, 0.6, 0.85);
     const breath = 0.5 + 0.5 * Math.sin(time * 0.9);
-    const fade = (1 - smoothstep(0, 0.55, input.drop)) * smoothstep(0.15, 0.6, input.entrance);
+    const fade = (1 - smoothstep(0.02, 0.16, input.drop)) * smoothstep(0.15, 0.6, input.entrance);
     // Draw-on from the left as the section arrives.
     const draw = smoothstep(0.2, 1, input.entrance) * 1.15;
     for (let band = 0; band < 2; band += 1) {

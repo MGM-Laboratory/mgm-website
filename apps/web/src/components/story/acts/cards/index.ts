@@ -13,6 +13,7 @@ import { BoxDirector, REST_LEAN, REST_YAW } from "@/components/story/acts/cards/
 import { CameraDirector } from "@/components/story/acts/cards/camera-director";
 import { createStudioLights, type StudioLights } from "@/components/story/acts/cards/lighting";
 import { RoomReveal } from "@/components/story/acts/cards/room-reveal";
+import { PageFall } from "@/components/story/acts/cards/page-fall";
 import { DeckLayout } from "@/components/story/acts/cards/deck-layout";
 import {
   DeckMotion,
@@ -66,6 +67,7 @@ class CardsAct implements StoryAct {
   private boxDirector: BoxDirector | null = null;
   private readonly camera = new CameraDirector();
   private reveal: RoomReveal | null = null;
+  private readonly pageFall = new PageFall();
   private readonly view: StageView = { tanHalf: 0.12, aspect: 1, width: 1, height: 1 };
   private readonly layout = new DeckLayout();
   private motion: DeckMotion | null = null;
@@ -95,7 +97,8 @@ class CardsAct implements StoryAct {
     const studio = createStudioLights(ctx.stage.renderer, room.tier === "low" ? 64 : 128);
     this.studio = studio;
     scene.add(studio.group);
-    this.reveal = new RoomReveal(room, studio, box);
+    scene.add(this.pageFall.mesh);
+    this.reveal = new RoomReveal(room, studio, box, this.pageFall);
     // The room's reflections come from its own capture (whoever asks first makes it).
     if (!room.envMap) await room.prepare(ctx.stage.renderer);
     room.setPhase("hidden");
@@ -129,10 +132,12 @@ class CardsAct implements StoryAct {
     box.warm(true);
     deck.warm(true);
     this.threads.warm(true);
+    this.pageFall.warm(true);
     await ctx.stage.compile();
     box.warm(false);
     deck.warm(false);
     this.threads.warm(false);
+    this.pageFall.warm(false);
     for (const hero of deck.heroes) hero.card.setFront(null);
   }
 
@@ -167,7 +172,7 @@ class CardsAct implements StoryAct {
       this.camera.update(ctx, state, director.frame.position);
       director.update(ctx, state, this.view);
     }
-    reveal.update(ctx, state, director.frame.position);
+    reveal.update(ctx, state);
     if (motion && deck) {
       // The cursor parts the stream while it flows (not while the four are on show).
       const parting =
@@ -241,6 +246,7 @@ class CardsAct implements StoryAct {
     this.heroes = null;
     this.threads?.dispose();
     this.threads = null;
+    this.pageFall.dispose();
     this.studio?.dispose();
     this.studio = null;
     this.boxDirector = null;
