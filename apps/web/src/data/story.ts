@@ -178,6 +178,12 @@ export const LOADER_COPY = {
     "Cutting the deck.",
     "Practising a small trick.",
     "Checking every corner.",
+    "Sorting the suits.",
+    "Giving the jokers the day off.",
+    "Warming up our hands.",
+    "Asking the deck to behave.",
+    "Counting all 52 cards.",
+    "Smoothing out the creases.",
   ],
   /** While the homepage story's scenes download. */
   story: [
@@ -187,6 +193,10 @@ export const LOADER_COPY = {
     "Polishing five worlds.",
     "Teaching a toy to fly.",
     "Hanging the stars.",
+    "Fluffing the cushions.",
+    "Finding the remote.",
+    "Charging a very small star.",
+    "Drawing five maps.",
   ],
   /** While the story's scenes are built and warmed up. */
   build: [
@@ -194,6 +204,8 @@ export const LOADER_COPY = {
     "Warming up the lamps.",
     "Rehearsing the tricks.",
     "Lighting the stage.",
+    "Moving the coffee table a little.",
+    "Checking the TV is plugged in.",
   ],
   /** When no card has been dealt for a while. */
   stalled: [
@@ -201,6 +213,9 @@ export const LOADER_COPY = {
     "One card is being shy.",
     "Your connection is taking a breath.",
     "Good things take a moment.",
+    "Almost. Cutting the deck.",
+    "This card is stuck. Wiggling it loose.",
+    "Thank you for waiting with us.",
   ],
   /** A dealt card, tapped and turned over. */
   pick: "Is this your card?",
