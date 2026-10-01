@@ -92,12 +92,15 @@ export const STORY_HINTS = {
  */
 export const STORY_LETTERS = ["We tell", "stories", "through", "interactive", "media."] as const;
 
-/** The table act: the hint at its rest and the names of the things you can touch. */
+/**
+ * The table act: the hint at its rest and the names of the things you can touch. The phrase on the
+ * table exists only as toy letters on the canvas, so its hotspot's name carries it to screen readers.
+ */
 export const STORY_TABLE = {
   hint: "Keep scrolling. She is trying very hard to stay still.",
   hotspots: {
     toy: "Poke the toy",
-    letters: "Nudge the letters",
+    letters: `${STORY_LETTERS.join(" ")} Nudge the letters.`,
     box: "Tap the card box",
     spark: "Chase the spark",
     tv: "Tap the TV",
