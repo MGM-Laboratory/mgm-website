@@ -146,11 +146,14 @@ html[data-story-mode="gl"] [data-storybook] {
   }
 }
 
-/* Before the motion is ready, the WebGL block shows nothing it would then hide. */
+/*
+ * Before the motion is ready, the WebGL block shows nothing it would then
+ * hide (opacity only: the words stay in the accessibility tree).
+ */
 html[data-story-mode="gl"]
   .story-finale-gl:not([data-finale-ready])
   :is(.story-finale-words, .story-finale-line, [data-finale-action]) {
-  visibility: hidden;
+  opacity: 0;
 }
 
 .story-finale-book {

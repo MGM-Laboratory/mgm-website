@@ -122,11 +122,11 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
     });
     tl.fromTo(
       lineWords,
-      { yPercent: 200, rotate: 18, autoAlpha: 0 },
+      { yPercent: 200, rotate: 18, opacity: 0 },
       {
         yPercent: 0,
         rotate: 0,
-        autoAlpha: 1,
+        opacity: 1,
         duration: 0.8,
         stagger: 0.035,
         immediateRender: true,
@@ -136,9 +136,9 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
     if (actionEl) {
       tl.fromTo(
         actionEl,
-        { autoAlpha: 0, y: 26, scale: 0.9 },
+        { opacity: 0, y: 26, scale: 0.9 },
         {
-          autoAlpha: 1,
+          opacity: 1,
           y: 0,
           scale: 1,
           duration: 0.9,
@@ -148,12 +148,22 @@ function useFinaleMotion(root: RefObject<HTMLDivElement | null>) {
         0.78,
       );
     }
+    // Only opacity hides the line and the action, so they stay in the accessibility tree and
+    // focusable; whatever takes focus in the block finishes the entrance at once.
     let shown = false;
     const show = (on: boolean) => {
       shown = on;
       if (on) tl.timeScale(1).play();
       else tl.timeScale(1.7).reverse();
     };
+    const onFocus = () => {
+      shown = true;
+      tl.progress(1).pause();
+    };
+    block.addEventListener("focusin", onFocus);
+    cleanups.push(() => {
+      block.removeEventListener("focusin", onFocus);
+    });
 
     if (inStory) {
       // The act decides: on once she has waved, off when the visitor scrolls back.
