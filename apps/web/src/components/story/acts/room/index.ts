@@ -185,8 +185,6 @@ class RoomAct implements StoryAct {
   private tv: TvScreen | null = null;
   private readonly power = new Latch();
   private lastT = -1;
-  /** The last story position this act saw (near or active). */
-  private seenT = 0;
   private readonly glowColour = new Color();
   private readonly start = createPose();
   /** The operator stands further off on a narrow frame (portrait), so her swings stay in it. */
@@ -502,7 +500,6 @@ class RoomAct implements StoryAct {
     const letters = this.letters;
     if (!this.ready || !room || !box || !godette || !toy || !letters) return;
     const t = state.t;
-    this.seenT = t;
     const scene = ctx.stage.rootScene;
 
     // From w-hole on, the worlds act owns her: hand her back on the default layer and step aside.
@@ -1494,9 +1491,10 @@ class RoomAct implements StoryAct {
     this.placeNoSpots();
   }
 
-  sleep() {
-    // Left backward (into the card act's beats): she waits out of sight until the drop shows her again.
-    const backward = this.seenT < ROOM_RANGE.start + 0.5;
+  sleep(ctx: StoryContext) {
+    // Left backward (into the card act's beats, by a scroll or a jump): she waits out of sight until the
+    // drop shows her again.
+    const backward = ctx.director.t < ROOM_RANGE.start;
     this.sleepObjects();
     const room = this.room;
     if (room) {
