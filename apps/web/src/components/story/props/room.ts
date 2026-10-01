@@ -269,7 +269,9 @@ export type StoryRoom = {
   lamps(intensity: number): void;
   /**
    * The TV's light on the room and on the props: the screen's average colour and a strength
-   * (0 = off, 1 = a bright screen at night; flicker it for a power-on).
+   * (0 = off, 1 = a bright screen at night; flicker it for a power-on). Useful from about 0.1, a dim
+   * picture, to 1.5; above 1 the sheen on the table and the light on the props' screen side grow
+   * strong, which suits the moment the room goes dark around the screen.
    */
   tvGlow(color: ColorRepresentation, intensity: number): void;
   /**
@@ -403,8 +405,11 @@ const AFTERNOON: Grade = {
 const PENDANT_W = 70;
 const ARC_W = 40;
 const TRIPOD_DIFFUSER_W = 14;
-/** `tvGlow(color, 1)`: a bright screen at night, its light carrying across the table. */
-const TV_RADIANCE = 6;
+/**
+ * `tvGlow(color, 1)`: a bright screen at night. It washes the console and the coffee table (a sheen on
+ * the stone), lights the props from the screen side and leaves a faint halo on the wall.
+ */
+const TV_RADIANCE = 24;
 
 const ANCHORS_URL = `${ROOM_BASE_URL}anchors.json`;
 
@@ -613,7 +618,9 @@ vec3 geometryClearcoatNormal = vec3( 0.0 );
 	vec3 toTv = tvPos - geometryPosition;
 	float tvD2 = max( dot( toTv, toTv ), 1e-4 );
 	vec3 tvL = toTv * inversesqrt( tvD2 );
-	float tvLobe = saturate( dot( tvNormal, - tvL ) );
+	// A floor under the lobe: some of the screen's light reaches the wall and the shelf around it, the way a
+	// real screen's spill does, so a lit screen reads in the dark.
+	float tvLobe = 0.18 + 0.82 * saturate( dot( tvNormal, - tvL ) );
 	float tvNL = saturate( dot( geometryNormal, tvL ) );
 	reflectedLight.directDiffuse += uRoomTvColor * ( tvNL * tvLobe * uRoomTvArea / ( tvD2 + uRoomTvArea ) ) * BRDF_Lambert( material.diffuseContribution );
 }
@@ -1177,7 +1184,8 @@ export async function loadRoom(assets: StoryLoaderLike, tier: StoryTier): Promis
     shared.uRoomTvColor.value
       .set(tvColor.r, tvColor.g, tvColor.b)
       .multiplyScalar(tvStrength * TV_RADIANCE * e);
-    glint[3].copy(shared.uRoomTvColor.value).multiplyScalar(shared.uRoomTvArea.value);
+    // The screen's highlight on glossy surfaces stays soft: a sheen, not a spotlight.
+    glint[3].copy(shared.uRoomTvColor.value).multiplyScalar(shared.uRoomTvArea.value * 0.4);
     const gl = grade.glow * e;
     glowUniforms.uGlowPractical.value.setRGB(pr[0], pr[1], pr[2]).multiplyScalar(gl * lp);
     glowUniforms.uGlowPendant.value.setRGB(pe[0], pe[1], pe[2]).multiplyScalar(gl * 1.2 * lq);
