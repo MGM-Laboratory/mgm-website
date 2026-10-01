@@ -79,6 +79,20 @@ export const STORY_CARDS: readonly StoryCard[] = [
   },
 ];
 
+/**
+ * The four cards at rest in the WebGL story: each card's control (it brings
+ * the card forward for a closer look) and the link under a card in that
+ * closer look, to its focus page.
+ */
+export const STORY_CARD_PLAY: Readonly<
+  Record<StoryCardId, Readonly<{ look: string; link: string }>>
+> = {
+  website: { look: "Website. Take a closer look.", link: "See our website work" },
+  mobile: { look: "Mobile. Take a closer look.", link: "See our mobile work" },
+  game: { look: "Game. Take a closer look.", link: "See our game work" },
+  ux: { look: "UX. Take a closer look.", link: "See our UX work" },
+};
+
 /** Small overlay lines while the story waits for the visitor. */
 export const STORY_HINTS = {
   deckWaiting: "Keep scrolling. The deck is listening.",

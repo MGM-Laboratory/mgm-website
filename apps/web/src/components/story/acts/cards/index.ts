@@ -24,9 +24,11 @@ import {
 import { DeckView } from "@/components/story/acts/cards/deck-view";
 import { HeroCards } from "@/components/story/acts/cards/hero-cards";
 import { Threads } from "@/components/story/acts/cards/threads";
+import { CardPlay } from "@/components/story/acts/cards/card-play";
 import type { StreamExtent } from "@/components/story/acts/cards/deck-motion";
 import { swarmCountFor } from "@/components/story/props/card-mesh";
 import { smoothstep, window4 } from "@/components/story/engine/act";
+import { STORY_HINTS } from "@/data/story";
 import {
   STAGE_ORIGIN,
   STAGE_YAW,
@@ -74,6 +76,7 @@ class CardsAct implements StoryAct {
   private deck: DeckView | null = null;
   private heroes: HeroCards | null = null;
   private threads: Threads | null = null;
+  private play: CardPlay | null = null;
   private readonly stream: StreamExtent = { head: 0, tail: 0, back: false, on: 0 };
   private readonly hover = [0, 0, 0, 0];
   private readonly beats = createBeats();
@@ -122,6 +125,8 @@ class CardsAct implements StoryAct {
     this.threads = new Threads(this.stage, ctx.tier);
     const heroes = new HeroCards(deck, ctx.tier);
     this.heroes = heroes;
+    const play = new CardPlay(this.stage, deck, heroes);
+    this.play = play;
     // Compile the live fronts too (a hero with a front texture is the same program as without).
     deck.heroes.forEach((hero, k) => {
       hero.card.setFront(heroes.fronts.at(k)?.texture ?? null);
@@ -133,7 +138,9 @@ class CardsAct implements StoryAct {
     deck.warm(true);
     this.threads.warm(true);
     this.pageFall.warm(true);
+    play.warm(true);
     await ctx.stage.compile();
+    play.warm(false);
     box.warm(false);
     deck.warm(false);
     this.threads.warm(false);
@@ -173,6 +180,7 @@ class CardsAct implements StoryAct {
       director.update(ctx, state, this.view);
     }
     reveal.update(ctx, state);
+    this.hints(ctx, state);
     if (motion && deck) {
       // The cursor parts the stream while it flows (not while the four are on show).
       const parting =
@@ -180,7 +188,10 @@ class CardsAct implements StoryAct {
         smoothstep(0.12, 0.3, this.beats.gather) * (1 - smoothstep(0.7, 0.85, this.beats.gather));
       deck.update(ctx, motion, this.beats, this.layout, Math.min(1, parting));
       const heroes = this.heroes;
+      const play = this.play;
+      play?.update(ctx, this.beats, state.t, state.velocity);
       heroes?.update(ctx, this.beats, this.layout, state.velocity);
+      play?.place(ctx, this.layout, this.view);
       const threads = this.threads;
       if (threads && heroes) {
         heroes.life.forEach((life, k) => {
@@ -202,7 +213,17 @@ class CardsAct implements StoryAct {
     }
   }
 
+  /** The overlay's hint line at the two rests, once the visitor has been still a moment. */
+  private hints(ctx: StoryContext, state: ActState) {
+    const idle = ctx.director.idle;
+    const resting = (id: string) => state.current === id && state.local > 0.985;
+    if (resting("c-rise") && idle > 1.2) ctx.overlay.setHint(STORY_HINTS.deckWaiting);
+    else if (resting("c-turn") && idle > 1.5 && (this.play?.focus ?? -1) < 0)
+      ctx.overlay.setHint(STORY_HINTS.cardsReady);
+  }
+
   pointer(ctx: StoryContext, event: StoryPointerEvent) {
+    if (this.play?.pointer(ctx, event)) return true;
     const director = this.boxDirector;
     const box = this.box;
     if (!director || !box) return false;
@@ -234,6 +255,7 @@ class CardsAct implements StoryAct {
 
   sleep(ctx: StoryContext) {
     this.stage.visible = false;
+    this.play?.sleep();
     this.reveal?.sleep(ctx);
     if (this.boxDirector) this.boxDirector.hovered = false;
   }
@@ -246,6 +268,8 @@ class CardsAct implements StoryAct {
     this.heroes = null;
     this.threads?.dispose();
     this.threads = null;
+    this.play?.dispose();
+    this.play = null;
     this.pageFall.dispose();
     this.studio?.dispose();
     this.studio = null;
