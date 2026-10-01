@@ -26,8 +26,8 @@ const MIDDLE_VH = TIMELINE.end - ENTRANCE_VH - FINALE_VH;
  * The title as letters (for the entrance's rise, its slot rolls and the
  * cursor's lift, driven by the cards act) and the line as words. Split here,
  * in the server markup, so nothing rewrites the HTML after hydration; the
- * heading's text is read from an sr-only copy, the letters are hidden from
- * assistive tech.
+ * heading's text is read from an sr-only copy, and the letters are drawn
+ * from `data-char` (story.css), so the word is in the page's text once.
  */
 const TITLE_LETTERS = Array.from(STORY_INTRO.title).map((char, i) => ({
   char,
@@ -50,10 +50,7 @@ export function StoryShell() {
             <span className="sr-only">{STORY_INTRO.title}</span>
             {TITLE_LETTERS.map((letter) => (
               <span key={letter.key} aria-hidden className="story-letter" data-story-letter>
-                <span className="story-letter-roll" data-story-roll>
-                  {letter.char}
-                  <span className="story-letter-clone">{letter.char}</span>
-                </span>
+                <span className="story-letter-roll" data-story-roll data-char={letter.char} />
               </span>
             ))}
           </h2>

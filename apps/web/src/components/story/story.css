@@ -53,11 +53,15 @@ html[data-story-mode="gl"] [data-storybook] {
 /*
  * The title's letters (the cards act moves them with inline styles only):
  * each is a mask (a clip, so its layout and baseline stay the text's own,
- * with room for the descenders) over a roll that holds the letter and an
- * identical clone below it. A slot roll moves the roll up by the clone's
- * offset and snaps back, invisibly. The act locks each letter's width to
- * its advance in the word, so a heavier weight under the cursor never
- * reflows the title or the box placeholder measured from it.
+ * with room for the descenders) over a roll that draws the letter and an
+ * identical clone below it, both from `data-char` (the word's text is in the
+ * page once, in the heading's sr-only copy). A slot roll moves the roll up
+ * by the clone's offset and snaps back, invisibly; while it rolls the act
+ * closes the mask at the baseline, so the clone rises out of a clean slot
+ * and never shows below the line. The act locks
+ * each letter's width to its advance in the word, so a heavier weight
+ * under the cursor never reflows the title or the box placeholder measured
+ * from it.
  */
 .story-letter {
   position: relative;
@@ -72,7 +76,12 @@ html[data-story-mode="gl"] [data-storybook] {
   transform-origin: 50% 88%;
 }
 
-.story-letter-clone {
+.story-letter-roll::before {
+  content: attr(data-char);
+}
+
+.story-letter-roll::after {
+  content: attr(data-char);
   position: absolute;
   top: 125%;
   left: 0;

@@ -1,4 +1,5 @@
 import {
+  backOut,
   cubicBezier,
   saturate,
   seededRandom,
@@ -29,7 +30,17 @@ const RISE_SECONDS = 1;
 const LETTER_STAGGER = 0.035;
 const WORDS_AFTER = 0.45;
 const WORD_STAGGER = 0.05;
-const ROLL_SECONDS = 0.72;
+/** The slot roll: quick, with a small mechanical overshoot as the clone clicks into place. */
+const ROLL_SECONDS = 0.5;
+/**
+ * The mask's clip at rest (story.css: room for the descenders) and while a
+ * letter rolls: closed just under the baseline (0.108em above the mask's
+ * bottom at the title's 0.9 line height), so the clone rises out of a slot.
+ */
+const MASK_CLIP = "";
+const MASK_CLIP_ROLLING = "inset(-0.12em -0.14em 0.09em -0.14em)";
+/** Letters whose descender needs the mask's room below the baseline even while they roll. */
+const DESCENDERS = /[gjpqy]/;
 /** Weight of the display face at rest and under the cursor. */
 const WEIGHT = 600;
 const WEIGHT_LIFT = 140;
@@ -37,6 +48,9 @@ const WEIGHT_LIFT = 140;
 type Letter = {
   readonly mask: HTMLElement;
   readonly roll: HTMLElement;
+  /** The mask's clip while it rolls (the letter's own box, or the rest clip for a descender). */
+  readonly rollClip: string;
+  clip: string;
   /** Advance in the word, em; and the letter's centre from the title's left edge, em. */
   advance: number;
   centre: number;
@@ -74,9 +88,20 @@ export class Entrance {
     this.letters = Array.from(title.querySelectorAll<HTMLElement>("[data-story-letter]")).flatMap(
       (mask) => {
         const roll = mask.querySelector<HTMLElement>("[data-story-roll]");
-        return roll
-          ? [{ mask, roll, advance: 0, centre: 0, lift: [0, 0], style: "", weight: "" } as Letter]
-          : [];
+        if (!roll) return [];
+        const descends = DESCENDERS.test(roll.dataset.char ?? "");
+        const letter: Letter = {
+          mask,
+          roll,
+          rollClip: descends ? MASK_CLIP : MASK_CLIP_ROLLING,
+          clip: MASK_CLIP,
+          advance: 0,
+          centre: 0,
+          lift: [0, 0],
+          style: "",
+          weight: "",
+        };
+        return [letter];
       },
     );
     this.words = Array.from(
@@ -105,7 +130,7 @@ export class Entrance {
     g.font = `${String(WEIGHT)} ${String(size)}px ${style.fontFamily}`;
     const spacing = Number.parseFloat(style.letterSpacing) / Number.parseFloat(style.fontSize);
     g.letterSpacing = `${String(Number.isFinite(spacing) ? spacing * size : 0)}px`;
-    const text = this.letters.map((letter) => letter.roll.firstChild?.textContent ?? "").join("");
+    const text = this.letters.map((letter) => letter.roll.dataset.char ?? "").join("");
     let previous = 0;
     let left = 0;
     this.letters.forEach((letter, i) => {
@@ -177,7 +202,13 @@ export class Entrance {
       stepSpring(letter.lift, k, dt, 120, 13);
       const lift = letter.lift[0];
       const rollAge = i === this.rollLetter ? (time - this.rollStart) / ROLL_SECONDS : -1;
-      const roll = rollAge > 0 && rollAge < 1 ? siteEase(rollAge) * 125 : 0;
+      const rolling = rollAge > 0 && rollAge < 1;
+      const roll = rolling ? backOut(rollAge, 1.1) * 125 : 0;
+      const clip = rolling ? letter.rollClip : MASK_CLIP;
+      if (clip !== letter.clip) {
+        letter.clip = clip;
+        letter.mask.style.clipPath = clip;
+      }
       const y = (1 - p) * 135 - roll;
       const tilt = (1 - p) * -35;
       const style =
@@ -230,6 +261,7 @@ export class Entrance {
       letter.roll.style.transform = "";
       letter.roll.style.fontWeight = "";
       letter.mask.style.width = "";
+      letter.mask.style.clipPath = "";
     }
     for (const word of this.words) {
       word.element.style.opacity = "";
