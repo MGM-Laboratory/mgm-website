@@ -1103,8 +1103,9 @@ export async function loadGodette(
     weights.clear();
     // three's mixer fills any weight short of 1 with the bind pose (a T-pose), so the weights always add up to
     // 1: the reaction's envelope, the share the replaced reactions still hold, and the base layers in what is left
-    const env = reactionEnvelope();
     const r = reaction;
+    // a reaction without a clip (the toy's flinch, a spin in flight) moves her from outside: it takes no body share
+    const env = r?.clip ? reactionEnvelope() : 0;
     const handed = r ? blendInOf(r) : 1;
     let held = 0;
     for (const f of fading) {
