@@ -117,6 +117,8 @@ export type HeroSlot = {
 const HERO_PAPER_LIFT = 0.55;
 /** Over the light page the paper must sit a touch above the page's own white, never on it. */
 const HERO_PAPER_LIFT_LIGHT = 0.85;
+/** The mist's strength over the light page (a wheel at 0.76 becomes about a quarter veil). */
+const LIGHT_MIST = 0.33;
 
 export class DeckView {
   readonly swarm: CardSwarm;
@@ -131,6 +133,7 @@ export class DeckView {
   readonly heroPoses: CardPose[] = [createPose(), createPose(), createPose(), createPose()];
   /** Whether each card (deck order) is out of the box this frame. */
   readonly visible = new Uint8Array(SWARM_CAPACITY);
+  private mistScale = 1;
   private paperLift = HERO_PAPER_LIFT;
   /** The four fronts' paper lift uniforms (reached once their programs compile). */
   private readonly paperLifts: { value: number }[] = [];
@@ -164,10 +167,14 @@ export class DeckView {
 
   /**
    * The page colour the mist fades toward (sRGB bytes, as the DOM shows it),
-   * and the paper's lift for the page's scheme.
+   * and how far: over the dark page a receding card dims into the night as
+   * the brief asks; over the light page the same mix would wash the navy
+   * backs into lavender, off the brand, so there it stays a light veil and
+   * the depth comes from the wheel's scale and its place behind the four.
    */
   setPage(hex: number, scheme: "light" | "dark") {
     this.pageColour.set(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
+    this.mistScale = scheme === "light" ? LIGHT_MIST : 1;
     this.paperLift = scheme === "light" ? HERO_PAPER_LIFT_LIGHT : HERO_PAPER_LIFT;
     for (const lift of this.paperLifts) lift.value = this.paperLift;
   }
@@ -218,7 +225,7 @@ export class DeckView {
       swarm.setMatrixAt(j, matrix);
       swarm.setFlipAt(j, pose.flip);
       swarm.setBendAt(j, pose.curl, pose.flex);
-      this.mistAttr.setX(j, pose.mist);
+      this.mistAttr.setX(j, pose.mist * this.mistScale);
       j += 1;
     }
     swarm.count = j;
@@ -239,7 +246,7 @@ export class DeckView {
     mesh.quaternion.copy(pose.quaternion).multiply(flipQ);
     mesh.scale.setScalar(pose.scale);
     hero.card.setBend(pose.curl, pose.flex);
-    hero.mist.uMist.value = pose.mist;
+    hero.mist.uMist.value = pose.mist * this.mistScale;
   }
 
   /** The cursor parts the stream: a spring push away from the pointer on screen. */
