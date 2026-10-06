@@ -1,5 +1,13 @@
 # MGM Laboratory
 
+## Important
+
+This project is no longer supported by the lab and the server will be taken down. Thanks for anyone who contributed to this project and help to achieve it. This sites will be the creator's portfolio and if you wanted to see it, you can visit https://mgm.creations.ren.
+
+Anything that's in this website are not supported by the lab anymore, so any use of elements or things from this repo are forbidden. Creators and maintainer are not liable for any fraud or wrongdoings caused by this project in the future.
+
+---
+
 Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/web`) and a NestJS API (`apps/api`), deployed on Railway.
 
 [![CI](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml)
