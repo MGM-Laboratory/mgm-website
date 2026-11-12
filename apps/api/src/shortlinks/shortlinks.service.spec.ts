@@ -327,7 +327,10 @@ describe("ShortlinksService", () => {
     it("lists the CNAME and the verification TXT for a custom domain", async () => {
       const prisma = makePrisma();
       const service = makeService(prisma);
-      prisma.shortLinkDomain.findMany.mockResolvedValue([DOMAIN, CUSTOM_DOMAIN]);
+      prisma.shortLinkDomain.findMany.mockResolvedValue([
+        { ...DOMAIN, _count: { links: 0 } },
+        CUSTOM_DOMAIN,
+      ]);
 
       const [primary, custom] = await service.listDomains();
       expect(primary.records).toBeUndefined();
