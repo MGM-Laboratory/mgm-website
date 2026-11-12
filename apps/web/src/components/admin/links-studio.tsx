@@ -648,7 +648,7 @@ function DomainCard({
             <div className="flex flex-wrap items-center gap-3">
               <button
                 className="inline-flex h-9 items-center gap-2 rounded-xl bg-brand-blue px-3.5 text-xs font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
-                disabled={connectBusy || !canWrite || !records?.cname}
+                disabled={connectBusy || !canWrite || (records != null && !records.cname)}
                 onClick={() => onConnect(domain)}
                 type="button"
               >
