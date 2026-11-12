@@ -41,28 +41,20 @@ export async function resolveCloudflareSync(
 export type ConnectRecords = {
   cname: { name: string; content: string };
   verifyTxt: { name: string; content: string };
-  railwayTxt: { name: string; content: string } | null;
 };
 
 /**
- * The records the template applies: the routing CNAME, our own
- * verification TXT (what the check-now button looks for), and Railway's
- * ownership TXT. Railway hands the verification token over with the
- * "railway-verify=" prefix already in place.
+ * The records the template applies: the routing CNAME and our own
+ * verification TXT (what the check-now button looks for).
  */
 export function connectRecords(
   hostname: string,
   cnameTarget: string,
   verifyToken: string,
-  railwayToken: string | null,
-  railwayTxtHost = "_railway-verify",
 ): ConnectRecords {
   return {
     cname: { name: hostname, content: cnameTarget },
     verifyTxt: { name: `_mgm-verify.${hostname}`, content: verifyToken },
-    railwayTxt: railwayToken
-      ? { name: `${railwayTxtHost}.${hostname}`, content: railwayToken }
-      : null,
   };
 }
 
@@ -97,7 +89,6 @@ export function buildConnectUrl(input: ConnectUrlInput): ConnectUrlResult {
   if (host) pairs.push(["host", host]);
   pairs.push(["cnameTarget", input.records.cname.content]);
   pairs.push(["verifyToken", input.records.verifyTxt.content]);
-  if (input.records.railwayTxt) pairs.push(["railwayToken", input.records.railwayTxt.content]);
   pairs.push(["redirect_uri", input.redirectUrl]);
 
   // The signature covers everything after the "?" except the key parameter

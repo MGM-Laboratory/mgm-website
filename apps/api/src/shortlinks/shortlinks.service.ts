@@ -12,14 +12,6 @@ import {
 } from "./shortlinks.domainconnect.js";
 import { enrichVisit } from "./shortlinks.geo.js";
 import {
-  RailwayApiError,
-  railwayCustomDomainAvailable,
-  railwayCustomDomainCreate,
-  railwayCustomDomainDelete,
-  railwayCustomDomainStatus,
-  type RailwayDomainStatus,
-} from "./shortlinks.providers.js";
-import {
   SLUG_MAX_LENGTH,
   SLUG_START_LENGTH,
   checkLongUrl,
@@ -117,55 +109,30 @@ export class ShortlinksService implements OnApplicationBootstrap {
       include: { _count: { select: { links: true } } },
       orderBy: [{ isPrimary: "desc" }, { lastUsedAt: "desc" }, { createdAt: "desc" }],
     });
-    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
-    return Promise.all(
-      domains.map(async (domain) => {
-        const dto = this.toDomainDto(domain, domain._count.links);
-        if (!domain.isPrimary) {
-          const railway =
-            domain.railwayDomainId && railwayToken
-              ? await this.railwayStatus(railwayToken, domain.railwayDomainId)
-              : null;
-          dto.records = this.recordsFor(domain.hostname, domain.verifyToken, railway);
-        }
-        return dto;
-      }),
-    );
+    return domains.map((domain) => {
+      const dto = this.toDomainDto(domain, domain._count.links);
+      if (!domain.isPrimary) {
+        dto.records = this.recordsFor(domain.hostname, domain.verifyToken);
+      }
+      return dto;
+    });
+  }
+
+  /** The routing CNAME target, or null when SHORTLINKS_CNAME_TARGET is not set. */
+  get cnameTarget(): string | null {
+    return this.config.get("SHORTLINKS_CNAME_TARGET") ?? null;
   }
 
   /**
    * The DNS records the admin's provider needs, ready to copy: the routing
-   * CNAME (Railway's own per-domain target when the domain is attached),
-   * our verification TXT, and Railway's ownership TXT.
+   * CNAME (null while no target is configured) and our verification TXT.
    */
-  private recordsFor(
-    hostname: string,
-    verifyToken: string | null,
-    railway: RailwayDomainStatus | null,
-  ) {
+  private recordsFor(hostname: string, verifyToken: string | null) {
+    const target = this.cnameTarget;
     return {
-      cname: {
-        name: hostname,
-        content:
-          railway?.status?.dnsRecords?.[0]?.requiredValue ??
-          this.config.getOrThrow("SHORTLINKS_CNAME_TARGET"),
-      },
+      cname: target ? { name: hostname, content: target } : null,
       verifyTxt: { name: `_mgm-verify.${hostname}`, content: verifyToken ?? "" },
-      railwayTxt: railway?.status?.verificationToken
-        ? {
-            name: `${railway.status.verificationDnsHost ?? "_railway-verify"}.${hostname}`,
-            content: railway.status.verificationToken,
-          }
-        : null,
     };
-  }
-
-  private railwayStatus(token: string, railwayDomainId: string) {
-    return railwayCustomDomainStatus(
-      token,
-      railwayDomainId,
-      this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
-    ).catch(() => null);
   }
 
   private toDomainDto(
@@ -177,7 +144,6 @@ export class ShortlinksService implements OnApplicationBootstrap {
       status: string;
       cloudflareZoneId: string | null;
       cloudflareTokenEncrypted: string | null;
-      railwayDomainId: string | null;
       verifyToken: string | null;
       lastUsedAt: Date | null;
       createdAt: Date;
@@ -190,7 +156,6 @@ export class ShortlinksService implements OnApplicationBootstrap {
       isPrimary: boolean;
       provider: string;
       status: string;
-      railwayAttached: boolean;
       lastUsedAt: Date | null;
       createdAt: Date;
       linkCount: number;
@@ -201,7 +166,6 @@ export class ShortlinksService implements OnApplicationBootstrap {
       isPrimary: domain.isPrimary,
       provider: domain.provider,
       status: domain.status,
-      railwayAttached: Boolean(domain.railwayDomainId),
       lastUsedAt: domain.lastUsedAt,
       createdAt: domain.createdAt,
       linkCount,
@@ -211,8 +175,9 @@ export class ShortlinksService implements OnApplicationBootstrap {
 
   /**
    * The short domain's own health check: the web app answers this path with
-   * a marker only when Railway routes the hostname to it, so a 200 marker
-   * means DNS, the Railway attachment and TLS all work end to end.
+   * a marker only when the proxy in front of the site routes the hostname to
+   * it, so a 200 marker means DNS, the proxy routing and TLS all work end to
+   * end.
    */
   private async verifyDomainMarker(hostname: string): Promise<boolean> {
     try {
@@ -240,40 +205,15 @@ export class ShortlinksService implements OnApplicationBootstrap {
     if (existing) throw new ShortlinksError("That domain is already added.", 409);
 
     const provider = (await isCloudflareHost(host)) ? "cloudflare" : "manual";
-    let railwayDomainId: string | null = null;
-    let railwayNote: string | null = null;
-
-    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
-    if (railwayToken) {
-      try {
-        const available = await railwayCustomDomainAvailable(railwayToken, host);
-        if (!available.available) {
-          railwayNote = available.message ?? "Railway cannot attach this domain.";
-        } else {
-          const created = await railwayCustomDomainCreate(
-            railwayToken,
-            this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
-            this.config.getOrThrow("SHORTLINKS_RAILWAY_ENV_ID"),
-            this.config.getOrThrow("SHORTLINKS_WEB_SERVICE_ID"),
-            host,
-          );
-          railwayDomainId = created.id;
-        }
-      } catch (error) {
-        railwayNote =
-          error instanceof RailwayApiError ? error.message : "Railway attachment failed.";
-      }
-    }
 
     const domain = await this.prisma.shortLinkDomain.create({
       data: {
         hostname: host,
         provider,
-        railwayDomainId,
         verifyToken: randomBytes(16).toString("hex"),
       },
     });
-    return { domain: this.toDomainDto(domain, 0), railwayNote };
+    return { domain: this.toDomainDto(domain, 0) };
   }
 
   /** Domains created before the verify token existed get one on demand. */
@@ -292,7 +232,7 @@ export class ShortlinksService implements OnApplicationBootstrap {
    * at _mgm-verify.<hostname> (what the Domain Connect sync writes): the
    * domain is only connected when that TXT matches its stored token AND
    * the web app's marker probe answers, which is the end-to-end proof that
-   * Railway routes the host. A "manual" domain gets its Cloudflare
+   * the proxy in front of the site routes the host. A "manual" domain gets its Cloudflare
    * detection refreshed too.
    */
   async refreshDomain(id: string) {
@@ -321,14 +261,9 @@ export class ShortlinksService implements OnApplicationBootstrap {
   }
 
   /** The individual pieces a domain's connected state is made of. */
-  private async domainCheckParts(domain: {
-    hostname: string;
-    verifyToken: string | null;
-    railwayDomainId: string | null;
-  }) {
+  private async domainCheckParts(domain: { hostname: string; verifyToken: string | null }) {
     const parts = {
       verifyTxt: false,
-      railway: false,
       marker: false,
     };
     if (domain.verifyToken) {
@@ -338,15 +273,6 @@ export class ShortlinksService implements OnApplicationBootstrap {
       } catch {
         // No TXT record yet.
       }
-    }
-    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
-    if (railwayToken && domain.railwayDomainId) {
-      const railway = await this.railwayStatus(railwayToken, domain.railwayDomainId);
-      parts.railway = Boolean(
-        railway?.status?.dnsRecords?.every(
-          (record) => record.status !== "DNS_RECORD_STATUS_REQUIRES_UPDATE",
-        ) && railway.status.certificateStatus === "CERTIFICATE_STATUS_TYPE_VALID",
-      );
     }
     parts.marker = await this.verifyDomainMarker(domain.hostname);
     return parts;
@@ -365,84 +291,29 @@ export class ShortlinksService implements OnApplicationBootstrap {
         409,
       );
     }
-    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
-    if (railwayToken && domain.railwayDomainId) {
-      void railwayCustomDomainDelete(railwayToken, domain.railwayDomainId).catch(() => {});
-    }
     await this.prisma.shortLinkDomain.delete({ where: { id } });
     return true;
   }
 
   /**
-   * Attaches the domain to the web service through the Railway API (when a
-   * token is configured) and returns the routing target Railway expects.
-   */
-  private async attachOnRailway(domain: {
-    id: string;
-    hostname: string;
-    railwayDomainId: string | null;
-  }) {
-    const railwayToken = this.config.get("RAILWAY_API_TOKEN");
-    const fallbackTarget = this.config.getOrThrow("SHORTLINKS_CNAME_TARGET");
-    if (!railwayToken)
-      return { railway: null as RailwayDomainStatus | null, cnameTarget: fallbackTarget };
-
-    let railway: RailwayDomainStatus | null = null;
-    if (domain.railwayDomainId) {
-      railway = await railwayCustomDomainStatus(
-        railwayToken,
-        domain.railwayDomainId,
-        this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
-      );
-    } else {
-      const available = await railwayCustomDomainAvailable(railwayToken, domain.hostname);
-      if (!available.available) {
-        throw new RailwayApiError(available.message ?? "Railway cannot attach this domain.");
-      }
-      const created = await railwayCustomDomainCreate(
-        railwayToken,
-        this.config.getOrThrow("SHORTLINKS_RAILWAY_PROJECT_ID"),
-        this.config.getOrThrow("SHORTLINKS_RAILWAY_ENV_ID"),
-        this.config.getOrThrow("SHORTLINKS_WEB_SERVICE_ID"),
-        domain.hostname,
-      );
-      await this.prisma.shortLinkDomain.update({
-        where: { id: domain.id },
-        data: { railwayDomainId: created.id },
-      });
-      railway = created;
-    }
-    const routing = railway?.status?.dnsRecords?.[0];
-    return { railway, cnameTarget: routing?.requiredValue ?? fallbackTarget };
-  }
-
-  /**
-   * The one-click Cloudflare setup: make sure the domain is attached on
-   * Railway (so the edge routes it), then build the signed Domain Connect
-   * apply URL. Cloudflare's consent page applies the template's CNAME and
-   * TXT records to the zone; the API never sees a Cloudflare token.
+   * The one-click Cloudflare setup: build the signed Domain Connect apply
+   * URL. Cloudflare's consent page applies the template's CNAME and TXT
+   * records to the zone; the API never sees a Cloudflare token. The proxy in
+   * front of the site routes the host, so nothing is attached from here.
    */
   async connectDomain(id: string) {
     const domain = await this.prisma.shortLinkDomain.findUnique({ where: { id } });
     if (!domain || domain.isPrimary) return null;
     const verifyToken = await this.ensureVerifyToken(domain);
 
-    let railwayResult: { railway: RailwayDomainStatus | null; cnameTarget: string };
-    try {
-      railwayResult = await this.attachOnRailway(domain);
-    } catch (error) {
+    const cnameTarget = this.cnameTarget;
+    if (!cnameTarget) {
       throw new ShortlinksError(
-        `Railway could not attach the domain: ${error instanceof RailwayApiError ? error.message : String(error)}`,
+        "The CNAME target is not configured. Set SHORTLINKS_CNAME_TARGET on the API first.",
+        409,
       );
     }
-
-    const records = connectRecords(
-      domain.hostname,
-      railwayResult.cnameTarget,
-      verifyToken,
-      railwayResult.railway?.status?.verificationToken ?? null,
-      railwayResult.railway?.status?.verificationDnsHost,
-    );
+    const records = connectRecords(domain.hostname, cnameTarget, verifyToken);
 
     const privateKey = this.config.get("DOMAIN_CONNECT_PRIVATE_KEY");
     if (!privateKey) {
@@ -724,7 +595,7 @@ export class ShortlinksService implements OnApplicationBootstrap {
     if (domain && !domain.isPrimary && domain.status !== "connected") return null;
     if (!domain) {
       // Not a short domain: the site's own /s/ links resolve on every host
-      // the site answers on (www, the Railway domain, localhost), so fall
+      // the site answers on (www, localhost), so fall
       // back to the primary domain rather than 404ing by hostname.
       const primary = await this.prisma.shortLinkDomain.findFirst({ where: { isPrimary: true } });
       if (!primary) return null;
