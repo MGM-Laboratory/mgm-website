@@ -1,9 +1,9 @@
 /** Types for the link shortener workspace, shared by the server fetch and the editor. */
 
 export type DomainRecords = {
-  cname: { name: string; content: string };
+  /** Null while the API has no SHORTLINKS_CNAME_TARGET configured. */
+  cname: { name: string; content: string } | null;
   verifyTxt: { name: string; content: string };
-  railwayTxt: { name: string; content: string } | null;
 };
 
 export type ShortlinkDomain = {
@@ -12,7 +12,6 @@ export type ShortlinkDomain = {
   isPrimary: boolean;
   provider: "local" | "cloudflare" | "manual";
   status: "connected" | "pending";
-  railwayAttached: boolean;
   lastUsedAt: string | null;
   createdAt: string;
   linkCount: number;
@@ -22,7 +21,6 @@ export type ShortlinkDomain = {
 
 export type DomainChecks = {
   verifyTxt: boolean;
-  railway: boolean;
   marker: boolean;
 };
 

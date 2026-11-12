@@ -648,7 +648,7 @@ function DomainCard({
             <div className="flex flex-wrap items-center gap-3">
               <button
                 className="inline-flex h-9 items-center gap-2 rounded-xl bg-brand-blue px-3.5 text-xs font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
-                disabled={connectBusy || !canWrite}
+                disabled={connectBusy || !canWrite || !records?.cname}
                 onClick={() => onConnect(domain)}
                 type="button"
               >
@@ -674,19 +674,23 @@ function DomainCard({
           ) : null}
           {records ? (
             <div className="mt-3 space-y-2 rounded-xl bg-[#fbfbfa] p-3 dark:bg-white/[0.03]">
-              <RecordRow label="CNAME" name={records.cname.name} content={records.cname.content} />
+              {records.cname ? (
+                <RecordRow
+                  label="CNAME"
+                  name={records.cname.name}
+                  content={records.cname.content}
+                />
+              ) : (
+                <p className="text-xs leading-5 text-brand-red">
+                  The CNAME target is not configured. Set SHORTLINKS_CNAME_TARGET on the API, then
+                  reload this page.
+                </p>
+              )}
               <RecordRow
                 label="Verify TXT"
                 name={records.verifyTxt.name}
                 content={records.verifyTxt.content}
               />
-              {records.railwayTxt ? (
-                <RecordRow
-                  label="Railway TXT"
-                  name={records.railwayTxt.name}
-                  content={records.railwayTxt.content}
-                />
-              ) : null}
             </div>
           ) : null}
         </div>
@@ -1092,13 +1096,11 @@ export function LinksStudio({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ hostname }),
       });
-      const body = await jsonOrThrow<{ domain: ShortlinkDomain; railwayNote?: string | null }>(
-        response,
-      );
+      const body = await jsonOrThrow<{ domain: ShortlinkDomain }>(response);
       setDomains((current) => [...current, body.domain]);
       setNewDomain("");
       announce();
-      toast.success("Domain added", { description: body.railwayNote ?? undefined });
+      toast.success("Domain added");
     } catch (error) {
       toast.error("Could not add the domain", {
         description: error instanceof Error ? error.message : undefined,
