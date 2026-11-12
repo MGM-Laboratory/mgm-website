@@ -1,6 +1,6 @@
 # MGM Laboratory Website
 
-Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, theme-aware Next.js marketing site (`apps/web`) plus a NestJS API (`apps/api`) and a shared workspace package (`packages/@repo/shared`). Live at `github.com/MGM-Laboratory/mgm-website`, published as Docker Hub images by CI and deployed on MGM infrastructure.
+Monorepo for the **MGM Laboratory** homepage and backend. It holds a heavily animated, theme-aware Next.js marketing site (`apps/web`), a NestJS API (`apps/api`) and a shared workspace package (`packages/shared`). Live at `github.com/MGM-Laboratory/mgm-website`, published as Docker Hub images by CI and deployed on MGM infrastructure.
 
 ## If you're new here, read in this order
 
@@ -23,20 +23,23 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 
 ## ⚠️ Next.js 16: not the Next.js in your training data
 
-This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). APIs and conventions differ from older versions. `apps/web/AGENTS.md` (auto-managed by `next dev`, so don't edit it) points at the bundled guides: **before writing any Next-specific code, read the relevant guide in `apps/web/node_modules/next/dist/docs/`** (resolve from the file's directory, since in this monorepo `next` is not hoisted to the root).
+This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). APIs and conventions differ from older versions. `apps/web/AGENTS.md` (auto-managed by `next dev`, so don't edit it) points at the bundled guides. **Before writing any Next-specific code, read the relevant guide in `apps/web/node_modules/next/dist/docs/`**, resolved from the file's directory, because `next` is not hoisted to the root in this monorepo.
 
 ## Hard rules (user-enforced, do not bend)
 
-1. **Git identity & attribution.** Commit as whatever identity `git config user.name`/`user.email` resolves to in this working copy: no repo-local override, and never impersonate another contributor's identity. **Never mention Claude, ChatGPT, or any AI agent anywhere in a commit message, trailer, PR description, or code comment: no `Co-Authored-By`, no "generated with," nothing.** The user once rewrote the entire 109-commit history over this. Details: `docs/repo-history.md`.
-2. **Granular commits and PR flow.** One discrete working change per commit, pushed to the working branch immediately. Every change goes through a branch and a pull request, and the required checks must pass. Never push directly to `main`. A pull request is merged with a merge commit, never squash or rebase.
-3. **Dev server only when the owner asks for it in that moment.** When asked, run it at `http://localhost:3000` (`pnpm dev:web`) and check that it responds before and after changes (`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000`).
-4. **Browser verification only when the owner asks for it in that moment.** When asked, interact with the result in a real browser (Playwright screenshots and interaction scripts, see `docs/testing-verification.md`), then `open http://localhost:3000`. When fixing a bug, reproduce it first, then re-test the fix under the same conditions.
-5. **Design discipline.** Use the `DESIGN_SYSTEM.md` tokens, not ad-hoc colors. Everything must be theme-aware (light/dark via `.dark` class) and reduced-motion safe (`prefers-reduced-motion`).
-6. **Never let a static CSS class set `transform`/`translate-*`/`rotate-*`/`scale-*` on an element GSAP also animates**: GSAP stacks onto it instead of replacing it. This bug has shipped twice. See `docs/animation-system.md` §Gotchas.
-7. **Merging.** Never merge a PR unless the user explicitly asks for it in that moment, and double-check that this is really what they want before acting, because a merge to `main` publishes new Docker Hub images. Merge with a merge commit (`gh pr merge <n> --merge`), never squash or rebase, so the individual commits of each PR stay on `main`. Required checks must pass first.
-8. **Verified commits.** Every commit pushed from this working copy must be signed with the configured SSH signing key and verified by GitHub. Keep `commit.gpgsign=true`, `gpg.format=ssh`, and the repository signing key configured.
+1. **Git identity and attribution.** Commit as the identity that `git config user.name` and `git config user.email` resolve to in this working copy. Set no repo-local override and never impersonate another contributor. **Never mention Claude, ChatGPT or any AI agent anywhere in a commit message, trailer, PR description or code comment. Add no `Co-Authored-By` line and no "generated with" line.** The user once rewrote the entire 109-commit history over this. Details are in `docs/repo-history.md`.
+2. **Granular commits and PR flow.** One discrete working change per commit, pushed to the working branch right after the commit. Every change goes through a branch and a pull request, and the required checks must pass. Never push directly to `main`. Name branches `type/short-description`, write commits and PR titles in English as Conventional Commits, and keep the PR body to one bullet for each commit.
+3. **Dev server only when the owner asks for it in that moment.** When asked, run it at `http://localhost:3000` with `pnpm dev:web` and check that it responds before and after changes with `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000`.
+4. **Browser verification only when the owner asks for it in that moment.** When asked, interact with the result in a real browser (Playwright screenshots and interaction scripts, see `docs/testing-verification.md`), then `open http://localhost:3000`. When fixing a bug, reproduce it first, then test the fix under the same conditions.
+5. **Design discipline.** Use the `DESIGN_SYSTEM.md` tokens and no ad-hoc colors. Everything must be theme-aware (light and dark through the `.dark` class) and safe for `prefers-reduced-motion`.
+6. **Never let a static CSS class set `transform`, `translate-*`, `rotate-*` or `scale-*` on an element that GSAP also animates.** GSAP stacks onto the class instead of replacing it. This bug has shipped twice. See `docs/animation-system.md` under Gotchas.
+7. **Merging.** Merge a pull request with a merge commit (`gh pr merge <n> --merge`), never squash or rebase, so the individual commits of each PR stay on `main`. Merge it once every required check is green, every comment and review thread has been read and handled, and nothing still asks for a change. A merge to `main` publishes new Docker Hub images, so stop and ask the owner when a check fails or a decision is open.
+8. **Verified commits.** Every commit must be signed and verified by GitHub. Keep `commit.gpgsign=true` and never turn signing off. When signing stops on a passphrase prompt, stop and ask the owner to unlock the key.
+9. **Heavy work runs in CI.** Do not run tests, builds, linters, container builds or load tests on the owner's machine. Push the branch and read the CI results. Run one narrow check locally only when there is no other way, and say why first.
 
 ## Commands
+
+CI runs these. Run them locally only under rule 9.
 
 | Command                                      | What it does                                                               |
 | -------------------------------------------- | -------------------------------------------------------------------------- |
@@ -47,7 +50,6 @@ This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). AP
 | `pnpm test`                                  | vitest (api only, web has no test script)                                  |
 | `pnpm format` / `pnpm format:check`          | Prettier over the repo (also runs on staged files via husky + lint-staged) |
 | `docker compose up`                          | Local Postgres + api + web stack (see `.env.example`)                      |
-| `gh run watch`                               | Follow a GitHub Actions run on the new repo                                |
 
 Node **22** (`.nvmrc`), pnpm **11.3.0** (`packageManager`), Turbo 2.10.
 
@@ -78,10 +80,10 @@ docs/                deep-dive documentation (read them)
 
 ## Pages (apps/web/src/app)
 
-`/` (hero, process magnets, reel, featured projects, competencies, Trusted By, publications, articles, footer finale) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services` · `/forms/[slug]` (public forms built in the admin). `/admin` is the internal, signed-session CMS workspace and is deliberately outside the public menu. Only `/media`, `/privacy-policy`, and `/terms-of-services` are bare `PageBand` stubs; every other public route is real and CMS-driven where applicable. Full inventory: `docs/project-overview.md`; CMS detail: `docs/cms-admin.md`.
+`/` (hero, process magnets, reel, featured projects, competencies, Trusted By, publications, articles, footer finale) · `/about` · `/member` · `/careers` · `/contact` · `/articles` · `/events` · `/media` · Focus: `/game` `/website` `/mobile` `/ux` · Our Work: `/projects` `/publications` `/research` · `/privacy-policy` · `/terms-of-services` · `/forms/[slug]` (public forms built in the admin). `/admin` is the internal, signed-session CMS workspace and is deliberately outside the public menu. Only `/media`, `/privacy-policy` and `/terms-of-services` are bare `PageBand` stubs. Every other public route is real and CMS-driven where applicable. The full inventory is in `docs/project-overview.md` and the CMS detail is in `docs/cms-admin.md`.
 
 ## CI/CD at a glance
 
-- **GitHub Actions**: `ci.yaml` runs on push to `main` + PRs + manual dispatch; `publish-docker-image-latest.yml` (push to `main`) and `publish-docker-image-staging.yml` (any PR) call the reusable `publish-docker-image.yml` workflow (matrixed over api/web) to build & push `website-api`/`website-web` images to Docker Hub (Docker Hub creds live at org level).
+- **GitHub Actions**: `ci.yaml` runs on push to `main`, on pull requests and on manual dispatch. `publish-docker-image-latest.yml` (push to `main`) and `publish-docker-image-staging.yml` (any PR) call the reusable `publish-docker-image.yml` workflow, matrixed over api and web, to build and push the `website-api` and `website-web` images to Docker Hub. The Docker Hub credentials live at org level.
 - **Deployment**: the Docker Hub images are deployed on MGM infrastructure, outside this repository. No workflow here deploys or restarts anything.
 - Every push to `main` therefore triggers GitHub Actions CI and the Docker image publish. Full details and verification commands are in `docs/ci-cd.md`.
