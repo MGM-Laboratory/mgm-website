@@ -63,7 +63,7 @@ pnpm dev:web # http://localhost:3000
 pnpm dev:api # http://localhost:4000
 ```
 
-Copy the workspace examples to local `.env` files before using the API or `/admin`; `docker compose up` starts Postgres, web, and API together. Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm format:check` before opening a PR. All changes use the branch, pull request and required checks workflow in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Copy the workspace examples to local `.env` files before using the API or `/admin`. `docker compose up` starts Postgres, web, and API together. Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm format:check` before opening a PR. All changes use the branch, pull request and required checks workflow in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Contributing
 
