@@ -96,7 +96,7 @@ export function classifyChanges(files, { force = false } = {}) {
     if (
       file === "CODEOWNERS" ||
       file === "renovate.json" ||
-      /^\.(github|gitleaks|deepsource|coderabbit|sonar)/.test(file)
+      /^\.(github|gitleaks|coderabbit)/.test(file)
     ) {
       enable("automation", "trivy");
       continue;
