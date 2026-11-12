@@ -100,7 +100,10 @@ const LINE_BREAK_HTML = "<br>";
 
 export function toMarkdown(table: ExportTable): string {
   const escape = (value: string) =>
-    value.replace(/\|/g, "\\|").replace(/\r?\n/g, () => LINE_BREAK_HTML);
+    value
+      .replace(/\\/g, "\\\\")
+      .replace(/\|/g, "\\|")
+      .replace(/\r?\n/g, () => LINE_BREAK_HTML);
   const lines = [
     `| ${table.header.map(escape).join(" | ")} |`,
     `| ${table.header.map(() => "---").join(" | ")} |`,
