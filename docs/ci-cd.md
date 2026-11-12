@@ -67,7 +67,7 @@ Safety notes:
 
 <!-- vale Google.Headings = YES -->
 
-`vale.yaml` runs [Vale](https://vale.sh) over the repo's hand-written Markdown, not the generated or vendored kind: `README.md`, `AGENTS.md`, `CLAUDE.md`, `DESIGN_SYSTEM.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `GOVERNANCE.md`, `SECURITY.md`, `.github/pull_request_template.md`, `apps/api/README.md`, `apps/web/README.md`, and everything under `docs/`. `apps/web/AGENTS.md` and `apps/web/CLAUDE.md` are deliberately excluded. `next dev` regenerates the first, and the second is a one-line include.
+`vale.yaml` runs [Vale](https://vale.sh) over the repo's hand-written Markdown, not the generated or vendored kind: `README.md`, `AGENTS.md`, `CLAUDE.md`, `DESIGN_SYSTEM.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `GOVERNANCE.md`, `SECURITY.md`, `ACCESSIBILITY.md`, `MAINTAINERS.md`, `SUPPORT.md`, `ROADMAP.md`, `.github/pull_request_template.md`, `apps/api/README.md`, `apps/web/README.md`, and everything under `docs/`. `apps/web/AGENTS.md` and `apps/web/CLAUDE.md` are deliberately excluded. `next dev` regenerates the first, and the second is a one-line include.
 
 The `.vale.ini` at the repo root wires three style sources together:
 
