@@ -46,11 +46,14 @@ Requires Node 22 and pnpm 11.3.0.
 pnpm install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
+```
+
+Set `DATABASE_URL` and `ADMIN_PASSPHRASE` in `apps/api/.env`, and the same `ADMIN_PASSPHRASE` in `apps/web/.env`. Create the passphrase with `openssl rand -hex 64`. Then start the two servers in separate terminals.
+
+```bash
 pnpm dev:web # http://localhost:3000
 pnpm dev:api # http://localhost:4000
 ```
-
-Set `DATABASE_URL` and `ADMIN_PASSPHRASE` in the two `.env` files before you start the API or open `/admin`. Create the passphrase with `openssl rand -hex 64`.
 
 To run Postgres, the API and the web app together, copy `.env.example` to `.env`, set `POSTGRES_PASSWORD` and `ADMIN_PASSPHRASE`, and run `docker compose up`.
 

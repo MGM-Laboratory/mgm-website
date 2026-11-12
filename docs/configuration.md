@@ -1,6 +1,6 @@
 # Configuration
 
-Every setting of the site is an environment variable. The API reads and checks its settings at start (`apps/api/src/config/env.validation.ts`) and refuses to start when a required one is missing or wrong. The web app reads its settings where it uses them. A value left empty counts as not set.
+Every setting of the site is an environment variable. The API reads and checks its settings at start (`apps/api/src/config/env.validation.ts`) and refuses to start when a required one is missing or wrong. The web app reads its settings where it uses them. Leave out a setting that you do not use. An empty value is read as unset only for the optional settings, and an empty `PORT` stops the start.
 
 Each workspace has an example file with the same names.
 
@@ -10,7 +10,7 @@ Each workspace has an example file with the same names.
 | `apps/api/.env.example` | The API when it runs with `pnpm dev:api`              |
 | `apps/web/.env.example` | The web app when it runs with `pnpm dev:web`          |
 
-A secret has no default. Create each one with `openssl rand -hex 32` (or `-hex 64` for a longer value) and keep it out of git.
+A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POSTGRES_PASSWORD` with `openssl rand -hex 64`, and `SHORTLINKS_ENCRYPTION_KEY` with `openssl rand -hex 32`, which gives the 64 characters that it needs. Credentials that a provider issues, such as the AWS, Resend and SMTP settings and `DOMAIN_CONNECT_PRIVATE_KEY`, come from that provider.
 
 ## API
 
