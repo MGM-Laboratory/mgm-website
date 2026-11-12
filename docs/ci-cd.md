@@ -193,4 +193,4 @@ After the repo migration, push-triggered runs silently stopped firing on the fre
 
 ## Historical: Harness removed (2026-09-15)
 
-This repo used to run a second CI platform on Harness Cloud (three checks: `harness-ci`, `harness-security`, `harness-supply-chain`, triggered via `harness.yml` and `.harness/*.yaml`). It was removed entirely. The account needed a credit card on file to run anything at all, and rather than leave a permanently red, unfixable check gating merges, the whole integration (workflow, trigger script, pipeline YAML, secret) was deleted. CodeQL, gitleaks, Trivy, and SonarCloud remain as the security and quality coverage.
+This repo used to run a second CI platform on Harness Cloud (three checks: `harness-ci`, `harness-security`, `harness-supply-chain`, triggered via `harness.yml` and `.harness/*.yaml`). It was removed entirely. The account needed a credit card on file to run anything at all, and rather than leave a permanently red, unfixable check gating merges, the whole integration (workflow, trigger script, pipeline YAML, secret) was deleted. CodeQL, gitleaks, and Trivy remain as the security and quality coverage.

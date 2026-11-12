@@ -799,7 +799,7 @@ function DomainsModal({
   );
 }
 
-// Won't fix, see docs/repo-history.md. The workspace is one
+// Known refactor candidate, see docs/repo-history.md. The workspace is one
 // stateful studio, the heavy lifting already lives in the components above.
 export function LinksStudio({
   initialDomains,

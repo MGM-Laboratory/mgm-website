@@ -921,7 +921,7 @@ export function MemberCmsStudio({
           initialEvents={initialEvents}
           initialRegistrations={initialEventRegistrations}
         />
-      ) : section === "forms" ? ( // Won't fix, see docs/repo-history.md
+      ) : section === "forms" ? ( // Known refactor candidate, see docs/repo-history.md
         // Full-bleed like events: the forms list, the builder, and each
         // form's share, responses and analytics tabs live in FormsStudio.
         <FormsStudio
@@ -931,7 +931,7 @@ export function MemberCmsStudio({
           canWriteLinks={can(viewer.permissions, "links", "write")}
           initialForms={initialForms}
         />
-      ) : section === "contact-inquiries" ? ( // Won't fix, see docs/repo-history.md
+      ) : section === "contact-inquiries" ? ( // Known refactor candidate, see docs/repo-history.md
         // Full-bleed, no-aside-rail: the inbox is the whole workspace, same
         // shape as careers/events' registrations panes.
         <div className="mx-auto max-w-[1680px] p-5 sm:p-8 lg:p-10">
@@ -1284,7 +1284,7 @@ export function MemberCmsStudio({
                   Administrator accounts, passphrases, and per-page permissions.
                 </p>
               </div>
-            ) : section === "links" ? ( // Won't fix, see docs/repo-history.md
+            ) : section === "links" ? ( // Known refactor candidate, see docs/repo-history.md
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
                   <div className="relative">
@@ -1337,7 +1337,7 @@ export function MemberCmsStudio({
                   ))}
                 </nav>
               </div>
-            ) : section === "other" ? ( // Won't fix, see docs/repo-history.md
+            ) : section === "other" ? ( // Known refactor candidate, see docs/repo-history.md
               <SettingsSubNav
                 active={activeSettingsSection}
                 canAccess={canAccess}
@@ -1525,7 +1525,7 @@ export function MemberCmsStudio({
                 />
               ) : section === "administration" ? (
                 <AdminManagementPanel initialAdmins={initialAdmins} />
-              ) : section === "links" ? ( // Won't fix, see docs/repo-history.md
+              ) : section === "links" ? ( // Known refactor candidate, see docs/repo-history.md
                 <LinksStudio
                   canDelete={can(viewer.permissions, "links", "delete")}
                   canWrite={can(viewer.permissions, "links", "write")}
@@ -1534,7 +1534,7 @@ export function MemberCmsStudio({
                   onSearchChange={setLinksSearch}
                   search={linksSearch}
                 />
-              ) : section === "other" ? ( // Won't fix, see docs/repo-history.md
+              ) : section === "other" ? ( // Known refactor candidate, see docs/repo-history.md
                 activeSettingsSection === "contact" ? (
                   <ContactSettingsEditor
                     isSuperadmin={viewer.role === "superadmin"}
