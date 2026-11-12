@@ -1,6 +1,6 @@
 # Privacy
 
-This page describes, from the code, which personal data the site collects, why, where it is stored, who can read it and how long it stays. It is a technical description for the people who run the site. The privacy policy page of the site is a separate text, and this page does not replace it.
+This page describes, from the code, which personal data the site collects, why, where it is stored, who can read it and how long it stays. It is a technical description for the people who run the site. The privacy policy page of the site is a placeholder at the time of writing, so this page is the only description of the data in this repository.
 
 ## What is collected
 
@@ -35,6 +35,8 @@ The device id of a form is a random value that the browser stores. The API keeps
 | The object storage service (an S3 compatible bucket)     | Uploaded files                                                | For every upload                                                                                                                                                                                                                        |
 | YouTube                                                  | The visitor browser requests a thumbnail                      | When a form places a YouTube video. The player loads from the `youtube-nocookie` domain only after a click                                                                                                                              |
 | Vimeo                                                    | The player, with do not track                                 | When a form places a Vimeo video, after a click                                                                                                                                                                                         |
+| `fonts.googleapis.com` and `fonts.gstatic.com`           | The request of the browser for the fonts                      | When a visitor opens a short link gate page, an expired link page or a not found link page. These pages load fonts from Google                                                                                                          |
+| The host of a linked form image or video                 | The request of the browser for the file                       | When an editor links a form image or video by URL (the kinds `image`, `video`, `youtube` and `vimeo` take a URL), the browser of the visitor loads it from that host                                                                    |
 | The directions link on the contact page                  | Nothing, until the visitor follows the link to a maps service | When the visitor clicks the link                                                                                                                                                                                                        |
 
 The mails that the site sends are the following.
@@ -43,7 +45,7 @@ The mails that the site sends are the following.
 - A confirmation to the person who sent a contact message, a job application or an event registration.
 - A notification of a form response to the addresses that the form lists, and a receipt to the respondent when the form turns receipts on. The notification holds the answers.
 
-The code of the web app has no advertising and no analytics script. The fonts load through `next/font`, which serves them from the site itself.
+The code of the web app has no advertising and no analytics script. The main site serves its fonts itself through `next/font`. The short link pages load fonts from Google, as the table says.
 
 ## Cookies and browser storage
 
@@ -58,30 +60,36 @@ The code of the web app has no advertising and no analytics script. The fonts lo
 | `mgm-form-done:<slug>`                         | Local storage   | The time of a response                                                                                | Until the visitor clears it                   |
 | `mgm-form-session:<slug>`                      | Session storage | A random session id                                                                                   | Until the tab closes                          |
 | `mgm:lab-notes`, `member-directory:return-url` | Session storage | Notes that were shown and the page to return to                                                       | Until the tab closes                          |
+| `mgm-forms-view`                               | Local storage   | The editor choice of a grid or a list for the forms list                                              | Until the editor clears it                    |
+| `mgm.forms.table.<formId>`                     | Local storage   | The editor table settings of the responses of a form                                                  | Until the editor clears it                    |
+| `mgm.forms.pipeline.<formId>`                  | Local storage   | The editor data cleaning steps for the responses of a form                                            | Until the editor clears it                    |
+| `mgm-forms-my-templates`                       | Local storage   | The form templates that an editor saved                                                               | Until the editor clears it                    |
+| `mgm.links.lastDomainId`                       | Local storage   | The id of the short link domain that an editor used last                                              | Until the editor clears it                    |
 | A key of the process magnets                   | Local storage   | The arrangement of the magnets that the visitor moved                                                 | Until the visitor clears it                   |
 
 ## Who can read it
 
 - The superadmin can read everything in the admin workspace.
 - A delegated editor reads a kind of data only with the permission for its page. The contact inbox needs `contact-inquiries` read. Applications need `careers`. Registrations need `events`. Form responses and form visits need `forms`. Short link visits need `links`.
-- The person who runs the site can read the database, the object storage and the API logs. The API writes a log line for each request. It holds the method, the URL, the status, the time, the remote address and the request headers that the logger records by default, such as the user agent.
+- The person who runs the site can read the database, the object storage and the API logs. The API request log holds the method, the path, the status, the timing and the request headers.
 - The mail providers and the recipients of the notification mails see the mail text.
-- A signed download link opens a stored file for anyone who holds the link until it expires. The lifetime is 15 minutes for most files, and 7 days in the contact notification mail.
+- A signed download link opens a stored file for anyone who holds the link until it expires. The lifetime is 15 minutes for most files, and 7 days in the contact notification mail. These lifetimes hold when `REDIS_URL` is not set, because the cache of signed URLs is keyed by the object key alone.
 
 ## How long it stays
 
 The code has no retention period for personal data. Records stay until an editor deletes them. The exceptions are in the table.
 
-| Data                                 | Rule in the code                                                                                           |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| Form uploads that no response claims | The API deletes them after one day, when a later upload to the same form runs the cleanup                  |
-| A form response                      | Stays until an editor deletes it, or deletes the form. Deleting a response also deletes its files          |
-| A form                               | Deleting a form deletes its responses, events and uploads, with the stored files                           |
-| A job application                    | Stays until an editor deletes it. The delete also removes the CV from storage                              |
-| A contact message                    | Stays until an editor deletes it. The delete removes the record and leaves the attachment files in storage |
-| An event registration                | Stays until an editor deletes it                                                                           |
-| A short link visit                   | Stays until an editor deletes the link, and the delete removes its visits                                  |
-| The geolocation cache                | Lives in the memory of the API process and goes with a restart                                             |
+| Data                                        | Rule in the code                                                                                                                                                     |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Form uploads that no response claims        | The API deletes them after one day, when a later upload to the same form runs the cleanup                                                                            |
+| A form response                             | Stays until an editor deletes it, or deletes the form. Deleting a response also deletes its files                                                                    |
+| A form                                      | Deleting a form deletes its responses, events and uploads, with the stored files                                                                                     |
+| A job application                           | Stays until an editor deletes it. The delete also removes the CV from storage                                                                                        |
+| A contact message                           | Stays until an editor deletes it. The delete removes the record and leaves the attachment files in storage                                                           |
+| A contact attachment that no message claims | The browser uploads an attachment before it sends the message. The code has no cleanup for contact attachments, so an upload that no message claims stays in storage |
+| An event registration                       | Stays until an editor deletes it                                                                                                                                     |
+| A short link visit                          | Stays until an editor deletes the link, and the delete removes its visits                                                                                            |
+| The geolocation cache                       | Lives in the memory of the API process and goes with a restart                                                                                                       |
 
 ## Requests from a person
 
