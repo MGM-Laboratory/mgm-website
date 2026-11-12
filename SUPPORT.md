@@ -22,7 +22,7 @@ The website is maintained by its owner. There is no paid support and no promise 
 - **A security problem.** Never open a public issue. Follow [SECURITY.md](SECURITY.md) and write to **hi@labmgm.org**.
 - **A barrier for a person with a disability.** Follow [ACCESSIBILITY.md](ACCESSIBILITY.md).
 - **A question for the lab.** Write to **hi@labmgm.org**.
-- **A change you want to make.** Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Larger changes need an issue before the pull request, as [GOVERNANCE.md](GOVERNANCE.md) explains.
+- **A change you want to make.** Read [CONTRIBUTING.md](CONTRIBUTING.md) first. [GOVERNANCE.md](GOVERNANCE.md) says that larger changes should be discussed in an issue before a pull request is opened.
 
 ## What is not supported
 

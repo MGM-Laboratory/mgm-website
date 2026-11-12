@@ -10,7 +10,7 @@ This page says what the site does for accessibility, which checks run in CI, whe
 - The menu and the glass of the header follow `prefers-reduced-transparency`. They fall back to the opaque surface of the theme.
 - The full screen menu marks its toggle with `aria-expanded`. The closed panel is `inert`. Escape closes the menu, and focus returns to the toggle.
 - The film player on the homepage is a dialog with `aria-modal`, a close button, play and pause and sound buttons, and a close action on Escape.
-- The public forms support a keyboard layout that asks one question at a time. The date and time pickers follow the key bindings of the ARIA Authoring Practices date picker.
+- The public forms offer a conversational layout that shows one question at a time, and the keyboard can drive it. The date and time pickers follow the key bindings of the ARIA Authoring Practices date picker.
 - Several controls set a visible focus style with `:focus-visible`, for example the header controls, the back link of a project and the article covers.
 - The design system sets contrast targets for both themes in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md). Body text uses the ink tokens. Red is for large text and fills only. Yellow never carries text on white. The themed project, article and form pages target a ratio of at least 7 to 1 for text and at least 4.5 to 1 for labels and muted text.
 

@@ -21,4 +21,4 @@ A contributor opens a pull request like anyone else. Every change to `main` goes
 
 ## Known limit
 
-The project has one maintainer. If that person is unavailable, nobody else can change the repository settings, rotate a secret or deploy. [GOVERNANCE.md](GOVERNANCE.md) says that a second maintainer has no fixed process yet, and this file changes the day that one is added.
+The project has one maintainer, as [GOVERNANCE.md](GOVERNANCE.md) says. That file also says that becoming a maintainer has no fixed process yet. This file changes the day a second maintainer is added.
