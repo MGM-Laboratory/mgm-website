@@ -2,7 +2,7 @@
 
 This is the **MGM Laboratory** website monorepo (Next.js 16 marketing site + NestJS API), live at `github.com/MGM-Laboratory/mgm-website`.
 
-**Read `CLAUDE.md` (repo root) first.** It contains the hard rules every agent must follow (git identity, commit granularity, no AI attribution in commits, verification workflow) and the reading order. The deep-dive documentation lives in `docs/`:
+**Read `CLAUDE.md` (repo root) first.** It contains the hard rules every agent must follow (git identity, commit granularity, no AI attribution in commits, the pull request flow) and the reading order. The deep-dive documentation lives in `docs/`:
 
 - `docs/project-overview.md`: product context, all pages, content status
 - `docs/architecture.md`: monorepo layout, components, data, routing
@@ -11,8 +11,8 @@ This is the **MGM Laboratory** website monorepo (Next.js 16 marketing site + Nes
 - `docs/navigation-menu.md`: the full-screen menu system
 - `docs/page-transition.md`: internal-navigation curtain and homepage entrance behavior
 - `docs/careers-cms.md`: openings, applications, and the careers inbox
-- `docs/mail-system.md`: mail providers, routing, quotas, and Railway's SMTP restriction
-- `docs/ci-cd.md`: GitHub Actions / Docker Hub / Railway
+- `docs/mail-system.md`: mail providers, routing, quotas, and outbound SMTP limits on some hosts
+- `docs/ci-cd.md`: GitHub Actions, Docker Hub images and deployment on MGM infrastructure
 - `docs/testing-verification.md`: Playwright verification methodology
 - `docs/repo-history.md`: the repo migration and why the git rules exist
 

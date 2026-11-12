@@ -1,14 +1,12 @@
 # MGM Laboratory
 
-## Important
+## Maintenance
 
-This project is no longer supported by the lab and the server will be taken down. Thanks for anyone who contributed to this project and help to achieve it. This sites will be the creator's portfolio and if you wanted to see it, you can visit https://mgm.creations.ren.
-
-Anything that's in this website are not supported by the lab anymore, so any use of elements or things from this repo are forbidden. Creators and maintainer are not liable for any fraud or wrongdoings caused by this project in the future.
+This project is maintained by the owner and deployed on MGM infrastructure. See `LICENSE` for the license.
 
 ---
 
-Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/web`) and a NestJS API (`apps/api`), deployed on Railway.
+Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/web`) and a NestJS API (`apps/api`), published as Docker Hub images and deployed on MGM infrastructure.
 
 [![CI](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml)
 [![Security](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml)
@@ -27,7 +25,6 @@ Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/we
 [![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![Turbo](https://img.shields.io/badge/Turbo-monorepo-EF4444?logo=turborepo&logoColor=white)](https://turbo.build)
 [![NestJS](https://img.shields.io/badge/NestJS-api-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com)
-[![Railway](https://img.shields.io/badge/Railway-deployed-0B0D0E?logo=railway&logoColor=white)](https://railway.com)
 
 [![Last commit](https://img.shields.io/github/last-commit/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website/commits/main)
 [![Repo size](https://img.shields.io/github/repo-size/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website)
@@ -66,7 +63,7 @@ pnpm dev:web # http://localhost:3000
 pnpm dev:api # http://localhost:4000
 ```
 
-Copy the workspace examples to local `.env` files before using the API or `/admin`; `docker compose up` starts Postgres, web, and API together. Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm format:check` before opening a PR. All changes use the branch → PR → required checks → `/merge` workflow in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Copy the workspace examples to local `.env` files before using the API or `/admin`. `docker compose up` starts Postgres, web, and API together. Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm format:check` before opening a PR. All changes use the branch, pull request and required checks workflow in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Contributing
 
