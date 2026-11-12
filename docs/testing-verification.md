@@ -1,6 +1,6 @@
 # Testing & Verification
 
-**Rule: nothing is "done" until it's been seen working in a real browser.** The established workflow is Playwright (screenshots + interaction scripts) against the dev server, followed by `open http://localhost:3000` for a human look. The dev server must stay running at all times (`pnpm dev:web`); check with `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` before and after changes.
+**Rule: when the owner asks for browser verification, nothing is "done" until it's been seen working in a real browser.** The established workflow is Playwright (screenshots + interaction scripts) against the dev server, followed by `open http://localhost:3000` for a human look. The dev server and the browser checks run only when the owner asks for them in that moment. When the dev server runs (`pnpm dev:web`), check it with `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` before and after changes.
 
 ## Playwright methodology (proven patterns from this codebase)
 
@@ -76,4 +76,4 @@ CI=true PORT=3457 CMS_FIXTURE_PORT=4010 npx playwright test --retries=0 --worker
 
 ## Commit & push
 
-One discrete change per commit, push immediately after each commit (see `docs/repo-history.md` for the full git rules). Pushing to `main` triggers CI + Railway deploys automatically: the CI run itself is a final verification (watch it with `gh run watch`), and `gh run list -R MGM-Laboratory/mgm-website` should show both workflows green.
+One discrete change per commit, push immediately after each commit (see `docs/repo-history.md` for the full git rules). Every change goes through a pull request, and the CI run on it is a final verification (watch it with `gh run watch`). `gh run list -R MGM-Laboratory/mgm-website` should show the workflows green.

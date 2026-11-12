@@ -59,7 +59,7 @@ The API stores each collection as a slug-keyed JSONB `data` record. Prisma defin
 The Home record (`packages/shared/src/schemas/home.ts`, the `CmsHomeContent` singleton) holds one thing: the company profile video the homepage reel plays. There are no editorial fields: the reel's title, description and CTA are written into the page (`apps/web/src/data/reel.ts`).
 
 - **Upload only.** `videoMode` is `"none"` or `"upload"`, with `videoKey`, `videoName` and `videoSize`. A record saved with the old `"url"` or `"youtube"` modes reads as `"none"`, and the old `videoUrl`, `videoTitle` and `videoDescription` fields are stripped on parse, so older records keep validating.
-- **Editor.** `components/admin/home-settings-editor.tsx` uploads a file (`POST /cms/home/video`, raw body, which mints a `home-video-<uuid>.<ext>` key) and previews the saved video. There is no preview of a file before it is uploaded: a local blob preview was removed because CodeQL flagged it as DOM XSS, and a failing CodeQL check blocks `/merge`.
+- **Editor.** `components/admin/home-settings-editor.tsx` uploads a file (`POST /cms/home/video`, raw body, which mints a `home-video-<uuid>.<ext>` key) and previews the saved video. There is no preview of a file before it is uploaded: a local blob preview was removed because CodeQL flagged it as DOM XSS, and a failing CodeQL check blocks the merge.
 - **Playback.** `app/api/home-cms/video/[key]/route.ts` checks the key's shape and proxies to the API, which serves only the key the saved record holds (a signed storage redirect, with Range support). Every upload mints a fresh key and a replaced video's old key stops resolving, so the bytes behind a key never change: the route answers `Cache-Control: private, max-age=31536000, immutable` (`IMMUTABLE_VIDEO_CACHE` in `lib/video-proxy.ts`) and passes ETag and Last-Modified through.
 - **On the page.** `homeVideoSource()` in `lib/home-cms.ts` turns the record into the reel's source. With no upload (or after a Remove) the reel shows an animated test card and the caption "Our film is on its way." instead of a play button.
 
@@ -67,7 +67,7 @@ The careers workflow has additional validation, upload constraints, and inbox be
 
 ## Media and upload rules
 
-The API's `StorageService` writes to AWS S3 or an S3-compatible bucket. It gives uploaded objects immutable cache headers and serves private/public CMS files through short-lived signed-download redirects. The object bucket must be configured with `AWS_S3_BUCKET`; `AWS_ENDPOINT_URL` and `AWS_S3_FORCE_PATH_STYLE` support Railway or another compatible provider.
+The API's `StorageService` writes to AWS S3 or an S3-compatible bucket. It gives uploaded objects immutable cache headers and serves private/public CMS files through short-lived signed-download redirects. The object bucket must be configured with `AWS_S3_BUCKET`; `AWS_ENDPOINT_URL` and `AWS_S3_FORCE_PATH_STYLE` support any S3-compatible provider.
 
 Large bodies must be streamed through the Next proxy, not parsed into `request.formData()` or JSON first. The established paths use raw PDF/video bodies or streamed multipart forwarding:
 
@@ -88,7 +88,7 @@ The article save and bootstrap routes validate their bodies and answer 400 namin
 
 ### Project detail fields
 
-A project record also carries the fields its detail page (`/projects/[slug]`, see [`projects-page.md`](projects-page.md)) is built from. Their schema lives in the shared package (`packages/shared/src/schemas/project-detail.ts`), so the API and the admin editor enforce the same limits. Every field is optional, which keeps older records and preview seeding valid.
+A project record also carries the fields its detail page (`/projects/[slug]`, see [`projects-page.md`](projects-page.md)) is built from. Their schema lives in the shared package (`packages/shared/src/schemas/project-detail.ts`), so the API and the admin editor enforce the same limits. Every field is optional, which keeps older records valid.
 
 | Field         | Shape                                                                       | Limit                        |
 | ------------- | --------------------------------------------------------------------------- | ---------------------------- |
