@@ -1,33 +1,56 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommitsDisabled"],
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigestsToSemver"],
   "timezone": "Asia/Jakarta",
-  "schedule": ["before 6am on monday"],
+  "schedule": ["before 7am on monday"],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "rebaseWhen": "conflicted",
+  "platformCommit": "enabled",
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
   "labels": ["dependencies"],
+  "assignees": ["SyafaHadyan"],
+  "dependencyDashboard": true,
   "automerge": false,
   "rangeStrategy": "bump",
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["* 0 * * *"]
+    "semanticCommitType": "build"
   },
   "vulnerabilityAlerts": {
     "enabled": true,
     "schedule": ["at any time"],
-    "labels": ["dependencies", "security"]
+    "labels": ["dependencies", "security"],
+    "semanticCommitType": "fix"
   },
   "packageRules": [
     {
+      "matchManagers": ["github-actions"],
+      "semanticCommitType": "ci"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "matchManagers": ["npm"],
+      "semanticCommitType": "build"
+    },
+    {
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "non-major dependencies",
       "matchFileNames": ["apps/web/package.json"],
+      "groupName": "web non-major dependencies",
       "groupSlug": "web-minor-patch"
     },
     {
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "non-major dependencies",
       "matchFileNames": ["apps/api/package.json"],
+      "groupName": "api non-major dependencies",
       "groupSlug": "api-minor-patch"
     },
     {
@@ -38,12 +61,16 @@
       "dependencyDashboardApproval": true
     },
     {
-      "matchManagers": ["github-actions"],
-      "groupName": "GitHub Actions",
-      "matchUpdateTypes": ["minor", "patch"]
+      "description": "the images of .github/tools/Dockerfile are the tools that CI starts from a workflow, so they take the commit type of the workflows",
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": [".github/tools/Dockerfile"],
+      "semanticCommitType": "ci"
     },
     {
+      "description": "the base images of the app Dockerfiles are part of the app images, so they take the commit type of the packages",
       "matchManagers": ["dockerfile"],
+      "matchFileNames": ["apps/api/Dockerfile", "apps/web/Dockerfile"],
+      "semanticCommitType": "build",
       "groupName": "Dockerfile base images",
       "matchUpdateTypes": ["minor", "patch"]
     },
@@ -55,6 +82,21 @@
     {
       "matchDepTypes": ["engines"],
       "enabled": false
+    },
+    {
+      "description": "the tools that CI starts from a workflow, such as ls-lint and Renovate itself, take the commit type of the workflows",
+      "matchManagers": ["custom.regex"],
+      "semanticCommitType": "ci"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "A version in a workflow that the line above names with a renovate comment, which the bot cannot find in a run step or an action input otherwise",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*(?:version|[A-Z][A-Z0-9_]*_VERSION): [\"']?(?<currentValue>[^\"'\\s]+)[\"']?"
+      ]
     }
   ]
 }
