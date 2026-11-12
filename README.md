@@ -1,6 +1,6 @@
 # MGM Laboratory website
 
-The homepage and backend of MGM Laboratory. A Next.js 16 marketing site with a built-in CMS workspace, and a NestJS and Prisma API on PostgreSQL. The project is maintained by the owner and deployed on MGM infrastructure.
+The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at the Faculty of Computer Science (FILKOM), Universitas Brawijaya, in Malang, Indonesia. It presents the lab, its members, projects, publications, articles, events and open positions. The lab team manages that content in a built-in `/admin` workspace. The project is maintained by the owner and deployed on MGM infrastructure.
 
 [![CI](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml)
 [![Security](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml)
@@ -32,7 +32,7 @@ Status page: [status.labmgm.org](https://status.labmgm.org)
 
 ## Stack
 
-- Web in `apps/web`. Next.js 16 (App Router), React 19, Tailwind CSS 4, GSAP and WebGL.
+- Web in `apps/web`. The site and the `/admin` workspace, built with Next.js 16 (App Router), React 19, Tailwind CSS 4, GSAP and WebGL.
 - API in `apps/api`. NestJS 12, Prisma 7 and PostgreSQL. Mail goes through Resend, SMTP or AWS SES. Uploads go to an S3 compatible store.
 - Shared code in `packages/shared`.
 - pnpm 11 workspaces and Turborepo on Node 22.

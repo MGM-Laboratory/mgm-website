@@ -1,6 +1,6 @@
 # Contributing to MGM Laboratory's website
 
-Thanks for taking the time to contribute. This is a pnpm monorepo: a Next.js marketing site (`apps/web`) and a NestJS API (`apps/api`), sharing `packages/shared`. Read `docs/architecture.md` and `DESIGN_SYSTEM.md` before making UI changes. The index of all docs is `docs/README.md`.
+Thanks for taking the time to contribute. This is a pnpm monorepo: the lab's Next.js website and CMS workspace (`apps/web`) and a NestJS API (`apps/api`), sharing `packages/shared`. Read `docs/architecture.md` and `DESIGN_SYSTEM.md` before making UI changes. The index of all docs is `docs/README.md`.
 
 ## Before you change code
 
