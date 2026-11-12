@@ -300,7 +300,7 @@ export class MailService {
     if (total <= 0) return list;
     // Not security-sensitive: picks which mail provider handles this send,
     // not an auth token, session id, or anything cryptographic.
-    let roll = Math.random() * total; // NOSONAR
+    let roll = Math.random() * total;
     let picked = withWeight[0].id;
     for (const entry of withWeight) {
       if (roll < entry.weight) {
@@ -415,7 +415,7 @@ export class MailService {
       await this.prisma.mailSendLog.create({ data: { provider: id } });
       // Opportunistic cleanup — avoids an unbounded log without a cron job.
       // Not security-sensitive: just a sampling rate for a housekeeping query.
-      const shouldCleanup = Math.random() < 0.05; // NOSONAR
+      const shouldCleanup = Math.random() < 0.05;
       if (shouldCleanup) {
         const cutoff = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
         await this.prisma.mailSendLog.deleteMany({
