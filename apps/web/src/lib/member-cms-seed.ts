@@ -34,7 +34,7 @@ async function legacyProfile(slug: string): Promise<LegacyProfile> {
     try {
       return JSON.parse(await readFile(join(directory, `${slug}.json`), "utf8")) as LegacyProfile;
     } catch {
-      // The next candidate covers both `next dev` and the standalone Railway image.
+      // The next candidate covers both `next dev` and the standalone image.
     }
   }
   return {};
