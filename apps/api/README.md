@@ -25,7 +25,7 @@ Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/we
 
 ## Docs
 
-Start with [`docs/project-overview.md`](docs/project-overview.md), then [`docs/architecture.md`](docs/architecture.md). The full index is in [`CLAUDE.md`](CLAUDE.md).
+Start with [`docs/project-overview.md`](../../docs/project-overview.md), then [`docs/architecture.md`](../../docs/architecture.md). The full index is in [`docs/README.md`](../../docs/README.md).
 
 ## Contributing
 
