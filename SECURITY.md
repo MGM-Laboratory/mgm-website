@@ -2,7 +2,7 @@
 
 ## Supported scope
 
-`MGM-Laboratory/mgm-website` is the only actively developed repository for the MGM Laboratory site (web + API). `mgm-website-legacy` is a frozen, read-only backup and is not in scope for security reports.
+`MGM-Laboratory/mgm-website` is the only actively developed repository for the MGM Laboratory site (web + API). It is maintained by the owner and deployed on MGM infrastructure. `mgm-website-legacy` is a frozen, read-only backup and is not in scope for security reports.
 
 ## Reporting a vulnerability
 
@@ -18,6 +18,6 @@ You can expect an initial response within a few business days. We'll keep you up
 
 ## Scope notes
 
-- The production deployment (`web-production-589d3f.up.railway.app` and its API) is in scope.
+- The production deployment of the site and its API is in scope.
 - Automated scanning that could degrade production availability (load testing, aggressive fuzzing against the live site) is **not** authorized. Use a local `docker compose up` stack instead.
 - Findings from the automated tooling in this repo (CodeQL, dependency review, secret scanning, Trivy, OSSF Scorecard) are triaged the same way as external reports.

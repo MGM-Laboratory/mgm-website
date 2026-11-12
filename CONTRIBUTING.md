@@ -10,7 +10,7 @@ There's no `dev` branch. Every change to `main` goes through a pull request:
 2. Make your change, following the conventions in `docs/` (especially `docs/animation-system.md` if you're touching anything animated).
 3. Open a PR against `main`. Keep PRs focused: one discrete change per PR is easier to review than a bundle of unrelated fixes.
 4. Automated checks run on every PR (see below). All of them need to be green before a maintainer can merge, and no review approval is required beyond that.
-5. A maintainer merges via `/merge`, once the checks are green. See `GOVERNANCE.md` for how larger decisions get made.
+5. A maintainer merges the PR with a merge commit (never squash or rebase) once the checks are green. See `GOVERNANCE.md` for how larger decisions get made.
 
 ## Required checks
 
@@ -37,20 +37,7 @@ pnpm dev            # web on :3000, api on :4000
 docker compose up
 ```
 
-See `docs/testing-verification.md` for how UI changes are expected to be verified (a real browser, not just green tests) before you consider something done.
-
-## PR comment commands
-
-Once a PR is open, anyone can comment:
-
-- **`LGTM`**: in either a PR conversation comment or submitted review, gets a GIF reply. It doesn't do anything else: see `/merge` below for the command that actually ships a PR.
-
-Maintainers, or anyone listed in `CODEOWNERS`, can also run:
-
-- **`/check`**: re-runs the latest CI run for the PR's current commit.
-- **`/preview`**: builds the PR's code into Docker images and deploys a throwaway Railway environment (web + api + Postgres + Redis + bucket) seeded with sanitized public production content, then comments the preview URL and its freshly rotated Railway superadmin password. The deploy is watched strictly (checked every minute, retried automatically on a crash, escalated to CODEOWNERS after 10 minutes without giving up, capped at 1 hour) with progress posted to the PR throughout. Torn down automatically when the PR closes, or safe to re-run any time.
-- **`/merge`**: checks that every required check is green and there are no conflicts, merges with a merge commit, then thanks and tags every GitHub-linked contributor from the PR's commits, deletes the branch if it's safe to, tears down the PR's preview environment, and confirms the resulting production deploy actually succeeds before calling it done. If anything's not ready, it says what and does nothing else.
-- **`/close`**: closes the PR without merging it. The branch is left alone (nothing is deleted), but any preview environment running for the PR is torn down immediately rather than left sitting around.
+See `docs/testing-verification.md` for how UI changes are verified in a real browser, not just with green tests, when a maintainer asks for it.
 
 ## Commit messages
 
