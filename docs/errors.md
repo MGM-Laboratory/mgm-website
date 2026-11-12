@@ -1,6 +1,6 @@
 # Errors
 
-This page lists the error answers of the API (`apps/api`) and of the route handlers of the web app that sit in front of it. The API has no single error format. Several controllers each make their own, so this page groups them by shape. Every path of the API starts with `/api`.
+This page lists the error answers of the API (`apps/api`) and of the route handlers of the web app that sit in front of it. The API has no single error format. Several controllers each make their own, so this page groups them by shape. The API routes start with `/api`. The interactive API documentation is at `/docs`.
 
 A proxy or the platform in front of the site can also answer with its own body, so a client reads the HTTP status first.
 
@@ -63,7 +63,7 @@ The public job application and the public event registration catch the zod error
 ## Rate limits
 
 - A blocked request answers 429 with the body `{"statusCode":429,"message":"ThrottlerException: Too Many Requests"}`. The header `Retry-After` holds the seconds to wait. An allowed request carries the headers `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`.
-- The global budget is `THROTTLE_LIMIT` requests (default 100) in `THROTTLE_TTL` milliseconds (default 60000) for each client address.
+- The global budget is `THROTTLE_LIMIT` requests (default 100) in `THROTTLE_TTL` milliseconds (default 60000) for each route and each client address.
 - The routes `POST /api/contact`, `POST /api/cms/jobs/:slug/apply` and `POST /api/cms/events/:slug/register` allow 5 requests a minute.
 - The public form routes allow, for each visitor and each minute, 10 unlocks, 120 events, 30 uploads and 10 responses.
 
@@ -76,14 +76,14 @@ The public job application and the public event registration catch the zod error
 | `POST /api/contact/attachments`          | 25 MB                                                                   | 400 for an empty body or a file above 25 MB. The raw parser refuses a body above 26 MB with 413                                                                                                                                                                        |
 | `POST /api/cms/publications/:slug/paper` | `CMS_MAX_PAPER_BYTES`, default 200 MB                                   | 413 above the limit, from the body parser. 400 for a file that is not a PDF                                                                                                                                                                                            |
 | Project, home and form video routes      | `CMS_MAX_VIDEO_BYTES`, default 500 MB                                   | 413 above the limit, from the body parser. 400 for a type that is not MP4 or WebM, or a file that is not a valid video                                                                                                                                                 |
-| Image routes of the CMS                  | 6 MB after compression                                                  | 400 for a data URL that is not a PNG, JPEG or WebP, or for a file above the limit                                                                                                                                                                                      |
+| Image routes of the CMS                  | 6 MB after compression                                                  | 400 for a data URL that does not name a PNG, JPEG or WebP, or for a file above the limit. The author and contributor portrait routes also accept GIF. The form design image route accepts PNG, JPEG, WebP or GIF by the bytes                                          |
 
 A route that stores a file answers 400 with a message such as `Media storage is not configured in this environment.` when no bucket is set. The forms routes answer 503 in that case.
 
 ## Forms
 
 - The public routes answer 404 `That form does not exist.` for an unknown slug or a draft.
-- A form with a passphrase answers 401 `This form is locked.` until the visitor unlocks it. A wrong passphrase answers 401 `That passphrase is not right.`.
+- A form with a passphrase answers `GET /api/forms/public/:slug` with 200 and the state `locked`. The events, uploads and responses routes answer 401 `This form is locked.` until the visitor unlocks the form. A wrong passphrase on the unlock route answers 401 `That passphrase is not right.`.
 - A form that cannot take a response answers 409 with `This form is closed.`, `This form is not open yet.` or `This form has reached its response limit.`.
 - A response answers 400 with `errors` when an answer fails its question, 409 `You have already responded to this form.` for the rule of one response for each device, and 409 `One of the files was already submitted.` when two submissions claim one upload.
 - The admin routes of the forms workspace answer 404 for an unknown form, response or file, 409 `That form URL is already in use.` for a taken slug, and 503 when the API cannot find a free random slug.
@@ -100,7 +100,22 @@ A route that stores a file answers 400 with a message such as `Media storage is 
 - `POST /api/cms/events/:slug/register` answers 400 `That event does not exist.`, 409 `This event is not accepting registrations.` and 409 `This event has already ended.`.
 - A save of an article, a project, a research initiative, a job, a publication, a member or an event answers 409 when its slug is taken, for example `That article URL is already in use.`. A member rename that matches more than one profile answers 409 `More than one existing profile has this name. Please contact an administrator.`.
 - A read of an unknown record answers 404 with a message such as `Article record not found`. A draft answers the same 404 on the public routes.
-- A media or file route answers 400 `Unknown media key` for a key that does not match its pattern. A publication paper that is hidden, or whose record is a draft, answers 404.
+- Several media and file routes answer 400 with `Unknown media key`, `Unknown video key`, `Unknown paper key` or `Unknown attachment key` when the key is not one that the route serves. A publication paper that is hidden, or whose record is a draft, answers 404.
+
+## Public form routes of the web app
+
+The route handlers under `/api/forms/**` of the web app forward to the API and add their own answers.
+
+| Status | Body message                                               | When                                                                |
+| ------ | ---------------------------------------------------------- | ------------------------------------------------------------------- |
+| 404    | `That form does not exist.`                                | The slug is not a valid form slug                                   |
+| 413    | `The request is too large.`                                | An unlock or events body above 64 KB, or a response body above 8 MB |
+| 400    | `The request body must be JSON.`                           | The body is not valid JSON                                          |
+| 502    | `We could not reach the form right now. Please try again.` | The call to the API failed                                          |
+| 413    | `The file is too large.`                                   | An upload declares a size above `FORMS_MAX_UPLOAD_BYTES`            |
+| 502    | `The upload could not be completed. Please try again.`     | The upload call to the API failed                                   |
+
+When the API answers with a body that is not JSON, the web app answers `The file is too large.` for a 413 and `Something went wrong on our side. Please try again.` for any other error status.
 
 ## Health
 
