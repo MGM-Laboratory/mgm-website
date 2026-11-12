@@ -1,4 +1,4 @@
-// Minimal GitHub REST API helper shared by the PR automation scripts.
+// Minimal GitHub REST API helper shared by the CI scripts.
 // Deliberately dependency-free (plain fetch) so these scripts don't need an
 // `npm install` step in CI.
 export async function ghRequest(token, path, opts = {}) {
@@ -35,10 +35,9 @@ export async function ghPaginate(token, path, key) {
   }
 }
 
-// Shared by the status comment and the /merge readiness check: every check
-// reported against a commit, whether it arrived as a Check Run (workflow
-// jobs, CodeQL, SonarCloud's own App) or a legacy commit Status, deduplicated
-// by name.
+// Every check reported against a commit, whether it arrived as a Check Run
+// (workflow jobs, CodeQL, SonarCloud's own App) or a legacy commit Status,
+// deduplicated by name.
 export async function collectChecks(token, repo, sha) {
   const [checkRuns, combinedStatus] = await Promise.all([
     ghPaginate(token, `/repos/${repo}/commits/${sha}/check-runs`, "check_runs"),
@@ -65,7 +64,7 @@ export async function collectChecks(token, repo, sha) {
 // GitHub links a commit's author and committer independently. A PR can have
 // several people contributing commits, so use both identities and retain the
 // PR author as a fallback for contributions made with an unlinked email.
-// Bot accounts are deliberately omitted from the human thank-you message.
+// Bot accounts are deliberately omitted from the contributor list.
 export function collectPullRequestContributorLogins(commits, prAuthorLogin) {
   const logins = new Map();
   const add = (login) => {

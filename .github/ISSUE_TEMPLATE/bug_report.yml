@@ -23,7 +23,7 @@ body:
     id: url
     attributes:
       label: Page URL
-      placeholder: https://web-production-589d3f.up.railway.app/...
+      placeholder: https://example.com/page
   - type: input
     id: browser
     attributes:
