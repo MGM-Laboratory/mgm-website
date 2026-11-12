@@ -1,7 +1,7 @@
 import type { ArticleBlock, CmsArticleRecord } from "@/lib/article-cms";
 
 /**
- * Seed articles shown on a fresh database (local or Railway) until the
+ * Seed articles shown on a fresh database (local or production) until the
  * editorial team publishes real ones. Every entry is editable through the
  * admin workspace — the bootstrap only runs when the articles collection is
  * empty, so publishing or deleting any of these keeps them gone.

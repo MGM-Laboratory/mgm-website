@@ -6,23 +6,12 @@ import { buildConnectUrl, connectRecords } from "./shortlinks.domainconnect.js";
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 
 describe("connectRecords", () => {
-  it("lays out the CNAME plus both TXT records", () => {
-    const records = connectRecords(
-      "mgm.li",
-      "7twq8s70.up.railway.app",
-      "token123",
-      "railway-verify=abc",
-    );
+  it("lays out the CNAME plus the verification TXT", () => {
+    const records = connectRecords("mgm.li", "edge.example.net", "token123");
     expect(records).toEqual({
-      cname: { name: "mgm.li", content: "7twq8s70.up.railway.app" },
+      cname: { name: "mgm.li", content: "edge.example.net" },
       verifyTxt: { name: "_mgm-verify.mgm.li", content: "token123" },
-      railwayTxt: { name: "_railway-verify.mgm.li", content: "railway-verify=abc" },
     });
-  });
-
-  it("drops Railway's TXT when there is no verification token", () => {
-    const records = connectRecords("mgm.li", "target", "token123", null);
-    expect(records.railwayTxt).toBeNull();
   });
 });
 
@@ -33,7 +22,7 @@ describe("buildConnectUrl", () => {
     serviceId: "shortlinks",
     zone: "mgm.li",
     hostname: "mgm.li",
-    records: connectRecords("mgm.li", "7twq8s70.up.railway.app", "token123", "railway-verify=abc"),
+    records: connectRecords("mgm.li", "edge.example.net", "token123"),
     keyId: "_dcpubkeyv1",
     redirectUrl: "https://labmgm.org/admin",
     privateKey: privateKey.export({ type: "pkcs8", format: "pem" }) as string,

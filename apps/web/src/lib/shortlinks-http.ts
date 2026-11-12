@@ -8,7 +8,7 @@ import { renderShortlinkPage, renderShortlinkUnavailable } from "@/lib/shortlink
  * redirect itself is one API call and one 302: no page, no scripts, no ads.
  */
 
-const DEFAULT_SITE_HOSTS = "labmgm.org,www.labmgm.org,web-production-589d3f.up.railway.app";
+const DEFAULT_SITE_HOSTS = "labmgm.org,www.labmgm.org";
 
 function apiBase(): string {
   return (
