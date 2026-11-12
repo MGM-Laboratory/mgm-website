@@ -1,6 +1,6 @@
 # MGM Laboratory Website
 
-Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, theme-aware Next.js marketing site (`apps/web`) plus a NestJS API (`apps/api`) and a shared workspace package (`packages/@repo/shared`). Live at `github.com/MGM-Laboratory/mgm-website`, deployed on Railway (auto-deploy on every push to `main`).
+Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, theme-aware Next.js marketing site (`apps/web`) plus a NestJS API (`apps/api`) and a shared workspace package (`packages/@repo/shared`). Live at `github.com/MGM-Laboratory/mgm-website`, published as Docker Hub images by CI and deployed on MGM infrastructure.
 
 ## If you're new here, read in this order
 
@@ -16,8 +16,8 @@ Monorepo for the **MGM Laboratory** homepage and backend: a heavily animated, th
 10. `docs/careers-cms.md`: job postings, application uploads, and the careers inbox.
 11. `docs/shortlinks.md`: the link shortener (domains with Cloudflare setup, links with expiry and passphrases, the click path, per-link analytics).
 12. `docs/forms.md`: the form builder (the Forms workspace in `/admin`, the form document and its logic, responses, analytics, and the immersive public form at `/forms/[slug]`).
-13. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Railway blocks outbound SMTP entirely below the Pro plan, a fact that's cost real debugging time once already.
-14. `docs/ci-cd.md`: GitHub Actions + Docker Hub + Railway wiring.
+13. `docs/mail-system.md`: the 3-provider mail abstraction (Resend/SMTP/SES). **Read this before touching mail config.** Some hosts block outbound SMTP, so the provider choice has to follow what the deployment allows.
+14. `docs/ci-cd.md`: GitHub Actions, Docker Hub images and how they are deployed.
 15. `docs/testing-verification.md`: how work is verified here (Playwright + dev server).
 16. `docs/repo-history.md`: the 2026-09-12 migration and why git rules are strict.
 
@@ -28,12 +28,12 @@ This project runs **Next.js 16.3.4** (App Router, React 19.2.8, Tailwind v4). AP
 ## Hard rules (user-enforced, do not bend)
 
 1. **Git identity & attribution.** Commit as whatever identity `git config user.name`/`user.email` resolves to in this working copy: no repo-local override, and never impersonate another contributor's identity. **Never mention Claude, ChatGPT, or any AI agent anywhere in a commit message, trailer, PR description, or code comment: no `Co-Authored-By`, no "generated with," nothing.** The user once rewrote the entire 109-commit history over this. Details: `docs/repo-history.md`.
-2. **Granular commits and PR flow.** One discrete working change per commit; push it to the working branch immediately, open a PR to `main`, and wait for every required check to pass. Do **not** push directly to `main`; only `/merge` performs the merge, and only when the user explicitly requests it.
-3. **Keep the dev server running** at `http://localhost:3000` at all times (`pnpm dev:web`). Check it responds before and after changes (`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000`).
-4. **Verify before declaring done.** Interact with the result in a real browser (Playwright screenshots + interaction scripts; see `docs/testing-verification.md`), then `open http://localhost:3000`. Fixing a bug = reproducing it first, then re-testing the fix under the same conditions.
+2. **Granular commits and PR flow.** One discrete working change per commit, pushed to the working branch immediately. Every change goes through a branch and a pull request, and the required checks must pass. Never push directly to `main`. A pull request is merged with a merge commit, never squash or rebase.
+3. **Dev server only when the owner asks for it in that moment.** When asked, run it at `http://localhost:3000` (`pnpm dev:web`) and check that it responds before and after changes (`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000`).
+4. **Browser verification only when the owner asks for it in that moment.** When asked, interact with the result in a real browser (Playwright screenshots and interaction scripts, see `docs/testing-verification.md`), then `open http://localhost:3000`. When fixing a bug, reproduce it first, then re-test the fix under the same conditions.
 5. **Design discipline.** Use the `DESIGN_SYSTEM.md` tokens, not ad-hoc colors. Everything must be theme-aware (light/dark via `.dark` class) and reduced-motion safe (`prefers-reduced-motion`).
 6. **Never let a static CSS class set `transform`/`translate-*`/`rotate-*`/`scale-*` on an element GSAP also animates**: GSAP stacks onto it instead of replacing it. This bug has shipped twice. See `docs/animation-system.md` §Gotchas.
-7. **Never merge a PR unless the user explicitly asks for it in that moment**. Even then, double-check that this is really what they want before acting: a merge ships to production within approximately 30 seconds (see "CI/CD at a glance"). This repo merges by commenting `/merge` on the PR (see `docs/ci-cd.md` § Merging), never GitHub's own merge button or the API's merge endpoint directly. `/merge` re-checks readiness, uses a merge commit (not squash), deletes the branch safely, tears down the preview environment, and verifies the post-merge deploy. Going around it skips all of that.
+7. **Merging.** Never merge a PR unless the user explicitly asks for it in that moment, and double-check that this is really what they want before acting, because a merge to `main` publishes new Docker Hub images. Merge with a merge commit (`gh pr merge <n> --merge`), never squash or rebase, so the individual commits of each PR stay on `main`. Required checks must pass first.
 8. **Verified commits.** Every commit pushed from this working copy must be signed with the configured SSH signing key and verified by GitHub. Keep `commit.gpgsign=true`, `gpg.format=ssh`, and the repository signing key configured.
 
 ## Commands
@@ -83,5 +83,5 @@ docs/                deep-dive documentation (read them)
 ## CI/CD at a glance
 
 - **GitHub Actions**: `ci.yaml` runs on push to `main` + PRs + manual dispatch; `publish-docker-image-latest.yml` (push to `main`) and `publish-docker-image-staging.yml` (any PR) call the reusable `publish-docker-image.yml` workflow (matrixed over api/web) to build & push `website-api`/`website-web` images to Docker Hub (Docker Hub creds live at org level).
-- **Railway**: project `mgm-company-profile` (`810d3a40-d9d2-410c-b117-289d2aff095f`), production env `42acf786-e8f4-41f8-8d4f-715bee1655f8`. Services `web` + `api` source from this repo's `main` and **auto-deploy on every push** (about 30 seconds). Postgres + `mgm-storage` bucket attached.
-- Every push to `main` therefore triggers: GitHub Actions CI → Docker images → Railway deploys. Full details + verification commands: `docs/ci-cd.md`.
+- **Deployment**: the Docker Hub images are deployed on MGM infrastructure, outside this repository. No workflow here deploys or restarts anything.
+- Every push to `main` therefore triggers GitHub Actions CI and the Docker image publish. Full details and verification commands are in `docs/ci-cd.md`.
