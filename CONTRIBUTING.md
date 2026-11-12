@@ -19,6 +19,8 @@ Every PR runs:
 - **CI**: lint, typecheck, `pnpm test` (API unit tests + coverage), build, for both workspaces.
 - **Security**: CodeQL, dependency review, secret scanning (gitleaks), Trivy filesystem scan.
 - **E2E**: Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
+- **Lighthouse**: performance, accessibility, SEO and best-practices budgets on `/`, `/about` and `/contact`, on pull requests.
+- **Prose**: Vale lint of the hand-written Markdown.
 - **SonarCloud Code Analysis**: posted automatically by SonarCloud's own GitHub App; no local setup needed.
 - **pre-commit.ci**: runs repository hygiene checks and Prettier on every pull-request commit; formatting fixes are committed back to same-repository PRs automatically.
 
