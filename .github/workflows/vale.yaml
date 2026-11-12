@@ -62,7 +62,7 @@ jobs:
           # through as "" at runtime and vale-action silently falls back to
           # scanning the whole working directory. Comma survives the trim.
           separator: ","
-          files: "README.md,AGENTS.md,CLAUDE.md,DESIGN_SYSTEM.md,CODE_OF_CONDUCT.md,CONTRIBUTING.md,GOVERNANCE.md,SECURITY.md,.github/pull_request_template.md,apps/api/README.md,apps/web/README.md,docs"
+          files: "README.md,AGENTS.md,CLAUDE.md,DESIGN_SYSTEM.md,CODE_OF_CONDUCT.md,CONTRIBUTING.md,GOVERNANCE.md,SECURITY.md,ACCESSIBILITY.md,MAINTAINERS.md,SUPPORT.md,ROADMAP.md,.github/pull_request_template.md,apps/api/README.md,apps/web/README.md,docs"
 
   gate:
     name: Prose gate
