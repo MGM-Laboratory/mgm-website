@@ -20,9 +20,9 @@ The pages follow the design tokens (`apps/web/src/lib/shortlinks-pages.ts`): lig
 `ShortLinkDomain` rows live in Postgres. The primary domain (env `SHORTLINKS_PRIMARY_DOMAIN`, `labmgm.org`) is seeded at API boot and serves links under `/s/`. Custom domains are added in the admin workspace and serve links at their root once they are connected.
 
 - **Detection.** Adding a domain queries its nameservers. A Cloudflare nameserver marks the domain `cloudflare`, which unlocks the one-click setup. Anything else shows manual DNS instructions.
-- **Routing.** Railway's edge answers 404 for unknown hosts, so a custom domain must be attached to the web service. With `RAILWAY_API_TOKEN` configured (a project token with domain permissions) the API attaches it itself through the Railway GraphQL API. The routing CNAME points at Railway's per-domain target (each attached domain gets its own `*.up.railway.app` hostname), plus Railway's ownership TXT at `_railway-verify.<domain>`.
-- **Cloudflare connect.** The admin clicks "Connect with Cloudflare" and the API builds a signed Domain Connect v2 apply URL (RSA-SHA256 over the query string, public key published at `_dcpubkeyv1.labmgm.org`). Cloudflare's consent page applies the template's records: the routing CNAME, our verification TXT (`_mgm-verify.<domain>`) and Railway's ownership TXT. No Cloudflare token is ever handled. The one-time provider onboarding with Cloudflare is documented in `docs/domain-connect.md`; until it is complete the button still returns the exact records to copy.
-- **Verification.** The validity check is the TXT: the domain is connected only when `_mgm-verify.<domain>` matches its stored token AND the marker probe answers (`GET https://<domain>/__mgm-shortlink-verify`), which proves DNS, the Railway attachment and TLS all work end to end. The admin page's check-now re-runs the checks and shows which piece is missing. Links on a pending domain do not resolve.
+- **Routing.** A custom domain is only a stored record. The API does not attach it to a service. The proxy in front of the site has to accept the host and route it to the web app. The routing CNAME points at `SHORTLINKS_CNAME_TARGET`, which has no default. While it is unset, the admin page says that the CNAME target is not configured in place of the CNAME row, and "Connect with Cloudflare" is disabled. The API also refuses the connect request with a 409.
+- **Cloudflare connect.** The admin clicks "Connect with Cloudflare" and the API builds a signed Domain Connect v2 apply URL (RSA-SHA256 over the query string, public key published at `_dcpubkeyv1.labmgm.org`). Cloudflare's consent page applies the template's records: the routing CNAME and our verification TXT (`_mgm-verify.<domain>`). No Cloudflare token is ever handled. The one-time provider onboarding with Cloudflare is documented in `docs/domain-connect.md`. Until it is complete the button still returns the exact records to copy.
+- **Verification.** The validity check is the TXT: the domain is connected only when `_mgm-verify.<domain>` matches its stored token AND the marker probe answers (`GET https://<domain>/__mgm-shortlink-verify`), which proves DNS, the proxy routing and TLS all work end to end. The admin page's check-now re-runs the checks and shows which piece is missing. Links on a pending domain do not resolve.
 - The web app caches the custom-domain list (`/api/shortlinks/hosts`) for a minute, and the marker only answers for hosts on that list, so a probe for a random host header never succeeds.
 
 ## Links
@@ -49,18 +49,18 @@ Public (no authentication, throttled off or per-IP where noted):
 
 Admin (the `x-cms-passphrase` header, same gate as every CMS controller):
 
-| Route                                            | What it does                                         |
-| ------------------------------------------------ | ---------------------------------------------------- |
-| `GET /api/shortlinks/admin/domains`              | domains plus the CNAME target                        |
-| `POST /api/shortlinks/admin/domains`             | add a domain (Cloudflare detected, Railway attached) |
-| `GET /api/shortlinks/admin/domains/:id`          | re-check DNS, provider and the verification marker   |
-| `POST /api/shortlinks/admin/domains/:id/connect` | the signed Domain Connect apply URL and the records  |
-| `DELETE /api/shortlinks/admin/domains/:id`       | remove a domain (refused while it has links)         |
-| `GET /api/shortlinks/admin/links`                | list with search and domain filter                   |
-| `POST /api/shortlinks/admin/links`               | create                                               |
-| `PUT /api/shortlinks/admin/links/:id`            | update                                               |
-| `DELETE /api/shortlinks/admin/links/:id`         | delete                                               |
-| `GET /api/shortlinks/admin/links/:id/analytics`  | the analytics bundle                                 |
+| Route                                            | What it does                                        |
+| ------------------------------------------------ | --------------------------------------------------- |
+| `GET /api/shortlinks/admin/domains`              | domains plus the CNAME target (null when unset)     |
+| `POST /api/shortlinks/admin/domains`             | add a domain (Cloudflare is detected)               |
+| `GET /api/shortlinks/admin/domains/:id`          | re-check DNS, provider and the verification marker  |
+| `POST /api/shortlinks/admin/domains/:id/connect` | the signed Domain Connect apply URL and the records |
+| `DELETE /api/shortlinks/admin/domains/:id`       | remove a domain (refused while it has links)        |
+| `GET /api/shortlinks/admin/links`                | list with search and domain filter                  |
+| `POST /api/shortlinks/admin/links`               | create                                              |
+| `PUT /api/shortlinks/admin/links/:id`            | update                                              |
+| `DELETE /api/shortlinks/admin/links/:id`         | delete                                              |
+| `GET /api/shortlinks/admin/links/:id/analytics`  | the analytics bundle                                |
 
 The web app mirrors these under `/api/admin/links/**`, gated by the `links` RBAC page id like every other workspace, and forwards the visitor's IP and client on the public reads.
 
@@ -74,21 +74,19 @@ The Links section of the studio (`apps/web/src/components/admin/links-studio.tsx
 
 ## Environment
 
-| Variable                                    | Service | What it does                                                                       |
-| ------------------------------------------- | ------- | ---------------------------------------------------------------------------------- |
-| `SHORTLINKS_PRIMARY_DOMAIN`                 | api     | the site domain that serves `/s/` links (default `labmgm.org`)                     |
-| `SHORTLINKS_CNAME_TARGET`                   | api     | where custom domains point (the web service's Railway domain)                      |
-| `SHORTLINKS_WEB_SERVICE_ID`                 | api     | the Railway web service id for domain attachment                                   |
-| `SHORTLINKS_RAILWAY_PROJECT_ID` / `_ENV_ID` | api     | Railway ids for attachment (defaults match production)                             |
-| `RAILWAY_API_TOKEN`                         | api     | project token for attaching custom domains; without it the admin attaches manually |
-| `DOMAIN_CONNECT_PRIVATE_KEY`                | api     | PEM RSA key signing each Domain Connect sync request                               |
-| `SHORTLINKS_GEOLOCATE`                      | api     | `false` turns IP geolocation off                                                   |
-| `SHORTLINKS_SITE_HOSTS`                     | web     | hosts that serve the marketing site, where `/s/` is used                           |
+| Variable                     | Service | What it does                                                                                   |
+| ---------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `SHORTLINKS_PRIMARY_DOMAIN`  | api     | the site domain that serves `/s/` links (default `labmgm.org`)                                 |
+| `SHORTLINKS_CNAME_TARGET`    | api     | where custom domains point, no default (optional, see Routing above)                           |
+| `DOMAIN_CONNECT_PRIVATE_KEY` | api     | PEM RSA key signing each Domain Connect sync request                                           |
+| `SHORTLINKS_GEOLOCATE`       | api     | `false` turns IP geolocation off                                                               |
+| `SHORTLINKS_SITE_HOSTS`      | web     | hosts that serve the marketing site, where `/s/` is used (default `labmgm.org,www.labmgm.org`) |
 
 ## Gotchas
 
 - Do not add a `proxy.ts` to "speed up" resolution: the catch-all route handler already costs nothing on matched pages, and a proxy would force every page dynamic.
-- Railway must know a custom domain before its traffic reaches the app. The autoconfigure path does this only when `RAILWAY_API_TOKEN` has the permission; a token that cannot even read `project` is scoped wrong.
+- The proxy in front of the site must know a custom domain before its traffic reaches the app. Adding the domain in the admin page does not configure the proxy.
+- Domain rows keep a legacy `railwayDomainId` column. Nothing reads or writes it, and it stays so that the old migrations remain valid.
 - Custom domains resolve their own links only. A link shortened on the site domain never resolves at a custom domain's root, and vice versa, by design.
-- The primary domain's links work on every host the site answers on (www, the Railway domain, localhost), via a fallback in `findRoutableLink`.
+- The primary domain's links work on every host the site answers on (www, localhost), via a fallback in `findRoutableLink`.
 - Visit recording and the click counter are two separate writes per hit. They agree in aggregate, but a crash between them can leave a click recorded without its counter increment, which only matters for single-use links under rare timing.

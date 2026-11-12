@@ -3,9 +3,9 @@
   "providerName": "MGM Laboratory",
   "serviceId": "shortlinks",
   "serviceName": "MGM Short Links",
-  "version": 1,
+  "version": 2,
   "logoUrl": "https://labmgm.org/logo.svg",
-  "description": "Point this domain at your MGM Laboratory short links. The domain serves short links at its root, with a routing CNAME, a verification TXT MGM Laboratory checks, and the ownership TXT Railway requires.",
+  "description": "Point this domain at your MGM Laboratory short links. The domain serves short links at its root, with a routing CNAME and a verification TXT that MGM Laboratory checks.",
   "variableDescription": "the short-link domain being connected",
   "syncPubKeyDomain": "labmgm.org",
   "syncRedirectDomain": "labmgm.org",
@@ -22,12 +22,6 @@
       "type": "TXT",
       "host": "_mgm-verify",
       "data": "%verifyToken%",
-      "ttl": 600
-    },
-    {
-      "type": "TXT",
-      "host": "_railway-verify",
-      "data": "%railwayToken%",
       "ttl": 600
     }
   ]
