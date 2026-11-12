@@ -42,7 +42,7 @@ test("tests, automation, and unknown paths use the appropriate conservative scop
       .map(([name]) => name),
     ["e2e"],
   );
-  const automation = classifyChanges([".github/scripts/pr-command.mjs"]);
+  const automation = classifyChanges([".github/scripts/detect-changes.mjs"]);
   assert.ok(automation.automation && automation.codeql && !automation.web && !automation.api);
   assert.deepEqual(
     classifyChanges(["new-build-system.conf"]),

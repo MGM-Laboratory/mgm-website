@@ -2,13 +2,13 @@
 
 The API sends transactional email (contact-form admin notifications + visitor confirmations, event/job-application confirmations) through a single abstraction, `apps/api/src/mail/mail.service.ts`, that can route across **three providers**: Resend's REST API, SMTP (nodemailer), and AWS SES, with configurable failover/load-balancing and per-provider quota accounting. Admins configure routing from the CMS; nothing about provider choice is hardcoded per call site.
 
-## ⚠️ Railway blocks outbound SMTP below the Pro plan
+## ⚠️ Some hosts block outbound SMTP
 
-**Before reaching for the SMTP provider on this deployment: Railway disables outbound SMTP entirely on Free/Trial/Hobby plans. It only works on Pro and above.** This is not a code or config problem; no host/port/TLS combination fixes it.
+**Before reaching for the SMTP provider, check that the deployment allows outbound SMTP.** Some hosts and cloud plans disable it entirely to prevent spam and abuse. This is not a code or config problem, and no host, port or TLS combination fixes it. Choose the provider to match what the deployment allows.
 
-Confirmed directly (2026-09-19): SSH'd into the production `api` container and probed raw TCP connectivity to `smtp.resend.com` on all four standard SMTP ports: 25, 465, 587, and 2525. Every one timed out. Railway's own docs (`docs.railway.com/networking/outbound-networking`) state this explicitly: _"SMTP is disabled on \[Free/Trial/Hobby] plans to prevent spam and abuse"_ and recommend an HTTPS-API transactional email service instead: Resend is literally their top recommendation. If this project is ever moved to a Pro plan and SMTP is wanted again, the debug recipe is in that same doc (SSH in, probe all four ports, compare against Railway's own IPs).
+Resend's REST API (the `resend` provider below) and SES use HTTPS, so a host that blocks SMTP does not affect them. SMTP is still fully implemented and configurable, which is useful for local dev, Docker Compose, or any host that allows it.
 
-**Practical upshot:** Resend's REST API (the `resend` provider below) is the one that actually works on this deployment. SMTP is still fully implemented and configurable (useful for local dev, Docker Compose, or a future Pro-plan deployment). Just don't expect it to work in production without a plan upgrade.
+To check a host, run a raw TCP probe from the `api` container to the SMTP server on all four standard SMTP ports (25, 465, 587 and 2525). A timeout on every port means the host blocks outbound SMTP. A probe of `smtp.resend.com` on the previous host (2026-09-19) timed out on all four ports, which is why the `resend` provider was the one that worked there.
 
 ## Providers
 
@@ -66,4 +66,4 @@ Singleton settings row (`CmsContactSettings`, fixed slug `"contact"`), cached fo
 
 ## Changing production mail config
 
-Env vars are Railway service variables on `api` (`mcp__railway__set-variables` or the dashboard), never in the repo. Setting any `SMTP_*`/`RESEND_API_KEY`/`SES_FROM_EMAIL`/`MAIL_FROM_NAME` var triggers an automatic redeploy. After changing anything provider-related in production, verify with a real submission (`curl -X POST .../api/contact` with a throwaway payload) and check the deploy's logs for `"All mail providers failed: ..."`. That exact string is the give-away that every configured candidate rejected the send.
+Env vars are set in the deployment environment of the `api` container, never in the repo. The API reads them at start, so restart the container after changing any `SMTP_*`/`RESEND_API_KEY`/`SES_FROM_EMAIL`/`MAIL_FROM_NAME` var. After changing anything provider-related in production, verify with a real submission (`curl -X POST .../api/contact` with a throwaway payload) and check the container logs for `"All mail providers failed: ..."`. That exact string is the give-away that every configured candidate rejected the send.
