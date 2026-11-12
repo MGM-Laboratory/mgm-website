@@ -799,8 +799,8 @@ function DomainsModal({
   );
 }
 
-// NOSONAR: won't-fix, see docs/repo-history.md — the workspace is one
-// stateful studio; the heavy lifting already lives in the components above.
+// Known refactor candidate, see docs/repo-history.md. The workspace is one
+// stateful studio, the heavy lifting already lives in the components above.
 export function LinksStudio({
   initialDomains,
   initialLinks,
