@@ -36,7 +36,7 @@ export async function ghPaginate(token, path, key) {
 }
 
 // Every check reported against a commit, whether it arrived as a Check Run
-// (workflow jobs, CodeQL, SonarCloud's own App) or a legacy commit Status,
+// (workflow jobs, CodeQL, apps) or a legacy commit Status,
 // deduplicated by name.
 export async function collectChecks(token, repo, sha) {
   const [checkRuns, combinedStatus] = await Promise.all([

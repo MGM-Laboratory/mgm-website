@@ -1,6 +1,6 @@
 // Same reasoning as focus-toolkits.ts: every Focus page's pipeline-stepper
 // content shares the {label, detail} shape by design (so it renders through
-// FocusPipelineSection), and SonarCloud's duplication check masks string
+// FocusPipelineSection), and duplication checks mask string
 // literals, so repeated arrays of that shape register as duplicate code
 // regardless of the actual copy — stored as JSON instead of TS object-literal
 // syntax, since there's no repeated code structure to compare that way.
