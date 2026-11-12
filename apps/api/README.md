@@ -1,6 +1,6 @@
 # MGM Laboratory
 
-Monorepo for the MGM Laboratory company site: a Next.js marketing site (`apps/web`) and a NestJS API (`apps/api`).
+The NestJS and Prisma API behind the website of MGM Laboratory, the Media, Game and Mobile laboratory at FILKOM, Universitas Brawijaya. It serves the CMS, contact, forms, mail, short link and storage routes. The web app is in `apps/web`.
 
 [![CI](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml)
 [![Security](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml)

@@ -82,4 +82,4 @@ A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POS
 | `POSTGRES_PORT`     | `5432`         | The host port of the database.                                       |
 | `ADMIN_PASSPHRASE`  | none, required | The superadmin passphrase for the API and the web app.               |
 
-The compose file passes the other API settings through with the defaults of the tables above.
+The compose file forwards only these settings from the root `.env` to the API container. They are `CORS_ORIGIN`, `THROTTLE_TTL`, `THROTTLE_LIMIT`, `AWS_REGION`, `AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `SES_FROM_EMAIL`. To use another setting, such as `RESEND_API_KEY`, `AWS_ENDPOINT_URL` or `PUBLIC_WEB_URL`, add it to the `environment` block of the `api` service in `docker-compose.yml`.
