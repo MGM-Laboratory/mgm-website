@@ -1,6 +1,6 @@
 # CI/CD
 
-Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, and the Docker build, publish and sign pipeline. Every pull request runs the same checks plus SonarCloud and pre-commit.ci. `main` is protected. Every change goes through a branch, a pull request and the required checks, and it is merged with a merge commit, never squash or rebase. An administrative bypass exists but is not routine practice.
+Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, and the Docker build, publish and sign pipeline. Every pull request runs the same checks plus pre-commit.ci. `main` is protected. Every change goes through a branch, a pull request and the required checks, and it is merged with a merge commit, never squash or rebase. An administrative bypass exists but is not routine practice.
 
 The site is not deployed from this repository. CI publishes the Docker images to Docker Hub, and the images are deployed on MGM infrastructure. See "Deployment" below.
 
@@ -59,7 +59,7 @@ Safety notes:
 
 - `detect-changes.yml` only attempts the actual diff on `push` and `pull_request`. Every other trigger (`workflow_dispatch`, the weekly `schedule` on `security.yaml`) forces every scope on, so a manual run is never silently skipped.
 - A job skipped via `if:` reports conclusion `skipped`, and GitHub's required-status-checks treat a skipped required check as passing. This is why gating with `if:` on the downstream job is safe, whereas putting `paths-ignore` on the workflow's own `on:` trigger would **not** be (the check would never run at all, and a required check that never runs blocks the PR forever). Don't swap this for `paths-ignore` without changing that.
-- CodeRabbit and SonarCloud are separate GitHub Apps, not workflow files in this repo, so they're unaffected by this and keep reviewing every PR (including docs-only ones) as before.
+- CodeRabbit is a separate GitHub App, not a workflow file in this repo, so it is unaffected by this and keeps reviewing every PR (including docs-only ones) as before.
 
 <!-- vale Google.Headings = NO -->
 
@@ -133,10 +133,6 @@ gh release create v1.0.0 --title "v1.0.0" --generate-notes --target main
 
 `--generate-notes` builds the changelog from merged PR titles since the previous tag (or from the beginning of history, for the first release). Before tagging, confirm CI is green on the exact commit being tagged (`gh run list --branch main --limit 5`). A release should represent something already verified working, not just "whatever main happens to be." v1.0.0 was cut this way from the tip of `main` after PR #48 merged.
 
-## SonarCloud
-
-Wired via SonarCloud's own GitHub App (Automatic Analysis), project `MGM-Laboratory_mgm-website3`, posts its own "SonarCloud Code Analysis" check on every push/PR with no workflow file needed.
-
 ## Security-scanner suppressions
 
 Known false positives get suppressed at the source (an inline comment next to the flagged code), never by clicking "dismiss" through a scanner's own web UI or API. That way the reasoning ships with the diff and survives independently of any alert database.
@@ -182,9 +178,7 @@ All other workflows still run on their explicit triggers. Staging Docker builds 
 | -------------------------------------------------------- | ---------------- |
 | GitHub Actions                                           | 15368            |
 | GitHub Advanced Security (Trivy and gitleaks check-runs) | 57789            |
-| SonarCloud                                               | 12526            |
 | Codecov                                                  | 254              |
-| DeepSource                                               | 16372            |
 | pre-commit.ci                                            | 68672            |
 | GitGuardian                                              | 46505            |
 | Semgrep                                                  | 4965759          |
@@ -199,4 +193,4 @@ After the repo migration, push-triggered runs silently stopped firing on the fre
 
 ## Historical: Harness removed (2026-09-15)
 
-This repo used to run a second CI platform on Harness Cloud (three checks: `harness-ci`, `harness-security`, `harness-supply-chain`, triggered via `harness.yml` and `.harness/*.yaml`). It was removed entirely. The account needed a credit card on file to run anything at all, and rather than leave a permanently red, unfixable check gating merges, the whole integration (workflow, trigger script, pipeline YAML, secret) was deleted. CodeQL, gitleaks, Trivy, and SonarCloud remain as the security and quality coverage.
+This repo used to run a second CI platform on Harness Cloud (three checks: `harness-ci`, `harness-security`, `harness-supply-chain`, triggered via `harness.yml` and `.harness/*.yaml`). It was removed entirely. The account needed a credit card on file to run anything at all, and rather than leave a permanently red, unfixable check gating merges, the whole integration (workflow, trigger script, pipeline YAML, secret) was deleted. CodeQL, gitleaks, and Trivy remain as the security and quality coverage.
