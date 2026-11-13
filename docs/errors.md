@@ -60,6 +60,11 @@ The public job application and the public event registration catch the zod error
 - The contact inbox allows only the read action for delegated accounts. Any other action on that page answers 403.
 - The web login route answers with a 303 redirect. A wrong passphrase goes to `/admin/login?error=1`.
 
+## Waiting for the API
+
+- The web server waits at most 10 seconds for the answer to a read from the API and 30 seconds for a write. A file that streams through the web server, such as a video, a CV or a form upload, may take up to 30 minutes before the API answers. Only the wait for the response headers is limited, so a long download is not cut off.
+- A call that runs out of time fails like a call that cannot connect. The pages that catch an API failure show their empty state, and a route handler that does not catch it answers 500.
+
 ## Rate limits
 
 - A blocked request answers 429 with the body `{"statusCode":429,"message":"ThrottlerException: Too Many Requests"}`. The header `Retry-After` holds the seconds to wait. An allowed request carries the headers `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`.

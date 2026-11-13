@@ -9,6 +9,7 @@ import {
 } from "@/lib/admin-session";
 import type { CmsAdminRecord } from "@/lib/admin-permissions";
 import { apiBaseUrl } from "@/lib/cms-api";
+import { API_WRITE_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-timeout";
 
 /**
  * A redirect back into the admin panel. The Location is relative so it
@@ -38,12 +39,16 @@ export async function POST(request: Request) {
   // Otherwise the passphrase belongs to a managed admin account. The verify
   // endpoint is public by design, so this fetch deliberately sends no
   // x-cms-passphrase header.
-  const response = await fetch(`${apiBaseUrl()}/cms/admins/verify`, {
-    method: "POST",
-    cache: "no-store",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ passphrase }),
-  });
+  const response = await fetchWithTimeout(
+    `${apiBaseUrl()}/cms/admins/verify`,
+    {
+      method: "POST",
+      cache: "no-store",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ passphrase }),
+    },
+    API_WRITE_TIMEOUT_MS,
+  );
   if (response.ok) {
     const { account } = (await response.json()) as { account?: CmsAdminRecord };
     if (account?.slug) {
