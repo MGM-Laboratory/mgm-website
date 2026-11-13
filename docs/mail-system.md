@@ -38,6 +38,10 @@ Configured (or not) purely by which env vars are present. Nothing needs to be "e
 
 Only the superadmin changes the routing. A save by another admin keeps the stored strategy, order, weights and limits, because the web server adds them to the request before it reaches the API, which would otherwise fill the missing fields with their defaults (the strategy `failover`, the order `resend`, `smtp`, `ses`, and empty weights and limits). A save that tries to change one of them answers 403. A save answers 502 when the web server cannot read the stored settings first.
 
+## Timeouts
+
+Each provider has a limit, so a provider that goes silent hands the message to the next one. SES and SMTP give up after 10 seconds without a connection and after 30 seconds without data. SMTP also waits at most 10 seconds for the greeting of the server. The Resend client cannot be aborted, so the call is dropped after 30 seconds and the next provider takes over. A message that Resend delivered after that limit can reach the recipient twice.
+
 ## Quota accounting (`MailProviderLimitConfig`)
 
 Optional per-provider `dailyLimit`/`longLimit` (`longPeriod: "monthly" | "30day"`), two window modes:

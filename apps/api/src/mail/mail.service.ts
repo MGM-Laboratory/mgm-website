@@ -16,6 +16,12 @@ import {
 import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { withTimeout } from "./with-timeout.js";
+
+// None of the mail clients stops waiting on its own, or they wait for minutes. A
+// provider that goes silent must hand the message to the next one in good time.
+const MAIL_CONNECTION_TIMEOUT_MS = 10_000;
+const MAIL_SOCKET_TIMEOUT_MS = 30_000;
 
 export type MailProviderStatus = {
   fromEmailConfigured: boolean;
@@ -70,7 +76,13 @@ export class MailService {
     configService: ConfigService<Env, true>,
     private readonly prisma: PrismaService,
   ) {
-    this.client = new SESClient({ region: configService.get<string>("AWS_REGION") });
+    this.client = new SESClient({
+      region: configService.get<string>("AWS_REGION"),
+      requestHandler: {
+        connectionTimeout: MAIL_CONNECTION_TIMEOUT_MS,
+        socketTimeout: MAIL_SOCKET_TIMEOUT_MS,
+      },
+    });
     this.sesCredentialsConfigured = Boolean(
       configService.get<string | undefined>("AWS_ACCESS_KEY_ID"),
     );
@@ -87,6 +99,9 @@ export class MailService {
           port: configService.get<number | undefined>("SMTP_PORT") ?? 587,
           secure: configService.get<boolean>("SMTP_SECURE"),
           auth: smtpUser && smtpPassword ? { user: smtpUser, pass: smtpPassword } : undefined,
+          connectionTimeout: MAIL_CONNECTION_TIMEOUT_MS,
+          greetingTimeout: MAIL_CONNECTION_TIMEOUT_MS,
+          socketTimeout: MAIL_SOCKET_TIMEOUT_MS,
         })
       : undefined;
 
@@ -497,13 +512,17 @@ export class MailService {
   ): Promise<void> {
     if (id === "resend") {
       if (!this.resend) throw new Error("Resend is not configured (RESEND_API_KEY is missing)");
-      const { error } = await this.resend.emails.send({
-        from,
-        html: params.html,
-        replyTo: params.replyTo,
-        subject: params.subject,
-        to: params.to,
-      });
+      const { error } = await withTimeout(
+        this.resend.emails.send({
+          from,
+          html: params.html,
+          replyTo: params.replyTo,
+          subject: params.subject,
+          to: params.to,
+        }),
+        MAIL_SOCKET_TIMEOUT_MS,
+        "Resend",
+      );
       if (error) throw new Error(`Resend: ${error.message}`);
       return;
     }
