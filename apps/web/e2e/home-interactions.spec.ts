@@ -194,10 +194,14 @@ test("article covers respond to focus without reloading their image", async ({ p
     }
   });
   await cover.locator("..").focus();
-  await expect(cover.locator(".article-cover-arrow")).toHaveCSS("opacity", "1");
+  // The fade takes a moment, and a slow macOS runner was still at 0.98 when the default 5 seconds ended, and the cause is not proven. If it stays flaky, check the frame rate of the page.
+  await expect(cover.locator(".article-cover-arrow")).toHaveCSS("opacity", "1", {
+    timeout: 15_000,
+  });
   await expect(cover.locator(".article-cover-image")).toHaveCSS(
     "filter",
     "saturate(1.12) contrast(1.04)",
+    { timeout: 15_000 },
   );
   expect(requests).toEqual([]);
   await page.emulateMedia({ reducedMotion: "reduce" });
