@@ -3,14 +3,16 @@
 # Build context is the monorepo root:
 #   docker build -f apps/web/Dockerfile -t mgm-website-frontend .
 
-FROM node:22-alpine AS base
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS base
 RUN corepack enable
 
 # 1. Prune the monorepo down to what `web` actually needs
 FROM base AS pruner
 WORKDIR /app
 COPY . .
-RUN npx turbo prune web --docker
+# renovate: datasource=npm depName=turbo
+ARG TURBO_VERSION=2.10.12
+RUN npx --yes turbo@${TURBO_VERSION} prune web --docker
 
 # 2. Install deps and build
 FROM base AS builder
@@ -30,11 +32,17 @@ ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
 RUN pnpm turbo run build --filter=web
 
 # 3. Final runtime image — Next.js standalone output is already self-contained
-FROM node:22-alpine AS runner
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nextjs && adduser --system --uid 1001 nextjs
+
+# The runtime needs only the node binary. npm, corepack and yarn carry their own
+# bundled packages, which scanners report, and nothing at run time calls them.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
 
 COPY --from=builder --chown=nextjs:nextjs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/apps/web/.next/static ./apps/web/.next/static
