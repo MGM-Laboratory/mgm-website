@@ -4,7 +4,7 @@
 
 ## How was this tested?
 
-<!-- Commands run, browsers checked, screenshots for UI changes. See docs/testing-verification.md. -->
+<!-- Checks you read in CI, browsers checked, screenshots for UI changes. See docs/testing-verification.md. -->
 
 ## Checklist
 

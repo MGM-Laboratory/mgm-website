@@ -72,7 +72,7 @@ CI=true PORT=3457 CMS_FIXTURE_PORT=4010 npx playwright test --retries=0 --worker
 
 ## Type & lint gates
 
-`pnpm typecheck` (web: `next typegen && tsc --noEmit`) and `pnpm lint` (web: eslint; api: oxlint) must be clean before declaring done: these are also the CI gates. `pnpm test` runs api vitest only (web has no test script).
+`pnpm typecheck` (web: `next typegen && tsc --noEmit`) and `pnpm lint` (web: eslint; api: oxlint) must be clean in CI before declaring done, because they are also the CI gates. `pnpm test` runs api vitest only (web has no test script).
 
 ## Commit & push
 

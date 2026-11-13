@@ -1,6 +1,6 @@
 # Support
 
-The website is maintained by its owner. There is no paid support and no promise of a reply time. This page says where to look first and where each kind of question goes.
+The website is maintained by its owner. There is no paid support and no promise of a reply time, except for vulnerability reports, which `SECURITY.md` covers. This page says where to look first and where each kind of question goes.
 
 ## Look here first
 
