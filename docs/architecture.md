@@ -5,9 +5,9 @@
 pnpm workspaces (pnpm 11.3.0, Node 22, Turbo 2.10):
 
 ```
-apps/web/              Next.js 16.3.4 marketing site (React 19.2.8, Tailwind v4, GSAP 3.15)
+apps/web/              Next.js 16 site and CMS workspace (React 19.2.8, Tailwind v4, GSAP 3.15)
 apps/api/              NestJS API (ESM, Prisma, oxlint, vitest), port 4000
-packages/@repo/shared  shared code consumed via workspace:*
+packages/shared       shared code (@repo/shared) consumed via workspace:*
 .github/workflows/     ci.yaml + publish-docker-image.yml + publish-docker-image-{latest,staging}.yml
 ```
 
