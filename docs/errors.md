@@ -33,7 +33,7 @@ A route that calls `schema.parse(body)` and has no guard turns a zod error into 
 - `POST /api/cms/publications/author-photo` and `PUT /api/cms/publications/:slug`
 - `PUT /api/cms/jobs/:slug`, `POST /api/cms/jobs/:slug/media`, `PUT /api/cms/jobs/applications/:slug/state` and `POST /api/cms/jobs/applications/bulk`
 
-The public job application and the public event registration catch the zod error and answer 400 with the first issue as the message. The articles, projects, research, events, contact inbox, link shortener and forms routes also answer 400.
+The public job application and the public event registration catch the zod error and answer 400 with the first issue as the message. The articles, projects, research, events, contact inbox, link shortener and forms routes also answer 400. So does the member save, with the path of the first failing field in front of the message, for example `profile.links.1.url`.
 
 ## Status codes
 

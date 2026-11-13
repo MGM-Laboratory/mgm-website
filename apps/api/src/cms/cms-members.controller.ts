@@ -92,7 +92,11 @@ export class CmsMembersController {
     // A link with an unsafe scheme is a mistake of the editor, so it answers 400 with the reason and not a server error
     const parsed = saveMemberSchema.safeParse(body);
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.issues[0]?.message ?? "The member is not valid.");
+      const issue = parsed.error.issues[0];
+      const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
+      throw new BadRequestException(
+        issue ? `${where}${issue.message}` : "The member is not valid.",
+      );
     }
     const document = parsed.data;
     try {
