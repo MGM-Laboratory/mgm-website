@@ -356,27 +356,45 @@ export class FormsPublicService {
     if (now - (this.lastSweep.get(formId) ?? 0) < ORPHAN_SWEEP_INTERVAL_MS) return;
     this.lastSweep.set(formId, now);
     if (this.lastSweep.size > 5000) this.lastSweep.clear();
-    void (async () => {
-      const orphans = await this.prisma.formUpload.findMany({
-        where: {
-          formId,
-          responseId: null,
-          createdAt: { lt: new Date(now - ORPHAN_AGE_MS) },
-        },
-        select: { key: true },
-        take: 200,
-      });
-      for (const { key } of orphans) {
-        await this.storage.deleteFile(key).catch(() => undefined);
-      }
-      if (orphans.length) {
-        await this.prisma.formUpload.deleteMany({
-          where: { key: { in: orphans.map((orphan) => orphan.key) }, responseId: null },
-        });
-      }
-    })().catch((error: unknown) => {
+    void this.deleteOrphans(formId, now).catch((error: unknown) => {
       this.logger.warn("Orphaned form upload sweep failed", String(error));
     });
+  }
+
+  /**
+   * Deletes the old unsubmitted uploads of a form. A row goes only when its
+   * object is gone, so an object that failed to delete keeps its row and the
+   * next sweep tries it again. Without the row nothing would ever find it.
+   */
+  async deleteOrphans(formId: string, now: number): Promise<void> {
+    const orphans = await this.prisma.formUpload.findMany({
+      where: {
+        formId,
+        responseId: null,
+        createdAt: { lt: new Date(now - ORPHAN_AGE_MS) },
+      },
+      select: { key: true },
+      take: 200,
+    });
+    const deleted: string[] = [];
+    for (const { key } of orphans) {
+      try {
+        await this.storage.deleteFile(key);
+        deleted.push(key);
+      } catch {
+        // The row stays for the next sweep.
+      }
+    }
+    if (deleted.length < orphans.length) {
+      this.logger.warn(
+        `Could not delete ${orphans.length - deleted.length} of ${orphans.length} orphaned form files`,
+      );
+    }
+    if (deleted.length) {
+      await this.prisma.formUpload.deleteMany({
+        where: { key: { in: deleted }, responseId: null },
+      });
+    }
   }
 
   // --- Submissions ---
