@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import type { PrismaService } from "../prisma/prisma.service.js";
@@ -377,6 +378,31 @@ describe("ShortlinksService", () => {
 
       await expect(check).resolves.toBeUndefined();
       expect(prisma.shortLink.update).toHaveBeenCalledTimes(1);
+    });
+
+    it("logs a dropped check by name and stays quiet for a deleted link", async () => {
+      const prisma = makePrisma();
+      const service = makeService(prisma);
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      onTestFinished(() => warn.mockRestore());
+      const run = () =>
+        (
+          service as unknown as { checkAndStoreUrl(id: string, url: string): Promise<void> }
+        ).checkAndStoreUrl("link-1", "javascript:alert(1)");
+
+      prisma.shortLink.update.mockRejectedValueOnce(
+        Object.assign(new Error("Record to update not found."), { code: "P2025" }),
+      );
+      await run();
+      expect(warn).not.toHaveBeenCalled();
+
+      prisma.shortLink.update.mockRejectedValueOnce(
+        new Error("connection to db://secret-host refused"),
+      );
+      await run();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]?.[0])).toContain("link-1");
+      expect(String(warn.mock.calls[0]?.[0])).not.toContain("secret-host");
     });
   });
 });
