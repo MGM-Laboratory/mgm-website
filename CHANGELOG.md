@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.4](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.3...v1.3.4) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** keep the quota reservation of a send that timed out ([35f362f](https://github.com/MGM-Laboratory/mgm-website/commit/35f362fe5c8c92167343004ecc7ff8e0c38db2a3))
+* **api:** make one SES attempt, document the duplicate risk and test the client limits ([c43d005](https://github.com/MGM-Laboratory/mgm-website/commit/c43d005e92a13db3f84ed867642fd29eb2cf886b))
+* **api:** stop waiting for a silent mail provider and pass the message on ([2ff8daa](https://github.com/MGM-Laboratory/mgm-website/commit/2ff8daa1ebcf6f2acdaeb1a6a09671a24643f737))
+* **api:** stop waiting for a silent mail provider and pass the message on ([e2cdf15](https://github.com/MGM-Laboratory/mgm-website/commit/e2cdf1578abfa5764627a6d49520aab2eb2a6ac1))
+
 ## [1.3.3](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.2...v1.3.3) (2026-11-13)
 
 
