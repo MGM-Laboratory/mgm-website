@@ -61,7 +61,7 @@ test.describe("footer", () => {
 
     const instagram = page.locator('footer a[href="https://www.instagram.com/labmgmfilkomub/"]');
     // A native scroll to the bottom, repeated until the link shows. On "/" ScrollSmoother follows the native scroll and catches up
-    // a little later. A loop of wheel events never brought the link into view on macOS WebKit.
+    // a little later. A loop of wheel events did not bring the link into view in CI on macOS WebKit, and the cause is not proven.
     await expect
       .poll(
         async () =>
