@@ -19,6 +19,7 @@ import {
 } from "@repo/shared";
 import type { Request, Response } from "express";
 
+import { storedContentType } from "../storage/content-type.js";
 import { StorageConfigurationError, StorageService } from "../storage/storage.service.js";
 import { ContactService } from "./contact.service.js";
 
@@ -83,9 +84,9 @@ export class ContactController {
     const ext = extensionOf(filename);
     const slugSuffix = slug ? `-${slug}` : "";
     const key = `contact-${randomUUID()}${slugSuffix}${ext}`;
-    const contentType = String(request.headers["content-type"] ?? "application/octet-stream")
-      .split(";")[0]
-      .trim();
+    const contentType = storedContentType(
+      String(request.headers["content-type"] ?? "application/octet-stream"),
+    );
 
     try {
       await this.storage.uploadFile({ body, contentType, key });
