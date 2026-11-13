@@ -78,6 +78,9 @@ export class MailService {
   ) {
     this.client = new SESClient({
       region: configService.get<string>("AWS_REGION"),
+      // The failover to the next provider is the retry, so the SDK does not
+      // repeat a send that timed out on its own.
+      maxAttempts: 1,
       requestHandler: {
         connectionTimeout: MAIL_CONNECTION_TIMEOUT_MS,
         socketTimeout: MAIL_SOCKET_TIMEOUT_MS,
