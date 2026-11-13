@@ -26,6 +26,7 @@ import { HealthModule } from "./health/health.module.js";
 import { MailModule } from "./mail/mail.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
 import { skipThrottleForFormsAdmin } from "./forms/forms-admin.throttle.js";
+import { visitorTracker } from "./forms/forms.common.js";
 import { ShortlinksModule } from "./shortlinks/shortlinks.module.js";
 import { StorageModule } from "./storage/storage.module.js";
 
@@ -53,6 +54,8 @@ import { StorageModule } from "./storage/storage.module.js";
         },
       ],
       skipIf: skipThrottleForFormsAdmin,
+      // One bucket for each visitor that the web server vouches for, and one for the peer address otherwise
+      getTracker: visitorTracker,
     }),
     CacheModule,
     PrismaModule,

@@ -22,7 +22,7 @@ The device id of a form is a random value that the browser stores. The API keeps
 
 - A form stores the visit events `view`, `start`, `progress` and `submit` for each session. A session id is random and lives in the session storage of the tab.
 - The API stores the user agent of a form visit and the browser, system and device type that it reads from the user agent.
-- A short link visit always stores the IP address. The web app passes the address of the visitor to the API. The API reads the forwarded address, the header `cf-connecting-ip` or `x-forwarded-for`, and the address of the connection, in that order.
+- A short link visit always stores the IP address. The web app passes the address of the visitor to the API. The API believes the forwarded address only when the request carries the admin passphrase of the web server, and otherwise uses the address of the connection as Express reports it. That address is the client when `TRUST_PROXY` names the proxy in front of the API.
 - A form visit stores the IP address only when `collectLocation` is on.
 - The editor reads a short link visit log in the admin workspace, as totals, a 14 day series and the 50 most recent visits.
 

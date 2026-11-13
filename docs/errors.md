@@ -63,7 +63,7 @@ The public job application and the public event registration catch the zod error
 ## Rate limits
 
 - A blocked request answers 429 with the body `{"statusCode":429,"message":"ThrottlerException: Too Many Requests"}`. The header `Retry-After` holds the seconds to wait. An allowed request carries the headers `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`.
-- The global budget is `THROTTLE_LIMIT` requests (default 100) in `THROTTLE_TTL` milliseconds (default 60000) for each route and each client address.
+- The global budget is `THROTTLE_LIMIT` requests (default 100) in `THROTTLE_TTL` milliseconds (default 60000) for each route and each client, see the rate limit notes in `security.md`.
 - The routes `POST /api/contact`, `POST /api/cms/jobs/:slug/apply` and `POST /api/cms/events/:slug/register` allow 5 requests a minute.
 - The public form routes allow, for each visitor and each minute, 10 unlocks, 120 events, 30 uploads and 10 responses.
 

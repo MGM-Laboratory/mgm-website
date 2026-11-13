@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { parseTrustProxy } from "../trust-proxy.js";
+
 function optionalString<T extends z.ZodType<string>>(schema: T = z.string() as unknown as T) {
   return z.preprocess((value: unknown) => (value === "" ? undefined : value), schema.optional());
 }
@@ -15,6 +17,16 @@ const envSchema = z.object({
   PUBLIC_WEB_URL: z.url().default("http://localhost:3000"),
   THROTTLE_TTL: z.coerce.number().int().positive().default(60000),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
+  // The proxies in front of the API whose x-forwarded-for is believed, see trust-proxy.ts. Unset trusts none.
+  TRUST_PROXY: optionalString(
+    z.string().superRefine((value, context) => {
+      try {
+        parseTrustProxy(value);
+      } catch (error) {
+        context.addIssue({ code: "custom", message: (error as Error).message });
+      }
+    }),
+  ),
   ADMIN_PASSPHRASE: z.string().min(1, "ADMIN_PASSPHRASE is required"),
   REDIS_URL: optionalString(z.url()),
   AWS_REGION: z.string().default("us-east-1"),

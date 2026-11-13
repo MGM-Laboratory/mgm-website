@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import type { Env } from "../config/env.validation.js";
 import { safeEqual } from "../cms/admin-auth.util.js";
+import { visitMeta } from "../forms/forms.common.js";
 import { ShortlinksService, ShortlinksError } from "./shortlinks.service.js";
 import { EXPIRY_OPTIONS, SLUG_PATTERN } from "./shortlinks.utils.js";
 
@@ -85,8 +86,6 @@ const verifySchema = z.object({
   passphrase: z.string().min(1).max(200),
 });
 
-type VisitMeta = { ip: string | null; userAgent: string | null; referer: string | null };
-
 @ApiTags("shortlinks")
 @Controller("shortlinks")
 export class ShortlinksController {
@@ -112,33 +111,6 @@ export class ShortlinksController {
     if (!safeEqual(value, configured)) throw new UnauthorizedException("Unauthorized");
   }
 
-  /**
-   * The visitor's address and client, forwarded by the web app (which is the
-   * API's only client for these routes), with the direct-request headers as
-   * a fallback so a link hit straight on the API is still attributed.
-   */
-  private visitMeta(
-    req: Request,
-    forwardedIp: string | undefined,
-    forwardedAgent: string | undefined,
-    forwardedReferer: string | undefined,
-  ): VisitMeta {
-    const headers = req.headers;
-    const firstForwarded = (value: string | undefined) =>
-      value ? value.split(",")[0].trim() : null;
-    const ip =
-      firstForwarded(forwardedIp) ??
-      firstForwarded(headers["cf-connecting-ip"] as string | undefined) ??
-      firstForwarded(headers["x-forwarded-for"] as string | undefined) ??
-      req.ip ??
-      null;
-    return {
-      ip,
-      userAgent: forwardedAgent ?? (headers["user-agent"] as string | undefined) ?? null,
-      referer: forwardedReferer ?? (headers.referer as string | undefined) ?? null,
-    };
-  }
-
   // --- Public routes (the redirect path, visited on every click) ---
 
   /** Custom domains the web proxy should treat as short-link hosts. */
@@ -151,19 +123,8 @@ export class ShortlinksController {
 
   @SkipThrottle()
   @Get("resolve")
-  async resolve(
-    @Query("slug") slug: string,
-    @Query("host") host: string,
-    @Req() req: Request,
-    @Headers("x-visitor-ip") forwardedIp: string,
-    @Headers("x-visitor-user-agent") forwardedAgent: string,
-    @Headers("x-visitor-referer") forwardedReferer: string,
-  ) {
-    return this.shortlinks.resolve(
-      host ?? "",
-      slug ?? "",
-      this.visitMeta(req, forwardedIp, forwardedAgent, forwardedReferer),
-    );
+  async resolve(@Query("slug") slug: string, @Query("host") host: string, @Req() req: Request) {
+    return this.shortlinks.resolve(host ?? "", slug ?? "", visitMeta(req));
   }
 
   @SkipThrottle()
@@ -172,31 +133,18 @@ export class ShortlinksController {
     @Param("slug") slug: string,
     @Query("host") host: string,
     @Req() req: Request,
-    @Headers("x-visitor-ip") forwardedIp: string,
-    @Headers("x-visitor-user-agent") forwardedAgent: string,
-    @Headers("x-visitor-referer") forwardedReferer: string,
   ) {
-    return this.shortlinks.publicLinkState(
-      host ?? "",
-      slug,
-      this.visitMeta(req, forwardedIp, forwardedAgent, forwardedReferer),
-    );
+    return this.shortlinks.publicLinkState(host ?? "", slug, visitMeta(req));
   }
 
   @Post("verify")
-  async verify(
-    @Body() body: unknown,
-    @Req() req: Request,
-    @Headers("x-visitor-ip") forwardedIp: string,
-    @Headers("x-visitor-user-agent") forwardedAgent: string,
-    @Headers("x-visitor-referer") forwardedReferer: string,
-  ) {
+  async verify(@Body() body: unknown, @Req() req: Request) {
     const input = parseSafe(verifySchema, body);
     const result = await this.shortlinks.verify(
       input.host,
       input.slug,
       input.passphrase,
-      this.visitMeta(req, forwardedIp, forwardedAgent, forwardedReferer),
+      visitMeta(req),
     );
     if (!result) throw new HttpException("That link does not exist.", 404);
     if (result.expired) throw new HttpException("That link has expired.", 410);
