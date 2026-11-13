@@ -8,6 +8,18 @@ export const ROUTING_FIELDS = [
   "mailProviderLimits",
 ] as const;
 
+/** A stable string of a value, with object keys sorted and array order kept. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) => {
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      return Object.fromEntries(
+        Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
+      );
+    }
+    return item;
+  });
+}
+
 type Merged = { ok: true; payload: Partial<ContactSettings> } | { ok: false };
 
 /**
@@ -21,8 +33,7 @@ export function mergeOrdinarySave(
   current: ContactSettings,
 ): Merged {
   const changed = ROUTING_FIELDS.some(
-    (field) =>
-      body[field] !== undefined && JSON.stringify(body[field]) !== JSON.stringify(current[field]),
+    (field) => body[field] !== undefined && canonical(body[field]) !== canonical(current[field]),
   );
   if (changed) return { ok: false };
   const payload: Partial<ContactSettings> = Object.fromEntries(
