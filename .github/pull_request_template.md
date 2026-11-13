@@ -8,6 +8,7 @@
 
 ## Checklist
 
-- [ ] `pnpm lint` / `pnpm typecheck` / `pnpm test` pass locally
+- [ ] The CI checks pass
+- [ ] New or changed behavior comes with tests, or this PR says why not
 - [ ] UI changes were checked in a real browser (light + dark mode, reduced motion if animated)
 - [ ] No secrets, `.env` values, or production data included in this diff
