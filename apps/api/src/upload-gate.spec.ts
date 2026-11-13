@@ -29,7 +29,11 @@ describe("requireAdminPassphrase", () => {
 
     expect(next).not.toHaveBeenCalled();
     expect(status).toHaveBeenCalledWith(401);
-    expect(json).toHaveBeenCalledWith({ statusCode: 401, message: "Unauthorized" });
+    expect(json).toHaveBeenCalledWith({
+      message: "Unauthorized",
+      error: "Unauthorized",
+      statusCode: 401,
+    });
     expect(setHeader).toHaveBeenCalledWith("Connection", "close");
   });
 
@@ -52,6 +56,13 @@ describe("requireAdminPassphrase", () => {
 
     expect(next).not.toHaveBeenCalled();
     expect(status).toHaveBeenCalledWith(401);
+  });
+
+  it("lets a read through, because the same path prefix also serves public downloads", () => {
+    const { next, status } = run("GET", {});
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(status).not.toHaveBeenCalled();
   });
 
   it("lets a preflight request through, because it never carries the header", () => {

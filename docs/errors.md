@@ -46,7 +46,7 @@ The public job application and the public event registration catch the zod error
 | 409    | A slug or a code is taken, a state conflicts, or a form is closed, full or not open yet                     | A message that names the conflict                                         |
 | 410    | A short link has expired                                                                                    | `That link has expired.`                                                  |
 | 411    | A form respondent upload does not declare its size                                                          | `The upload must declare its size.`                                       |
-| 413    | A body or a file is above its limit                                                                         | `The file is too large.` or `The CV must be under 100 MB.`                |
+| 413    | A body or a file is above its limit                                                                         | `The file is too large.` or `File too large` (the CV apply route)         |
 | 429    | A rate limit budget is used up                                                                              | `ThrottlerException: Too Many Requests`                                   |
 | 500    | An error that the code did not plan                                                                         | `Internal server error`                                                   |
 | 502    | A form respondent file cannot be read from storage                                                          | `The file could not be read from storage.`                                |

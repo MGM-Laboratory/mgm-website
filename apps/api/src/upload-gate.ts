@@ -9,8 +9,9 @@ import { safeEqual } from "./cms/admin-auth.util.js";
  */
 export function requireAdminPassphrase(expected: string) {
   return (request: Request, response: Response, next: NextFunction) => {
-    // A preflight request has no body and never carries the header
-    if (request.method === "OPTIONS") {
+    // Only the upload verb carries a body. The same path prefix also serves public reads such as the video download, and a
+    // preflight request has no body and never carries the header
+    if (request.method !== "POST") {
       next();
       return;
     }
@@ -19,7 +20,9 @@ export function requireAdminPassphrase(expected: string) {
     if (!expected || !safeEqual(given, expected)) {
       // Close the connection so the rest of an upload is dropped and not read
       response.setHeader("Connection", "close");
-      response.status(401).json({ statusCode: 401, message: "Unauthorized" });
+      response
+        .status(401)
+        .json({ message: "Unauthorized", error: "Unauthorized", statusCode: 401 });
       return;
     }
     next();
