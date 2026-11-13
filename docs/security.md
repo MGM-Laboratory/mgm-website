@@ -46,7 +46,7 @@ This page describes what the web app and the API protect, who they protect it fr
 
 - The API uses `helmet` with its default headers and `compression`.
 - The production build of the web app sends a `Content-Security-Policy-Report-Only` header on every page. It blocks nothing. The browser reports each source that the policy would refuse to `/api/csp-report`, which writes one log line for each report with the page, the blocked source and the directive, without the query string. The route reads at most 8 KB of a body, whether or not the caller declares a length, and writes at most 60 lines a minute for each web process. The policy leaves out `frame-ancestors` and `form-action` for now, because the public forms are meant to be embedded on other sites and the short link gate is answered with a redirect to another site. Both are decided before the policy is enforced. The list in `apps/web/next.config.ts` is read against these reports and tightened before it becomes an enforced `Content-Security-Policy` header.
-- CORS allows the origins in `CORS_ORIGIN`, a comma separated list, with credentials.
+- CORS allows the origins in `CORS_ORIGIN`, a comma separated list, with credentials. Spaces around an entry and empty entries are ignored.
 - Every body is validated with a zod schema before the code uses it. The shared schemas live in `packages/shared`.
 - The API refuses a body above its limit. The JSON limit is 8 MB, and the form design media route takes 9 MB. The other limits are in the table under Uploads.
 - Contact messages are HTML escaped before they go into the notification mail.
