@@ -57,19 +57,19 @@ A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POS
 
 ## Web app
 
-| Setting                           | Default                     | Purpose                                                                                                |
-| --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_API_URL`             | `http://localhost:4000/api` | The API address that browsers call. It is read when the image is built, so set it as a build argument. |
-| `CMS_API_URL`                     | `NEXT_PUBLIC_API_URL`       | The API address that the web server calls. In compose it is `http://api:4000/api`.                     |
-| `ADMIN_PASSPHRASE`                | none, required              | The superadmin passphrase. It must match the API.                                                      |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | none                        | Turns on the interactive map on event pages. It is read when the image is built. Without it, the page shows the address and a link.        |
-| `CMS_MAX_PAPER_BYTES`             | `209715200`                 | The same limit as the API, checked before the upload is sent.                                          |
-| `CMS_MAX_VIDEO_BYTES`             | `524288000`                 | The same limit as the API.                                                                             |
-| `CMS_MAX_CV_BYTES`                | `104857600`                 | The same limit as the API.                                                                             |
-| `FORMS_MAX_UPLOAD_BYTES`          | `104857600`                 | The same limit as the API.                                                                             |
-| `SHORTLINKS_SITE_HOSTS`           | `labmgm.org,www.labmgm.org` | The host names that count as the site itself and not as a custom short domain.                         |
-| `PORT`                            | `3000`                      | The port the web server listens on. The image sets it, and its health check reads it.                  |
-| `NEXT_PUBLIC_SHOW_QUERY_DEVTOOLS` | none                        | `true` shows the query devtools in development.                                                        |
+| Setting                           | Default                     | Purpose                                                                                                                             |
+| --------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`             | `http://localhost:4000/api` | The API address that browsers call. It is read when the image is built, so set it as a build argument.                              |
+| `CMS_API_URL`                     | `NEXT_PUBLIC_API_URL`       | The API address that the web server calls. In compose it is `http://api:4000/api`.                                                  |
+| `ADMIN_PASSPHRASE`                | none, required              | The superadmin passphrase. It must match the API.                                                                                   |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | none                        | Turns on the interactive map on event pages. It is read when the image is built. Without it, the page shows the address and a link. |
+| `CMS_MAX_PAPER_BYTES`             | `209715200`                 | The same limit as the API, checked before the upload is sent.                                                                       |
+| `CMS_MAX_VIDEO_BYTES`             | `524288000`                 | The same limit as the API.                                                                                                          |
+| `CMS_MAX_CV_BYTES`                | `104857600`                 | The same limit as the API.                                                                                                          |
+| `FORMS_MAX_UPLOAD_BYTES`          | `104857600`                 | The same limit as the API.                                                                                                          |
+| `SHORTLINKS_SITE_HOSTS`           | `labmgm.org,www.labmgm.org` | The host names that count as the site itself and not as a custom short domain.                                                      |
+| `PORT`                            | `3000`                      | The port the web server listens on. The image sets it, and its health check reads it.                                               |
+| `NEXT_PUBLIC_SHOW_QUERY_DEVTOOLS` | none                        | `true` shows the query devtools in development.                                                                                     |
 
 ## Compose
 
