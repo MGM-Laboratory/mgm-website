@@ -23,8 +23,8 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
-  // The seed helpers speak for the superadmin, so the draft feeds must not
-  // reach accounts without read access to the matching page — the UI hides
+  // These reads speak for the superadmin, so the draft feeds must not
+  // reach accounts without read access to the matching page. The UI hides
   // the workspace, and the server must not ship its data either.
   const [
     articles,

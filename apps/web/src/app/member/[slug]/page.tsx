@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: MemberDetailPageProps): Promi
     const record = records.find(
       (item) => item.slug === slug || (item.sourceSlug === slug && item.slug !== slug),
     );
-    member = record?.member ?? member;
+    member = record?.member;
   } catch {
     // Fall back to the not found title when the CMS cannot be reached.
   }

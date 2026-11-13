@@ -1,0 +1,61 @@
+{
+  "records": [
+    {
+      "slug": "rahma-aliyyah",
+      "updatedAt": "2026-07-01T08:00:00.000Z",
+      "member": {
+        "accent": "blue",
+        "bio": "A fixture member of the Curriculum division.",
+        "division": "Curriculum",
+        "group": "People",
+        "hasPortrait": false,
+        "labFocus": [
+          "Fixture focus"
+        ],
+        "name": "Rahma Aliyyah",
+        "nickname": "Rahma",
+        "role": "Student Member",
+        "slug": "rahma-aliyyah"
+      },
+      "profile": {}
+    },
+    {
+      "slug": "tobias-andra-valentino",
+      "updatedAt": "2026-07-01T08:00:00.000Z",
+      "member": {
+        "accent": "yellow",
+        "bio": "A fixture member of the Curriculum division.",
+        "division": "Curriculum",
+        "group": "People",
+        "hasPortrait": false,
+        "labFocus": [
+          "Fixture focus"
+        ],
+        "name": "Tobias Andra Valentino",
+        "nickname": "Tobi",
+        "role": "Student Member",
+        "slug": "tobias-andra-valentino"
+      },
+      "profile": {}
+    },
+    {
+      "slug": "ihtishamul-hasan",
+      "updatedAt": "2026-07-01T08:00:00.000Z",
+      "member": {
+        "accent": "red",
+        "bio": "A fixture member of the Curriculum division.",
+        "division": "Curriculum",
+        "group": "People",
+        "hasPortrait": false,
+        "labFocus": [
+          "Fixture focus"
+        ],
+        "name": "Ihtishamul Hasan",
+        "nickname": "Samhasan",
+        "role": "Student Member",
+        "slug": "ihtishamul-hasan"
+      },
+      "profile": {}
+    }
+  ]
+}

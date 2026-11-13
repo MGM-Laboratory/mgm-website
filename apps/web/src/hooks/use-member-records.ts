@@ -34,9 +34,8 @@ export function useMemberRecords(initialRecords: readonly CmsMemberRecord[] = []
       // The route revalidates its ETag on revisit, preserving immediate edits
       // without downloading and parsing an unchanged directory again.
       const response = await fetch("/api/member-cms", { cache: "default", signal });
-      const data = (response.ok ? await response.json() : { records: [] }) as {
-        records?: CmsMemberRecord[];
-      };
+      if (!response.ok) throw new Error("Member records could not be read");
+      const data = (await response.json()) as { records?: CmsMemberRecord[] };
       if (!signal?.aborted && version === requestVersion.current) {
         setRecords(data.records ?? []);
       }
