@@ -18,6 +18,11 @@ export function formPosterSrc(media: FormMedia | undefined) {
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{6,20}$/;
 
+/** True for the domain itself or any subdomain of it, and not for `evilyoutube.com`. */
+function isHostOrSubdomain(host: string, domain: string) {
+  return host === domain || host.endsWith(`.${domain}`);
+}
+
 /** The video id of a YouTube link (watch, youtu.be, embed, shorts), or null. */
 export function youtubeId(url: string | undefined) {
   if (!url) return null;
@@ -26,7 +31,10 @@ export function youtubeId(url: string | undefined) {
     const host = parsed.hostname.replace(/^www\.|^m\./, "");
     let id: string | null = null;
     if (host === "youtu.be") id = parsed.pathname.slice(1).split("/")[0];
-    else if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+    else if (
+      isHostOrSubdomain(host, "youtube.com") ||
+      isHostOrSubdomain(host, "youtube-nocookie.com")
+    ) {
       id =
         parsed.searchParams.get("v") ??
         parsed.pathname.match(/^\/(?:embed|shorts|live|v)\/([^/?#]+)/)?.[1] ??
@@ -43,7 +51,8 @@ export function vimeoId(url: string | undefined) {
   if (!url) return null;
   try {
     const parsed = new URL(url);
-    if (!parsed.hostname.replace(/^www\.|^player\./, "").endsWith("vimeo.com")) return null;
+    if (!isHostOrSubdomain(parsed.hostname.replace(/^www\.|^player\./, ""), "vimeo.com"))
+      return null;
     return parsed.pathname.match(/\/(?:video\/)?(\d{5,12})(?:\/|$)/)?.[1] ?? null;
   } catch {
     return null;
