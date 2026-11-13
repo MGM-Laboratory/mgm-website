@@ -11,6 +11,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Throttle } from "@nestjs/throttler";
 import { ApiTags } from "@nestjs/swagger";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -75,6 +76,10 @@ export class CmsAdminsController {
   // The verify route is public by design: it is how the login page checks an
   // admin passphrase. The remaining routes are superadmin-only. It sits above
   // ":slug" so a record can never shadow the reserved path.
+  //
+  // It is the only public route that guesses a secret. Each visitor gets ten requests a minute, successful ones included,
+  // and every request costs one scrypt for each active account.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("verify")
   async verify(@Body() body: unknown) {
     // A missing or oversized passphrase is a bad request from the caller and not a server error

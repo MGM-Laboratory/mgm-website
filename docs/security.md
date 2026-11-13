@@ -36,9 +36,10 @@ This page describes what the web app and the API protect, who they protect it fr
 
 - The API registers the Nest throttler as a global guard. The default budget is `THROTTLE_LIMIT` requests (default 100) in `THROTTLE_TTL` milliseconds (default 60000) for each route and each client. The client is the visitor address that the web server forwards when the request carries the admin passphrase, and the address of the peer otherwise.
 - Three public write routes have a budget of 5 requests a minute, namely the contact message, the job application and the event registration.
+- The public admin check `POST /api/cms/admins/verify` has a budget of 10 requests a minute for each visitor, because each try costs one password hash for every active account. The web sign in route also allows 10 sign in attempts a minute for each visitor, for the superadmin passphrase and for the delegated accounts, and sends the visitor back to the login page with a message from the eleventh. A right passphrase gives its attempt back, and a visitor who is over the limit is refused even with the right one. An IPv6 visitor counts under its /64 prefix, here and for the other limits of the API that count per visitor. That counter lives in the memory of each web copy.
 - The public form routes have a budget for each visitor and not for the web server. The limits for each minute are 10 for an unlock, 120 for events, 30 for uploads and 10 for responses. For these form routes, the API uses the forwarded visitor address only when the request carries the admin passphrase.
 - The admin routes of the forms workspace skip the global budget when the request carries the right passphrase. A wrong or missing passphrase stays under the budget.
-- Most media redirect routes skip the budget. The public read routes of the link shortener and of the forms skip it too, because the web server calls them for every page render and every click.
+- Most media redirect routes skip the budget, and so does the list of short link hosts. The short link routes `resolve` and `public/:slug` allow 300 requests a minute for each visitor, because every click writes a visit row. The public read routes of the forms skip the budget, because the web server calls them for every page render.
 - A blocked request answers 429 with the header `Retry-After`. [Errors](errors.md) lists the bodies.
 
 ### Request hardening
