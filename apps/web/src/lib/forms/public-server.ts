@@ -32,9 +32,9 @@ export async function readFormToken(slug: string): Promise<string | undefined> {
 }
 
 /**
- * The public payload of a form: `null` when the form doesn't exist (or is
- * a draft) and when the API can't be reached in 5 seconds, so the page can
- * 404 or show its error state instead of throwing.
+ * The public payload of a form: `null` only when the API answers 404 (the
+ * form doesn't exist or is a draft). Any other failure, including no answer
+ * within 5 seconds, throws so the page shows the error page and not a 404.
  */
 export async function fetchPublicForm(
   slug: string,

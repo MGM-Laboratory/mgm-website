@@ -124,9 +124,10 @@ When the API answers with a body that is not JSON, the web app answers `The file
 
 ## Pages of the web app
 
-- A detail page of an article, project, research initiative, publication, event, role or form answers a real 404 only when the API answers 404 for the record. The page is the site's own 404 page (`app/not-found.tsx`), except for forms, which have their own.
-- When the API does not answer, answers with another error status, or times out, the page throws and the visitor sees the error page of `app/error.tsx` with a "Try again" button. The status is 500 when the failure comes before the page starts to stream, and 200 on a page whose `loading.tsx` has already been sent. A global failure of the root layout shows `app/global-error.tsx`.
-- An address that no page serves is answered by the catch-all route `app/[...slug]/route.ts`. A browser that sends `Accept: text/html` gets the 404 page. Any other caller gets `{"error":"Not Found"}` with the status 404.
+- A detail page of an article, project, research initiative, publication, event, role or form shows a 404 only when the API answers 404 for the record. The page is the site's own 404 page (`app/not-found.tsx`), except for forms and articles, which have their own `not-found.tsx`. A page that has a `loading.tsx` (articles, events and roles) has already started to stream, so its 404 page comes with the status 200 and a `noindex` tag.
+- When the API does not answer, answers with another error status, or times out, the page throws and the visitor sees the error page of `app/error.tsx` with a "Try again" button and a `noindex` tag. The status is 500 when the failure comes before the page starts to stream, and 200 on a page whose `loading.tsx` has already been sent. A failure of the root layout shows `app/global-error.tsx`.
+- The `generateViewport` of a detail page treats a failed read as no theme color, because it runs outside the error boundary of the page.
+- An address that no page serves is answered by the catch-all route `app/[...slug]/route.ts`. A `GET` that sends `Accept: text/html` gets a small HTML 404 page with a link to the home page. Any other call gets `{"error":"Not Found"}` with the status 404. Both answers carry `Vary: Accept`. A route handler cannot render `app/not-found.tsx`, which is why the HTML page is its own document.
 - The feeds that only decorate a page (the next project, the byline members, the photos of a publication) still fall back to an empty list when the API fails, so a failed feed never hides a record that was read.
 
 ## Health

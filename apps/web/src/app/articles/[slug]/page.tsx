@@ -60,7 +60,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export async function generateViewport({ params }: ArticlePageProps): Promise<Viewport> {
   const { slug } = await params;
-  const record = await readArticle(slug);
+  // The viewport sits outside the error boundary of the page, so a failed
+  // read gives no theme color and leaves the error page to the page itself.
+  const record = await readArticle(slug).catch(() => undefined);
   if (!record) return {};
   // The browser chrome wears the article's background, following the
   // system scheme (the site's own toggle can't reach a meta tag).

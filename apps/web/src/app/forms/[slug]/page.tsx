@@ -76,7 +76,9 @@ export async function generateMetadata({ params }: FormPageProps): Promise<Metad
 
 export async function generateViewport({ params }: FormPageProps): Promise<Viewport> {
   const { slug } = await params;
-  const payload = await readPublicForm(slug);
+  // The viewport sits outside the error boundary of the page, so a failed
+  // read gives no theme color and leaves the error page to the page itself.
+  const payload = await readPublicForm(slug).catch(() => null);
   if (!payload) return {};
   // The browser chrome wears the form's background. Under `auto` it can
   // only follow the system scheme (the site toggle can't reach a meta tag).
