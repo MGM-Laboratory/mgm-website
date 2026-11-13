@@ -85,6 +85,13 @@ jobs:
                 minor="${BASH_REMATCH[2]}"
                 source="${major}.${minor}.${BASH_REMATCH[3]}"
                 tags="$source"
+                # A tag can be pushed on any commit by a person with write access, and docker.yaml at that commit would build and
+                # sign an image of their choice. So the commit of the tag must be on main, where docker.yaml went through a pull request
+                status="$(gh api "repos/${REPOSITORY}/compare/main...${HEAD_SHA}" --jq .status)"
+                case "$status" in
+                  identical | behind) ;;
+                  *) skip "The commit ${sha7} of the tag ${HEAD_BRANCH} is not on main, so nothing is copied" ;;
+                esac
                 # A run of an older release that is started again must not move 1.2 or 1 back, so a floating tag is only a
                 # candidate when no higher version exists in its line
                 versions="$(gh api "repos/${REPOSITORY}/git/matching-refs/tags/v${major}." --paginate --jq '.[].ref' \
@@ -98,7 +105,7 @@ jobs:
                 identity="${workflow}@refs/tags/${HEAD_BRANCH}"
                 trigger="push"
               else
-                skip "A run of ${EVENT} on this ref publishes nothing"
+                skip "A run of ${EVENT} on ${HEAD_BRANCH} is not copied to Docker Hub. Only main and tags such as v1.2.3 are copied"
               fi
               ;;
             *)

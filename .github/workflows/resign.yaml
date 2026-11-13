@@ -64,7 +64,10 @@ jobs:
           digest=$(docker buildx imagetools inspect "${GHCR_IMAGE}:${TAG}" --format '{{.Manifest.Digest}}')
           echo "GitHub Container Registry holds ${digest}"
           if [ "$HUB" = "true" ]; then
-            hub_digest=$(docker buildx imagetools inspect "${HUB_IMAGE}:${TAG}" --format '{{.Manifest.Digest}}')
+            hub_digest=$(docker buildx imagetools inspect "${HUB_IMAGE}:${TAG}" --format '{{.Manifest.Digest}}') || {
+              echo "Docker Hub has no ${HUB_IMAGE}:${TAG}, so nothing was signed" >&2
+              exit 1
+            }
             echo "Docker Hub holds ${hub_digest}"
             if [ "$digest" != "$hub_digest" ]; then
               echo "The two registries hold different images for ${TAG}, so nothing was signed" >&2
