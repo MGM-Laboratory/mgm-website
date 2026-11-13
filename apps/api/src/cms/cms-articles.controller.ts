@@ -69,7 +69,6 @@ const articleSchema = z.object({
   }),
   content: z.array(blockSchema),
 });
-const bootstrapSchema = z.object({ records: z.array(articleSchema).min(1).max(500) });
 const saveArticleSchema = articleSchema.extend({ sourceSlug: z.string().min(1).optional() });
 
 const imageSchema = z.object({ image: z.string().startsWith("data:image/") });
@@ -117,20 +116,6 @@ export class CmsArticlesController {
   @Get(":slug")
   async one(@Param("slug") slug: string) {
     return { record: await this.articles.bySlug(slug) };
-  }
-
-  @Post("bootstrap")
-  async bootstrap(@Body() body: unknown, @Headers("x-cms-passphrase") passphrase = "") {
-    this.assertAdmin(passphrase);
-    const { records } = parseSafe(bootstrapSchema, body);
-    return {
-      records: await this.articles.bootstrap(
-        records.map((record) => ({
-          data: record as unknown as Prisma.InputJsonValue,
-          slug: record.article.slug,
-        })),
-      ),
-    };
   }
 
   // Article pages request hundreds of media redirects in a single burst, so

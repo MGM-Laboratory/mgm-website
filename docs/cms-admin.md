@@ -84,7 +84,7 @@ When adding a media type, enforce the byte limit at the API, preserve the stream
 
 An article record may carry `theme`, one of the same 20 preset ids as projects (`apps/web/src/lib/project-themes.ts`). The editor's Page theme picker (`article-cms-editor.tsx`, reusing the project editor's `ThemePicker`) offers every preset and an Automatic option, which previews the stable pick from the slug (`lib/theme-pick.ts`) that a record without a theme gets. The article page wears it, the library world tints its fog toward it, and the list's cards carry it (`data-article-theme`) so opening one sweeps its color in. See [`articles-page.md`](articles-page.md).
 
-The article save and bootstrap routes validate their bodies and answer 400 naming the first invalid field (an unknown theme id included, which the editor shows next to that field), like the project routes, instead of failing with a 500.
+The article save route validates their bodies and answer 400 naming the first invalid field (an unknown theme id included, which the editor shows next to that field), like the project routes, instead of failing with a 500.
 
 ### Project detail fields
 
@@ -111,7 +111,7 @@ A project record also carries the fields its detail page (`/projects/[slug]`, se
 
 ## Content seeding and failure behavior
 
-The members, articles and publications live only in the database. The code holds no starter data for them, so a new database starts with empty pages, and an editor adds the records in `/admin`. Only the research collection still has a starter record, an internal draft template in `apps/web/src/data/research.ts` that the admin workspace loads into an empty store. The API keeps the `bootstrap` routes of the other collections, but the web app no longer calls them for members, articles and publications. Do not call an admin feed from a public page just to fill a list, because drafts and protected fields must not reach an account without the corresponding `read` permission.
+The members, articles and publications live only in the database. The code holds no starter data for them, so a new database starts with empty pages, and an editor adds the records in `/admin`. Only the research collection still has a starter record, an internal draft template in `apps/web/src/data/research.ts` that the admin workspace loads into an empty store. The API has no `bootstrap` route for members, articles and publications. The research, project and event collections still have one. Do not call an admin feed from a public page just to fill a list, because drafts and protected fields must not reach an account without the corresponding `read` permission.
 
 When the API cannot be reached, the member and article pages show no member, author or record, because no bundled copy exists to fall back on.
 
