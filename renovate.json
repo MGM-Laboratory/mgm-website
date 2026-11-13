@@ -55,7 +55,7 @@
       "groupSlug": "api-minor-patch"
     },
     {
-      "matchManagers": ["npm"],
+      "matchManagers": ["npm", "custom.regex"],
       "matchUpdateTypes": ["major"],
       "groupName": null,
       "dependencyDashboardApproval": true
