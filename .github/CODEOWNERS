@@ -2,8 +2,8 @@
 # code owner, so a pull request from anyone else needs the approval of the owner.
 * @SyafaHadyan
 
-# Files that a bot rewrites on its own have no owner, so a Renovate or Release Please pull request does not ask the owner
-# for a review of a lockfile or a changelog that nobody writes by hand. The last matching line wins.
+# Files that a bot rewrites on its own have no owner, so a pull request that changes only those files does not ask the owner
+# for a review. The approval count of the ruleset still applies. The last matching line wins.
 /pnpm-lock.yaml
 /CHANGELOG.md
 /.release-please-manifest.json

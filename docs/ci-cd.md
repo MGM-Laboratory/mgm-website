@@ -1,6 +1,6 @@
 # CI/CD
 
-Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, and the Docker build, publish and sign pipeline. Every pull request runs the same checks plus pre-commit.ci. `main` is protected. Every change goes through a branch, a pull request and the required checks, and it is merged with a merge commit, never squash or rebase. An administrative bypass exists but is not routine practice.
+Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, and the Docker build, publish and sign pipeline. Every pull request runs the same checks plus pre-commit.ci. `main` is protected. Every change goes through a branch, a pull request and the required checks, and it is merged with a merge commit, never squash or rebase. The Governance section below says who can merge and what is required.
 
 The site is not deployed from this repository. CI builds the Docker images and publishes them to GitHub Container Registry and Docker Hub, and the images are deployed on MGM infrastructure. See "Deployment" below.
 
@@ -158,7 +158,7 @@ Gatus also exposes a response-time badge (`.../response-times/:duration/badge.sv
 
 ## Governance
 
-Two rulesets protect `main`. `main-protection` (id `23450743`) has no bypass actor, so it holds for everyone, the owner included. It requires an up-to-date PR, signed commits, resolved review threads and the selected first-party gates below. It also blocks a direct push, a force push and a deletion, and it allows only merge commits. `main-merge-and-approval` (id `27176484`) adds two rules. A PR needs one approval of a code owner (`require_code_owner_review`), and only the bypass team can update `main`, which in practice means only the maintainer can merge. That team holds one account and its bypass works only through a pull request, so it never covers a direct push, and `main-protection` still applies in full to that merge. Check the rules after any ruleset edit with the commands below. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`.
+Two rulesets protect `main`. `main-protection` (id `23450743`) has no bypass actor, so it holds for everyone, the owner included. It requires an up-to-date PR, signed commits, resolved review threads and the selected first-party gates below. It also blocks a direct push, a force push and a deletion, and it allows only merge commits. `main-merge-and-approval` (id `27176484`) adds two rules. A PR needs one approval of a code owner (`require_code_owner_review`), and only the bypass team can update `main`, which in practice means only the maintainer can merge. That team currently holds one account and its bypass works only through a pull request, so it never covers a direct push, and `main-protection` still applies in full to that merge. Check the rules after any ruleset edit with the commands below. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`.
 
 ```bash
 gh api repos/MGM-Laboratory/mgm-website/rules/branches/main \
