@@ -10,6 +10,7 @@ The site is not deployed from this repository. CI publishes the Docker images to
 | -------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ci.yaml`                                          | push/PR to `main`, dispatch                          | Three independently scoped jobs. `api` (lint, typecheck, test with coverage uploaded to Codecov with flag `api`, then build, against a Postgres 17 service container), `web` (lint, typecheck, build) and `hygiene` (repo-wide format check, unconditional, plus tests of the CI scripts gated on the `automation` scope). Aggregate gate `Lint, typecheck, test & build` |
 | `security.yaml`                                    | push/PR to `main`, weekly, dispatch                  | CodeQL (JS/TS), dependency review (PRs only, fails on new high/critical advisories), gitleaks secret scan (OSS CLI, not the licensed Action, see `.gitleaksignore`), Trivy filesystem scan, weekly OSSF Scorecard. All upload SARIF to the Security tab                                                                                                                   |
+| `release-please.yaml`                              | push to `main`, dispatch                             | Keeps one release pull request with the next version and `CHANGELOG.md`. Merging that pull request creates the `v*` tag and the GitHub release. It runs in the `release` environment, which only `main` can use, and it creates its token from the GitHub App `syafa-bot`. It is not a required check                                                                     |
 | `e2e.yaml`                                         | push/PR to `main`, dispatch                          | Playwright on chromium, firefox, webkit, mobile-chrome and mobile-safari on ubuntu, plus one Windows and one macOS job. Visual-regression baselines only on the primary ubuntu+chromium project                                                                                                                                                                           |
 | `lighthouse.yaml`                                  | PR to `main`, dispatch                               | Lighthouse CI performance, accessibility, SEO and best-practices budget on `/`, `/about`, `/contact`. Also posts a per-URL GitHub status check as a best-effort, `continue-on-error` step separate from the assertion step that actually decides pass or fail, so a status-post failure can never affect the gate                                                         |
 | `vale.yaml`                                        | push/PR to `main`, dispatch                          | Prose lint over the repo's hand-written Markdown (Vale, the Google style package and a custom `MGM` style). See "Prose linting (Vale)" below                                                                                                                                                                                                                              |
@@ -122,16 +123,13 @@ cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer https
 
 ## Releases
 
-Entirely manual, because no workflow watches for or reacts to a `v*.*.*` tag (see the note above). To cut one:
+Release Please makes the releases. After each push to `main` it keeps one release pull request open with the next version number and the changelog. It reads the Conventional Commit types of the commits since the last tag. A `fix` raises the patch number, a `feat` raises the minor number, and a breaking change (`type!:` or a `BREAKING CHANGE:` footer) raises the major number. A `docs`, `ci`, `chore`, `style` or `test` commit does not start a release by itself.
 
-```bash
-git checkout main && git pull origin main
-git tag -a v1.0.0 -m "v1.0.0" <commit-sha-or-omit-for-current-HEAD>
-git push origin v1.0.0
-gh release create v1.0.0 --title "v1.0.0" --generate-notes --target main
-```
+Merging the release pull request writes `CHANGELOG.md`, sets the version in the root `package.json`, creates the tag `vX.Y.Z` and publishes the GitHub release. The first version is 1.0.0, the tag that already existed, and it is recorded in `.release-please-manifest.json`. The settings are in `release-please-config.json`.
 
-`--generate-notes` builds the changelog from merged PR titles since the previous tag (or from the beginning of history, for the first release). Before tagging, confirm CI is green on the exact commit being tagged (`gh run list --branch main --limit 5`). A release should represent something already verified working, not just "whatever main happens to be." v1.0.0 was cut this way from the tip of `main` after PR #48 merged.
+Release Please gets its token from the GitHub App `syafa-bot` and not from the default token. A pull request or tag made with the default token does not start other workflows, and the App token does, so the release pull request runs the checks. The App also signs the release commits through the API, which the ruleset requires. The private key is the secret `RELEASE_APP_PRIVATE_KEY` of the `release` environment, which only the `main` branch can use, and the variable `RELEASE_APP_CLIENT_ID` holds the App's client ID.
+
+Before the release pull request is merged, confirm that CI is green on `main` for the newest merge and read the changelog. A release should represent something that was already verified, and not only whatever `main` happens to hold.
 
 ## Security-scanner suppressions
 
