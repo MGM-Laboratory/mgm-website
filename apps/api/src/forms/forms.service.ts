@@ -27,6 +27,9 @@ import {
 
 type FormStats = FormRecord["stats"];
 
+// How long and how many keys a copy remembers as used by some form.
+const REFERENCED_KEYS_TTL_MS = 5 * 60 * 1000;
+const REFERENCED_KEYS_MAX = 500;
 const EMPTY_STATS: FormStats = { responses: 0, views: 0, starts: 0, lastResponseAt: null };
 
 function isUniqueViolation(error: unknown) {
@@ -41,7 +44,12 @@ export class FormsService {
   private readonly logger = new Logger(FormsService.name);
   // The scan of every form document is the one expensive step of the public
   // media route, and a made up key whose form does not exist reaches it.
-  private readonly referenceScans = new ScanBudget(5);
+  private readonly referenceScans = new ScanBudget(5, 2);
+  // A form that was duplicated keeps pointing at the media of its original, so
+  // once the original is deleted every image of the copy needs the scan. A
+  // key that a scan found is remembered for a while, which leaves the budget
+  // to the keys that are made up.
+  private readonly referencedKeys = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -296,9 +304,23 @@ export class FormsService {
     return rows.length > 0;
   }
 
+  private rememberReferenced(key: string) {
+    const now = Date.now();
+    if (this.referencedKeys.size >= REFERENCED_KEYS_MAX) {
+      for (const [stored, expires] of this.referencedKeys) {
+        if (expires <= now) this.referencedKeys.delete(stored);
+      }
+      if (this.referencedKeys.size >= REFERENCED_KEYS_MAX) {
+        const oldest = this.referencedKeys.keys().next().value;
+        if (oldest !== undefined) this.referencedKeys.delete(oldest);
+      }
+    }
+    this.referencedKeys.set(key, now + REFERENCED_KEYS_TTL_MS);
+  }
+
   /**
    * A design media key may be served when its form exists or any form still
-   * uses it. The second check is limited to a few scans for each second.
+   * uses it. The second check is limited to a few scans, and a key that it found is remembered for a few minutes.
    */
   async mediaServable(key: string): Promise<boolean> {
     const formId = mediaKeyFormId(key);
@@ -308,8 +330,12 @@ export class FormsService {
       select: { id: true },
     });
     if (owner) return true;
-    // Only a key whose form was deleted while another form still uses it
-    // needs the scan, which is rare. Over the budget the key is not served.
-    return this.referenceScans.take() ? this.mediaReferenced(key) : false;
+    const known = this.referencedKeys.get(key);
+    if (known !== undefined && known > Date.now()) return true;
+    // Over the budget the key is not served.
+    const found = await this.referenceScans.run(() => this.mediaReferenced(key));
+    if (found !== true) return false;
+    this.rememberReferenced(key);
+    return true;
   }
 }

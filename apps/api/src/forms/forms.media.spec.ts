@@ -31,4 +31,19 @@ describe("mediaServable", () => {
     expect(prisma.$queryRaw.mock.calls.length).toBeLessThanOrEqual(5);
     expect(prisma.$queryRaw.mock.calls.length).toBeGreaterThan(0);
   });
+
+  it("serves the images of a copy after its original is deleted, even when the budget is spent", async () => {
+    const { service, prisma } = makeService(null, true);
+    const keys = Array.from(
+      { length: 6 },
+      (_, index) => `form-abc123-0b6a1c52-3f2e-4d7a-9a1b-5c0d8e2f4a6${index}.png`,
+    );
+    // The first request for each image scans. The budget lets only a few through at a time.
+    for (const key of keys) await service.mediaServable(key);
+    const scans = prisma.$queryRaw.mock.calls.length;
+    expect(scans).toBeLessThanOrEqual(5);
+    // Every key that was found is served again from memory without a scan.
+    for (const key of keys.slice(0, scans)) expect(await service.mediaServable(key)).toBe(true);
+    expect(prisma.$queryRaw.mock.calls.length).toBe(scans);
+  });
 });
