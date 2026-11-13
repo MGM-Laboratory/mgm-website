@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Search, Star, X } from "lucide-react";
 import { debounce, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
-import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { PhotoSkeleton } from "@/components/ui/skeleton";
 import { type Member, type MemberDivision } from "@/data/members";
@@ -304,7 +304,6 @@ export function MemberDirectory({
     division: parseAsStringLiteral(FILTER_VALUES).withDefault("All"),
     q: parseAsString.withDefault("").withOptions({ limitUrlUpdates: debounce(300) }),
   });
-  const [profileSearchIndex, setProfileSearchIndex] = useState<Record<string, string>>({});
   const [scrollResetVersion, setScrollResetVersion] = useState(0);
   const deferredQuery = useDeferredValue(query);
   const recordsBySlug = useMemo(
@@ -312,38 +311,11 @@ export function MemberDirectory({
     [records],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const loadIndex = () =>
-      fetch("/member-profiles/index.json", { signal: controller.signal })
-        .then((response) => (response.ok ? response.json() : {}))
-        .then((index: Record<string, string>) => {
-          setProfileSearchIndex(index);
-        })
-        .catch((error: unknown) => {
-          if (error instanceof DOMException && error.name === "AbortError") return;
-        });
-
-    const idleCallback = window.requestIdleCallback?.(loadIndex);
-    if (idleCallback === undefined) {
-      void loadIndex();
-    }
-
-    return () => {
-      controller.abort();
-      if (idleCallback !== undefined) window.cancelIdleCallback?.(idleCallback);
-    };
-  }, []);
-
   const filteredMembers = useMemo(() => {
     return members
       .flatMap((member) => {
         const record = recordsBySlug.get(member.slug);
-        const profileText = [
-          profileSearchIndex[member.slug],
-          record?.profile.bio,
-          ...(record?.profile.skills ?? []),
-        ]
+        const profileText = [record?.profile.bio, ...(record?.profile.skills ?? [])]
           .filter(Boolean)
           .join(" ");
         if (!matchesFilter(member, filter)) return [];
@@ -357,7 +329,7 @@ export function MemberDirectory({
           Number(Boolean(b.member.highlighted)) - Number(Boolean(a.member.highlighted)) ||
           a.member.name.localeCompare(b.member.name),
       );
-  }, [deferredQuery, filter, members, profileSearchIndex, recordsBySlug]);
+  }, [deferredQuery, filter, members, recordsBySlug]);
 
   const countFor = (candidate: Filter) =>
     members.filter((member) => matchesFilter(member, candidate)).length;
