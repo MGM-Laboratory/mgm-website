@@ -9,7 +9,6 @@ const RECORDS_CACHE_KEY = "cms:projects:v1";
 const DRAFTS_CACHE_KEY = "cms:projects:drafts:v1";
 const FEED_CACHE_KEY = "cms:projects:feed:v1";
 const RECORDS_CACHE_TTL_SECONDS = 60 * 10;
-const VIDEO_ALLOWED_TTL_SECONDS = 60 * 10;
 // Stored image keys are immutable (every upload mints a new uuid), so a
 // measured size never goes stale; a failed read is retried after a while.
 const MEDIA_SIZE_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -160,23 +159,15 @@ export class CmsProjectsService {
     return records;
   }
 
+  /**
+   * A video is public when a published record uses it as its demo video or in
+   * one of its media sections. The answer comes from the cached feed, so a
+   * request for a key that nothing uses costs one cache read and no query,
+   * and the cache holds no entry for each key a caller makes up.
+   */
   async videoIsPublished(key: string) {
-    const cacheKey = `cms:projects:video-allowed:${key}`;
-    const cached = await this.cache.getJson<boolean>(cacheKey);
-    if (cached !== undefined) return cached;
-    // A video is public when a published record uses it as its demo video
-    // or in one of its media sections (jsonb containment on the array).
-    const records = await this.prisma.cmsProject.findMany({
-      where: {
-        OR: [
-          { data: { path: ["project", "videoKey"], equals: key } },
-          { data: { path: ["project", "media"], array_contains: [{ key }] } },
-        ],
-      },
-    });
-    const allowed = records.some((record) => !isDraft(record.data as Record<string, unknown>));
-    await this.cache.setJson(cacheKey, allowed, VIDEO_ALLOWED_TTL_SECONDS);
-    return allowed;
+    const records = await this.feed();
+    return records.some((record) => videoKeysOf(record).includes(key));
   }
 
   async bySlug(slug: string) {
@@ -317,12 +308,7 @@ export class CmsProjectsService {
       }
     }
 
-    await Promise.all([
-      this.invalidateRecords(),
-      ...[...new Set([...previousVideoKeys, ...nextVideoKeys])].map((key) =>
-        this.invalidateVideoAllowed(key),
-      ),
-    ]);
+    await this.invalidateRecords();
     return {
       ...(record.data as Record<string, unknown>),
       slug: record.slug,
@@ -367,10 +353,7 @@ export class CmsProjectsService {
         await this.storage.deleteFile(key).catch(() => undefined);
       }
     }
-    await Promise.all([
-      this.invalidateRecords(),
-      ...videoKeys.map((key) => this.invalidateVideoAllowed(key)),
-    ]);
+    await this.invalidateRecords();
   }
 
   private async invalidateRecords() {
@@ -379,10 +362,5 @@ export class CmsProjectsService {
       this.cache.remove(DRAFTS_CACHE_KEY),
       this.cache.remove(FEED_CACHE_KEY),
     ]);
-  }
-
-  private async invalidateVideoAllowed(key?: string) {
-    if (!key) return;
-    await this.cache.remove(`cms:projects:video-allowed:${key}`);
   }
 }
