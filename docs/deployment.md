@@ -30,7 +30,7 @@ The folder `deploy/` holds three files.
    ```
 
 2. Make a folder for the site on the host. Copy `compose.production.example.yml` into it as `compose.yml`, copy `rolling-update.sh` into it, and copy `.env.example` into it as `.env`.
-3. Fill in `.env`. Every setting has a comment. The settings of the apps are in [`configuration.md`](configuration.md). `ADMIN_PASSPHRASE` and the password in `DATABASE_URL` are secrets, so they stay only in this file.
+3. Fill in `.env`. Every setting has a comment. The settings of the apps are in [`configuration.md`](configuration.md). `ADMIN_PASSPHRASE`, `SESSION_SECRET` and the password in `DATABASE_URL` are secrets, so they stay only in this file.
 4. Start the first version with the script, for example `./rolling-update.sh 1.1.0`. It pulls the images, writes `IMAGE_TAG` into `.env` and starts the four copies one at a time. On macOS a non interactive SSH session has no `docker` in its path, so start it from a login shell, for example with `zsh -lc`.
 5. Point the reverse proxy at the copies. The API needs the two ports of `API_1_HOST_PORT` and `API_2_HOST_PORT` as upstreams, and the web app needs `WEB_1_HOST_PORT` and `WEB_2_HOST_PORT`. The proxy has to send the next request to the other copy when one copy is down, because that is what keeps the site up during an update.
 
@@ -78,7 +78,7 @@ The API creates its tables when it starts, so there is no migration step. Read t
 Run the update in `tmux` or `screen`, so a dropped connection does not stop it half way.
 
 1. Read the changelog of the release, and the settings that are new or changed.
-2. Run the script as a dry run. It checks that the services exist and prints each step, and it changes nothing.
+2. Run the script as a dry run. It checks that the services exist and that `ADMIN_PASSPHRASE` and `SESSION_SECRET` are set, prints each step, and it changes nothing.
 
    ```bash
    DRY_RUN=1 ./rolling-update.sh 1.2.0
@@ -91,6 +91,8 @@ Run the update in `tmux` or `screen`, so a dropped connection does not stop it h
    ```
 
 For each copy, in the order `api-1`, `api-2`, `web-1`, `web-2`, the script recreates that copy and polls its health route until the answer is `status` `ok` and the container runs the image of the new version, twice in a row. It starts the next copy only after that. The health route of the API is `/api/health` and the one of the web app is `/healthz`.
+
+A release that makes `SESSION_SECRET` required needs the value in `.env` before the script runs, and the script stops with a message when it is missing or shorter than 32 characters. The first deploy with the new secret ends every admin session and every form unlock cookie, so people sign in again and respondents enter a form passphrase again. While the four copies update one at a time, a cookie or token that a new copy signed fails on an old copy, so a person may be asked to sign in again once during those minutes.
 
 The script pulls the images before it changes anything. When the pull fails, for example because the tag does not exist, nothing was changed. An interrupt before the first copy puts `.env` back as it was.
 

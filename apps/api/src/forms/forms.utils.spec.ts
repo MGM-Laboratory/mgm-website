@@ -65,7 +65,7 @@ describe("form slugs", () => {
 });
 
 describe("unlock tokens", () => {
-  const secret = formTokenSecret("admin-secret");
+  const secret = formTokenSecret("session-secret");
   const now = 1_790_000_000_000;
 
   it("verifies a token for the same form and passphrase", () => {

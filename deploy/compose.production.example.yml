@@ -48,6 +48,7 @@ x-web: &web
     - NODE_ENV=production
     # a name with no value takes the value from the env file, and rolling-update.sh refuses to start with an empty one
     - ADMIN_PASSPHRASE
+    - SESSION_SECRET
     - CMS_API_URL=http://api:4000/api
     # the web app checks the same limits as the API before it sends a file on, and it reads the hosts of the short links
     - CMS_MAX_PAPER_BYTES=${CMS_MAX_PAPER_BYTES:-209715200}

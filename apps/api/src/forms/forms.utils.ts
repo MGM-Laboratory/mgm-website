@@ -70,16 +70,16 @@ const TOKEN_SECRET_SALT = "mgm-forms-unlock:v1";
 const tokenSecrets = new Map<string, Buffer>();
 
 /**
- * The token secret: derived from the admin passphrase with scrypt and a
- * fixed, forms-only salt, computed once per passphrase (a slow derivation
+ * The token secret: derived from SESSION_SECRET with scrypt and a
+ * fixed, forms-only salt, computed once per value (a slow derivation
  * on every request would slow every form read).
  */
-export function formTokenSecret(adminPassphrase: string): Buffer {
-  const cached = tokenSecrets.get(adminPassphrase);
+export function formTokenSecret(sessionSecret: string): Buffer {
+  const cached = tokenSecrets.get(sessionSecret);
   if (cached) return cached;
-  const secret = scryptSync(adminPassphrase, TOKEN_SECRET_SALT, 32);
+  const secret = scryptSync(sessionSecret, TOKEN_SECRET_SALT, 32);
   tokenSecrets.clear();
-  tokenSecrets.set(adminPassphrase, secret);
+  tokenSecrets.set(sessionSecret, secret);
   return secret;
 }
 

@@ -87,7 +87,7 @@ export class FormsPublicService {
   ) {}
 
   private get tokenSecret() {
-    return formTokenSecret(this.config.getOrThrow<string>("ADMIN_PASSPHRASE"));
+    return formTokenSecret(this.config.getOrThrow<string>("SESSION_SECRET"));
   }
 
   /** A form respondents may see: unknown slugs and drafts are 404s. */

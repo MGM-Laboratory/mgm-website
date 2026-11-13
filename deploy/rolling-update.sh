@@ -224,6 +224,9 @@ trap release_lock EXIT
 # the web copies take ADMIN_PASSPHRASE from the env file without a check of their own, and an empty value would start them with the
 # admin sign in closed, so the script stops before it touches anything
 [ -n "$(env_value ADMIN_PASSPHRASE)" ] || die "ADMIN_PASSPHRASE is not set in $env_file, nothing was changed"
+# the API refuses to start without SESSION_SECRET, and the web copies would close the admin sign in, so the script checks it too
+session_secret="$(env_value SESSION_SECRET)"
+[ "${#session_secret}" -ge 32 ] || die "SESSION_SECRET in $env_file is not set or has fewer than 32 characters, nothing was changed"
 
 echo "Checking that the services exist"
 known="$(compose config --services)"

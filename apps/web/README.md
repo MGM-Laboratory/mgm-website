@@ -14,7 +14,7 @@ cp apps/web/.env.example apps/web/.env
 pnpm dev:web
 ```
 
-The site runs at `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL` and `CMS_API_URL` to the API (`http://localhost:4000/api` locally); `ADMIN_PASSPHRASE` has no default and must match the API when using `/admin` (create it with `openssl rand -hex 64`). `docker compose up` starts the complete local stack including Postgres.
+The site runs at `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL` and `CMS_API_URL` to the API (`http://localhost:4000/api` locally); `ADMIN_PASSPHRASE` and `SESSION_SECRET` have no default and must match the API when using `/admin` (create each with `openssl rand -hex 64`, and the admin sign in answers 503 without them). `docker compose up` starts the complete local stack including Postgres.
 
 Useful root commands:
 
