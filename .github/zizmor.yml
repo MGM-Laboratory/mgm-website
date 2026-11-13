@@ -1,5 +1,10 @@
 rules:
   self-repository:
-    # actionlint does not know the "$/" syntax yet and rejects it, so the jobs that call the local pull-images action keep the "./" form
+    # actionlint does not know the "$/" syntax yet and rejects it, so the workflows that call a local workflow or action keep the "./" form
     ignore:
+      - ci.yaml
       - config.yaml
+      - e2e.yaml
+      - lighthouse.yaml
+      - security.yaml
+      - vale.yaml
