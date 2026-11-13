@@ -47,4 +47,22 @@ describe("deleteOrphans", () => {
     await service.deleteOrphans("form1", NOW);
     expect(prisma.formUpload.deleteMany).not.toHaveBeenCalled();
   });
+
+  it("reads the oldest rows first and skips a key that failed lately", async () => {
+    const { service, prisma } = makeService(["b.pdf"]);
+    await service.deleteOrphans("form1", NOW);
+    await service.deleteOrphans("form1", NOW + 60_000);
+    const [first, second] = prisma.formUpload.findMany.mock.calls.map(([args]) => args);
+    expect(first.orderBy).toEqual({ createdAt: "asc" });
+    expect(first.where.key).toBeUndefined();
+    expect(second.where.key).toEqual({ notIn: ["b.pdf"] });
+  });
+
+  it("tries a failed key again after an hour", async () => {
+    const { service, prisma } = makeService(["b.pdf"]);
+    await service.deleteOrphans("form1", NOW);
+    await service.deleteOrphans("form1", NOW + 61 * 60_000);
+    const [, second] = prisma.formUpload.findMany.mock.calls.map(([args]) => args);
+    expect(second.where.key).toBeUndefined();
+  });
 });
