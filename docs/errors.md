@@ -29,7 +29,7 @@ A route that calls `schema.parse(body)` and has no guard turns a zod error into 
 - `PUT /api/cms/home`
 - `PUT /api/cms/contact-settings`
 - `POST /api/cms/admins/verify`, `POST /api/cms/admins` and `PUT /api/cms/admins/:slug`
-- `PUT /api/cms/members/:slug` and `POST /api/cms/members/:slug/photo`
+- `POST /api/cms/members/:slug/photo`
 - `POST /api/cms/publications/author-photo` and `PUT /api/cms/publications/:slug`
 - `PUT /api/cms/jobs/:slug`, `POST /api/cms/jobs/:slug/media`, `PUT /api/cms/jobs/applications/:slug/state` and `POST /api/cms/jobs/applications/bulk`
 

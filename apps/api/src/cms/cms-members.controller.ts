@@ -23,6 +23,7 @@ import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsMembersService } from "./cms-members.service.js";
 import { MEMBER_MEDIA_KEY_PATTERN } from "./member-media-key.js";
+import { memberProfileSchema } from "./member-profile.schema.js";
 
 const memberSchema = z.object({
   member: z.object({
@@ -39,7 +40,7 @@ const memberSchema = z.object({
     slug: z.string().min(1),
     unit: z.string().optional(),
   }),
-  profile: z.record(z.string(), z.unknown()),
+  profile: memberProfileSchema,
 });
 
 const saveMemberSchema = memberSchema.extend({ sourceSlug: z.string().min(1).optional() });
@@ -88,7 +89,12 @@ export class CmsMembersController {
     @Headers("x-cms-passphrase") passphrase = "",
   ) {
     this.assertAdmin(passphrase);
-    const document = saveMemberSchema.parse(body);
+    // A link with an unsafe scheme is a mistake of the editor, so it answers 400 with the reason and not a server error
+    const parsed = saveMemberSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "The member is not valid.");
+    }
+    const document = parsed.data;
     try {
       return await this.members.save(
         slug,

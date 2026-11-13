@@ -67,6 +67,7 @@ This page describes what the web app and the API protect, who they protect it fr
 | Author portraits of publications and contributor portraits of projects       | 6 MB after cropping                                                     | The data URL header must name PNG, JPEG, WebP or GIF. The API decodes the image and converts it to WebP |
 | Form design images                                                           | 6 MB                                                                    | The data URL must be a base64 image, and the bytes must be PNG, JPEG, WebP or GIF                       |
 
+- The links of a member profile (`links[].url` and `certificates[].credentialUrl`) must start with `https://`, `http://`, `mailto:` or `tel:`, and a profile is capped at 200,000 characters of JSON. The save answers 400 with the reason for any other value, because the public member page renders the link as an `href`.
 - A form respondent upload needs a declared size. The API answers 411 without one and 413 above the limit. At most 6 upload bodies are held in memory at once, and further requests get 503 with `Retry-After`.
 - Storage keys are minted by the API with a random UUID.
 - The media routes answer with a redirect to a signed download URL. The lifetime is 15 minutes for most files, one hour for papers and 7 days for the attachment links in the contact notification mail. These lifetimes hold when `REDIS_URL` is not set, because the cache of signed URLs is keyed by the object key alone.
