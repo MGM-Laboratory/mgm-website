@@ -17,4 +17,9 @@ describe("corsOrigins", () => {
   it("drops empty entries from a trailing or doubled comma", () => {
     expect(corsOrigins("https://example.org,, ,")).toEqual(["https://example.org"]);
   });
+
+  it("returns an empty list for an empty setting, which allows no origin", () => {
+    expect(corsOrigins("")).toEqual([]);
+    expect(corsOrigins(" , ,")).toEqual([]);
+  });
 });
