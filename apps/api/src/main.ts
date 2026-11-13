@@ -10,6 +10,7 @@ import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module.js";
 import type { Env } from "./config/env.validation.js";
 import { parseTrustProxy } from "./trust-proxy.js";
+import { requireAdminPassphrase } from "./upload-gate.js";
 
 /** Respondent upload bodies buffered at the same time, at most. */
 const FORMS_UPLOADS_AT_ONCE = 6;
@@ -83,9 +84,15 @@ async function bootstrap() {
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
 
-  // Publication papers arrive as raw PDF bytes (never JSON); the size ceiling
-  // comes from configuration so it can change without touching code.
+  // The admin uploads that arrive as raw bytes are parsed only on their own routes, and only after the admin passphrase was
+  // checked. A parser for all paths would buffer a body of hundreds of megabytes for any caller before a guard or the rate limit
+  // could answer. The size ceilings come from configuration so they can change without touching code.
+  const adminGate = requireAdminPassphrase(configService.getOrThrow<string>("ADMIN_PASSPHRASE"));
+
+  // Publication papers arrive as raw PDF bytes (never JSON).
   app.use(
+    "/api/cms/publications/:slug/paper",
+    adminGate,
     raw({
       type: "application/pdf",
       limit: configService.getOrThrow<number>("CMS_MAX_PAPER_BYTES"),
@@ -97,8 +104,10 @@ async function bootstrap() {
   // it never shadows the JSON parser used everywhere else.
   app.use("/api/contact/attachments", raw({ type: () => true, limit: "26mb" }));
 
-  // Project demo videos arrive as raw bytes the same way.
+  // Project demo videos and the home page video arrive as raw bytes the same way.
   app.use(
+    ["/api/cms/projects/:slug/video", "/api/cms/home/video"],
+    adminGate,
     raw({
       type: ["video/mp4", "video/webm"],
       limit: configService.getOrThrow<number>("CMS_MAX_VIDEO_BYTES"),

@@ -63,8 +63,8 @@ export class CmsHomeContentController {
     await redirectToSignedVideoUrl(response, this.storage, key);
   }
 
-  // Raw video bytes; the global raw-body middleware (main.ts) enforces the
-  // same size ceiling.
+  // Raw video bytes. The raw body middleware of this route (main.ts) checks the
+  // passphrase first and enforces the same size ceiling.
   @Post("video")
   async uploadVideo(@Req() request: Request, @Headers("x-cms-passphrase") passphrase = "") {
     this.assertAdmin(passphrase);
