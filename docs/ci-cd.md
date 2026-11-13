@@ -100,7 +100,7 @@ One reusable workflow matrixed over both images, plus thin caller workflows, inv
 - **`publish-docker-image-latest.yml`**: caller, triggers on push to `main` and `workflow_dispatch`. Calls the image workflow with `tag: latest`, using the local `./...` reference.
 - **`publish-docker-image-staging.yml`**: caller, triggers on any pull request (`branches: ["*"]`) and `workflow_dispatch`. Calls the image workflow with `tag: pr-<PR number>` (falls back to the run number under `workflow_dispatch`, which has no PR number), using the same local `./...` reference. GitHub resolves that local reusable-workflow reference from the same commit as the caller, so the first PR introducing these files can invoke `publish-docker-image.yml` and future in-PR edits to the reusable workflow are picked up automatically.
 
-Version-tag-triggered releases (pushing `v*.*.*`) aren't wired up here. The original single-file workflow supported it, this one doesn't yet. Add a third caller workflow if that's needed again. See "Releases" below for how releases are actually cut today (manually, no automation).
+Version-tag-triggered releases (pushing `v*.*.*`) aren't wired up here. The original single-file workflow supported it, this one doesn't yet. Add a third caller workflow if that's needed again. Release Please makes the tag and the GitHub release, as "Releases" below describes, and a new tag does not start a Docker build yet.
 
 **Docker Hub credentials live at the GitHub org level** (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` variables and secrets). Nothing is stored per-repo, so new repos in the org inherit them automatically.
 
@@ -123,13 +123,13 @@ cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer https
 
 ## Releases
 
-Release Please makes the releases. After each push to `main` it keeps one release pull request open with the next version number and the changelog. It reads the Conventional Commit types of the commits since the last tag. A `fix` raises the patch number, a `feat` raises the minor number, and a breaking change (`type!:` or a `BREAKING CHANGE:` footer) raises the major number. A `docs`, `ci`, `chore`, `style` or `test` commit does not start a release by itself.
+Release Please makes the releases. After each push to `main` it keeps one release pull request open with the next version number and the changelog. It reads the Conventional Commit types of the commits since the last tag. A `fix` raises the patch number, a `feat` raises the minor number, and a breaking change (`type!:` or a `BREAKING CHANGE:` footer) raises the major number. A `docs`, `ci`, `chore`, `style` or `test` commit does not start a release by itself. A commit that does not follow Conventional Commits is ignored.
 
-Merging the release pull request writes `CHANGELOG.md`, sets the version in the root `package.json`, creates the tag `vX.Y.Z` and publishes the GitHub release. The first version is 1.0.0, the tag that already existed, and it is recorded in `.release-please-manifest.json`. The settings are in `release-please-config.json`.
+Merging the release pull request writes `CHANGELOG.md`, sets the version in the root `package.json`, creates the tag `vX.Y.Z` and publishes the GitHub release. The manifest `.release-please-manifest.json` records 1.0.0, the tag that already exists, as the last release, and the next version is counted from it. Release Please reads the last 1100 commits (`commit-search-depth`), so the first release pull request lists everything since 1.0.0. The settings are in `release-please-config.json`.
 
 Release Please gets its token from the GitHub App `syafa-bot` and not from the default token. A pull request or tag made with the default token does not start other workflows, and the App token does, so the release pull request runs the checks. The App also signs the release commits through the API, which the ruleset requires. The private key is the secret `RELEASE_APP_PRIVATE_KEY` of the `release` environment, which only the `main` branch can use, and the variable `RELEASE_APP_CLIENT_ID` holds the App's client ID.
 
-Before the release pull request is merged, confirm that CI is green on `main` for the newest merge and read the changelog. A release should represent something that was already verified, and not only whatever `main` happens to hold.
+The branch of the release pull request falls behind when other pull requests merge, and a docs or chore merge does not refresh it. Update it with `gh pr update-branch` and wait for the checks before the merge. Before the release pull request is merged, confirm that CI is green on `main` for the newest merge and read the changelog. A release should represent something that was already verified, and not only whatever `main` happens to hold.
 
 ## Security-scanner suppressions
 
