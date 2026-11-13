@@ -105,23 +105,6 @@ export class CmsMembersService {
     };
   }
 
-  async bootstrap(records: { data: Prisma.InputJsonValue; slug: string }[]) {
-    const existingCount = await this.prisma.cmsMember.count();
-    if (existingCount) return this.all();
-
-    await this.prisma.$transaction(
-      records.map((record) =>
-        this.prisma.cmsMember.upsert({
-          where: { slug: record.slug },
-          create: record,
-          update: { data: record.data },
-        }),
-      ),
-    );
-    await this.invalidateRecords();
-    return this.all();
-  }
-
   async remove(slug: string) {
     try {
       await this.prisma.cmsMember.delete({ where: { slug } });
