@@ -11,6 +11,11 @@ overrides:
   # refresh can't silently pull in an unreviewed future major.
   mysql2: "3.24.4"
   deepmerge-ts: "8.0.2"
+  # Transitive dev tool dependencies with open advisories. vitest accepts any
+  # vite from 6 to 8, so pnpm kept the older 8.2.2. eslint tooling takes
+  # minimatch 10, and the fix is in 11. Exact versions on purpose, like above.
+  vite: "8.2.6"
+  "minimatch@^10": "11.0.8"
 allowBuilds:
   "@prisma/engines": true
   "@scarf/scarf": false
