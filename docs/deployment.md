@@ -48,7 +48,7 @@ The folder `deploy/` holds three files.
    }
    ```
 
-   The proxy has to overwrite `X-Forwarded-For` with the address of the client, as the example does, because the apps read that header to find the visitor.
+   The proxy has to overwrite `X-Forwarded-For` with the address of the client, as the example does, because the apps read that header to find the visitor. The web copies must therefore be reachable only through the proxy. A caller that reaches a copy directly can send any `X-Forwarded-For`, so keep `WEB_BIND` on the loopback address, or firewall the web ports to the proxy.
 
 6. Make the API reachable from the browser. The contact form, the calendar download and the status light of the site call the API from the browser, at the address that was built into the web image as `NEXT_PUBLIC_API_URL`. CI takes that address from the repository variable `NEXT_PUBLIC_API_URL`, and it is `http://localhost:4000/api` when the variable is not set, which does not work for a visitor. Set the variable before the release builds the images, route that public address to the API copies in the proxy, and set `CORS_ORIGIN` to the public origin of the site.
 
@@ -69,7 +69,7 @@ The folder `deploy/` holds three files.
    }
    ```
 
-   The API trusts no proxy until `TRUST_PROXY` names it, so the contact form, which calls the API from the browser, would share one rate limit bucket for all visitors, because the API would see the address of the proxy. With this proxy on the same host, set `TRUST_PROXY=loopback` in the `.env` file, or `TRUST_PROXY=1` for one proxy hop. Keep the count equal to the real number of proxies, and let the proxy overwrite `X-Forwarded-For` as the example does, because a count that is too high lets a caller choose its own address when the proxy only appends to the header. When a CDN such as Cloudflare sits in front of this proxy, `$remote_addr` is the address of the CDN, so the buckets are per edge address unless the proxy restores the visitor address first, for example with the real IP module of nginx.
+   The API trusts no proxy until `TRUST_PROXY` names it, so the contact form, which calls the API from the browser, would share one rate limit bucket for all visitors, because the API would see the address of the proxy. With one proxy in front, set `TRUST_PROXY=1` in the `.env` file. Use the hop count and not `loopback`, because Docker passes a connection to a published port from the address of the bridge network, so the API never sees a loopback peer. Keep the count equal to the real number of proxies, and let the proxy overwrite `X-Forwarded-For` as the example does, because a count that is too high lets a caller choose its own address when the proxy only appends to the header. When a CDN such as Cloudflare sits in front of this proxy, `$remote_addr` is the address of the CDN, so the buckets are per edge address unless the proxy restores the visitor address first, for example with the real IP module of nginx.
 
 The API creates its tables when it starts, so there is no migration step. Read the changelog before an update anyway, because a new version may add tables or columns.
 
