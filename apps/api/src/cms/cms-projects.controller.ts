@@ -384,8 +384,8 @@ export class CmsProjectsController {
     return { key };
   }
 
-  // Raw video bytes; the global raw-body middleware (main.ts) enforces the
-  // same size ceiling.
+  // Raw video bytes; the raw body middleware of this route (main.ts) checks the
+  // passphrase first and enforces the same size ceiling.
   @Post(":slug/video")
   async uploadVideo(
     @Param("slug") slug: string,
