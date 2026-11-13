@@ -9,6 +9,8 @@ const RECORDS_CACHE_KEY = "cms:projects:v1";
 const DRAFTS_CACHE_KEY = "cms:projects:drafts:v1";
 const FEED_CACHE_KEY = "cms:projects:feed:v1";
 const RECORDS_CACHE_TTL_SECONDS = 60 * 10;
+// How long a copy of the API trusts its own list of published video keys.
+const VIDEO_KEYS_MEMO_MS = 15_000;
 // Stored image keys are immutable (every upload mints a new uuid), so a
 // measured size never goes stale; a failed read is retried after a while.
 const MEDIA_SIZE_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -159,15 +161,33 @@ export class CmsProjectsService {
     return records;
   }
 
+  private videoKeysMemo: { keys: Set<string>; loadedAt: number } | undefined;
+  private videoKeysLoad: Promise<Set<string>> | undefined;
+
   /**
    * A video is public when a published record uses it as its demo video or in
-   * one of its media sections. The answer comes from the cached feed, so a
-   * request for a key that nothing uses costs one cache read and no query,
-   * and the cache holds no entry for each key a caller makes up.
+   * one of its media sections. The answer comes from a list of those keys that
+   * each copy keeps for a few seconds, built from the cached feed. A request
+   * for a key that nothing uses costs a set lookup and no query, concurrent
+   * requests share one load, and a Redis outage does not turn each request
+   * into a full read of the table. A save clears the list of its own copy, so
+   * another copy may serve a video that just went private for up to
+   * `VIDEO_KEYS_MEMO_MS`.
    */
   async videoIsPublished(key: string) {
+    const memo = this.videoKeysMemo;
+    if (memo && Date.now() - memo.loadedAt < VIDEO_KEYS_MEMO_MS) return memo.keys.has(key);
+    this.videoKeysLoad ??= this.loadVideoKeys().finally(() => {
+      this.videoKeysLoad = undefined;
+    });
+    return (await this.videoKeysLoad).has(key);
+  }
+
+  private async loadVideoKeys() {
     const records = await this.feed();
-    return records.some((record) => videoKeysOf(record).includes(key));
+    const keys = new Set(records.flatMap((record) => videoKeysOf(record)));
+    this.videoKeysMemo = { keys, loadedAt: Date.now() };
+    return keys;
   }
 
   async bySlug(slug: string) {
@@ -357,6 +377,7 @@ export class CmsProjectsService {
   }
 
   private async invalidateRecords() {
+    this.videoKeysMemo = undefined;
     await Promise.all([
       this.cache.remove(RECORDS_CACHE_KEY),
       this.cache.remove(DRAFTS_CACHE_KEY),
