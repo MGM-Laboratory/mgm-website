@@ -18,7 +18,7 @@ vi.mock("next/headers", () => ({
 
 const COOKIE_NAME = "mgm_admin_session";
 const SECRET = "s".repeat(64);
-const PASSPHRASE = "the-admin-passphrase";
+const ADMIN_KEY = "the-admin-login-value";
 
 function signWith(key: string, payload: string) {
   return createHmac("sha256", key).update(payload).digest("base64url");
@@ -33,7 +33,7 @@ describe("the admin session", () => {
   beforeEach(() => {
     jar.clear();
     cookieOptions.clear();
-    vi.stubEnv("ADMIN_PASSPHRASE", PASSPHRASE);
+    vi.stubEnv("ADMIN_PASSPHRASE", ADMIN_KEY);
     vi.stubEnv("SESSION_SECRET", SECRET);
   });
   afterEach(() => {
@@ -50,13 +50,13 @@ describe("the admin session", () => {
     });
 
     it.each([
-      ["no secret", "", PASSPHRASE, ["SESSION_SECRET (at least 32 characters)"]],
-      ["a short secret", "x".repeat(31), PASSPHRASE, ["SESSION_SECRET (at least 32 characters)"]],
+      ["no secret", "", ADMIN_KEY, ["SESSION_SECRET (at least 32 characters)"]],
+      ["a short secret", "x".repeat(31), ADMIN_KEY, ["SESSION_SECRET (at least 32 characters)"]],
       ["no passphrase", SECRET, "", ["ADMIN_PASSPHRASE"]],
       ["neither", "", "", ["SESSION_SECRET (at least 32 characters)", "ADMIN_PASSPHRASE"]],
-    ])("are incomplete with %s", async (_name, secret, passphrase, missing) => {
+    ])("are incomplete with %s", async (_name, secret, adminKey, missing) => {
       vi.stubEnv("SESSION_SECRET", secret);
-      vi.stubEnv("ADMIN_PASSPHRASE", passphrase);
+      vi.stubEnv("ADMIN_PASSPHRASE", adminKey);
       const session = await load();
 
       expect(session.sessionsAreConfigured()).toBe(false);
@@ -75,7 +75,7 @@ describe("the admin session", () => {
     it("is compared with ADMIN_PASSPHRASE and not with SESSION_SECRET", async () => {
       const session = await load();
 
-      expect(session.isValidPassphrase(PASSPHRASE)).toBe(true);
+      expect(session.isValidPassphrase(ADMIN_KEY)).toBe(true);
       expect(session.isValidPassphrase(SECRET)).toBe(false);
       expect(session.isValidPassphrase("")).toBe(false);
     });
@@ -97,7 +97,7 @@ describe("the admin session", () => {
       const [accountId, version, issuedAt, signature] = cookie.split(".");
 
       expect(signature).toBe(signWith(SECRET, `${accountId}.${version}.${issuedAt}`));
-      expect(signature).not.toBe(signWith(PASSPHRASE, `${accountId}.${version}.${issuedAt}`));
+      expect(signature).not.toBe(signWith(ADMIN_KEY, `${accountId}.${version}.${issuedAt}`));
       expect(cookieOptions.get(COOKIE_NAME)).toMatchObject({ httpOnly: true, sameSite: "lax" });
       expect(await session.getAdminSession()).toMatchObject({
         accountId: "superadmin",
@@ -108,7 +108,7 @@ describe("the admin session", () => {
     it("is refused when it was signed with the passphrase", async () => {
       const session = await load();
       const payload = `superadmin.1.${Date.now()}`;
-      jar.set(COOKIE_NAME, `${payload}.${signWith(PASSPHRASE, payload)}`);
+      jar.set(COOKIE_NAME, `${payload}.${signWith(ADMIN_KEY, payload)}`);
 
       expect(await session.getAdminSession()).toBeNull();
     });
