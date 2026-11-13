@@ -50,10 +50,13 @@ describe("POST /api/admin/login", () => {
   it("answers 503 and logs the missing setting names when the session secret is missing", async () => {
     vi.stubEnv("SESSION_SECRET", "");
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 500 }));
     const { POST } = await load();
 
-    const response = await POST(loginRequest(PASSPHRASE));
+    // A wrong passphrase would reach the verify call if the gate were missing
+    const response = await POST(loginRequest("not-the-passphrase"));
 
     expect(response.status).toBe(503);
     expect(jar.size).toBe(0);

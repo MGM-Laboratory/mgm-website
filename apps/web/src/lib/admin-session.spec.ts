@@ -113,7 +113,8 @@ describe("the admin session", () => {
       expect(await session.getAdminSession()).toBeNull();
     });
 
-    it("is refused when it was signed with an empty key", async () => {
+    it("is refused when it was signed with an empty key and no secret is set", async () => {
+      vi.stubEnv("SESSION_SECRET", "");
       const session = await load();
       const payload = `superadmin.1.${Date.now()}`;
       jar.set(COOKIE_NAME, `${payload}.${signWith("", payload)}`);
@@ -147,10 +148,10 @@ describe("the admin session", () => {
     });
 
     it("is never read, and never made, while the settings are incomplete", async () => {
-      const first = await load();
-      await first.createAdminSession(first.SUPERADMIN_ACCOUNT_ID, 1);
       vi.stubEnv("SESSION_SECRET", "");
       const second = await load();
+      const payload = `superadmin.1.${Date.now()}`;
+      jar.set(COOKIE_NAME, `${payload}.${signWith("", payload)}`);
 
       expect(await second.getAdminSession()).toBeNull();
       jar.clear();
