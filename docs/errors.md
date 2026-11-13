@@ -62,7 +62,7 @@ The public job application and the public event registration catch the zod error
 
 ## Waiting for the API
 
-- The web server waits at most 10 seconds for the answer to a read from the API and 30 seconds for a write. A file that streams through the web server, such as a video or a CV, may take up to 15 minutes before the API answers. Only the wait for the response headers is limited, so a long download is not cut off.
+- The web server waits at most 10 seconds for the answer to a read from the API and 30 seconds for a write. A file that streams through the web server, such as a video, a CV or a form upload, may take up to 30 minutes before the API answers. Only the wait for the response headers is limited, so a long download is not cut off.
 - A call that runs out of time fails like a call that cannot connect. The pages that catch an API failure show their empty state, and a route handler that does not catch it answers 500.
 
 ## Rate limits

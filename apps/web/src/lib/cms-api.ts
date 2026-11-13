@@ -1,6 +1,11 @@
 import "server-only";
 
-import { API_READ_TIMEOUT_MS, API_WRITE_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-timeout";
+import {
+  API_READ_TIMEOUT_MS,
+  API_UPLOAD_TIMEOUT_MS,
+  API_WRITE_TIMEOUT_MS,
+  fetchWithTimeout,
+} from "@/lib/fetch-timeout";
 
 export const apiBaseUrl = () =>
   (
@@ -9,9 +14,17 @@ export const apiBaseUrl = () =>
     "http://localhost:4000/api"
   ).replace(/\/$/, "");
 
-export async function cmsApi(path: string, init?: RequestInit) {
+/**
+ * How long to wait for the answer. A stream passes a large file on, and the API answers only after it has stored the whole file,
+ * so a streamed body gets the upload limit. A read is quick, and a write with a body in memory is small.
+ */
+function timeoutFor(init?: RequestInit) {
+  if ((init as { duplex?: string } | undefined)?.duplex === "half") return API_UPLOAD_TIMEOUT_MS;
   const method = (init?.method ?? "GET").toUpperCase();
-  const read = method === "GET" || method === "HEAD";
+  return method === "GET" || method === "HEAD" ? API_READ_TIMEOUT_MS : API_WRITE_TIMEOUT_MS;
+}
+
+export async function cmsApi(path: string, init?: RequestInit) {
   return fetchWithTimeout(
     `${apiBaseUrl()}${path}`,
     {
@@ -23,6 +36,6 @@ export async function cmsApi(path: string, init?: RequestInit) {
         ...init?.headers,
       },
     },
-    read ? API_READ_TIMEOUT_MS : API_WRITE_TIMEOUT_MS,
+    timeoutFor(init),
   );
 }

@@ -28,4 +28,4 @@ export async function fetchWithTimeout(
 export const API_READ_TIMEOUT_MS = 10_000;
 export const API_WRITE_TIMEOUT_MS = 30_000;
 /** A large file goes through the server as a stream, and the API answers only after it has stored the file. */
-export const API_UPLOAD_TIMEOUT_MS = 15 * 60_000;
+export const API_UPLOAD_TIMEOUT_MS = 30 * 60_000;
