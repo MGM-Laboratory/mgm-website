@@ -1,0 +1,106 @@
+# Production example for the website, two copies of the API and two copies of the web app on one host behind a reverse proxy. Copy
+# this file to the server as compose.yml next to the .env file (copy .env.example to .env and fill it in), and update the copies
+# with rolling-update.sh. The copies only listen on the address of API_BIND and WEB_BIND, which is the loopback address by default,
+# so nothing reaches them except a reverse proxy on the same host. See docs/deployment.md.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "${LOG_MAX_SIZE:-10m}"
+    max-file: "${LOG_MAX_FILES:-5}"
+
+x-api: &api
+  image: ${DOCKERHUB_NAMESPACE:-labmgm}/mgm-website-backend:${IMAGE_TAG:?set IMAGE_TAG in the env file}
+  restart: always
+  # the API waits for the requests that are running after a stop signal, and Docker stops a container after 10 seconds when
+  # nothing is set, so the default here is longer
+  stop_grace_period: ${API_STOP_GRACE_PERIOD:-20s}
+  # a missing .env stops compose, because the file is required unless the entry says otherwise
+  env_file:
+    - .env
+  environment:
+    - NODE_ENV=production
+  networks:
+    internal:
+      # the web copies reach any API copy by this name, and Docker leaves a stopped copy out of the answer
+      aliases:
+        - api
+    database: {}
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  logging: *default-logging
+  deploy:
+    resources:
+      limits:
+        cpus: "${API_CPUS:-1.00}"
+        memory: ${API_MEMORY_LIMIT:-768m}
+
+x-web: &web
+  image: ${DOCKERHUB_NAMESPACE:-labmgm}/mgm-website-frontend:${IMAGE_TAG:?set IMAGE_TAG in the env file}
+  restart: always
+  stop_grace_period: ${WEB_STOP_GRACE_PERIOD:-20s}
+  # the web app gets only what it needs and never the database settings, so it has no env_file
+  environment:
+    - NODE_ENV=production
+    # a name with no value takes the value from the env file, and rolling-update.sh refuses to start with an empty one
+    - ADMIN_PASSPHRASE
+    - CMS_API_URL=http://api:4000/api
+    # the web app checks the same limits as the API before it sends a file on, and it reads the hosts of the short links
+    - CMS_MAX_PAPER_BYTES=${CMS_MAX_PAPER_BYTES:-209715200}
+    - CMS_MAX_VIDEO_BYTES=${CMS_MAX_VIDEO_BYTES:-524288000}
+    - CMS_MAX_CV_BYTES=${CMS_MAX_CV_BYTES:-104857600}
+    - FORMS_MAX_UPLOAD_BYTES=${FORMS_MAX_UPLOAD_BYTES:-104857600}
+    - SHORTLINKS_SITE_HOSTS=${SHORTLINKS_SITE_HOSTS:-labmgm.org,www.labmgm.org}
+  networks:
+    - internal
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+    # the image optimizer and the fetch cache of Next.js write here, and the image runs as the user 1001
+    - /app/apps/web/.next/cache:size=${WEB_CACHE_SIZE:-256m},uid=1001,gid=1001
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  logging: *default-logging
+  deploy:
+    resources:
+      limits:
+        cpus: "${WEB_CPUS:-1.00}"
+        memory: ${WEB_MEMORY_LIMIT:-512m}
+
+services:
+  api-1:
+    <<: *api
+    container_name: mgm-website-api-1
+    ports:
+      - "${API_BIND:-127.0.0.1}:${API_1_HOST_PORT:-4010}:4000"
+
+  api-2:
+    <<: *api
+    container_name: mgm-website-api-2
+    ports:
+      - "${API_BIND:-127.0.0.1}:${API_2_HOST_PORT:-4011}:4000"
+
+  web-1:
+    <<: *web
+    container_name: mgm-website-web-1
+    ports:
+      - "${WEB_BIND:-127.0.0.1}:${WEB_1_HOST_PORT:-3010}:3000"
+
+  web-2:
+    <<: *web
+    container_name: mgm-website-web-2
+    ports:
+      - "${WEB_BIND:-127.0.0.1}:${WEB_2_HOST_PORT:-3011}:3000"
+
+networks:
+  internal:
+  # the network of the shared database container, which already exists on the host. Compose never creates or removes it.
+  database:
+    external: true
+    name: ${DB_NETWORK:-postgres_postgres}
