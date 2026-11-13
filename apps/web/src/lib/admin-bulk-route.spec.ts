@@ -76,6 +76,28 @@ describe("bulkRoute", () => {
     expect(proxyJson).not.toHaveBeenCalled();
   });
 
+  it("forwards an action that is not a string after the write gate only, and the API refuses it", async () => {
+    gateAdminRequest.mockResolvedValue(allowed);
+
+    const response = await POST(post({ ids: ["a"], action: ["delete"] }));
+
+    expect(response.status).toBe(200);
+    expect(gateAdminRequest).toHaveBeenCalledTimes(1);
+    expect(proxyJson).toHaveBeenCalledWith("/cms/jobs/applications/bulk", {
+      body: JSON.stringify({ ids: ["a"], action: ["delete"] }),
+      method: "POST",
+    });
+  });
+
+  it("answers 400 for a JSON null", async () => {
+    gateAdminRequest.mockResolvedValue(allowed);
+
+    const response = await POST(post("null"));
+
+    expect(response.status).toBe(400);
+    expect(proxyJson).not.toHaveBeenCalled();
+  });
+
   it("answers 400 for a body that is not JSON", async () => {
     gateAdminRequest.mockResolvedValue(allowed);
 

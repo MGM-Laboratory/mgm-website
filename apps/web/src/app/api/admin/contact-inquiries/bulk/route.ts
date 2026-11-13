@@ -1,13 +1,6 @@
-import { gateAdminRequest, proxyJson } from "@/lib/admin-proxy";
+import { bulkRoute } from "@/lib/admin-bulk-route";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
-  const gate = await gateAdminRequest("contact-inquiries", "write");
-  if (!gate.ok) return gate.response;
-  return proxyJson("/cms/contact-inquiries/bulk", {
-    body: JSON.stringify(await request.json()),
-    method: "POST",
-  });
-}
+export const { POST } = bulkRoute("contact-inquiries", "/cms/contact-inquiries/bulk");
