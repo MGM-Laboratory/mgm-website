@@ -45,15 +45,15 @@ pnpm dev            # web on :3000, api on :4000
 docker compose up
 ```
 
-| Command | What it does |
-| --- | --- |
-| `pnpm dev`, `pnpm dev:web`, `pnpm dev:api` | Run everything, the web app (port 3000) or the API (port 4000). |
-| `pnpm build` | Build all workspaces with Turbo. |
-| `pnpm lint` | ESLint for the web app and oxlint for the API. |
-| `pnpm typecheck` | Type check both workspaces. |
-| `pnpm test` | Run the API unit tests with vitest. The web app has no test script. |
-| `pnpm format`, `pnpm format:check` | Run Prettier over the repo. A hook also runs it on staged files. |
-| `docker compose up` | Start the local Postgres, API and web stack. See `.env.example`. |
+| Command                                    | What it does                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| `pnpm dev`, `pnpm dev:web`, `pnpm dev:api` | Run everything, the web app (port 3000) or the API (port 4000).     |
+| `pnpm build`                               | Build all workspaces with Turbo.                                    |
+| `pnpm lint`                                | ESLint for the web app and oxlint for the API.                      |
+| `pnpm typecheck`                           | Type check both workspaces.                                         |
+| `pnpm test`                                | Run the API unit tests with vitest. The web app has no test script. |
+| `pnpm format`, `pnpm format:check`         | Run Prettier over the repo. A hook also runs it on staged files.    |
+| `docker compose up`                        | Start the local Postgres, API and web stack. See `.env.example`.    |
 
 Node 22 (`.nvmrc`) and pnpm 11.3.0 (`packageManager`) are required.
 

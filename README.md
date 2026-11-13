@@ -61,13 +61,13 @@ To run Postgres, the API and the web app together, copy `.env.example` to `.env`
 
 Every setting is an environment variable. The API refuses to start when a required one is missing. Each workspace has a `.env.example` with the names.
 
-| Setting | Default | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | none, required | The PostgreSQL connection string. |
-| `ADMIN_PASSPHRASE` | none, required | The superadmin passphrase. The API and the web app need the same value. |
-| `CORS_ORIGIN` | `http://localhost:3000` | The origins that may call the API from a browser. |
+| Setting               | Default                     | Purpose                                                                    |
+| --------------------- | --------------------------- | -------------------------------------------------------------------------- |
+| `DATABASE_URL`        | none, required              | The PostgreSQL connection string.                                          |
+| `ADMIN_PASSPHRASE`    | none, required              | The superadmin passphrase. The API and the web app need the same value.    |
+| `CORS_ORIGIN`         | `http://localhost:3000`     | The origins that may call the API from a browser.                          |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:4000/api` | The API address that browsers call. It is set when the web image is built. |
-| `AWS_S3_BUCKET` | none | The bucket for uploads. Without it, uploads do not work. |
+| `AWS_S3_BUCKET`       | none                        | The bucket for uploads. Without it, uploads do not work.                   |
 
 [`docs/configuration.md`](docs/configuration.md) lists every setting.
 
