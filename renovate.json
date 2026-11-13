@@ -37,7 +37,7 @@
       "groupName": "GitHub Actions"
     },
     {
-      "matchManagers": ["npm"],
+      "matchManagers": ["npm", "nvm", "docker-compose"],
       "semanticCommitType": "build"
     },
     {
@@ -57,7 +57,6 @@
     {
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["major"],
-      "matchFileNames": ["apps/web/package.json", "apps/api/package.json"],
       "groupName": null,
       "dependencyDashboardApproval": true
     },
@@ -71,12 +70,12 @@
     },
     {
       "matchDepNames": ["node"],
-      "matchManagers": ["dockerfile"],
       "allowedVersions": "22.x"
     },
     {
       "matchDepTypes": ["engines"],
       "enabled": false
     }
-  ]
+  ],
+  "minimumReleaseAgeBehaviour": "timestamp-optional"
 }
