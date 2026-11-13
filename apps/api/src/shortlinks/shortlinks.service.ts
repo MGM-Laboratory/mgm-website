@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common";
+import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomBytes } from "node:crypto";
 import { resolveNs, resolveTxt } from "node:dns/promises";
@@ -73,6 +73,8 @@ async function isCloudflareHost(hostname: string): Promise<boolean> {
 
 @Injectable()
 export class ShortlinksService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(ShortlinksService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
@@ -542,12 +544,25 @@ export class ShortlinksService implements OnApplicationBootstrap {
     for (const link of stale.slice(0, 12)) void this.checkAndStoreUrl(link.id, link.longUrl);
   }
 
+  // Callers start this without awaiting it. The link may be deleted while the check runs, so a failed update is dropped
+  // here, because a rejected promise that nobody handles stops the whole process.
   private async checkAndStoreUrl(id: string, longUrl: string) {
-    const status = await checkLongUrl(longUrl);
-    await this.prisma.shortLink.update({
-      where: { id },
-      data: { longUrlStatus: status, longUrlCheckedAt: new Date() },
-    });
+    try {
+      const status = await checkLongUrl(longUrl);
+      await this.prisma.shortLink.update({
+        where: { id },
+        data: { longUrlStatus: status, longUrlCheckedAt: new Date() },
+      });
+    } catch (error) {
+      // A deleted link is expected here. Anything else is logged by name only, because the message of a network or
+      // database error can carry the host or the query. A link without an expiry is checked again by the next listing.
+      const code = (error as { code?: unknown } | null)?.code;
+      if (code !== "P2025") {
+        this.logger.warn(
+          `The background check of link ${id} was dropped (${error instanceof Error ? error.name : "unknown error"})`,
+        );
+      }
+    }
   }
 
   // --- Visits & resolution ---
