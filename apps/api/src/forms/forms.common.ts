@@ -4,6 +4,7 @@ import type { Request } from "express";
 import { formDocumentSchema, type FieldError, type FormDocument } from "@repo/shared";
 
 import { safeEqual } from "../cms/admin-auth.util.js";
+import { ipBucket } from "../ip-bucket.js";
 
 /** A request the service refuses, with the status the controller answers. */
 export class FormsError extends Error {
@@ -114,5 +115,6 @@ export function visitorTracker(req: Record<string, unknown>): string {
   // The throttler hands over the raw request; nothing guarantees its headers.
   const request = req as Partial<Pick<Request, "headers" | "ip">>;
   const visitor = provenVisitorIp(request.headers);
-  return visitor ? `visitor:${visitor}` : (request.ip ?? "unknown");
+  // An IPv6 visitor counts under its /64 prefix, because it owns every address of it and could rotate them for each try
+  return visitor ? `visitor:${ipBucket(visitor)}` : request.ip ? ipBucket(request.ip) : "unknown";
 }
