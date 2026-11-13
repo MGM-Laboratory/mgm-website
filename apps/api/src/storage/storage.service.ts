@@ -14,6 +14,12 @@ import { CacheService } from "../cache/cache.service.js";
 import type { Env } from "../config/env.validation.js";
 
 const IMMUTABLE_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable";
+// The SDK waits without limit by default, so a store that accepts the
+// connection and then goes silent would hold a request, and the pool slot
+// behind it, until the process restarts. A socket that carries data is never
+// cut, so a large upload on a slow link still finishes.
+const STORAGE_CONNECTION_TIMEOUT_MS = 5_000;
+const STORAGE_SOCKET_IDLE_TIMEOUT_MS = 60_000;
 
 export class StorageConfigurationError extends Error {
   constructor(message: string) {
@@ -41,6 +47,10 @@ export class StorageService {
       // Falls back to the SDK's default credential provider chain when unset,
       // so real AWS S3 still works via IAM roles / shared config.
       credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
+      requestHandler: {
+        connectionTimeout: STORAGE_CONNECTION_TIMEOUT_MS,
+        socketTimeout: STORAGE_SOCKET_IDLE_TIMEOUT_MS,
+      },
     });
     this.bucket = configService.get<string | undefined>("AWS_S3_BUCKET");
   }
@@ -92,8 +102,8 @@ export class StorageService {
    * giving up after `timeoutMs`.
    */
   async readFile(key: string, maxBytes: number, timeoutMs = 15_000): Promise<Buffer> {
-    // S3Client has no request timeout of its own: a stalled read would hold
-    // its caller (and its worker slot) forever.
+    // The client only cuts a silent socket. A read that keeps trickling data
+    // would still hold its caller (and its worker slot), so it has its own limit.
     const response = await this.client.send(
       new GetObjectCommand({ Bucket: this.requireBucket(), Key: key }),
       { abortSignal: AbortSignal.timeout(timeoutMs) },
