@@ -17,8 +17,8 @@ import {
   publicationTypeLabel,
   type CmsPublicationRecord,
 } from "@/lib/publication-cms";
-import { ensurePublicationFeed, fetchPublicationRecord } from "@/lib/publication-cms-seed";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+import { fetchPublicationFeed, fetchPublicationRecord } from "@/lib/publication-cms-server";
+import { fetchMemberRecords } from "@/lib/member-cms-server";
 
 type PublicationPageProps = { params: Promise<{ slug: string }> };
 
@@ -36,7 +36,7 @@ async function readRecord(slug: string) {
 
 async function readFeed() {
   try {
-    return publishedPublications(await ensurePublicationFeed());
+    return publishedPublications(await fetchPublicationFeed());
   } catch {
     return [] as CmsPublicationRecord[];
   }
@@ -45,7 +45,7 @@ async function readFeed() {
 /** Portrait keys for lab-member authors, resolved through the member CMS. */
 async function readMemberPhotos() {
   try {
-    const records = await ensureMemberCmsSeeded();
+    const records = await fetchMemberRecords();
     return new Map(
       records.flatMap((record) =>
         record.profile.photoKey ? [[record.slug, record.profile.photoKey] as const] : [],

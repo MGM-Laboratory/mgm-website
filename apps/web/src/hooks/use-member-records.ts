@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { MEMBERS, type Member } from "@/data/members";
-import { mergeMemberRecords, type CmsMemberRecord } from "@/lib/member-cms";
+import type { Member } from "@/data/members";
+import { membersFromRecords, type CmsMemberRecord } from "@/lib/member-cms";
 
 function replaceRecord(records: readonly CmsMemberRecord[], next: CmsMemberRecord) {
   return [
@@ -75,7 +75,7 @@ export function useMemberRecords(initialRecords: readonly CmsMemberRecord[] = []
     };
   }, [loadRecords]);
 
-  const members = useMemo(() => mergeMemberRecords(MEMBERS, records), [records]);
+  const members = useMemo(() => membersFromRecords(records), [records]);
   return { members, ready, records, setRecords } as {
     members: Member[];
     ready: boolean;

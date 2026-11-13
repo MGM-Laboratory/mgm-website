@@ -4,7 +4,7 @@ import { MemberDirectory } from "@/components/members/member-directory";
 import { MemberHero } from "@/components/members/member-hero";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import type { CmsMemberRecord } from "@/lib/member-cms";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+import { fetchMemberRecords } from "@/lib/member-cms-server";
 
 export const metadata: Metadata = {
   title: "Member | MGM Laboratory",
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function MemberPage() {
   let initialRecords: CmsMemberRecord[] = [];
   try {
-    initialRecords = await ensureMemberCmsSeeded();
+    initialRecords = await fetchMemberRecords();
   } catch {
     // The static directory remains available during a temporary CMS outage.
   }

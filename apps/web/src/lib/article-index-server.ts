@@ -1,8 +1,8 @@
 import "server-only";
 
-import { MEMBERS, type Member } from "@/data/members";
+import type { Member } from "@/data/members";
 import { publishedArticles, type CmsArticleRecord } from "@/lib/article-cms";
-import { ensureArticleCmsSeeded, ensureArticleFeed } from "@/lib/article-cms-seed";
+import { fetchArticleRecords, fetchArticleFeed } from "@/lib/article-cms-server";
 import {
   articleCategories,
   hasCategory,
@@ -12,8 +12,8 @@ import {
   type ArticleIndexQuery,
 } from "@/lib/article-index";
 import { bodyText, searchArticles, tokenize } from "@/lib/article-search";
-import { mergeMemberRecords } from "@/lib/member-cms";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+import { membersFromRecords } from "@/lib/member-cms";
+import { fetchMemberRecords } from "@/lib/member-cms-server";
 
 /**
  * Server reads behind the /articles index: the page renders the first batch
@@ -58,19 +58,19 @@ function coalesced<T>(read: () => Promise<T>) {
 }
 
 const fetchFeed = coalesced(async () => {
-  const value = publishedArticles(await ensureArticleFeed());
+  const value = publishedArticles(await fetchArticleFeed());
   feedCache = { value, at: Date.now() };
   return value;
 });
 
 const fetchFullRecords = coalesced(async () => {
-  const value = publishedArticles(await ensureArticleCmsSeeded());
+  const value = publishedArticles(await fetchArticleRecords());
   fullCache = { value, at: Date.now() };
   return value;
 });
 
 const fetchMembers = coalesced(async () => {
-  const value = mergeMemberRecords(MEMBERS, await ensureMemberCmsSeeded());
+  const value = membersFromRecords(await fetchMemberRecords());
   membersCache = { value, at: Date.now() };
   return value;
 });
@@ -118,7 +118,7 @@ async function readMembers() {
   try {
     return await fetchMembers();
   } catch {
-    return membersCache?.value ?? [...MEMBERS];
+    return membersCache?.value ?? [];
   }
 }
 

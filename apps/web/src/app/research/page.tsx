@@ -6,12 +6,11 @@ import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { FlairShape, PatternTile } from "@/components/process/pattern-tile";
 import { ResearchExplorer } from "@/components/research/research-explorer";
 import { CtaFooter } from "@/components/sections/cta-footer";
-import { MEMBERS } from "@/data/members";
 import { articleCoverUrl } from "@/lib/article-cms";
-import { fetchArticleFeed } from "@/lib/article-cms-seed";
-import { mergeMemberRecords } from "@/lib/member-cms";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
-import { fetchPublicationFeed } from "@/lib/publication-cms-seed";
+import { fetchArticleFeed } from "@/lib/article-cms-server";
+import { membersFromRecords } from "@/lib/member-cms";
+import { fetchMemberRecords } from "@/lib/member-cms-server";
+import { fetchPublicationFeed } from "@/lib/publication-cms-server";
 import {
   featuredResearch,
   latestMilestone,
@@ -49,9 +48,9 @@ async function readRecords() {
 
 async function readMembers() {
   try {
-    return mergeMemberRecords(MEMBERS, await ensureMemberCmsSeeded());
+    return membersFromRecords(await fetchMemberRecords());
   } catch {
-    return [...MEMBERS];
+    return [];
   }
 }
 

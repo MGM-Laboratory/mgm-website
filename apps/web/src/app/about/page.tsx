@@ -13,7 +13,7 @@ import { FaqSection } from "@/components/about/faq-section";
 import { publishedProjects, type CmsProjectRecord } from "@/lib/project-cms";
 import { fetchProjectFeed } from "@/lib/project-cms-server";
 import type { CmsMemberRecord } from "@/lib/member-cms";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+import { fetchMemberRecords } from "@/lib/member-cms-server";
 
 export const metadata: Metadata = {
   title: "About Us | MGM Laboratory",
@@ -27,7 +27,7 @@ export default async function AboutPage() {
     fetchProjectFeed()
       .then((records) => publishedProjects(records).slice(0, PROJECT_PREVIEW_LIMIT))
       .catch(() => [] as CmsProjectRecord[]),
-    ensureMemberCmsSeeded().catch(() => [] as CmsMemberRecord[]),
+    fetchMemberRecords().catch(() => [] as CmsMemberRecord[]),
   ]);
 
   return (
