@@ -48,7 +48,7 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-The API needs a reachable PostgreSQL with an empty `mgm_website` database. Put its password in the `DATABASE_URL` of `apps/api/.env`, or run `docker compose up postgres` and use the `POSTGRES_PASSWORD` of the root `.env`. Set `ADMIN_PASSPHRASE` in `apps/api/.env` and the same value in `apps/web/.env`. Create the passphrase with `openssl rand -hex 64`. Then start the two servers in separate terminals.
+The API needs a reachable PostgreSQL with an empty `mgm_website` database. Put its password in the `DATABASE_URL` of `apps/api/.env`, or copy `.env.example` to `.env`, set `POSTGRES_PASSWORD`, run `docker compose up postgres` and use that password. Set `ADMIN_PASSPHRASE` in `apps/api/.env` and the same value in `apps/web/.env`. Create the passphrase with `openssl rand -hex 64`. Then start the two servers in separate terminals.
 
 ```bash
 pnpm dev:web # http://localhost:3000

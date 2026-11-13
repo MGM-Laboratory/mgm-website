@@ -109,7 +109,7 @@ CI publishes the images and nothing else. `publish-docker-image-latest.yml` push
 
 ## pre-commit.ci
 
-The pre-commit.ci GitHub App runs `.pre-commit-config.yaml` on every pull-request commit. The configuration covers repository hygiene (valid structured files, merge-conflict markers, private keys, line endings, whitespace, and large additions) and runs the repo's pinned Prettier version over supported source and documentation files. Safe formatting fixes are committed back to same-repository pull requests automatically. Dependency revisions in the configuration are updated weekly.
+The pre-commit.ci GitHub App runs `.pre-commit-config.yaml` on every pull-request commit. The configuration covers repository hygiene (valid structured files, merge-conflict markers, private keys, line endings, whitespace, and large additions) and runs the repo's pinned Prettier version over supported source and documentation files. It does not commit fixes to pull requests (`autofix_prs` is off), because the ruleset requires signed commits and a bot commit is unsigned. A formatting failure is fixed by running Prettier and committing the result. Dependency revisions in the configuration are updated weekly.
 
 ## Verification commands
 
