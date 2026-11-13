@@ -93,7 +93,6 @@ const publicationSchema = z.object({
     paperHidden: z.boolean().default(true),
   }),
 });
-const bootstrapSchema = z.object({ records: z.array(publicationSchema).min(1).max(500) });
 const savePublicationSchema = publicationSchema.extend({
   sourceSlug: z.string().min(1).optional(),
 });
@@ -189,20 +188,6 @@ export class CmsPublicationsController {
   @Get(":slug")
   async one(@Param("slug") slug: string) {
     return { record: await this.publications.bySlug(slug) };
-  }
-
-  @Post("bootstrap")
-  async bootstrap(@Req() request: Request, @Headers("x-cms-passphrase") passphrase = "") {
-    this.assertAdmin(passphrase);
-    const { records } = bootstrapSchema.parse(request.body);
-    return {
-      records: await this.publications.bootstrap(
-        records.map((record) => ({
-          data: record as unknown as Prisma.InputJsonValue,
-          slug: record.publication.slug,
-        })),
-      ),
-    };
   }
 
   // Non-residence author portraits arrive as base64 data URLs in whatever
