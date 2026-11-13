@@ -28,7 +28,7 @@
   },
   "packageRules": [
     {
-      "matchManagers": ["github-actions"],
+      "matchManagers": ["github-actions", "custom.regex"],
       "semanticCommitType": "ci"
     },
     {
@@ -55,7 +55,7 @@
       "groupSlug": "api-minor-patch"
     },
     {
-      "matchManagers": ["npm"],
+      "matchManagers": ["npm", "custom.regex"],
       "matchUpdateTypes": ["major"],
       "groupName": null,
       "dependencyDashboardApproval": true
@@ -75,6 +75,16 @@
     {
       "matchDepTypes": ["engines"],
       "enabled": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "tool versions in workflow files that sit under a renovate comment",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)\\n\\s*[A-Z0-9_]+: (?<currentValue>\\S+)"
+      ]
     }
   ],
   "minimumReleaseAgeBehaviour": "timestamp-optional"
