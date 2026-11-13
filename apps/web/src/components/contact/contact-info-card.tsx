@@ -3,12 +3,12 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { Copy, Mail, MapPin, Navigation, Plus, Send } from "lucide-react";
-import type { ContactSettings } from "@repo/shared";
 import { toast } from "sonner";
 
 import { InstagramGlyph, LinkedinGlyph, type GlyphProps } from "@/components/social-icons";
 import { NAV_SOCIALS } from "@/data/nav";
 import { useDismissableOpen } from "@/hooks/use-dismissable-open";
+import type { PublicContactSettings } from "@/lib/contact-settings";
 import { cn } from "@/lib/utils";
 
 type IconType = typeof Mail;
@@ -196,7 +196,7 @@ function FoundUsOn() {
   );
 }
 
-export function ContactInfoCard({ settings }: Readonly<{ settings: ContactSettings }>) {
+export function ContactInfoCard({ settings }: Readonly<{ settings: PublicContactSettings }>) {
   const addressLines = settings.address.split("\n");
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${settings.lat}%2C${settings.lng}`;
   const primaryEmail = settings.emails[0];
