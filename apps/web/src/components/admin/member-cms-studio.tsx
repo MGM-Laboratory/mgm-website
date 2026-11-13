@@ -35,7 +35,7 @@ import Cropper, { type Area } from "react-easy-crop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { MEMBER_DIVISIONS, MEMBERS, type Member } from "@/data/members";
+import { MEMBER_DIVISIONS, type Member } from "@/data/members";
 import {
   can,
   type AdminPageId,
@@ -777,7 +777,9 @@ export function MemberCmsStudio({
   const activeSettingsSection = canAccess(settingsSection)
     ? settingsSection
     : (SETTINGS_SUBSECTIONS.find((item) => canAccess(item.id))?.id ?? settingsSection);
-  const currentMember = selected ?? members[0] ?? MEMBERS[0];
+  const currentMember = selected ?? members[0];
+  // With no members yet the editor opens as a new record, so it never reads an absent member.
+  const editingNew = showNew || !currentMember;
   const activeWorkspace = WORKSPACES.find((workspace) => workspace.id === section) ?? WORKSPACES[0];
   const selectedArticle = sortedArticleRecords.find(
     (record) => record.slug === selectedArticleSlug,
@@ -1379,39 +1381,45 @@ export function MemberCmsStudio({
                       </button>
                     ))}
                   </div>
-                  <MemberEditor
-                    key={
-                      showNew
-                        ? `new-${newKey}`
-                        : `${currentMember.slug}-${selectedRecord?.updatedAt ?? "base"}`
-                    }
-                    activeTab={activeTab}
-                    initialMember={showNew ? undefined : currentMember}
-                    initialProfile={showNew ? undefined : selectedRecord?.profile}
-                    onDeleted={(slug) => {
-                      setRecords((current) => current.filter((item) => item.slug !== slug));
-                      setSelectedSlug(undefined);
-                      setHasUnsavedChanges(false);
-                    }}
-                    onDirtyChange={setHasUnsavedChanges}
-                    sourceMemberSlug={
-                      showNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
-                    }
-                    sourceRecordSlug={
-                      showNew ? undefined : (selectedRecord?.slug ?? currentMember.slug)
-                    }
-                    onSaved={(record) => {
-                      setRecords((current) => [
-                        ...current.filter(
-                          (item) => item.slug !== record.slug && item.slug !== record.sourceSlug,
-                        ),
-                        record,
-                      ]);
-                      setSelectedSlug(record.slug);
-                      setShowNew(false);
-                      setHasUnsavedChanges(false);
-                    }}
-                  />
+                  {!ready && !currentMember && !showNew ? (
+                    <p className="p-6 text-sm text-[var(--ink-2)] dark:text-white/65">
+                      Loading members…
+                    </p>
+                  ) : (
+                    <MemberEditor
+                      key={
+                        editingNew
+                          ? `new-${newKey}`
+                          : `${currentMember.slug}-${selectedRecord?.updatedAt ?? "base"}`
+                      }
+                      activeTab={activeTab}
+                      initialMember={editingNew ? undefined : currentMember}
+                      initialProfile={editingNew ? undefined : selectedRecord?.profile}
+                      onDeleted={(slug) => {
+                        setRecords((current) => current.filter((item) => item.slug !== slug));
+                        setSelectedSlug(undefined);
+                        setHasUnsavedChanges(false);
+                      }}
+                      onDirtyChange={setHasUnsavedChanges}
+                      sourceMemberSlug={
+                        editingNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
+                      }
+                      sourceRecordSlug={
+                        editingNew ? undefined : (selectedRecord?.slug ?? currentMember.slug)
+                      }
+                      onSaved={(record) => {
+                        setRecords((current) => [
+                          ...current.filter(
+                            (item) => item.slug !== record.slug && item.slug !== record.sourceSlug,
+                          ),
+                          record,
+                        ]);
+                        setSelectedSlug(record.slug);
+                        setShowNew(false);
+                        setHasUnsavedChanges(false);
+                      }}
+                    />
+                  )}
                 </>
               ) : section === "publications" ? (
                 <PublicationEditor

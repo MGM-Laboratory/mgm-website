@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { PublicationList } from "@/components/publications/publication-list";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { publishedPublications, type CmsPublicationRecord } from "@/lib/publication-cms";
-import { ensurePublicationFeed } from "@/lib/publication-cms-seed";
+import { fetchPublicationFeed } from "@/lib/publication-cms-server";
 
 export const metadata: Metadata = {
   title: "Publications — MGM Laboratory",
@@ -15,7 +15,7 @@ export const revalidate = 0;
 
 async function readRecords() {
   try {
-    return publishedPublications(await ensurePublicationFeed());
+    return publishedPublications(await fetchPublicationFeed());
   } catch {
     return [] as CmsPublicationRecord[];
   }

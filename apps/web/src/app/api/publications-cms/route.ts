@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
-import { ensurePublicationFeed } from "@/lib/publication-cms-seed";
+import { fetchPublicationFeed } from "@/lib/publication-cms-server";
 import { publishedPublications } from "@/lib/publication-cms";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   try {
     // Drafts stay out of the public feed entirely; the admin workspace reads
     // them through its own authenticated proxy.
-    const records = publishedPublications(await ensurePublicationFeed());
+    const records = publishedPublications(await fetchPublicationFeed());
     const payload = JSON.stringify({ records });
     const etag = `W/\"${createHash("sha256").update(payload).digest("base64url")}\"`;
     const headers = { "cache-control": RECORDS_CACHE_CONTROL, etag, vary: "Accept-Encoding" };

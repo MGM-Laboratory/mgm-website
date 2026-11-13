@@ -111,7 +111,9 @@ A project record also carries the fields its detail page (`/projects/[slug]`, se
 
 ## Content seeding and failure behavior
 
-Several public collections have seed helpers in `apps/web/src/lib/*-cms*-seed.ts`. They initialize legacy/static source data only when needed so the public site retains content during a fresh CMS rollout. Do not call an admin feed from a public page just to make seeding convenient: drafts and protected fields must not be sent to an account without the corresponding `read` permission.
+The members, articles and publications live only in the database. The code holds no starter data for them, so a new database starts with empty pages, and an editor adds the records in `/admin`. Only the research collection still has a starter record, an internal draft template in `apps/web/src/data/research.ts` that the admin workspace loads into an empty store. The API keeps the `bootstrap` routes of the other collections, but the web app no longer calls them for members, articles and publications. Do not call an admin feed from a public page just to fill a list, because drafts and protected fields must not reach an account without the corresponding `read` permission.
+
+When the API cannot be reached, the member and article pages show no member, author or record, because no bundled copy exists to fall back on.
 
 Public CMS helpers should fail softly to a safe static/default value where one exists (for example, contact settings fall back to `DEFAULT_CONTACT_SETTINGS`). Admin mutations should surface API validation errors rather than silently accepting malformed content.
 

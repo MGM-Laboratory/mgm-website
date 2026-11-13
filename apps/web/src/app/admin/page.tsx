@@ -4,11 +4,11 @@ import { MemberCmsStudio } from "@/components/admin/member-cms-studio";
 import { can } from "@/lib/admin-permissions";
 import { fetchAdminAccounts } from "@/lib/admin-records";
 import { getAdminSession } from "@/lib/admin-session";
-import { ensureArticleCmsSeeded } from "@/lib/article-cms-seed";
+import { fetchArticleRecords } from "@/lib/article-cms-server";
 import { fetchCareerAdminList, fetchCareerApplications } from "@/lib/career-cms-server";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+import { fetchMemberRecords } from "@/lib/member-cms-server";
 import { fetchProjectAdminList } from "@/lib/project-cms-server";
-import { ensurePublicationCmsSeeded } from "@/lib/publication-cms-seed";
+import { fetchPublicationRecords } from "@/lib/publication-cms-server";
 import { ensureResearchCmsSeeded } from "@/lib/research-cms-server";
 import { fetchEventAdminList, fetchEventRegistrations } from "@/lib/events-cms-server";
 import { fetchContactInquiries } from "@/lib/contact-inquiries-cms-server";
@@ -23,8 +23,8 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
-  // The seed helpers speak for the superadmin, so the draft feeds must not
-  // reach accounts without read access to the matching page — the UI hides
+  // These reads speak for the superadmin, so the draft feeds must not
+  // reach accounts without read access to the matching page. The UI hides
   // the workspace, and the server must not ship its data either.
   const [
     articles,
@@ -42,11 +42,11 @@ export default async function AdminPage() {
     forms,
   ] = await Promise.all([
     can(session.permissions, "articles", "read")
-      ? ensureArticleCmsSeeded().catch(() => undefined)
+      ? fetchArticleRecords().catch(() => undefined)
       : Promise.resolve(undefined),
-    ensureMemberCmsSeeded().catch(() => undefined),
+    fetchMemberRecords().catch(() => undefined),
     can(session.permissions, "publications", "read")
-      ? ensurePublicationCmsSeeded().catch(() => undefined)
+      ? fetchPublicationRecords().catch(() => undefined)
       : Promise.resolve(undefined),
     session.role === "superadmin" ? fetchAdminAccounts().catch(() => []) : Promise.resolve([]),
     can(session.permissions, "careers", "read")

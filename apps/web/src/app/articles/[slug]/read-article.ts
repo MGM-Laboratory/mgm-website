@@ -2,11 +2,10 @@ import "server-only";
 
 import { cache } from "react";
 
-import { MEMBERS } from "@/data/members";
 import { publishedArticles, type CmsArticleRecord } from "@/lib/article-cms";
-import { fetchArticleFeed, fetchArticleRecord } from "@/lib/article-cms-seed";
+import { fetchArticleFeed, fetchArticleRecord } from "@/lib/article-cms-server";
 import { cmsApi } from "@/lib/cms-api";
-import { mergeMemberRecords, type CmsMemberRecord } from "@/lib/member-cms";
+import { membersFromRecords, type CmsMemberRecord } from "@/lib/member-cms";
 
 /**
  * The article page's reads, memoised per request with React's cache():
@@ -35,10 +34,8 @@ export const readPublishedFeed = cache(async (): Promise<CmsArticleRecord[]> => 
 });
 
 /**
- * The member directory, for the bylines. A plain read of the CMS records
- * (not the directory's seeding helper, which imports the bundled members
- * into an empty store): an article page never writes. Without records the
- * bundled members still name every author, only without their portraits.
+ * The member directory, for the bylines. A plain read of the CMS records,
+ * because an article page never writes. Without records no author is named.
  */
 export const readMembers = cache(
   async (): Promise<{ members: CmsMemberRecord["member"][]; records: CmsMemberRecord[] }> => {
@@ -47,9 +44,9 @@ export const readMembers = cache(
       if (!response.ok) throw new Error("CMS member records could not be read");
       const data = (await response.json()) as { records?: CmsMemberRecord[] };
       const records = data.records ?? [];
-      return { members: mergeMemberRecords(MEMBERS, records), records };
+      return { members: membersFromRecords(records), records };
     } catch {
-      return { members: [...MEMBERS], records: [] };
+      return { members: [], records: [] };
     }
   },
 );

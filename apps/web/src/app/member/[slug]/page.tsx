@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { MemberProfile, MemberProfileBySlug } from "@/components/members/member-profile";
+import { MemberProfileBySlug } from "@/components/members/member-profile";
 import { CtaFooter } from "@/components/sections/cta-footer";
-import { MEMBERS, getMemberBySlug } from "@/data/members";
+import type { Member } from "@/data/members";
 import type { CmsMemberRecord } from "@/lib/member-cms";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+import { fetchMemberRecords } from "@/lib/member-cms-server";
 
 type MemberDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
-
-export function generateStaticParams() {
-  return MEMBERS.map((member) => ({ slug: member.slug }));
-}
 
 // A renamed profile needs to resolve at request time so its previous URL can
 // immediately redirect instead of serving an obsolete statically generated page.
@@ -20,15 +16,15 @@ export const revalidate = 0;
 
 export async function generateMetadata({ params }: MemberDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
-  let member = getMemberBySlug(slug);
+  let member: Member | undefined;
   try {
-    const records = await ensureMemberCmsSeeded();
+    const records = await fetchMemberRecords();
     const record = records.find(
       (item) => item.slug === slug || (item.sourceSlug === slug && item.slug !== slug),
     );
-    member = record?.member ?? member;
+    member = record?.member;
   } catch {
-    // Preserve the static member metadata when the CMS cannot be reached.
+    // Fall back to the not found title when the CMS cannot be reached.
   }
 
   if (!member) {
@@ -46,23 +42,18 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
   let initialRecords: CmsMemberRecord[] = [];
   let renamedSlug: string | undefined;
   try {
-    initialRecords = await ensureMemberCmsSeeded();
+    initialRecords = await fetchMemberRecords();
     renamedSlug = initialRecords.find(
       (record) => record.sourceSlug === slug && record.slug !== slug,
     )?.slug;
   } catch {
-    // The client-side member data hook retains the public profile fallback if the CMS is unavailable.
+    // The client-side member data hook loads the records again if the CMS is unavailable.
   }
   if (renamedSlug) redirect(`/member/${renamedSlug}`);
-  const member = getMemberBySlug(slug);
 
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col">
-      {member ? (
-        <MemberProfile initialRecords={initialRecords} member={member} />
-      ) : (
-        <MemberProfileBySlug initialRecords={initialRecords} slug={slug} />
-      )}
+      <MemberProfileBySlug initialRecords={initialRecords} slug={slug} />
       <CtaFooter />
     </div>
   );

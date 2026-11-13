@@ -4,9 +4,8 @@ import { notFound } from "next/navigation";
 
 import { ArticleBody } from "@/components/articles/article-body";
 import { CtaFooter } from "@/components/sections/cta-footer";
-import { MEMBERS } from "@/data/members";
-import { mergeMemberRecords } from "@/lib/member-cms";
-import { ensureMemberCmsSeeded } from "@/lib/member-cms-seed";
+import { membersFromRecords } from "@/lib/member-cms";
+import { fetchMemberRecords } from "@/lib/member-cms-server";
 import {
   formatResearchDateShort,
   formatResearchPeriod,
@@ -36,9 +35,9 @@ async function readRecord(slug: string) {
 
 async function readMembers() {
   try {
-    return mergeMemberRecords(MEMBERS, await ensureMemberCmsSeeded());
+    return membersFromRecords(await fetchMemberRecords());
   } catch {
-    return [...MEMBERS];
+    return [];
   }
 }
 

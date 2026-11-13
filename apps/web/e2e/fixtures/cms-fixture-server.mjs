@@ -1,12 +1,12 @@
 /**
- * A dependency-free stand-in for the CMS API's public project and article
- * reads, for the Playwright suite (playwright.config.ts starts it as a
+ * A dependency-free stand-in for the CMS API's public project, article and
+ * member reads, for the Playwright suite (playwright.config.ts starts it as a
  * webServer, and the web server's CMS_API_URL points at it). CI serves the
  * web build without an API, so without this /projects and /articles only
  * ever showed their empty states and every detail page was a 404.
  *
  * It answers only what the public project and article pages read, from the
- * records in cms/projects.json and cms/articles.json and the files in
+ * records in cms/projects.json, cms/articles.json and cms/members.json and the files in
  * cms/media/, shaped like the NestJS API
  * (apps/api/src/cms/cms-projects.controller.ts, cms-articles.controller.ts):
  *
@@ -19,6 +19,7 @@
  *   GET /api/cms/articles/feed         { records } (published, content [])
  *   GET /api/cms/articles/:slug        { record }, or a 404
  *   GET /api/cms/articles/media/:key   302 to /files/<key> on this server
+ *   GET /api/cms/members               { records } (the article authors)
  *   GET /api/shortlinks/hosts          { hosts: [] } (no custom domains)
  *   GET /api/shortlinks/public/:slug   redirect / gated / used / not_found
  *   POST /api/shortlinks/verify        the gate's passphrase check
@@ -83,6 +84,7 @@ const CONTENT_TYPES = {
 const { records } = JSON.parse(readFileSync(path.join(ROOT, "projects.json"), "utf8"));
 const forms = JSON.parse(readFileSync(path.join(ROOT, "forms.json"), "utf8")).records;
 const published = records.filter((record) => record.project.draft !== true);
+const members = JSON.parse(readFileSync(path.join(ROOT, "members.json"), "utf8")).records;
 const articles = JSON.parse(readFileSync(path.join(ROOT, "articles.json"), "utf8")).records.filter(
   (record) => record.article.draft !== true,
 );
@@ -448,6 +450,10 @@ function route(request, response) {
   }
   if (parts[0] === "files" && parts.length === 2) {
     sendFile(request, response, parts[1]);
+    return true;
+  }
+  if (parts[0] === "api" && parts[1] === "cms" && parts[2] === "members" && parts.length === 3) {
+    sendJson(response, 200, { records: members });
     return true;
   }
   if (parts[0] === "api" && parts[1] === "cms" && parts[2] === "articles") {

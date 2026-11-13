@@ -11,12 +11,12 @@ import { ReelPlayerHost } from "@/components/reel/player/reel-player-host";
 import { HOME_CHAPTERS } from "@/components/home-extras/chapters";
 import { HomeFinale } from "@/components/home-extras/home-finale";
 import { publishedArticles } from "@/lib/article-cms";
-import { ensureArticleFeed } from "@/lib/article-cms-seed";
+import { fetchArticleFeed } from "@/lib/article-cms-server";
 import { fetchHomeContent } from "@/lib/home-cms-server";
 import { featuredProjects, publishedProjects, type CmsProjectRecord } from "@/lib/project-cms";
 import { fetchProjectFeed } from "@/lib/project-cms-server";
 import { publishedPublications, type CmsPublicationRecord } from "@/lib/publication-cms";
-import { ensurePublicationFeed } from "@/lib/publication-cms-seed";
+import { fetchPublicationFeed } from "@/lib/publication-cms-server";
 
 const HOMEPAGE_PREVIEW_LIMIT = 10;
 
@@ -24,9 +24,9 @@ export default async function Home() {
   // Only the newest ten records of each kind render on the homepage, so the
   // server fetches the light feed and trims it before it reaches the client.
   const [initialArticles, projectData, publications, homeContent] = await Promise.all([
-    ensureArticleFeed()
+    fetchArticleFeed()
       .then((records) => publishedArticles(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
-      .catch(() => [] as Awaited<ReturnType<typeof ensureArticleFeed>>),
+      .catch(() => [] as Awaited<ReturnType<typeof fetchArticleFeed>>),
     fetchProjectFeed()
       .then((records) => ({
         projects: featuredProjects(records).slice(0, HOMEPAGE_PREVIEW_LIMIT),
@@ -34,7 +34,7 @@ export default async function Home() {
           .length,
       }))
       .catch(() => ({ projects: [] as CmsProjectRecord[], unfeaturedCount: 0 })),
-    ensurePublicationFeed()
+    fetchPublicationFeed()
       .then((records) => publishedPublications(records).slice(0, HOMEPAGE_PREVIEW_LIMIT))
       .catch(() => [] as CmsPublicationRecord[]),
     fetchHomeContent(),

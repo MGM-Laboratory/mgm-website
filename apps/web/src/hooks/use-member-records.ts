@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { MEMBERS, type Member } from "@/data/members";
-import { mergeMemberRecords, type CmsMemberRecord } from "@/lib/member-cms";
+import type { Member } from "@/data/members";
+import { membersFromRecords, type CmsMemberRecord } from "@/lib/member-cms";
 
 function replaceRecord(records: readonly CmsMemberRecord[], next: CmsMemberRecord) {
   return [
@@ -34,9 +34,8 @@ export function useMemberRecords(initialRecords: readonly CmsMemberRecord[] = []
       // The route revalidates its ETag on revisit, preserving immediate edits
       // without downloading and parsing an unchanged directory again.
       const response = await fetch("/api/member-cms", { cache: "default", signal });
-      const data = (response.ok ? await response.json() : { records: [] }) as {
-        records?: CmsMemberRecord[];
-      };
+      if (!response.ok) throw new Error("Member records could not be read");
+      const data = (await response.json()) as { records?: CmsMemberRecord[] };
       if (!signal?.aborted && version === requestVersion.current) {
         setRecords(data.records ?? []);
       }
@@ -75,7 +74,7 @@ export function useMemberRecords(initialRecords: readonly CmsMemberRecord[] = []
     };
   }, [loadRecords]);
 
-  const members = useMemo(() => mergeMemberRecords(MEMBERS, records), [records]);
+  const members = useMemo(() => membersFromRecords(records), [records]);
   return { members, ready, records, setRecords } as {
     members: Member[];
     ready: boolean;

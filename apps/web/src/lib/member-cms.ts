@@ -103,19 +103,7 @@ export function draftToMember(draft: MemberDraft): Member {
   };
 }
 
-export function mergeMemberRecords(base: readonly Member[], records: readonly CmsMemberRecord[]) {
-  const overrides = new Map(records.map((record) => [record.slug, record.member]));
-  const renamedBaseSlugs = new Set(
-    records.flatMap((record) =>
-      record.sourceSlug && record.sourceSlug !== record.slug ? [record.sourceSlug] : [],
-    ),
-  );
-  const merged = base
-    .filter((member) => !renamedBaseSlugs.has(member.slug))
-    .map((member) => overrides.get(member.slug) ?? member);
-  const additions = records
-    .filter((record) => !base.some((member) => member.slug === record.slug))
-    .map((record) => record.member);
-
-  return [...merged, ...additions];
+/** The members of the CMS records, in a stable order by name so an edit does not reshuffle a list. */
+export function membersFromRecords(records: readonly CmsMemberRecord[]) {
+  return records.map((record) => record.member).toSorted((a, b) => a.name.localeCompare(b.name));
 }
