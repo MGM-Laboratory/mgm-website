@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { AdminAction, AdminPageId } from "@/lib/admin-permissions";
 import { requireAdminPermission, requireSuperadmin, type AdminSession } from "@/lib/admin-session";
 import { apiBaseUrl, cmsApi } from "@/lib/cms-api";
+import { API_UPLOAD_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-timeout";
 
 export type AdminGate = { ok: true; session: AdminSession } | { ok: false; response: NextResponse };
 
@@ -186,16 +187,20 @@ export function videoUploadRoute(gate: () => Promise<AdminGate>, cmsPath: string
         );
       }
 
-      const response = await fetch(`${apiBaseUrl()}${cmsPath}`, {
-        body: request.body,
-        headers: {
-          "content-type": contentType,
-          "x-cms-passphrase": process.env.ADMIN_PASSPHRASE ?? "",
-        },
-        method: "POST",
-        // Node's fetch requires an explicit duplex mode for streamed bodies.
-        duplex: "half",
-      } as RequestInit);
+      const response = await fetchWithTimeout(
+        `${apiBaseUrl()}${cmsPath}`,
+        {
+          body: request.body,
+          headers: {
+            "content-type": contentType,
+            "x-cms-passphrase": process.env.ADMIN_PASSPHRASE ?? "",
+          },
+          method: "POST",
+          // Node's fetch requires an explicit duplex mode for streamed bodies.
+          duplex: "half",
+        } as RequestInit,
+        API_UPLOAD_TIMEOUT_MS,
+      );
       return NextResponse.json(await response.json(), { status: response.status });
     },
   };
