@@ -23,8 +23,9 @@ Start with the [README](../README.md) for the stack and the quick start, and wit
 19. [`security.md`](security.md) describes the security controls and the limits of the design.
 20. [`privacy.md`](privacy.md) describes the personal data that the site handles.
 21. [`ci-cd.md`](ci-cd.md) covers GitHub Actions, the Docker images and how they are deployed.
-22. [`testing-verification.md`](testing-verification.md) covers how work is verified.
-23. [`repo-history.md`](repo-history.md) covers the 2026-09-12 migration and why the git rules are strict.
+22. [`deployment.md`](deployment.md) covers how to run the images on a host and how to update them without downtime.
+23. [`testing-verification.md`](testing-verification.md) covers how work is verified.
+24. [`repo-history.md`](repo-history.md) covers the 2026-09-12 migration and why the git rules are strict.
 
 ## Two warnings
 

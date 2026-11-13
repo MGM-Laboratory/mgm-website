@@ -114,7 +114,7 @@ The push token is the secret `DOCKERHUB_TOKEN` of the `docker-hub` environment. 
 
 ## Deployment
 
-CI publishes the images and nothing else. The images are deployed on MGM infrastructure, outside this repository, so no workflow here deploys or restarts anything. To confirm that an image is the one CI built, run the `cosign verify` command in the Verification commands section.
+CI publishes the images and nothing else. The images are deployed on MGM infrastructure, outside this repository, so no workflow here deploys or restarts anything. [`deployment.md`](deployment.md) shows how to run and update them. To confirm that an image is the one CI built, run the `cosign verify` command in the Verification commands section.
 
 ## pre-commit.ci
 
