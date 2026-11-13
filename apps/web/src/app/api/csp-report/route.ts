@@ -1,3 +1,5 @@
+import { readLimitedText } from "@/lib/read-limited-text";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -38,17 +40,9 @@ function summarize(report: Record<string, unknown>) {
 
 /** Receives the reports of the Content-Security-Policy-Report-Only header and writes one line for each to the server log. */
 export async function POST(request: Request) {
-  const declared = Number(request.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
-    return new Response(null, { status: 413 });
-  }
-
-  let text: string;
-  try {
-    text = (await request.text()).slice(0, MAX_BODY_BYTES);
-  } catch {
-    return new Response(null, { status: 400 });
-  }
+  // Read chunk by chunk and abandoned at the limit, so a body without a declared length cannot fill the memory either
+  const text = await readLimitedText(request, MAX_BODY_BYTES).catch(() => "");
+  if (text === null) return new Response(null, { status: 413 });
 
   let parsed: unknown;
   try {

@@ -122,3 +122,5 @@ When the API answers with a body that is not JSON, the web app answers `The file
 `GET /api/health` answers 200 with `{"status":"ok","uptime":...,"timestamp":"..."}`. It answers 503 with `"status":"error"` when the query `SELECT 1` fails.
 
 The web app answers `GET /healthz` with 200 and `{"status":"ok"}` and no `cache-control` caching. It makes no call to the API, so it never answers 503.
+
+The web app answers `POST /api/csp-report` with 204 for a report or a list of reports, 400 for a body that is not JSON and 413 for a body above 8 KB. It reads the body in chunks and stops at the limit, so a body without a declared length gets the 413 as well.
