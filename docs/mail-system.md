@@ -36,6 +36,8 @@ Configured (or not) purely by which env vars are present. Nothing needs to be "e
 
 `mailProviderOrder` defaults to `["resend", "smtp", "ses"]` when a caller doesn't override it.
 
+Only the superadmin changes the routing. A save by another admin keeps the stored strategy, order, weights and limits, because the web server adds them to the request before it reaches the API, which would otherwise fill the missing fields with the defaults above. A save that tries to change one of them answers 403.
+
 ## Quota accounting (`MailProviderLimitConfig`)
 
 Optional per-provider `dailyLimit`/`longLimit` (`longPeriod: "monthly" | "30day"`), two window modes:
