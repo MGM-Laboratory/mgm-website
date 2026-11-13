@@ -30,11 +30,7 @@ function mediaUrl(key?: string) {
 }
 
 async function readRecord(slug: string) {
-  try {
-    return await fetchEventBySlug(slug);
-  } catch {
-    return undefined;
-  }
+  return fetchEventBySlug(slug);
 }
 
 async function readFeed() {

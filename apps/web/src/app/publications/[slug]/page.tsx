@@ -27,11 +27,7 @@ type PublicationPageProps = { params: Promise<{ slug: string }> };
 export const revalidate = 0;
 
 async function readRecord(slug: string) {
-  try {
-    return await fetchPublicationRecord(slug);
-  } catch {
-    return undefined;
-  }
+  return fetchPublicationRecord(slug);
 }
 
 async function readFeed() {

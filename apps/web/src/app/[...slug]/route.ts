@@ -1,3 +1,4 @@
+import { notFound as renderNotFound } from "next/navigation";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -11,16 +12,21 @@ export const runtime = "nodejs";
 
 type Context = { params: Promise<{ slug: string[] }> };
 
-function notFound() {
+// A browser that follows a dead link gets the site's own 404 page. Any other
+// caller (a script, a probe) keeps the JSON answer.
+function notFound(request: NextRequest) {
+  if (request.method === "GET" && request.headers.get("accept")?.includes("text/html")) {
+    renderNotFound();
+  }
   return NextResponse.json({ error: "Not Found" }, { status: 404 });
 }
 
 export async function GET(request: NextRequest, { params }: Context) {
   const { slug } = await params;
-  return (await handleShortlinkCatchAll(request, slug)) ?? notFound();
+  return (await handleShortlinkCatchAll(request, slug)) ?? notFound(request);
 }
 
 export async function POST(request: NextRequest, { params }: Context) {
   const { slug } = await params;
-  return (await handleShortlinkCatchAll(request, slug)) ?? notFound();
+  return (await handleShortlinkCatchAll(request, slug)) ?? notFound(request);
 }

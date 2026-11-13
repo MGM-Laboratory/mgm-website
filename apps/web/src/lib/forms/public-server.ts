@@ -41,14 +41,11 @@ export async function fetchPublicForm(
   token?: string,
 ): Promise<PublicFormPayload | null> {
   if (!isFormSlug(slug)) return null;
-  try {
-    const response = await cmsApi(`/forms/public/${encodeURIComponent(slug)}`, {
-      headers: token ? { "x-form-token": token } : {},
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) return null;
-    return (await response.json()) as PublicFormPayload;
-  } catch {
-    return null;
-  }
+  const response = await cmsApi(`/forms/public/${encodeURIComponent(slug)}`, {
+    headers: token ? { "x-form-token": token } : {},
+    signal: AbortSignal.timeout(5000),
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Public form could not be read");
+  return (await response.json()) as PublicFormPayload;
 }

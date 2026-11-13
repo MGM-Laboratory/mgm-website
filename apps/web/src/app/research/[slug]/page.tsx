@@ -26,11 +26,7 @@ type ResearchPageProps = { params: Promise<{ slug: string }> };
 export const revalidate = 0;
 
 async function readRecord(slug: string) {
-  try {
-    return await fetchResearchRecord(slug);
-  } catch {
-    return undefined;
-  }
+  return fetchResearchRecord(slug);
 }
 
 async function readMembers() {

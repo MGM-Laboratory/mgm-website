@@ -13,7 +13,8 @@ export async function fetchCareerFeed(): Promise<CmsJobRecord[]> {
 /** One role with its full document, or undefined for missing/draft records. */
 export async function fetchCareerRecord(slug: string): Promise<CmsJobRecord | undefined> {
   const response = await cmsApi(`/cms/jobs/${encodeURIComponent(slug)}`);
-  if (!response.ok) return undefined;
+  if (response.status === 404) return undefined;
+  if (!response.ok) throw new Error("CMS job record could not be read");
   const payload = (await response.json()) as { record?: CmsJobRecord };
   return payload.record;
 }

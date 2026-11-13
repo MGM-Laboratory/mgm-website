@@ -26,7 +26,7 @@ export async function generateMetadata({
 
 export default async function CareerApplyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const record = await fetchCareerRecord(slug).catch(() => undefined);
+  const record = await fetchCareerRecord(slug);
   if (!record) notFound();
 
   const { job } = record;
