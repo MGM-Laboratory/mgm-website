@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { cmsApi } from "@/lib/cms-api";
 import { formTokenCookieName, isFormSlug } from "@/lib/forms/public-server";
-import { visitorAddress } from "@/lib/forms/visitor-ip";
+import { visitorHeaders } from "@/lib/visitor-headers";
 
 /**
  * Shared plumbing of the public form routes (`/api/forms/**`): no session,
@@ -14,16 +14,7 @@ import { visitorAddress } from "@/lib/forms/visitor-ip";
 
 export type SlugContext = { params: Promise<{ slug: string }> };
 
-export function visitorHeaders(request: Request): Record<string, string> {
-  const headers: Record<string, string> = {};
-  const ip = visitorAddress(request);
-  if (ip) headers["x-visitor-ip"] = ip;
-  const userAgent = request.headers.get("user-agent");
-  if (userAgent) headers["x-visitor-user-agent"] = userAgent;
-  const referer = request.headers.get("referer");
-  if (referer) headers["x-visitor-referer"] = referer;
-  return headers;
-}
+export { visitorHeaders };
 
 /** The unlock token: the page's explicit header, else the slug's cookie. */
 function tokenHeader(request: Request, slug: string): Record<string, string> {

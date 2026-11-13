@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { apiBaseUrl } from "@/lib/cms-api";
+import { provenVisitorHeaders } from "@/lib/visitor-headers";
 
 type Context = { params: Promise<{ slug: string }> };
 
@@ -37,7 +38,7 @@ export async function POST(request: Request, { params }: Context) {
   // header carries the multipart boundary and must arrive verbatim.
   const response = await fetch(`${apiBaseUrl()}/cms/jobs/${encodeURIComponent(slug)}/apply`, {
     body: request.body,
-    headers: { "content-type": contentType },
+    headers: { "content-type": contentType, ...provenVisitorHeaders(request) },
     method: "POST",
     // Node's fetch requires an explicit duplex mode for streamed bodies.
     duplex: "half",

@@ -34,7 +34,7 @@ This page describes what the web app and the API protect, who they protect it fr
 
 ### Public routes and rate limits
 
-- The API registers the Nest throttler as a global guard. The default budget is `THROTTLE_LIMIT` requests (default 100) in `THROTTLE_TTL` milliseconds (default 60000) for each route and each client address.
+- The API registers the Nest throttler as a global guard. The default budget is `THROTTLE_LIMIT` requests (default 100) in `THROTTLE_TTL` milliseconds (default 60000) for each route and each client. The client is the visitor address that the web server forwards when the request carries the admin passphrase, and the address of the peer otherwise.
 - Three public write routes have a budget of 5 requests a minute, namely the contact message, the job application and the event registration.
 - The public form routes have a budget for each visitor and not for the web server. The limits for each minute are 10 for an unlock, 120 for events, 30 for uploads and 10 for responses. For these form routes, the API uses the forwarded visitor address only when the request carries the admin passphrase.
 - The admin routes of the forms workspace skip the global budget when the request carries the right passphrase. A wrong or missing passphrase stays under the budget.
@@ -125,7 +125,7 @@ Every action in a workflow is pinned to a full commit SHA.
 - The admin workspace has one shared credential model. The permissions of a delegated editor are enforced by the web app. The API checks only the shared passphrase, so anyone who holds that passphrase has every permission, and the API must be reachable only through trusted callers where that matters.
 - There is no account lockout and no second factor for the admin workspace. The login relies on the strength of the passphrase, and a generated passphrase has 18 random bytes.
 - The rate limit counters live in the memory of each API process. Each copy of the API counts on its own, and a restart empties the counters.
-- The rate limit tracks the client address that Express reports. A deployment that sits behind a proxy has to make sure that this address is the address of the client.
+- The rate limit tracks the visitor address that the web server forwards with the admin passphrase, and the address that Express reports for every other caller. The API trusts no proxy by default, so a browser that reaches the API through a reverse proxy, as the contact form does, shares the address of the proxy until `TRUST_PROXY` names that proxy. The setting refuses `true`, because that makes any `x-forwarded-for` believable.
 - A superadmin session is valid until its cookie expires. Changing `ADMIN_PASSPHRASE` ends every admin session at once, because it is also the signing key of the cookie.
 - The web app sets no content security policy of its own.
 - Uploaded files are stored as sent, within the checks above, and are not scanned.

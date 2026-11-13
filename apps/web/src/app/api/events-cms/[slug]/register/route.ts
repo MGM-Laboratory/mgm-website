@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { cmsApi } from "@/lib/cms-api";
+import { visitorHeaders } from "@/lib/visitor-headers";
 
 type Context = { params: Promise<{ slug: string }> };
 
@@ -11,6 +12,7 @@ export async function POST(request: Request, { params }: Context) {
   const { slug } = await params;
   const response = await cmsApi(`/cms/events/${encodeURIComponent(slug)}/register`, {
     body: JSON.stringify(await request.json()),
+    headers: visitorHeaders(request),
     method: "POST",
   });
   let body: unknown;

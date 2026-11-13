@@ -9,6 +9,7 @@ import { Logger } from "nestjs-pino";
 
 import { AppModule } from "./app.module.js";
 import type { Env } from "./config/env.validation.js";
+import { parseTrustProxy } from "./trust-proxy.js";
 
 /** Respondent upload bodies buffered at the same time, at most. */
 const FORMS_UPLOADS_AT_ONCE = 6;
@@ -16,6 +17,11 @@ const FORMS_UPLOADS_AT_ONCE = 6;
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true, bodyParser: false });
   const configService = app.get(ConfigService<Env, true>);
+
+  // Behind a reverse proxy that the API is reached through, `req.ip` is the proxy until the proxy is trusted. The setting
+  // is off by default, because trusting a proxy that is not there lets any caller choose its own address.
+  const trustProxy = parseTrustProxy(configService.get("TRUST_PROXY", { infer: true }));
+  if (trustProxy !== undefined) app.getHttpAdapter().getInstance().set("trust proxy", trustProxy);
 
   // Form respondents' uploads arrive as raw bytes of any type, on this one
   // path only. Registered ahead of every other parser: body parsers are

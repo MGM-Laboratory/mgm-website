@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { renderShortlinkPage, renderShortlinkUnavailable } from "@/lib/shortlinks-pages";
+import { provenVisitorHeaders } from "@/lib/visitor-headers";
 
 /**
  * The short-link request path, shared by /s/[slug] (links on the site's own
@@ -39,18 +40,6 @@ function isSiteHost(host: string | null): boolean {
   return SITE_HOSTS.has(normalized);
 }
 
-function visitorHeaders(request: Request): Record<string, string> {
-  const headers: Record<string, string> = {};
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = request.headers.get("cf-connecting-ip") ?? forwardedFor;
-  if (ip) headers["x-visitor-ip"] = ip;
-  const userAgent = request.headers.get("user-agent");
-  if (userAgent) headers["x-visitor-user-agent"] = userAgent;
-  const referer = request.headers.get("referer");
-  if (referer) headers["x-visitor-referer"] = referer;
-  return headers;
-}
-
 type PublicState =
   | { status: "ok"; longUrl: string }
   | { status: "passphrase"; host: string }
@@ -67,7 +56,7 @@ async function fetchLinkState(
       `${apiBase()}/shortlinks/public/${encodeURIComponent(slug)}?host=${encodeURIComponent(host)}`,
       {
         cache: "no-store",
-        headers: visitorHeaders(request),
+        headers: provenVisitorHeaders(request),
         signal: AbortSignal.timeout(5000),
       },
     );
@@ -97,7 +86,7 @@ async function verifyPassphrase(
       cache: "no-store",
       headers: {
         "content-type": "application/json",
-        ...visitorHeaders(request),
+        ...provenVisitorHeaders(request),
       },
       body: JSON.stringify({ slug, host, passphrase }),
       signal: AbortSignal.timeout(5000),
