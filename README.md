@@ -22,6 +22,18 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 [![Last commit](https://img.shields.io/github/last-commit/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website/commits/main)
 [![Repo size](https://img.shields.io/github/repo-size/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website)
 
+<img width="1454" src=".github/screenshots/1.png" alt="Screenshot 1 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/2.png" alt="Screenshot 2 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/3.png" alt="Screenshot 3 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/4.png" alt="Screenshot 4 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/5.png" alt="Screenshot 5 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/6.png" alt="Screenshot 6 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/7.png" alt="Screenshot 7 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/8.png" alt="Screenshot 8 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/9.png" alt="Screenshot 9 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/10.png" alt="Screenshot 10 of the MGM Laboratory website" />
+<img width="1454" src=".github/screenshots/11.png" alt="Screenshot 11 of the MGM Laboratory website" />
+
 ## Status
 
 | Site                   | Uptime                                                                                                                                                                                                                                                                                                      |
