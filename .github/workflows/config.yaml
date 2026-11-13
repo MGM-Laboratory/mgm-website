@@ -153,16 +153,24 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           token: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
 
-      # every file that git tracks with the .sh ending and every Husky hook, which has no ending and no shebang, the settings are in .shellcheckrc
+      # Files with the .sh ending are bash, the settings are in .shellcheckrc. Husky 9 runs its hooks with sh, so they are checked as sh.
       - name: ShellCheck
         run: |
           image="$(bash ./.github/actions/pull-images/pull.sh "$(bash ./.github/tools/image.sh shellcheck)")"
-          mapfile -d '' files < <(git ls-files -z '*.sh' ':(glob).husky/*')
-          if [ "${#files[@]}" -eq 0 ]; then
+          mapfile -d '' files < <(git ls-files -z '*.sh')
+          mapfile -d '' hooks < <(git ls-files -z ':(glob).husky/*')
+          if [ "${#files[@]}" -eq 0 ] && [ "${#hooks[@]}" -eq 0 ]; then
             echo "The repository has no shell file yet."
             exit 0
           fi
-          docker run --rm -v "$PWD:/mnt:ro" -w /mnt "$image" "${files[@]}"
+          status=0
+          if [ "${#files[@]}" -gt 0 ]; then
+            docker run --rm -v "$PWD:/mnt:ro" -w /mnt "$image" "${files[@]}" || status=1
+          fi
+          if [ "${#hooks[@]}" -gt 0 ]; then
+            docker run --rm -v "$PWD:/mnt:ro" -w /mnt "$image" --shell=sh "${hooks[@]}" || status=1
+          fi
+          exit "$status"
 
   names:
     name: File names
