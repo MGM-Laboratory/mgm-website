@@ -24,7 +24,7 @@ There's no `dev` branch. Every change to `main` goes through a pull request:
 
 Every PR runs the checks below. The ruleset requires all of them except pre-commit.ci.
 
-- **CI**: lint, typecheck, `pnpm test` (API unit tests + coverage), build, for both workspaces.
+- **CI**: lint, typecheck, `pnpm test` (API unit tests with coverage, and web unit tests), build, for both workspaces.
 - **Security**: CodeQL, dependency review, secret scanning (gitleaks), Trivy filesystem scan.
 - **E2E**: Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
 - **Lighthouse**: performance, accessibility, SEO and best-practices budgets on `/`, `/about` and `/contact`, on pull requests.
@@ -48,15 +48,15 @@ pnpm dev            # web on :3000, api on :4000
 docker compose up
 ```
 
-| Command                                    | What it does                                                        |
-| ------------------------------------------ | ------------------------------------------------------------------- |
-| `pnpm dev`, `pnpm dev:web`, `pnpm dev:api` | Run everything, the web app (port 3000) or the API (port 4000).     |
-| `pnpm build`                               | Build all workspaces with Turbo.                                    |
-| `pnpm lint`                                | ESLint for the web app and oxlint for the API.                      |
-| `pnpm typecheck`                           | Type check both workspaces.                                         |
-| `pnpm test`                                | Run the API unit tests with vitest. The web app has no test script. |
-| `pnpm format`, `pnpm format:check`         | Run Prettier over the repo. A hook also runs it on staged files.    |
-| `docker compose up`                        | Start the local Postgres, API and web stack. See `.env.example`.    |
+| Command                                    | What it does                                                     |
+| ------------------------------------------ | ---------------------------------------------------------------- |
+| `pnpm dev`, `pnpm dev:web`, `pnpm dev:api` | Run everything, the web app (port 3000) or the API (port 4000).  |
+| `pnpm build`                               | Build all workspaces with Turbo.                                 |
+| `pnpm lint`                                | ESLint for the web app and oxlint for the API.                   |
+| `pnpm typecheck`                           | Type check both workspaces.                                      |
+| `pnpm test`                                | Run the unit tests of the API and the web app with vitest.       |
+| `pnpm format`, `pnpm format:check`         | Run Prettier over the repo. A hook also runs it on staged files. |
+| `docker compose up`                        | Start the local Postgres, API and web stack. See `.env.example`. |
 
 Node 22 (`.nvmrc`) and pnpm 11.3.0 (`packageManager`) are required.
 
