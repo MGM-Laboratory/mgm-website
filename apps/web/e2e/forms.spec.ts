@@ -247,18 +247,19 @@ test.describe("date and time pickers", () => {
 
     // A time from the columns.
     await question(page, "arrival").getByRole("button", { name: "Choose a time" }).click();
-    await dialog(page)
-      .getByRole("listbox", { name: "Hours" })
-      .getByRole("option", { name: "2", exact: true })
-      .click();
-    await dialog(page)
-      .getByRole("listbox", { name: "Minutes" })
-      .getByRole("option", { name: "30", exact: true })
-      .click();
-    await dialog(page)
-      .getByRole("listbox", { name: "AM or PM" })
-      .getByRole("option", { name: "PM" })
-      .click();
+    // A click on a column can land while the list is still settling and be lost, so each pick is retried until the option is selected
+    const pick = async (list: string, name: string, exact = true) => {
+      const option = dialog(page)
+        .getByRole("listbox", { name: list })
+        .getByRole("option", { name, exact });
+      await expect(async () => {
+        await option.click();
+        await expect(option).toHaveAttribute("aria-selected", "true", { timeout: 1_000 });
+      }).toPass({ timeout: 10_000 });
+    };
+    await pick("Hours", "2");
+    await pick("Minutes", "30");
+    await pick("AM or PM", "PM", false);
     await dialog(page).getByRole("button", { name: "Done" }).click();
     await expect(field(page, "arrival")).toHaveValue("2:30 PM");
 

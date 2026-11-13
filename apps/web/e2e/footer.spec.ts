@@ -58,9 +58,20 @@ test.describe("footer", () => {
     await page.goto("/");
 
     const instagram = page.locator('footer a[href="https://www.instagram.com/labmgmfilkomub/"]');
-    for (let i = 0; i < 30; i++) {
-      await page.mouse.wheel(0, 500);
-    }
+    // Scroll with the wheel until the link is in view. A fixed number of wheel events is too many for a slow runner and too few for a
+    // smooth scroll that lags behind, so the loop stops as soon as the link shows.
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.wheel(0, 500);
+          return instagram.evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            return box.top >= 0 && box.bottom <= window.innerHeight;
+          });
+        },
+        { intervals: [100], timeout: 25_000 },
+      )
+      .toBe(true);
     await expect(instagram).toBeInViewport();
     await expect
       .poll(() =>
