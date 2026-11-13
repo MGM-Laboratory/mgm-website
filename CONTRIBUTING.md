@@ -29,6 +29,7 @@ Every PR runs:
 - **E2E**: Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
 - **Lighthouse**: performance, accessibility, SEO and best-practices budgets on `/`, `/about` and `/contact`, on pull requests.
 - **Prose**: Vale lint of the hand-written Markdown.
+- **Conventional commits** and **PR format**: the commit messages, the title, the branch name, the label, the assignee and the body of the pull request.
 - **pre-commit.ci**: runs repository hygiene checks and Prettier on every pull-request commit; it reports a formatting problem and does not push a fix, because the ruleset only accepts signed commits. Run Prettier yourself and commit the result.
 
 All of these need to actually succeed, not just avoid failing outright. A lint warning, a deprecation notice, or any other non-blocking annotation in a check's output is still something to fix before the PR is done, even if it doesn't turn the check red.
@@ -63,3 +64,12 @@ See `docs/testing-verification.md` for how UI changes are verified in a real bro
 ## Commit messages
 
 Use Conventional Commits (`type(scope): summary`) in English. Name the branch `type/short-description`, and use the same type as the commits. Sign every commit so that GitHub shows it as verified. Do not mention an AI tool in a commit message, trailer, PR text or code comment. Keep the PR body to one bullet for each commit.
+
+## Pull requests
+
+- Name the branch `type/short-description`, for example `fix/contact-form-error`. The type is the same as the type of the commits.
+- Write the title as a Conventional Commit, for example `fix(contact): show the error of the form`.
+- The body is only the list of commits, one bullet for each commit.
+- Add one label, `bug` for a fix, `enhancement` for a feature and `documentation` for docs only, and assign the pull request to yourself.
+- The check "Conventional commits" reads every commit message and the title. The check "PR format" reads the branch, the label, the assignee and the body. Fix what the message names and push again. For a missing label or assignee, add it and rerun the failed check.
+- The maintainer merges with a merge commit, never a squash or a rebase.
