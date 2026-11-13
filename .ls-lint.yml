@@ -2,8 +2,8 @@
 # A file name has no extension rule of its own when it has none at all, such as Dockerfile, LICENSE and CODEOWNERS.
 ls:
   # a folder is lowercase words joined by hyphens, and a leading dot marks the folder of a tool. The Next.js router adds two more
-  # forms, a dynamic segment such as [slug] or [...slug] and a private folder that starts with an underscore such as _lib
-  .dir: regex:\.?[a-z0-9]+(-[a-z0-9]+)*|\[(\.\.\.)?[a-zA-Z]+\]|_[a-z]+
+  # forms, a dynamic segment such as [slug], [...slug] or [[...slug]], a private folder that starts with an underscore such as _lib, a route group such as (site) and a slot such as @modal
+  .dir: regex:\.?[a-z0-9]+(-[a-z0-9]+)*|\[{1,2}(\.\.\.)?[a-zA-Z0-9_]+\]{1,2}|_[a-z]+|\([a-z0-9-]+\)|@[a-z0-9-]+
 
   # every other file is the same, with dots for a variant such as vite-env.d.ts or button.test.tsx
   .*: kebab-case
@@ -30,8 +30,6 @@ ignore:
   - test-results
   # GitHub names the issue forms by what the person sees
   - .github/ISSUE_TEMPLATE
-  # GitHub reads this exact name
-  - .github/FUNDING.yml
   # GitHub reads the template by this name, and the Vale and Prettier file lists name it too
   - .github/pull_request_template.md
   # Other files name these workflows, so renaming them to .yaml is a change of its own

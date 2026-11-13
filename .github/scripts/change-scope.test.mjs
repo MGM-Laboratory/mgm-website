@@ -35,6 +35,13 @@ test("shared packages and lockfile changes exercise both applications", () => {
       assert.ok(result[scope], `${file}: ${scope}`);
   }
 });
+test("the lint tool settings only run the automation checks", () => {
+  for (const file of [".hadolint.yml", ".ls-lint.yml", ".shellcheckrc"]) {
+    const result = classifyChanges([file]);
+    assert.ok(result.automation, file);
+    assert.ok(!result.e2e && !result.lighthouse && !result.docker_api && !result.docker_web, file);
+  }
+});
 test("tests, automation, and unknown paths use the appropriate conservative scopes", () => {
   assert.deepEqual(
     Object.entries(classifyChanges(["apps/web/e2e/example.spec.ts"]))

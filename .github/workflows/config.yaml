@@ -81,9 +81,12 @@ jobs:
       - name: Lint the Dockerfiles
         run: |
           image="$(bash ./.github/actions/pull-images/pull.sh "$(bash ./.github/tools/image.sh hadolint)")"
+          status=0
           for dockerfile in apps/api/Dockerfile apps/web/Dockerfile; do
-            docker run --rm -i -v "$PWD/.hadolint.yml:/etc/hadolint.yaml:ro" "$image" /bin/hadolint --config /etc/hadolint.yaml - < "$dockerfile"
+            echo "== $dockerfile"
+            docker run --rm -i -v "$PWD/.hadolint.yml:/etc/hadolint.yaml:ro" "$image" /bin/hadolint --config /etc/hadolint.yaml - < "$dockerfile" || status=1
           done
+          exit "$status"
 
   dotenv:
     name: Dotenv lint
