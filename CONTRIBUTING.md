@@ -29,6 +29,7 @@ Every PR runs the checks below. The ruleset requires all of them except pre-comm
 - **E2E**: Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
 - **Lighthouse**: performance, accessibility, SEO and best-practices budgets on `/`, `/about` and `/contact`, on pull requests.
 - **Prose**: Vale lint of the hand-written Markdown.
+- **Config**: actionlint, Zizmor, Hadolint, dotenv-linter, `docker compose config`, ShellCheck, ls-lint for file names and the Renovate validator.
 - **Conventional commits** and **PR format**: the commit messages, the title, the branch name, the label, the assignee and the body of the pull request.
 - **pre-commit.ci** is not required by the ruleset, but its report should be clean. It runs repository hygiene checks and Prettier on every pull-request commit. It reports a formatting problem and does not push a fix, because the ruleset only accepts signed commits. Run Prettier yourself and commit the result.
 

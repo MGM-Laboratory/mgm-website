@@ -1,0 +1,8 @@
+# The settings of the Hadolint job of config.yaml (Hadolint reads the name .hadolint.yml too). Each ignored rule has a reason.
+ignored:
+  # the build keeps separate RUN lines for generate and build, so a change to one of them reuses the cache of the other
+  - DL3059
+  # the user is created by name in the image, and the container never shares a user id with the host
+  - DL3066
+  # the health check is one line of node -e with quotes, and the shell form keeps it readable
+  - DL3025

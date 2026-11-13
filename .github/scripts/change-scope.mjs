@@ -89,7 +89,10 @@ export function classifyChanges(files, { force = false } = {}) {
       if (name.startsWith("publish-docker-image")) enable("docker_api", "docker_web");
       continue;
     }
-    if (/^\.(prettier|editorconfig|pre-commit)/.test(file) || file.startsWith(".husky/")) {
+    if (
+      /^\.(prettier|editorconfig|pre-commit|hadolint|ls-lint|shellcheck)/.test(file) ||
+      file.startsWith(".husky/")
+    ) {
       enable("automation");
       continue;
     }

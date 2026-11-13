@@ -22,7 +22,10 @@ COPY --from=pruner /app/out/full/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# A NEXT_PUBLIC value is built into the browser bundle, so it is public by design and Hadolint's secret warning does not apply
+# hadolint ignore=DL3064
 ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=""
+# hadolint ignore=DL3064
 ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
 RUN pnpm turbo run build --filter=web
 
