@@ -76,8 +76,9 @@ export class CmsAdminsController {
   // The verify route is public by design: it is how the login page checks an
   // admin passphrase. The remaining routes are superadmin-only. It sits above
   // ":slug" so a record can never shadow the reserved path.
-  // The only public route that guesses a secret. Each visitor gets ten tries a minute, and every try costs one scrypt for each
-  // active account.
+  //
+  // It is the only public route that guesses a secret. Each visitor gets ten requests a minute, successful ones included,
+  // and every request costs one scrypt for each active account.
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("verify")
   async verify(@Body() body: unknown) {

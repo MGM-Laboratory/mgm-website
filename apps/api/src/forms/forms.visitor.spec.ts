@@ -33,6 +33,20 @@ describe("the visitor details that the web server forwards", () => {
     expect(visitorTracker(req as unknown as Record<string, unknown>)).toBe("visitor:203.0.113.9");
   });
 
+  it("counts every address of one IPv6 prefix under one key, for a forwarded visitor and for a direct caller", () => {
+    const forwarded = (address: string) =>
+      visitorTracker(
+        request({ "x-cms-passphrase": PASSPHRASE, "x-visitor-ip": address }) as unknown as Record<string, unknown>,
+      );
+    const direct = (address: string) =>
+      visitorTracker(request({}, address) as unknown as Record<string, unknown>);
+
+    expect(forwarded("2001:db8:1:2:aaaa::1")).toBe("visitor:2001:db8:1:2::/64");
+    expect(forwarded("2001:db8:1:2:bbbb::2")).toBe(forwarded("2001:db8:1:2:aaaa::1"));
+    expect(direct("2001:db8:9:9:1::1")).toBe(direct("2001:db8:9:9:2::2"));
+    expect(forwarded("2001:db8:1:3::1")).not.toBe(forwarded("2001:db8:1:2::1"));
+  });
+
   it("uses the address of the peer when the passphrase is missing or wrong", () => {
     const proofs: Record<string, string>[] = [{}, { "x-cms-passphrase": "wrong" }];
     for (const proof of proofs) {

@@ -70,7 +70,7 @@ The public job application and the public event registration catch the zod error
 - A blocked request answers 429 with the body `{"statusCode":429,"message":"ThrottlerException: Too Many Requests"}`. The header `Retry-After` holds the seconds to wait. An allowed request carries the headers `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`.
 - The global budget is `THROTTLE_LIMIT` requests (default 100) in `THROTTLE_TTL` milliseconds (default 60000) for each route and each client, see the rate limit notes in `security.md`.
 - The routes `POST /api/contact`, `POST /api/cms/jobs/:slug/apply` and `POST /api/cms/events/:slug/register` allow 5 requests a minute.
-- The route `POST /api/cms/admins/verify` and the short link routes `GET /api/shortlinks/resolve` and `GET /api/shortlinks/public/:slug` allow 10, 120 and 120 requests a minute for each visitor. The sign in route of the web app answers 429 with the text `Too many sign in attempts. Wait a minute and try again.` after 10 wrong passphrases in a minute.
+- The route `POST /api/cms/admins/verify` and the short link routes `GET /api/shortlinks/resolve` and `GET /api/shortlinks/public/:slug` allow 10, 300 and 300 requests a minute for each visitor. The sign in route of the web app redirects to `/admin/login?error=rate` from the eleventh attempt in a minute, and the login page then says `Too many sign in attempts. Wait a minute and try again.`.
 - The public form routes allow, for each visitor and each minute, 10 unlocks, 120 events, 30 uploads and 10 responses.
 
 ## Uploads

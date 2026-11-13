@@ -38,7 +38,7 @@ One row per link, unique per `(domain, slug)`.
 
 ## API surface
 
-Public (no authentication, throttled off or per-IP where noted):
+Public (no authentication). `hosts` has no rate limit. `public/:slug` and `resolve` allow 300 requests a minute for each visitor, and `verify` allows 10:
 
 | Route                              | What it does                                                  |
 | ---------------------------------- | ------------------------------------------------------------- |

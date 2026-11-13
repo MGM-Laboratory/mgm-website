@@ -138,7 +138,7 @@ The builder previews a draft through `/admin/forms/preview`, an admin-only page 
 ## Gotchas
 
 - **A pattern is a format mask, never a regular expression.** An admin-written expression run by the API on respondent input could hang it. `matchesFormatMask` checks masks character by character (`#` a digit, `A` a letter, `*` either, `?` anything, alternatives separated by `|`).
-- **The admin workspace shares one address.** Every admin request reaches the API from the web server, so the global limit of 100 a minute would throttle a response gallery or a files download. Forms admin routes carrying the correct passphrase skip it (`forms-admin.throttle.ts`); wrong passphrases stay throttled.
+- **The admin workspace skips the limit of the forms routes.** Many admin requests come in a burst, so the global limit of 100 a minute would throttle a response gallery or a files download. Forms admin routes carrying the correct passphrase skip it (`forms-admin.throttle.ts`); wrong passphrases stay throttled.
 - **Visitor details are only trusted with the passphrase.** The public routes rate-limit per visitor using the forwarded `x-visitor-ip`, which the API believes only when the request also carries the CMS passphrase, so a direct caller can't invent addresses to dodge the limit.
 - **The referrer comes from the page.** The forwarded referer header of a public form request is always the form's own URL, so events and responses store the `document.referrer` the page sends.
 - **Image questions check bytes.** Image uploads and signatures accept PNG, JPEG, WebP and GIF, recognized by their first bytes, whatever the file name says.

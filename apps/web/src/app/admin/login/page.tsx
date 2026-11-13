@@ -36,8 +36,12 @@ export default async function AdminLoginPage({
             type="password"
           />
           {error ? (
-            <p className="text-sm text-brand-red-200">
-              That passphrase does not match an administrator account.
+            <p className="text-sm text-brand-red-200" role="alert">
+              {error === "rate"
+                ? "Too many sign in attempts. Wait a minute and try again."
+                : error === "unavailable"
+                  ? "The sign in could not be checked right now. Try again in a moment."
+                  : "That passphrase does not match an administrator account."}
             </p>
           ) : null}
           <button
