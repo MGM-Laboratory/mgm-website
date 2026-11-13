@@ -29,17 +29,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           PULL_REQUEST: ${{ github.event.pull_request.number }}
         run: |
-          # gh adds the labels and the assignee of a new pull request in a call after it created the pull request, so a missing one is read
-          # again a few times before it counts
-          for attempt in 1 2 3; do
-            pr="$(gh pr view "$PULL_REQUEST" --json headRefName,body,labels,assignees,author)"
-            if [ "$(jq '(.labels | length) > 0 and (.assignees | length) > 0' <<<"$pr")" = true ]; then
-              break
-            fi
-            if [ "$attempt" -lt 3 ]; then
-              sleep 10
-            fi
-          done
+          pr="$(gh pr view "$PULL_REQUEST" --json headRefName,body,labels,assignees,author)"
           branch="$(jq -r .headRefName <<<"$pr")"
           bot="$(jq -r .author.is_bot <<<"$pr")"
 
@@ -51,6 +41,18 @@ jobs:
               fi
               ;;
           esac
+
+          # gh adds the labels and the assignee of a new pull request in a call after it created the pull request, so a missing one is read
+          # again a few times before it counts
+          for attempt in 1 2 3; do
+            if [ "$(jq '(.labels | length) > 0 and (.assignees | length) > 0' <<<"$pr")" = true ]; then
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep 10
+              pr="$(gh pr view "$PULL_REQUEST" --json headRefName,body,labels,assignees,author)"
+            fi
+          done
 
           failed=0
           fail() {

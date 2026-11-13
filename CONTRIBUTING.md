@@ -71,5 +71,5 @@ Use Conventional Commits (`type(scope): summary`) in English. Name the branch `t
 - Write the title as a Conventional Commit, for example `fix(contact): show the error of the form`.
 - The body is only the list of commits, one bullet for each commit.
 - Add one label, `bug` for a fix, `enhancement` for a feature and `documentation` for docs only, and assign the pull request to yourself.
-- The check "Conventional commits" reads every commit message and the title. The check "PR format" reads the branch, the label, the assignee and the body. Fix what the message names and push again. For a missing label or assignee, add it and rerun the failed check.
+- The check "Conventional commits" reads every commit message and the title. The check "PR format" reads the branch, the label, the assignee and the body. A bad commit message needs a rebase that rewords it and a force push to your own branch. For a missing label or assignee, add it and rerun the failed check.
 - The maintainer merges with a merge commit, never a squash or a rebase.
