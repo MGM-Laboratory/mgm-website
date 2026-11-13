@@ -32,6 +32,14 @@
       "semanticCommitType": "ci"
     },
     {
+      "description": "the images of the lint tools run in the workflows and never ship, so they take the commit type of the workflows",
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": [".github/tools/Dockerfile"],
+      "semanticCommitType": "ci",
+      "groupName": "Lint tool images",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"]
+    },
+    {
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "GitHub Actions"
@@ -83,7 +91,7 @@
       "description": "tool versions in workflow files that sit under a renovate comment",
       "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)\\n\\s*[A-Z0-9_]+: (?<currentValue>\\S+)"
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)\\n\\s*[A-Za-z0-9_]+: (?<currentValue>\\S+)"
       ]
     }
   ],
