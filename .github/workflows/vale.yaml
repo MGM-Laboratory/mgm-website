@@ -53,8 +53,7 @@ jobs:
           filter_mode: nofilter
           fail_on_error: true
           # The full configured corpus has hundreds of non-blocking
-          # suggestions and warnings. Posting all of them exceeds GitHub's
-          # 65,535-character check-output limit, so send only the gate level.
+          # suggestions and warnings. Only the gate level is reported, so the log and the annotations stay short.
           min_alert_level: error
           level: warning
           # A newline separator looks tidier as a multi-line `files:` block,
