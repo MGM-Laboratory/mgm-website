@@ -14,7 +14,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiTags } from "@nestjs/swagger";
-import { SkipThrottle } from "@nestjs/throttler";
+import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { z } from "zod";
 
@@ -137,6 +137,9 @@ export class ShortlinksController {
     return this.shortlinks.publicLinkState(host ?? "", slug, visitMeta(req));
   }
 
+  // The only public route that guesses a secret. Each visitor gets ten tries a minute, because the visitor address is the
+  // key of the limit and not the address of the web server any more.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("verify")
   async verify(@Body() body: unknown, @Req() req: Request) {
     const input = parseSafe(verifySchema, body);

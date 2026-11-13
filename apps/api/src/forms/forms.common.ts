@@ -58,6 +58,26 @@ export function storedDocument(data: unknown): FormDocument {
 export type VisitMeta = { ip: string | null; userAgent: string | null; referer: string | null };
 
 /**
+ * The first address of the `x-visitor-ip` header, when the request proves that it comes from the web app with the CMS
+ * passphrase of the server. A direct caller never gets a forwarded address believed, so the visit details and the
+ * throttle key cannot be chosen by it.
+ */
+function provenVisitorIp(headers: Record<string, unknown> | undefined): string | null {
+  const configured = process.env.ADMIN_PASSPHRASE ?? "";
+  const presented = headers?.["x-cms-passphrase"];
+  const forwarded = headers?.["x-visitor-ip"];
+  if (
+    !configured ||
+    typeof presented !== "string" ||
+    !safeEqual(presented, configured) ||
+    typeof forwarded !== "string"
+  ) {
+    return null;
+  }
+  return forwarded.split(",")[0].trim() || null;
+}
+
+/**
  * The visitor's address and client, forwarded by the web app (the only
  * client of the public routes), with the direct-request headers as a
  * fallback, exactly like the short-link click path.
@@ -73,11 +93,7 @@ export function visitMeta(req: Request): VisitMeta {
   // connection's address and client, never the ones it claims.
   const configured = process.env.ADMIN_PASSPHRASE ?? "";
   const trusted = configured.length > 0 && safeEqual(header("x-cms-passphrase") ?? "", configured);
-  const firstForwarded = (value: string | undefined) =>
-    value ? value.split(",")[0].trim() || null : null;
-  const ip = trusted
-    ? (firstForwarded(header("x-visitor-ip")) ?? req.ip ?? null)
-    : (req.ip ?? null);
+  const ip = provenVisitorIp(req.headers) ?? req.ip ?? null;
   return {
     ip,
     userAgent:
@@ -97,17 +113,6 @@ export function visitMeta(req: Request): VisitMeta {
 export function visitorTracker(req: Record<string, unknown>): string {
   // The throttler hands over the raw request; nothing guarantees its headers.
   const request = req as Partial<Pick<Request, "headers" | "ip">>;
-  const configured = process.env.ADMIN_PASSPHRASE ?? "";
-  const presented = request.headers?.["x-cms-passphrase"];
-  const forwarded = request.headers?.["x-visitor-ip"];
-  if (
-    configured &&
-    typeof presented === "string" &&
-    safeEqual(presented, configured) &&
-    typeof forwarded === "string" &&
-    forwarded.trim()
-  ) {
-    return `visitor:${forwarded.split(",")[0].trim()}`;
-  }
-  return request.ip ?? "unknown";
+  const visitor = provenVisitorIp(request.headers);
+  return visitor ? `visitor:${visitor}` : (request.ip ?? "unknown");
 }

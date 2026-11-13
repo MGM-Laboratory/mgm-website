@@ -69,6 +69,8 @@ The folder `deploy/` holds three files.
    }
    ```
 
+   The API trusts no proxy until `TRUST_PROXY` names it, so the contact form, which calls the API from the browser, would share one rate limit bucket for all visitors, because the API would see the address of the proxy. With this proxy on the same host, set `TRUST_PROXY=loopback` in the `.env` file, or `TRUST_PROXY=1` for one proxy hop. Keep the count equal to the real number of proxies, and let the proxy overwrite `X-Forwarded-For` as the example does, because a count that is too high lets a caller choose its own address when the proxy only appends to the header. When a CDN such as Cloudflare sits in front of this proxy, `$remote_addr` is the address of the CDN, so the buckets are per edge address unless the proxy restores the visitor address first, for example with the real IP module of nginx.
+
 The API creates its tables when it starts, so there is no migration step. Read the changelog before an update anyway, because a new version may add tables or columns.
 
 ## Updating to a new version

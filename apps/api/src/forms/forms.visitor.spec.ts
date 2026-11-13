@@ -55,6 +55,13 @@ describe("the visitor details that the web server forwards", () => {
     expect(visitorTracker(req as unknown as Record<string, unknown>)).toBe("10.0.0.5");
   });
 
+  it("falls back to the address of the peer for an empty forwarded address in both places", () => {
+    const req = request({ "x-cms-passphrase": PASSPHRASE, "x-visitor-ip": " , 203.0.113.9" });
+
+    expect(visitMeta(req).ip).toBe("10.0.0.5");
+    expect(visitorTracker(req as unknown as Record<string, unknown>)).toBe("10.0.0.5");
+  });
+
   it("never believes a forwarded address when no passphrase is configured", () => {
     vi.stubEnv("ADMIN_PASSPHRASE", "");
     const req = request({ "x-cms-passphrase": "", "x-visitor-ip": "203.0.113.9" });
