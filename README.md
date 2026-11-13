@@ -55,19 +55,20 @@ pnpm dev:web # http://localhost:3000
 pnpm dev:api # http://localhost:4000
 ```
 
-To run Postgres, the API and the web app together, copy `.env.example` to `.env`, set `POSTGRES_PASSWORD` and `ADMIN_PASSPHRASE`, and run `docker compose up`.
+To run Postgres, the API and the web app together, copy `.env.example` to `.env`, set `POSTGRES_PASSWORD`, `ADMIN_PASSPHRASE` and `SESSION_SECRET`, and run `docker compose up`.
 
 ## Configuration
 
 Every setting is an environment variable. The API refuses to start when a required one is missing. Each workspace has a `.env.example` with the names.
 
-| Setting               | Default                     | Purpose                                                                    |
-| --------------------- | --------------------------- | -------------------------------------------------------------------------- |
-| `DATABASE_URL`        | none, required              | The PostgreSQL connection string.                                          |
-| `ADMIN_PASSPHRASE`    | none, required              | The superadmin passphrase. The API and the web app need the same value.    |
-| `CORS_ORIGIN`         | `http://localhost:3000`     | The origins that may call the API from a browser.                          |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:4000/api` | The API address that browsers call. It is set when the web image is built. |
-| `AWS_S3_BUCKET`       | none                        | The bucket for uploads. Without it, uploads do not work.                   |
+| Setting               | Default                               | Purpose                                                                                                  |
+| --------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`        | none, required                        | The PostgreSQL connection string.                                                                        |
+| `ADMIN_PASSPHRASE`    | none, required                        | The superadmin passphrase. The API and the web app need the same value.                                  |
+| `SESSION_SECRET`      | none, required, 32 characters or more | The key of the admin session and of the form unlock tokens. The API and the web app need the same value. |
+| `CORS_ORIGIN`         | `http://localhost:3000`               | The origins that may call the API from a browser.                                                        |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:4000/api`           | The API address that browsers call. It is set when the web image is built.                               |
+| `AWS_S3_BUCKET`       | none                                  | The bucket for uploads. Without it, uploads do not work.                                                 |
 
 [`docs/configuration.md`](docs/configuration.md) lists every setting.
 

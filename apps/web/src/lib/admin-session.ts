@@ -17,12 +17,13 @@ const MAX_AGE_SECONDS = 60 * 60 * 12;
 export const SUPERADMIN_ACCOUNT_ID = "superadmin";
 const SUPERADMIN_SESSION_VERSION = 1;
 
-function secret() {
-  return process.env.ADMIN_PASSPHRASE ?? "";
+/** The key of the session cookie. It is not the passphrase, so a leaked passphrase does not let anyone forge a cookie. */
+function sessionSecret() {
+  return process.env.SESSION_SECRET ?? "";
 }
 
 function sign(payload: string) {
-  return createHmac("sha256", secret()).update(payload).digest("base64url");
+  return createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
 }
 
 function equal(left: string, right: string) {
@@ -31,8 +32,13 @@ function equal(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+/** Whether a session can be signed. A missing or short secret closes the admin sign in instead of signing with an empty key. */
+export function sessionsAreConfigured() {
+  return sessionSecret().length >= 32 && Boolean(process.env.ADMIN_PASSPHRASE);
+}
+
 export function isValidPassphrase(value: string) {
-  const configured = secret();
+  const configured = process.env.ADMIN_PASSPHRASE ?? "";
   return Boolean(configured) && equal(value, configured);
 }
 
@@ -62,9 +68,9 @@ export type AdminSession = AdminViewer;
  * waiting for the cookie to age out.
  */
 export async function getAdminSession(): Promise<AdminSession | null> {
-  // Fail closed: without a configured passphrase the HMAC key would be empty
+  // Fail closed: without a configured session secret the HMAC key would be empty
   // and any visitor could forge a valid-looking session cookie.
-  if (!process.env.ADMIN_PASSPHRASE) return null;
+  if (!sessionsAreConfigured()) return null;
 
   const token = parseSessionToken((await cookies()).get(COOKIE_NAME)?.value ?? "");
   if (!token) return null;
@@ -99,6 +105,7 @@ export async function hasAdminSession() {
 }
 
 export async function createAdminSession(accountId: string, sessionVersion: number) {
+  if (!sessionsAreConfigured()) throw new Error("SESSION_SECRET is not set");
   const issuedAt = String(Date.now());
   const payload = `${accountId}.${sessionVersion}.${issuedAt}`;
   (await cookies()).set(COOKIE_NAME, `${payload}.${sign(payload)}`, {

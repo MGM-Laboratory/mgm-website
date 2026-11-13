@@ -25,7 +25,7 @@ This page describes what the web app and the API protect, who they protect it fr
 
 - The environment variable `ADMIN_PASSPHRASE` is the passphrase of the superadmin. The settings loader refuses to start the API when it is empty.
 - The admin login form posts to a route handler of the web app. A right passphrase writes the cookie `mgm_admin_session`. The cookie is `HttpOnly` and `SameSite=Lax`, it is `Secure` in production, and it lives for 12 hours. A browser does not send a `Lax` cookie on a cross-site POST, PUT or DELETE request.
-- The cookie holds the account id, a session version, the issue time and an HMAC-SHA256 signature. The key of the HMAC is `ADMIN_PASSPHRASE`. The signature is compared in constant time. The cookie is not a copy of the passphrase.
+- The cookie holds the account id, a session version, the issue time and an HMAC-SHA256 signature. The key of the HMAC is `SESSION_SECRET`, a value of its own with at least 32 characters, and not the passphrase. The web app closes the sign in with a 503 when the secret is missing. The signature is compared in constant time. The cookie is not a copy of the passphrase.
 - A delegated editor has a passphrase that is stored as a scrypt hash with a random 16 byte salt (`N` 16384, `r` 8, `p` 1, 64 byte key) and compared in constant time. A generated passphrase has 18 random bytes and is shown once.
 - The web app checks a delegated session against the API on every request. It checks the active flag, the expiry and the session version. Every update of an account raises its session version, so the old cookie stops working at once. A superadmin session is trusted from the signed cookie alone.
 - The route handlers under `/api/admin/**` run a permission gate before they forward a request. The login, logout and `me` routes handle the session themselves and are the only ones without that gate. The gate answers 401 without a session and 403 without the permission for the page and the action. Only the superadmin can manage admin accounts. The permission pages are listed in [CMS and admin workspace](cms-admin.md).
@@ -93,8 +93,8 @@ This page describes what the web app and the API protect, who they protect it fr
 ### Secrets and configuration
 
 - The API reads its settings from environment variables and validates them with a zod schema at start. The repository holds `.env.example` with placeholders and no real secret.
-- Set `ADMIN_PASSPHRASE` to a long random value in every real deployment. The settings loader checks only that the value is not empty.
-- These settings hold secrets and are environment variables. `ADMIN_PASSPHRASE`, `DATABASE_URL`, `REDIS_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `RESEND_API_KEY`, `SMTP_USER`, `SMTP_PASSWORD`, `DOMAIN_CONNECT_PRIVATE_KEY`, the API token for the hosting platform and `SHORTLINKS_ENCRYPTION_KEY`. The loader in `apps/api/src/config/env.validation.ts` validates them.
+- Set `ADMIN_PASSPHRASE` and `SESSION_SECRET` to long random values in every real deployment. The settings loader checks that the passphrase is not empty and that the session secret has at least 32 characters.
+- These settings hold secrets and are environment variables. `ADMIN_PASSPHRASE`, `SESSION_SECRET`, `DATABASE_URL`, `REDIS_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `RESEND_API_KEY`, `SMTP_USER`, `SMTP_PASSWORD`, `DOMAIN_CONNECT_PRIVATE_KEY`, the API token for the hosting platform and `SHORTLINKS_ENCRYPTION_KEY`. The loader in `apps/api/src/config/env.validation.ts` validates them.
 - `SHORTLINKS_ENCRYPTION_KEY` is validated as 64 hex characters and is listed in `.env.example`. This page makes no claim that it protects any stored value.
 
 ### Containers
@@ -126,7 +126,7 @@ Every action in a workflow is pinned to a full commit SHA.
 - There is no account lockout and no second factor for the admin workspace. The login relies on the strength of the passphrase, and a generated passphrase has 18 random bytes.
 - The rate limit counters live in the memory of each API process. Each copy of the API counts on its own, and a restart empties the counters.
 - The rate limit tracks the visitor address that the web server forwards with the admin passphrase, and the address that Express reports for every other caller. The API trusts no proxy by default, so a browser that reaches the API through a reverse proxy, as the contact form does, shares the address of the proxy until `TRUST_PROXY` names that proxy. The setting refuses `true`, because that makes any `x-forwarded-for` believable.
-- A superadmin session is valid until its cookie expires. Changing `ADMIN_PASSPHRASE` ends every admin session at once, because it is also the signing key of the cookie.
+- A superadmin session is valid until its cookie expires. Changing `SESSION_SECRET` ends every admin session at once, because it is the signing key of the cookie. Changing `ADMIN_PASSPHRASE` does not end a session that is already signed in.
 - The web app sets no content security policy of its own.
 - Uploaded files are stored as sent, within the checks above, and are not scanned.
 - The code keeps contact messages, applications, registrations, form responses and visit logs until an editor deletes them. [Privacy](privacy.md) has the details.

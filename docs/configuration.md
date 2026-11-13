@@ -10,7 +10,7 @@ Each workspace has an example file with the same names.
 | `apps/api/.env.example` | The API when it runs with `pnpm dev:api`             |
 | `apps/web/.env.example` | The web app when it runs with `pnpm dev:web`         |
 
-A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POSTGRES_PASSWORD` with `openssl rand -hex 64` (or `-hex 32`), and `SHORTLINKS_ENCRYPTION_KEY` with `openssl rand -hex 32`, which gives the 64 characters that it needs. Credentials that a provider issues, such as the AWS, Resend and SMTP settings and `DOMAIN_CONNECT_PRIVATE_KEY`, come from that provider.
+A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE`, `SESSION_SECRET` and `POSTGRES_PASSWORD` with `openssl rand -hex 64` (or `-hex 32`), and `SHORTLINKS_ENCRYPTION_KEY` with `openssl rand -hex 32`, which gives the 64 characters that it needs. Credentials that a provider issues, such as the AWS, Resend and SMTP settings and `DOMAIN_CONNECT_PRIVATE_KEY`, come from that provider.
 
 ## API
 
@@ -26,6 +26,7 @@ A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POS
 | `THROTTLE_LIMIT`              | `100`                                           | The requests that one client address may make in a window.                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `TRUST_PROXY`                 | unset, no proxy is trusted                      | The proxies in front of the API whose `x-forwarded-for` the API believes. A number from 1 to 10 is a count of proxy hops, and a list is addresses, ranges or the words `loopback`, `linklocal` and `uniquelocal`. `true` is refused. Set it when browsers reach the API through a reverse proxy, as the contact form does, so the rate limit counts each visitor and not the proxy. The web server needs no setting, because it proves the visitor address with the admin passphrase. |
 | `ADMIN_PASSPHRASE`            | none, required                                  | The passphrase of the superadmin. The web app needs the same value.                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `SESSION_SECRET`              | none, required, at least 32 characters          | The key of the form unlock tokens of the API and of the admin session cookie of the web app. It is separate from `ADMIN_PASSPHRASE`, so a leaked passphrase does not forge a session. The web app needs the same value. A new value ends every session and every unlock token.                                                                                                                                                                                                        |
 | `REDIS_URL`                   | none                                            | An optional Redis address for caching.                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `AWS_REGION`                  | `us-east-1`                                     | The region of the object storage and of SES.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `AWS_S3_BUCKET`               | none                                            | The bucket for uploads. Without it, file uploads do not work.                                                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -63,6 +64,7 @@ A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POS
 | `NEXT_PUBLIC_API_URL`             | `http://localhost:4000/api` | The API address that browsers call. It is read when the image is built, so set it as a build argument.                              |
 | `CMS_API_URL`                     | `NEXT_PUBLIC_API_URL`       | The API address that the web server calls. In compose it is `http://api:4000/api`.                                                  |
 | `ADMIN_PASSPHRASE`                | none, required              | The superadmin passphrase. It must match the API.                                                                                   |
+| `SESSION_SECRET`                  | none, required              | The key of the admin session cookie, at least 32 characters. It must match the API.                                                 |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | none                        | Turns on the interactive map on event pages. It is read when the image is built. Without it, the page shows the address and a link. |
 | `CMS_MAX_PAPER_BYTES`             | `209715200`                 | The same limit as the API, checked before the upload is sent.                                                                       |
 | `CMS_MAX_VIDEO_BYTES`             | `524288000`                 | The same limit as the API.                                                                                                          |
@@ -76,13 +78,14 @@ A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POS
 
 `docker compose up` reads the root `.env`. It sets the database and passes the API and web settings on.
 
-| Setting             | Default        | Purpose                                                |
-| ------------------- | -------------- | ------------------------------------------------------ |
-| `POSTGRES_USER`     | `postgres`     | The database user.                                     |
-| `POSTGRES_PASSWORD` | none, required | The database password.                                 |
-| `POSTGRES_DB`       | `mgm_website`  | The database name.                                     |
-| `POSTGRES_PORT`     | `5432`         | The host port of the database.                         |
-| `ADMIN_PASSPHRASE`  | none, required | The superadmin passphrase for the API and the web app. |
+| Setting             | Default        | Purpose                                                                                                  |
+| ------------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
+| `POSTGRES_USER`     | `postgres`     | The database user.                                                                                       |
+| `POSTGRES_PASSWORD` | none, required | The database password.                                                                                   |
+| `POSTGRES_DB`       | `mgm_website`  | The database name.                                                                                       |
+| `POSTGRES_PORT`     | `5432`         | The host port of the database.                                                                           |
+| `ADMIN_PASSPHRASE`  | none, required | The superadmin passphrase for the API and the web app.                                                   |
+| `SESSION_SECRET`    | none, required | The key of the sessions and the form unlock tokens, at least 32 characters, for the API and the web app. |
 
 The compose file forwards only these settings from the root `.env` to the API container. They are `CORS_ORIGIN`, `THROTTLE_TTL`, `THROTTLE_LIMIT`, `AWS_REGION`, `AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `SES_FROM_EMAIL`. To use another setting, such as `RESEND_API_KEY`, `AWS_ENDPOINT_URL` or `PUBLIC_WEB_URL`, add it to the `environment` block of the `api` service in `docker-compose.yml`.
 

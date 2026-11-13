@@ -28,6 +28,9 @@ const envSchema = z.object({
     }),
   ),
   ADMIN_PASSPHRASE: z.string().min(1, "ADMIN_PASSPHRASE is required"),
+  // The key of the form unlock tokens here, and of the admin session cookie in the web app, so the same value goes to both.
+  // It is separate from the passphrase, so a leaked passphrase does not let anyone forge a session or an unlock token.
+  SESSION_SECRET: z.string().min(32, "SESSION_SECRET must have at least 32 characters"),
   REDIS_URL: optionalString(z.url()),
   AWS_REGION: z.string().default("us-east-1"),
   AWS_S3_BUCKET: optionalString(),

@@ -73,7 +73,7 @@ function makeService(
   const config = {
     get: (key: string) => (key === "SHORTLINKS_GEOLOCATE" ? false : undefined),
     getOrThrow: (key: string) =>
-      key === "ADMIN_PASSPHRASE" ? "secret" : key === "FORMS_MAX_UPLOAD_BYTES" ? 104_857_600 : "",
+      key === "SESSION_SECRET" ? "secret" : key === "FORMS_MAX_UPLOAD_BYTES" ? 104_857_600 : "",
   } as unknown as ConfigService<never, true>;
   const mailer = { responseReceived: vi.fn() };
   const service = new FormsPublicService(

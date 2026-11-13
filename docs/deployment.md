@@ -30,7 +30,7 @@ The folder `deploy/` holds three files.
    ```
 
 2. Make a folder for the site on the host. Copy `compose.production.example.yml` into it as `compose.yml`, copy `rolling-update.sh` into it, and copy `.env.example` into it as `.env`.
-3. Fill in `.env`. Every setting has a comment. The settings of the apps are in [`configuration.md`](configuration.md). `ADMIN_PASSPHRASE` and the password in `DATABASE_URL` are secrets, so they stay only in this file.
+3. Fill in `.env`. Every setting has a comment. The settings of the apps are in [`configuration.md`](configuration.md). `ADMIN_PASSPHRASE`, `SESSION_SECRET` and the password in `DATABASE_URL` are secrets, so they stay only in this file.
 4. Start the first version with the script, for example `./rolling-update.sh 1.1.0`. It pulls the images, writes `IMAGE_TAG` into `.env` and starts the four copies one at a time. On macOS a non interactive SSH session has no `docker` in its path, so start it from a login shell, for example with `zsh -lc`.
 5. Point the reverse proxy at the copies. The API needs the two ports of `API_1_HOST_PORT` and `API_2_HOST_PORT` as upstreams, and the web app needs `WEB_1_HOST_PORT` and `WEB_2_HOST_PORT`. The proxy has to send the next request to the other copy when one copy is down, because that is what keeps the site up during an update.
 
