@@ -36,7 +36,10 @@ describe("the visitor details that the web server forwards", () => {
   it("counts every address of one IPv6 prefix under one key, for a forwarded visitor and for a direct caller", () => {
     const forwarded = (address: string) =>
       visitorTracker(
-        request({ "x-cms-passphrase": PASSPHRASE, "x-visitor-ip": address }) as unknown as Record<string, unknown>,
+        request({ "x-cms-passphrase": PASSPHRASE, "x-visitor-ip": address }) as unknown as Record<
+          string,
+          unknown
+        >,
       );
     const direct = (address: string) =>
       visitorTracker(request({}, address) as unknown as Record<string, unknown>);
