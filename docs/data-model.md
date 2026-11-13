@@ -41,6 +41,7 @@ Thirteen tables share one shape. The key is `slug` (text, primary key). The colu
 | `MailProviderUsage` | `provider` (`resend`, `smtp` or `ses`) | `dailyRemaining`, `dailyResetAt`, `longRemaining`, `longResetAt`, `updatedAt` | The counters of a calendar window for a provider limit                                       |
 | `MailSendLog`       | `id` (UUID made by Prisma)             | `provider`, `sentAt`                                                          | One row for each send, for a rolling window. The index `(provider, sentAt)` serves the count |
 | `MailRoutingState`  | `key`                                  | `value` (integer, default 0)                                                  | The pointer of the round robin strategy                                                      |
+| `MailOutbox`        | `id` (UUID made by Prisma)             | `params`, `attempts`, `status`, `nextAttemptAt`, `lastError`, `createdAt`     | A mail that is waiting for delivery. The index `(status, nextAttemptAt)` serves the claim    |
 
 [Mail system](mail-system.md) explains how the three tables are used.
 
