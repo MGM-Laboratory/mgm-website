@@ -11,6 +11,7 @@ import { type Member, type MemberDivision } from "@/data/members";
 import { useMemberRecords } from "@/hooks/use-member-records";
 import { usePhotoLoadState } from "@/hooks/use-photo-load-state";
 import type { CmsMemberRecord } from "@/lib/member-cms";
+import { memberSearchText } from "@/lib/member-search-text";
 
 type Filter = "All" | MemberDivision;
 
@@ -315,9 +316,7 @@ export function MemberDirectory({
     return members
       .flatMap((member) => {
         const record = recordsBySlug.get(member.slug);
-        const profileText = [record?.profile.bio, ...(record?.profile.skills ?? [])]
-          .filter(Boolean)
-          .join(" ");
+        const profileText = memberSearchText(record?.profile);
         if (!matchesFilter(member, filter)) return [];
         if (!matchesRequestedExperience(profileText, deferredQuery)) return [];
         const score = scoreMember(member, deferredQuery, profileText);
