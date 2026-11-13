@@ -54,11 +54,21 @@ jobs:
           IMAGE: ${{ matrix.image }}
         run: echo "GHCR_IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${IMAGE}" >> "$GITHUB_ENV"
 
+      # Only the labels of the image are used here, and they are the same ones that the publish job would make, because they name the
+      # version and the commit. The tags are made by the publish job.
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        env:
+          DOCKER_METADATA_PR_HEAD_SHA: "true"
         with:
           images: ${{ env.GHCR_IMAGE }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-,format=short,enable=${{ github.ref_type != 'tag' }}
+            type=ref,event=pr,prefix=pr-
+            type=semver,pattern={{version}}
 
       - name: Login to GitHub Container Registry
         if: env.PUSH == 'true'
@@ -79,13 +89,14 @@ jobs:
           API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
           MAPS_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
         run: |
+          delimiter="ghadelimiter_$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
           {
-            echo "list<<EOF"
+            echo "list<<${delimiter}"
             if [ "$IMAGE" = "frontend" ]; then
               echo "NEXT_PUBLIC_API_URL=${API_URL}"
               echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${MAPS_KEY}"
             fi
-            echo "EOF"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
       # The platform image is pushed by its digest and gets no tag. The next job joins the digests of the platforms under the tags.
@@ -128,6 +139,7 @@ jobs:
   image:
     name: Publish ${{ matrix.image }} image
     needs: build
+    # The condition is the PUSH expression of the build job. The two have to stay the same, and every step below may rely on it.
     if: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -203,16 +215,18 @@ jobs:
         run: |
           args=()
           while IFS= read -r tag; do
-            [ -n "$tag" ] && args+=(-t "$tag")
+            if [ -n "$tag" ]; then args+=(-t "$tag"); fi
           done <<< "$TAGS"
+          [ "${#args[@]}" -gt 0 ] || { echo "No tag was made" >&2; exit 1; }
           sources=()
           for file in *; do
+            [[ "$file" =~ ^[0-9a-f]{64}$ ]] || { echo "Unexpected file $file in the digests" >&2; exit 1; }
             sources+=("${GHCR_IMAGE}@sha256:${file}")
           done
           docker buildx imagetools create "${args[@]}" "${sources[@]}"
           first="$(head -n 1 <<< "$TAGS")"
-          digest="$(docker buildx imagetools inspect "$first" --format '{{json .}}' | jq -r '.manifest.digest // .Manifest.digest // .digest')"
-          test -n "$digest"
+          digest="$(docker buildx imagetools inspect "$first" --format '{{.Manifest.Digest}}')"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "The digest of $first is not valid, got $digest" >&2; exit 1; }
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
       # The build digest is the one of the index of all platforms. Each platform has an image of its own with its own
