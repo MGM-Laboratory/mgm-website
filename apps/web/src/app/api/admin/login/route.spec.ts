@@ -15,10 +15,10 @@ vi.mock("next/headers", () => ({
 const SECRET = "s".repeat(64);
 const PASSPHRASE = "the-admin-passphrase";
 
-function loginRequest(passphrase: string) {
+function loginRequest(passphrase: string, headers: Record<string, string> = {}) {
   const body = new FormData();
   body.set("passphrase", passphrase);
-  return new Request("http://localhost/api/admin/login", { method: "POST", body });
+  return new Request("http://localhost/api/admin/login", { method: "POST", body, headers });
 }
 
 async function load() {
@@ -72,5 +72,51 @@ describe("POST /api/admin/login", () => {
     const { POST } = await load();
 
     expect((await POST(loginRequest(PASSPHRASE))).status).toBe(503);
+  });
+  it("answers 429 after ten wrong passphrases from one visitor and stops calling the API", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(null, { status: 401 }));
+    const { POST } = await load();
+    const visitor = { "x-forwarded-for": "203.0.113.7" };
+
+    for (let index = 0; index < 10; index += 1) {
+      const response = await POST(loginRequest("wrong", visitor));
+      expect(response.status).toBe(303);
+    }
+    const blocked = await POST(loginRequest("wrong", visitor));
+    const other = await POST(loginRequest("wrong", { "x-forwarded-for": "203.0.113.8" }));
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("retry-after")).toBe("60");
+    expect(other.status).toBe(303);
+    expect(fetchSpy).toHaveBeenCalledTimes(11);
+  });
+
+  it("clears the failures of a visitor after a right passphrase", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response(null, { status: 401 }),
+    );
+    const { POST } = await load();
+    const visitor = { "x-forwarded-for": "203.0.113.9" };
+
+    for (let index = 0; index < 9; index += 1) await POST(loginRequest("wrong", visitor));
+    await POST(loginRequest(PASSPHRASE, visitor));
+    for (let index = 0; index < 9; index += 1) {
+      expect((await POST(loginRequest("wrong", visitor))).status).toBe(303);
+    }
+  });
+
+  it("sends the visitor address to the verify call with the proof of this server", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(null, { status: 401 }));
+    const { POST } = await load();
+
+    await POST(loginRequest("a-managed-account-passphrase", { "x-forwarded-for": "203.0.113.10" }));
+
+    const headers = (fetchSpy.mock.calls[0]?.[1] as RequestInit).headers as Record<string, string>;
+    expect(headers["x-visitor-ip"]).toBe("203.0.113.10");
+    expect(headers["x-cms-passphrase"]).toBe(PASSPHRASE);
   });
 });

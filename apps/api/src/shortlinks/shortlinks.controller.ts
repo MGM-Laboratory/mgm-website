@@ -121,13 +121,15 @@ export class ShortlinksController {
     return { hosts };
   }
 
-  @SkipThrottle()
+  // Each click writes a visit row, so these two routes have a budget for each visitor. The web server forwards the visitor
+  // address, and a caller that reaches the API directly is counted by its own address.
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @Get("resolve")
   async resolve(@Query("slug") slug: string, @Query("host") host: string, @Req() req: Request) {
     return this.shortlinks.resolve(host ?? "", slug ?? "", visitMeta(req));
   }
 
-  @SkipThrottle()
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @Get("public/:slug")
   async publicLinkState(
     @Param("slug") slug: string,
