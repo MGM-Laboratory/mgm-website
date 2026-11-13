@@ -126,7 +126,7 @@ Every action in a workflow is pinned to a full commit SHA.
 - There is no account lockout and no second factor for the admin workspace. The login relies on the strength of the passphrase, and a generated passphrase has 18 random bytes.
 - The rate limit counters live in the memory of each API process. Each copy of the API counts on its own, and a restart empties the counters.
 - The rate limit tracks the visitor address that the web server forwards with the admin passphrase, and the address that Express reports for every other caller. The API trusts no proxy by default, so a browser that reaches the API through a reverse proxy, as the contact form does, shares the address of the proxy until `TRUST_PROXY` names that proxy. The setting refuses `true`, because that makes any `x-forwarded-for` believable.
-- A superadmin session is valid until its cookie expires. Changing `SESSION_SECRET` ends every admin session at once, because it is the signing key of the cookie. Changing `ADMIN_PASSPHRASE` does not end a session that is already signed in.
+- A superadmin session is valid until its cookie expires. Changing `SESSION_SECRET` ends every admin session at once, because it is the signing key of the cookie. Changing `ADMIN_PASSPHRASE` does not end a session that is already signed in, so after a suspected leak of the passphrase change `SESSION_SECRET` as well, and then the sessions that an intruder opened end too.
 - The web app sets no content security policy of its own.
 - Uploaded files are stored as sent, within the checks above, and are not scanned.
 - The code keeps contact messages, applications, registrations, form responses and visit logs until an editor deletes them. [Privacy](privacy.md) has the details.

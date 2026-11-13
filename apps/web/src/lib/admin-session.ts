@@ -32,9 +32,17 @@ function equal(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+/** The names of the settings that keep a session from being signed, for the log. Never the values. */
+export function missingSessionSettings() {
+  const missing: string[] = [];
+  if (sessionSecret().length < 32) missing.push("SESSION_SECRET (at least 32 characters)");
+  if (!process.env.ADMIN_PASSPHRASE) missing.push("ADMIN_PASSPHRASE");
+  return missing;
+}
+
 /** Whether a session can be signed. A missing or short secret closes the admin sign in instead of signing with an empty key. */
 export function sessionsAreConfigured() {
-  return sessionSecret().length >= 32 && Boolean(process.env.ADMIN_PASSPHRASE);
+  return missingSessionSettings().length === 0;
 }
 
 export function isValidPassphrase(value: string) {

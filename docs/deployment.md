@@ -78,7 +78,7 @@ The API creates its tables when it starts, so there is no migration step. Read t
 Run the update in `tmux` or `screen`, so a dropped connection does not stop it half way.
 
 1. Read the changelog of the release, and the settings that are new or changed.
-2. Run the script as a dry run. It checks that the services exist and prints each step, and it changes nothing.
+2. Run the script as a dry run. It checks that the services exist and that `ADMIN_PASSPHRASE` and `SESSION_SECRET` are set, prints each step, and it changes nothing.
 
    ```bash
    DRY_RUN=1 ./rolling-update.sh 1.2.0
@@ -91,6 +91,8 @@ Run the update in `tmux` or `screen`, so a dropped connection does not stop it h
    ```
 
 For each copy, in the order `api-1`, `api-2`, `web-1`, `web-2`, the script recreates that copy and polls its health route until the answer is `status` `ok` and the container runs the image of the new version, twice in a row. It starts the next copy only after that. The health route of the API is `/api/health` and the one of the web app is `/healthz`.
+
+A release that makes `SESSION_SECRET` required needs the value in `.env` before the script runs, and the script stops with a message when it is missing or shorter than 32 characters. The first deploy with the new secret ends every admin session and every form unlock cookie, so people sign in again and respondents enter a form passphrase again. While the four copies update one at a time, a cookie or token that a new copy signed fails on an old copy, so a person may be asked to sign in again once during those minutes.
 
 The script pulls the images before it changes anything. When the pull fails, for example because the tag does not exist, nothing was changed. An interrupt before the first copy puts `.env` back as it was.
 

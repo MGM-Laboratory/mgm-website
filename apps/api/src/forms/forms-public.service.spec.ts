@@ -72,8 +72,16 @@ function makeService(
   prisma.$transaction.mockImplementation((work: (tx: typeof prisma) => unknown) => work(prisma));
   const config = {
     get: (key: string) => (key === "SHORTLINKS_GEOLOCATE" ? false : undefined),
-    getOrThrow: (key: string) =>
-      key === "SESSION_SECRET" ? "secret" : key === "FORMS_MAX_UPLOAD_BYTES" ? 104_857_600 : "",
+    getOrThrow: (key: string) => {
+      // The unlock token key comes from SESSION_SECRET, so a read of the passphrase here is a regression
+      if (key === "ADMIN_PASSPHRASE")
+        throw new Error("the token key must not come from the passphrase");
+      return key === "SESSION_SECRET"
+        ? "secret"
+        : key === "FORMS_MAX_UPLOAD_BYTES"
+          ? 104_857_600
+          : "";
+    },
   } as unknown as ConfigService<never, true>;
   const mailer = { responseReceived: vi.fn() };
   const service = new FormsPublicService(

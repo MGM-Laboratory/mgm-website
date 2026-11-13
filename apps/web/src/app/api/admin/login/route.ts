@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   createAdminSession,
   isValidPassphrase,
+  missingSessionSettings,
   sessionsAreConfigured,
   SUPERADMIN_ACCOUNT_ID,
 } from "@/lib/admin-session";
@@ -22,7 +23,7 @@ function redirectTo(path: string) {
 export async function POST(request: Request) {
   // Without the session secret no cookie can be signed, so say that and not "wrong passphrase"
   if (!sessionsAreConfigured()) {
-    console.error("admin login: SESSION_SECRET is not set or shorter than 32 characters");
+    console.error(`admin login: not set up, missing ${missingSessionSettings().join(" and ")}`);
     return new NextResponse("The admin sign in is not set up on this server.", { status: 503 });
   }
   const form = await request.formData();
