@@ -5,3 +5,5 @@ dist
 coverage
 pnpm-lock.yaml
 apps/api/src/generated
+CHANGELOG.md
+.release-please-manifest.json
