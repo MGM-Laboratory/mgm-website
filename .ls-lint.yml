@@ -36,9 +36,6 @@ ignore:
   - .github/ISSUE_TEMPLATE
   # GitHub reads the template by this name, and the Vale and Prettier file lists name it too
   - .github/pull_request_template.md
-  # Other files name these workflows, so renaming them to .yaml is a change of its own
-  - .github/workflows/stale.yml
-  - .github/workflows/detect-changes.yml
   # Vale names a style after its folder
   - .github/vale/styles
   # Prisma names a migration after its timestamp, and Playwright names a snapshot folder after the test file

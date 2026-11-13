@@ -153,11 +153,11 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           token: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
 
-      # every file that git tracks with the .sh ending, the settings are in .shellcheckrc
+      # every file that git tracks with the .sh ending and every Husky hook, which has no ending and no shebang, the settings are in .shellcheckrc
       - name: ShellCheck
         run: |
           image="$(bash ./.github/actions/pull-images/pull.sh "$(bash ./.github/tools/image.sh shellcheck)")"
-          mapfile -d '' files < <(git ls-files -z '*.sh')
+          mapfile -d '' files < <(git ls-files -z '*.sh' ':(glob).husky/*')
           if [ "${#files[@]}" -eq 0 ]; then
             echo "The repository has no shell file yet."
             exit 0
