@@ -14,7 +14,7 @@ Instead, email **hi@labmgm.org** with:
 - Steps to reproduce (or a proof of concept).
 - Any relevant logs, requests, or screenshots.
 
-You can expect an initial response within a few business days. We'll keep you updated as the issue is triaged and fixed, and we're happy to credit reporters who want it once a fix has shipped.
+You can expect an initial response within 7 days. We'll keep you updated as the issue is triaged and fixed, and we're happy to credit reporters who want it once a fix has shipped.
 
 ## Scope notes
 
