@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
-import type { ContactSettings } from "@repo/shared";
+import type { PublicContactSettings } from "@/lib/contact-settings";
 
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { ContactForm } from "@/components/contact/contact-form";
@@ -14,7 +14,7 @@ function reducedMotion() {
   return !window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
 }
 
-export function ContactContent({ settings }: Readonly<{ settings: ContactSettings }>) {
+export function ContactContent({ settings }: Readonly<{ settings: PublicContactSettings }>) {
   const heroRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 

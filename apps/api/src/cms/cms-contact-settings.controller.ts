@@ -24,8 +24,11 @@ export class CmsContactSettingsController {
     private readonly config: ConfigService<Env, true>,
   ) {}
 
+  // Admin-only. The record holds the inbox addresses and the mail routing. The contact page and the studio both
+  // read it through the web server, which sends the passphrase on every call.
   @Get()
-  async get() {
+  async get(@Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
     return { record: await this.settings.get() };
   }
 

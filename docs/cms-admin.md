@@ -115,7 +115,7 @@ The members, articles and publications live only in the database. The code holds
 
 When the API cannot be reached, the member and article pages show no member, author or record, because no bundled copy exists to fall back on.
 
-Public CMS helpers should fail softly to a safe static/default value where one exists (for example, contact settings fall back to `DEFAULT_CONTACT_SETTINGS`). Admin mutations should surface API validation errors rather than silently accepting malformed content.
+Public CMS helpers should fail softly to a safe static/default value where one exists (for example, contact settings fall back to `DEFAULT_CONTACT_SETTINGS`). The contact page reads the settings through the web server, which sends the admin passphrase. A refusal from the API is logged and the page shows the defaults, so a passphrase that differs between the web server and the API is visible in the web server log. The page passes only the first email, the address and the map position to the browser. Admin mutations should surface API validation errors rather than silently accepting malformed content.
 
 ## Change checklist
 

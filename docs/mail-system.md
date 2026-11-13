@@ -49,7 +49,7 @@ Both modes are pure overhead-avoidance when unset (the default): no limit config
 
 Singleton settings row (`CmsContactSettings`, fixed slug `"contact"`), cached for 600 seconds, normalized through `contactSettingsSchema` on every read (falls back to `DEFAULT_CONTACT_SETTINGS` wholesale if the stored record fails validation):
 
-- `GET /api/cms/contact-settings`: public, no auth. Returns `{ record }`: `emails[]`, `address`, `lat`/`lng`, `mailStrategy`, `mailProviderOrder`, `mailProviderWeights`, `mailProviderLimits`.
+- `GET /api/cms/contact-settings`: admin (`x-cms-passphrase`). The contact page reads it through the web server, which sends the passphrase on every call, and gives the browser only the first email, the address and the map position. Returns `{ record }`: `emails[]`, `address`, `lat`/`lng`, `mailStrategy`, `mailProviderOrder`, `mailProviderWeights`, `mailProviderLimits`.
 - `GET /api/cms/contact-settings/mail-provider-status`: admin (`x-cms-passphrase`). Returns `{configured, dailyRemaining?, longRemaining?, ...}` per provider plus `fromEmailConfigured`, never credentials, and limits come from the saved settings server-side (not caller input).
 - `PUT /api/cms/contact-settings`: admin. `contactSettingsSchema.parse(body)`, then saved (invalidates the cache).
 
