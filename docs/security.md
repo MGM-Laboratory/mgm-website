@@ -44,6 +44,7 @@ This page describes what the web app and the API protect, who they protect it fr
 ### Request hardening
 
 - The API uses `helmet` with its default headers and `compression`.
+- The production build of the web app sends a `Content-Security-Policy-Report-Only` header on every page. It blocks nothing. The browser reports each source that the policy would refuse to `/api/csp-report`, which writes one log line for each report with the page, the blocked source and the directive, without the query string. The route accepts at most 8 KB and writes at most 60 lines a minute for each web process. The list in `apps/web/next.config.ts` is read against these reports and tightened before it becomes an enforced `Content-Security-Policy` header.
 - CORS allows the origins in `CORS_ORIGIN`, a comma separated list, with credentials.
 - Every body is validated with a zod schema before the code uses it. The shared schemas live in `packages/shared`.
 - The API refuses a body above its limit. The JSON limit is 8 MB, and the form design media route takes 9 MB. The other limits are in the table under Uploads.
@@ -127,7 +128,7 @@ Every action in a workflow is pinned to a full commit SHA.
 - The rate limit counters live in the memory of each API process. Each copy of the API counts on its own, and a restart empties the counters.
 - The rate limit tracks the visitor address that the web server forwards with the admin passphrase, and the address that Express reports for every other caller. The API trusts no proxy by default, so a browser that reaches the API through a reverse proxy, as the contact form does, shares the address of the proxy until `TRUST_PROXY` names that proxy. The setting refuses `true`, because that makes any `x-forwarded-for` believable.
 - A superadmin session is valid until its cookie expires. Changing `SESSION_SECRET` ends every admin session at once, because it is the signing key of the cookie. Changing `ADMIN_PASSPHRASE` does not end a session that is already signed in, so after a suspected leak of the passphrase change `SESSION_SECRET` as well, and then the sessions that an intruder opened end too.
-- The web app sets no content security policy of its own.
+- The web app sends its content security policy as a report only header for now, so it blocks nothing, and the policy still allows inline scripts and styles.
 - Uploaded files are stored as sent, within the checks above, and are not scanned.
 - The code keeps contact messages, applications, registrations, form responses and visit logs until an editor deletes them. [Privacy](privacy.md) has the details.
 - Nobody outside the maintainers has audited the code, and the automated scans find only known classes of faults.
