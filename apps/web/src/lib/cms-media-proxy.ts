@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { cmsApi } from "@/lib/cms-api";
+import { API_READ_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-timeout";
 
 type KeyContext = { params: Promise<{ key: string }> };
 
@@ -36,7 +37,9 @@ export function mediaPlaybackRoute(
 
       const response = await cmsApi(cmsPath(key), { redirect: "manual" });
       const location = response.headers.get("location");
-      const source = location ? await fetch(location, { cache: "no-store" }) : response;
+      const source = location
+        ? await fetchWithTimeout(location, { cache: "no-store" }, API_READ_TIMEOUT_MS)
+        : response;
       if (!source.ok || !source.body) return new NextResponse(null, { status: source.status });
 
       const contentType = source.headers.get("content-type") ?? "application/octet-stream";
