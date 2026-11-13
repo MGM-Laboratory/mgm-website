@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.1](https://github.com/MGM-Laboratory/mgm-website/compare/v1.1.0...v1.1.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** keep secret request headers out of the logs ([7a3ebac](https://github.com/MGM-Laboratory/mgm-website/commit/7a3ebac4976d577b4b8394c81539f1e43cee6015))
+* **api:** share one redact option between the app and its test and document the masked headers ([9381c7d](https://github.com/MGM-Laboratory/mgm-website/commit/9381c7d99ec87a13dd58d1a02e6c2fa0f4a7bcbe))
+* **contact:** require the admin passphrase to read the contact settings ([bc4175a](https://github.com/MGM-Laboratory/mgm-website/commit/bc4175a7f9bc11cb97aa6c4b1c7d9ce7058b85be))
+* **contact:** require the admin passphrase to read the contact settings ([207753b](https://github.com/MGM-Laboratory/mgm-website/commit/207753b3d88927ab25c831786f1d5a6657062df8))
+* **contact:** send only the public part of the settings to the page and log a refused passphrase ([5fade04](https://github.com/MGM-Laboratory/mgm-website/commit/5fade045d591c361ea36a38820a3aa78dd340f5e))
+* **images:** keep all PNG chunks and spell out the schedule day ([b527610](https://github.com/MGM-Laboratory/mgm-website/commit/b5276103ad49a997f0b3eda63f0554dd9bb775b1))
+* **images:** keep the App token away from the tools in a separate job ([0462743](https://github.com/MGM-Laboratory/mgm-website/commit/046274374700745b928cd343e1bdd9250163faa8))
+* **media:** accept any hyphen run in portrait keys, keep the throttle and cover all XML types ([0649737](https://github.com/MGM-Laboratory/mgm-website/commit/064973756d76eb223c062b1d121ce4314acd44fb))
+* **media:** clean the slug in new portrait keys, accept older ones and cover the script type aliases ([dc6ef5e](https://github.com/MGM-Laboratory/mgm-website/commit/dc6ef5e7f694e9714747158ccacc1197ec65a64e))
+* **members:** sign and serve only portrait keys on the media route ([df9724c](https://github.com/MGM-Laboratory/mgm-website/commit/df9724cf1956a65599512c0804cf2e721b89bae1))
+* **shortlinks:** drop a failed background URL check instead of crashing ([0433711](https://github.com/MGM-Laboratory/mgm-website/commit/0433711933518db404c5d403d4f52e7bf9ac0b61))
+* **shortlinks:** log a dropped check by link id and update the health check doc ([f4e78e7](https://github.com/MGM-Laboratory/mgm-website/commit/f4e78e7328344fa854f8d740bf2b5d000f82c506))
+
 ## [1.1.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.0.0...v1.1.0) (2026-11-13)
 
 
