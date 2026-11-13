@@ -22,6 +22,9 @@ describe("storedContentType", () => {
     "application/rdf+xml",
     "application/xslt+xml",
     "text/xsl",
+    "application/x-javascript",
+    "text/ecmascript",
+    "text/jscript",
   ])("stores %s as plain bytes", (type) => {
     expect(storedContentType(type)).toBe("application/octet-stream");
   });

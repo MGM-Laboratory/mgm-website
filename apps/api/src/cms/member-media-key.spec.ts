@@ -11,6 +11,7 @@ describe("MEMBER_MEDIA_KEY_PATTERN", () => {
     `member--x-${UUID}.webp`,
     `member-1731500000000-${UUID}.png`,
     `member-a-${UUID}.jpeg`,
+    `member-Jane_Doe-${UUID}.jpg`,
   ])("accepts %s", (key) => {
     expect(MEMBER_MEDIA_KEY_PATTERN.test(key)).toBe(true);
   });
@@ -25,6 +26,8 @@ describe("MEMBER_MEDIA_KEY_PATTERN", () => {
     `../member-a-${UUID}.jpg`,
     `member-a/b-${UUID}.jpg`,
     `member-a.b-${UUID}.jpg`,
+    `member-a b-${UUID}.jpg`,
+    `member-a%2Fb-${UUID}.jpg`,
     `cv-${UUID}.pdf`,
     `contact-${UUID}.jpg`,
   ])("rejects %s", (key) => {

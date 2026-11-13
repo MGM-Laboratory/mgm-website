@@ -150,7 +150,7 @@ export class CmsMembersController {
     }
     const extension =
       contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
-    const key = `member-${slug}-${randomUUID()}.${extension}`;
+    const key = `member-${slug.replace(/[^A-Za-z0-9_-]/g, "-")}-${randomUUID()}.${extension}`;
     await this.storage.uploadFile({ body: buffer, contentType, key });
     return { key };
   }

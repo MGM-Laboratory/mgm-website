@@ -1,6 +1,6 @@
 // Types that a browser runs or renders as a page when it opens the file from a site address.
 const ACTIVE_CONTENT_TYPE =
-  /^(?:text\/(?:html|xml|xsl|javascript)|application\/(?:javascript|xml|[\w.+-]*\+xml)|image\/svg\+xml)$/i;
+  /^(?:text\/(?:html|xml|xsl|javascript|ecmascript|jscript|livescript|x-javascript|x-ecmascript)|application\/(?:javascript|x-javascript|ecmascript|x-ecmascript|xml|[\w.+-]*\+xml)|image\/svg\+xml)$/i;
 
 /** The type to store for a file from an anonymous caller. A page or a script is stored as plain bytes. */
 export function storedContentType(contentType: string) {
