@@ -1381,39 +1381,45 @@ export function MemberCmsStudio({
                       </button>
                     ))}
                   </div>
-                  <MemberEditor
-                    key={
-                      editingNew
-                        ? `new-${newKey}`
-                        : `${currentMember.slug}-${selectedRecord?.updatedAt ?? "base"}`
-                    }
-                    activeTab={activeTab}
-                    initialMember={editingNew ? undefined : currentMember}
-                    initialProfile={editingNew ? undefined : selectedRecord?.profile}
-                    onDeleted={(slug) => {
-                      setRecords((current) => current.filter((item) => item.slug !== slug));
-                      setSelectedSlug(undefined);
-                      setHasUnsavedChanges(false);
-                    }}
-                    onDirtyChange={setHasUnsavedChanges}
-                    sourceMemberSlug={
-                      editingNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
-                    }
-                    sourceRecordSlug={
-                      editingNew ? undefined : (selectedRecord?.slug ?? currentMember.slug)
-                    }
-                    onSaved={(record) => {
-                      setRecords((current) => [
-                        ...current.filter(
-                          (item) => item.slug !== record.slug && item.slug !== record.sourceSlug,
-                        ),
-                        record,
-                      ]);
-                      setSelectedSlug(record.slug);
-                      setShowNew(false);
-                      setHasUnsavedChanges(false);
-                    }}
-                  />
+                  {!ready && !currentMember && !showNew ? (
+                    <p className="p-6 text-sm text-[var(--ink-2)] dark:text-white/65">
+                      Loading members…
+                    </p>
+                  ) : (
+                    <MemberEditor
+                      key={
+                        editingNew
+                          ? `new-${newKey}`
+                          : `${currentMember.slug}-${selectedRecord?.updatedAt ?? "base"}`
+                      }
+                      activeTab={activeTab}
+                      initialMember={editingNew ? undefined : currentMember}
+                      initialProfile={editingNew ? undefined : selectedRecord?.profile}
+                      onDeleted={(slug) => {
+                        setRecords((current) => current.filter((item) => item.slug !== slug));
+                        setSelectedSlug(undefined);
+                        setHasUnsavedChanges(false);
+                      }}
+                      onDirtyChange={setHasUnsavedChanges}
+                      sourceMemberSlug={
+                        editingNew ? undefined : (selectedRecord?.sourceSlug ?? currentMember.slug)
+                      }
+                      sourceRecordSlug={
+                        editingNew ? undefined : (selectedRecord?.slug ?? currentMember.slug)
+                      }
+                      onSaved={(record) => {
+                        setRecords((current) => [
+                          ...current.filter(
+                            (item) => item.slug !== record.slug && item.slug !== record.sourceSlug,
+                          ),
+                          record,
+                        ]);
+                        setSelectedSlug(record.slug);
+                        setShowNew(false);
+                        setHasUnsavedChanges(false);
+                      }}
+                    />
+                  )}
                 </>
               ) : section === "publications" ? (
                 <PublicationEditor
