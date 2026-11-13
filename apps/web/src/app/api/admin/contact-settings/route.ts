@@ -14,6 +14,18 @@ export async function GET() {
   return proxyJson("/cms/contact-settings");
 }
 
+/** The stored settings, or undefined when the API fails, times out or answers something else. */
+async function readStoredSettings(): Promise<ContactSettings | undefined> {
+  try {
+    const response = await cmsApi("/cms/contact-settings");
+    if (!response.ok) return undefined;
+    const { record } = (await response.json()) as { record?: ContactSettings };
+    return record;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function PUT(request: Request) {
   const gate = await gateAdminRequest("contact", "write");
   if (!gate.ok) return gate.response;
@@ -27,14 +39,7 @@ export async function PUT(request: Request) {
   // ordinary save carries the stored routing along and never resets it.
   let payload = body;
   if (gate.session.role !== "superadmin") {
-    const current = await cmsApi("/cms/contact-settings");
-    if (!current.ok) {
-      return NextResponse.json(
-        { error: "The current settings could not be read. Please try again." },
-        { status: 502 },
-      );
-    }
-    const { record } = (await current.json()) as { record?: ContactSettings };
+    const record = await readStoredSettings();
     if (!record) {
       return NextResponse.json(
         { error: "The current settings could not be read. Please try again." },
