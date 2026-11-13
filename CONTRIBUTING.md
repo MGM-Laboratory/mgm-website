@@ -22,7 +22,7 @@ There's no `dev` branch. Every change to `main` goes through a pull request:
 
 ## Required checks
 
-Every PR runs:
+Every PR runs the checks below. The ruleset requires all of them except pre-commit.ci.
 
 - **CI**: lint, typecheck, `pnpm test` (API unit tests + coverage), build, for both workspaces.
 - **Security**: CodeQL, dependency review, secret scanning (gitleaks), Trivy filesystem scan.
@@ -30,7 +30,7 @@ Every PR runs:
 - **Lighthouse**: performance, accessibility, SEO and best-practices budgets on `/`, `/about` and `/contact`, on pull requests.
 - **Prose**: Vale lint of the hand-written Markdown.
 - **Conventional commits** and **PR format**: the commit messages, the title, the branch name, the label, the assignee and the body of the pull request.
-- **pre-commit.ci**: runs repository hygiene checks and Prettier on every pull-request commit; it reports a formatting problem and does not push a fix, because the ruleset only accepts signed commits. Run Prettier yourself and commit the result.
+- **pre-commit.ci** is not required by the ruleset, but its report should be clean. It runs repository hygiene checks and Prettier on every pull-request commit. It reports a formatting problem and does not push a fix, because the ruleset only accepts signed commits. Run Prettier yourself and commit the result.
 
 All of these need to actually succeed, not just avoid failing outright. A lint warning, a deprecation notice, or any other non-blocking annotation in a check's output is still something to fix before the PR is done, even if it doesn't turn the check red.
 
