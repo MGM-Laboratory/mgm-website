@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { cmsApi } from "@/lib/cms-api";
+import { API_READ_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-timeout";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -32,10 +33,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
   if (!location) return new NextResponse(null, { status: response.status || 502 });
 
   const range = request.headers.get("range");
-  const source = await fetch(location, {
-    cache: "no-store",
-    headers: range ? { range } : {},
-  });
+  const source = await fetchWithTimeout(
+    location,
+    { cache: "no-store", headers: range ? { range } : {} },
+    API_READ_TIMEOUT_MS,
+  );
   if (!source.ok || !source.body) return new NextResponse(null, { status: source.status });
 
   const headers = new Headers({

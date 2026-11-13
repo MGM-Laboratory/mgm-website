@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { apiBaseUrl } from "@/lib/cms-api";
+import { API_UPLOAD_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-timeout";
 import { provenVisitorHeaders } from "@/lib/visitor-headers";
 
 type Context = { params: Promise<{ slug: string }> };
@@ -36,13 +37,17 @@ export async function POST(request: Request, { params }: Context) {
   // The multipart body is streamed through untouched — no buffering, so the
   // upload stays memory-flat no matter how large the CV is. The content-type
   // header carries the multipart boundary and must arrive verbatim.
-  const response = await fetch(`${apiBaseUrl()}/cms/jobs/${encodeURIComponent(slug)}/apply`, {
-    body: request.body,
-    headers: { "content-type": contentType, ...provenVisitorHeaders(request) },
-    method: "POST",
-    // Node's fetch requires an explicit duplex mode for streamed bodies.
-    duplex: "half",
-  } as RequestInit);
+  const response = await fetchWithTimeout(
+    `${apiBaseUrl()}/cms/jobs/${encodeURIComponent(slug)}/apply`,
+    {
+      body: request.body,
+      headers: { "content-type": contentType, ...provenVisitorHeaders(request) },
+      method: "POST",
+      // Node's fetch requires an explicit duplex mode for streamed bodies.
+      duplex: "half",
+    } as RequestInit,
+    API_UPLOAD_TIMEOUT_MS,
+  );
   // The API answers JSON; anything else (an upstream HTML error page) must
   // not blow up the proxy — relay it as a readable failure instead.
   let body: unknown;
