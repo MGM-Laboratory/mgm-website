@@ -158,14 +158,13 @@ Gatus also exposes a response-time badge (`.../response-times/:duration/badge.sv
 
 ## Governance
 
-`main` requires an up-to-date PR, signed commits, and the selected first-party gates below. No pull request review is required to merge (`required_approving_review_count: 0`, with `require_code_owner_review`, `require_last_push_approval`, and `required_review_thread_resolution` all `false`), a deliberate choice by the repository owner, not an oversight. Check the rule after any ruleset edit with the command below. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`. Do not use an administrative bypass for routine work.
+Two rulesets protect `main`. `main-protection` (id `23450743`) has no bypass actor, so it holds for everyone, the owner included. It requires an up-to-date PR, signed commits, resolved review threads and the selected first-party gates below. It also blocks a direct push, a force push and a deletion, and it allows only merge commits. `main-merge-and-approval` (id `27176484`) adds two rules. A PR needs one approval of a code owner (`require_code_owner_review`), and only the bypass team can update `main`, which in practice means only the maintainer can merge. That team holds one account and its bypass works only through a pull request, so it never covers a direct push, and `main-protection` still applies in full to that merge. Check the rules after any ruleset edit with the commands below. External contributors, maintainers, and agents all follow the full PR flow described in `CONTRIBUTING.md`.
 
 ```bash
-gh api repos/MGM-Laboratory/mgm-website/rulesets/23450743 \
-  --jq '.rules[] | select(.type=="pull_request") | .parameters | {required_approving_review_count, require_code_owner_review, require_last_push_approval, required_review_thread_resolution}'
+gh api repos/MGM-Laboratory/mgm-website/rules/branches/main \
+  --jq '.[] | select(.type=="pull_request" or .type=="update") | {type, ruleset_id, parameters}'
+gh api repos/MGM-Laboratory/mgm-website/rulesets/27176484 --jq '.bypass_actors'
 ```
-
-The ruleset also allows all three merge strategies (merge commit, squash, rebase) at the GitHub level, but this repo merges with a merge commit only, so the individual commits of each PR stay on `main`.
 
 The `main-protection` ruleset (id `23450743`) deliberately requires only stable, repository-owned checks rather than every check reported by installed apps. This keeps the branch rule strict without allowing an unrelated or renamed third-party check to block every merge:
 

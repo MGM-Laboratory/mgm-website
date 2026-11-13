@@ -17,8 +17,8 @@ There's no `dev` branch. Every change to `main` goes through a pull request:
 1. Fork the repo (or branch directly if you're a collaborator).
 2. Make your change, following the conventions in `docs/` (especially `docs/animation-system.md` if you're touching anything animated).
 3. Open a PR against `main`. Keep PRs focused: one discrete change per PR is easier to review than a bundle of unrelated fixes.
-4. Automated checks run on every PR (see below). All of them need to be green before a maintainer can merge, and no review approval is required beyond that.
-5. A maintainer merges the PR with a merge commit (never squash or rebase) once the checks are green. See `GOVERNANCE.md` for how larger decisions get made.
+4. Automated checks run on every PR (see below). All of them need to be green before the PR can merge, and the code owner has to approve it. This holds for every PR, including a PR that you opened yourself.
+5. Only the maintainer merges the PR, with a merge commit (never squash or rebase), once the checks are green and the approval is given. Nobody can push to `main` directly, and every commit has to be signed. See `GOVERNANCE.md` for how larger decisions get made.
 
 ## Required checks
 
