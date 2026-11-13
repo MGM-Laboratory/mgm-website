@@ -3,6 +3,8 @@
 // what CSS and the page can refer to.
 export default {
   multipass: true,
+  // svgo leaves out the final newline by default, and the end-of-file check of pre-commit.ci fails on that
+  js2svg: { finalNewline: true },
   plugins: [
     {
       name: "preset-default",
