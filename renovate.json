@@ -80,7 +80,7 @@
       "matchFileNames": ["apps/api/Dockerfile", "apps/web/Dockerfile"],
       "semanticCommitType": "build",
       "groupName": "Dockerfile base images",
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"]
     },
     {
       "matchDepNames": ["node"],
