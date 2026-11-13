@@ -1,6 +1,13 @@
 # Contributing to MGM Laboratory's website
 
-Thanks for taking the time to contribute. This is a pnpm monorepo: a Next.js marketing site (`apps/web`) and a NestJS API (`apps/api`), sharing `packages/@repo/shared`. Read `docs/architecture.md` and `DESIGN_SYSTEM.md` before making UI changes.
+Thanks for taking the time to contribute. This is a pnpm monorepo with the lab's Next.js website and CMS workspace (`apps/web`) and a NestJS API (`apps/api`), sharing `packages/shared`. Read `docs/architecture.md` and `DESIGN_SYSTEM.md` before making UI changes. The index of all docs is `docs/README.md`.
+
+## Before you change code
+
+- This is Next.js 16, which differs from older versions. Read the relevant guide in `apps/web/node_modules/next/dist/docs/` before you write Next-specific code.
+- Use the tokens of `DESIGN_SYSTEM.md` and no ad-hoc colors. Every element must work in the light and the dark theme (the `.dark` class) and with `prefers-reduced-motion`.
+- Never let a static CSS class set `transform`, `translate-*`, `rotate-*` or `scale-*` on an element that GSAP also animates. GSAP stacks onto the class instead of replacing it. See `docs/animation-system.md`.
+- Heavy work runs in CI. Push the branch and read the results there. Run a single narrow check locally only when CI cannot explain a failure.
 
 ## Workflow
 
@@ -21,11 +28,11 @@ Every PR runs:
 - **E2E**: Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
 - **Lighthouse**: performance, accessibility, SEO and best-practices budgets on `/`, `/about` and `/contact`, on pull requests.
 - **Prose**: Vale lint of the hand-written Markdown.
-- **pre-commit.ci**: runs repository hygiene checks and Prettier on every pull-request commit; formatting fixes are committed back to same-repository PRs automatically.
+- **pre-commit.ci**: runs repository hygiene checks and Prettier on every pull-request commit; it reports a formatting problem and does not push a fix, because the ruleset only accepts signed commits. Run Prettier yourself and commit the result.
 
 All of these need to actually succeed, not just avoid failing outright. A lint warning, a deprecation notice, or any other non-blocking annotation in a check's output is still something to fix before the PR is done, even if it doesn't turn the check red.
 
-Run the fast ones locally before pushing: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format:check`.
+These are the same commands that CI runs, listed in the table under Local setup. Run one locally only when CI cannot explain a failure.
 
 To run the same focused checks before committing, install [pre-commit](https://pre-commit.com/) and run `pre-commit install` once, then use `pre-commit run --all-files` when needed. The existing Husky hook continues to format staged files.
 
@@ -38,8 +45,20 @@ pnpm dev            # web on :3000, api on :4000
 docker compose up
 ```
 
+| Command                                    | What it does                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| `pnpm dev`, `pnpm dev:web`, `pnpm dev:api` | Run everything, the web app (port 3000) or the API (port 4000).     |
+| `pnpm build`                               | Build all workspaces with Turbo.                                    |
+| `pnpm lint`                                | ESLint for the web app and oxlint for the API.                      |
+| `pnpm typecheck`                           | Type check both workspaces.                                         |
+| `pnpm test`                                | Run the API unit tests with vitest. The web app has no test script. |
+| `pnpm format`, `pnpm format:check`         | Run Prettier over the repo. A hook also runs it on staged files.    |
+| `docker compose up`                        | Start the local Postgres, API and web stack. See `.env.example`.    |
+
+Node 22 (`.nvmrc`) and pnpm 11.3.0 (`packageManager`) are required.
+
 See `docs/testing-verification.md` for how UI changes are verified in a real browser, not just with green tests, when a maintainer asks for it.
 
 ## Commit messages
 
-Plain prose describing what changed and why, no AI-attribution trailers of any kind, please. Use a hyphen or a colon instead of an em dash. Never use an em dash in a commit message or PR title/body.
+Use Conventional Commits (`type(scope): summary`) in English. Name the branch `type/short-description`, and use the same type as the commits. Sign every commit so that GitHub shows it as verified. Do not mention an AI tool in a commit message, trailer, PR text or code comment. Keep the PR body to one bullet for each commit.
