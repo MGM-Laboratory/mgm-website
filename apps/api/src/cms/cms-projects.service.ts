@@ -9,7 +9,8 @@ const RECORDS_CACHE_KEY = "cms:projects:v1";
 const DRAFTS_CACHE_KEY = "cms:projects:drafts:v1";
 const FEED_CACHE_KEY = "cms:projects:feed:v1";
 const RECORDS_CACHE_TTL_SECONDS = 60 * 10;
-const VIDEO_ALLOWED_TTL_SECONDS = 60 * 10;
+// How long a copy of the API trusts its own list of published video keys.
+const VIDEO_KEYS_MEMO_MS = 15_000;
 // Stored image keys are immutable (every upload mints a new uuid), so a
 // measured size never goes stale; a failed read is retried after a while.
 const MEDIA_SIZE_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -160,23 +161,33 @@ export class CmsProjectsService {
     return records;
   }
 
+  private videoKeysMemo: { keys: Set<string>; loadedAt: number } | undefined;
+  private videoKeysLoad: Promise<Set<string>> | undefined;
+
+  /**
+   * A video is public when a published record uses it as its demo video or in
+   * one of its media sections. The answer comes from a list of those keys that
+   * each copy keeps for a few seconds, built from the cached feed. A request
+   * for a key that nothing uses costs a set lookup and no query, concurrent
+   * requests share one load, and a Redis outage does not turn each request
+   * into a full read of the table. A save clears the list of its own copy, so
+   * another copy may serve a video that just went private for up to
+   * `VIDEO_KEYS_MEMO_MS`.
+   */
   async videoIsPublished(key: string) {
-    const cacheKey = `cms:projects:video-allowed:${key}`;
-    const cached = await this.cache.getJson<boolean>(cacheKey);
-    if (cached !== undefined) return cached;
-    // A video is public when a published record uses it as its demo video
-    // or in one of its media sections (jsonb containment on the array).
-    const records = await this.prisma.cmsProject.findMany({
-      where: {
-        OR: [
-          { data: { path: ["project", "videoKey"], equals: key } },
-          { data: { path: ["project", "media"], array_contains: [{ key }] } },
-        ],
-      },
+    const memo = this.videoKeysMemo;
+    if (memo && Date.now() - memo.loadedAt < VIDEO_KEYS_MEMO_MS) return memo.keys.has(key);
+    this.videoKeysLoad ??= this.loadVideoKeys().finally(() => {
+      this.videoKeysLoad = undefined;
     });
-    const allowed = records.some((record) => !isDraft(record.data as Record<string, unknown>));
-    await this.cache.setJson(cacheKey, allowed, VIDEO_ALLOWED_TTL_SECONDS);
-    return allowed;
+    return (await this.videoKeysLoad).has(key);
+  }
+
+  private async loadVideoKeys() {
+    const records = await this.feed();
+    const keys = new Set(records.flatMap((record) => videoKeysOf(record)));
+    this.videoKeysMemo = { keys, loadedAt: Date.now() };
+    return keys;
   }
 
   async bySlug(slug: string) {
@@ -317,12 +328,7 @@ export class CmsProjectsService {
       }
     }
 
-    await Promise.all([
-      this.invalidateRecords(),
-      ...[...new Set([...previousVideoKeys, ...nextVideoKeys])].map((key) =>
-        this.invalidateVideoAllowed(key),
-      ),
-    ]);
+    await this.invalidateRecords();
     return {
       ...(record.data as Record<string, unknown>),
       slug: record.slug,
@@ -367,22 +373,15 @@ export class CmsProjectsService {
         await this.storage.deleteFile(key).catch(() => undefined);
       }
     }
-    await Promise.all([
-      this.invalidateRecords(),
-      ...videoKeys.map((key) => this.invalidateVideoAllowed(key)),
-    ]);
+    await this.invalidateRecords();
   }
 
   private async invalidateRecords() {
+    this.videoKeysMemo = undefined;
     await Promise.all([
       this.cache.remove(RECORDS_CACHE_KEY),
       this.cache.remove(DRAFTS_CACHE_KEY),
       this.cache.remove(FEED_CACHE_KEY),
     ]);
-  }
-
-  private async invalidateVideoAllowed(key?: string) {
-    if (!key) return;
-    await this.cache.remove(`cms:projects:video-allowed:${key}`);
   }
 }
