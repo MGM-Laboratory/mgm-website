@@ -8,6 +8,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { Logger } from "nestjs-pino";
 
 import { AppModule } from "./app.module.js";
+import { corsOrigins } from "./config/cors-origins.js";
 import type { Env } from "./config/env.validation.js";
 import { parseTrustProxy } from "./trust-proxy.js";
 import { requireAdminPassphrase } from "./upload-gate.js";
@@ -117,7 +118,7 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
   app.enableCors({
-    origin: configService.getOrThrow<string>("CORS_ORIGIN").split(","),
+    origin: corsOrigins(configService.getOrThrow<string>("CORS_ORIGIN")),
     credentials: true,
   });
 
