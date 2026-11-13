@@ -61,8 +61,8 @@ jobs:
           oxipng --version
           jpegoptim --version | head -n 1
 
-      # Nothing here changes how an image looks. PNG and JPEG files are recompressed and lose only metadata that does not
-      # affect rendering (the color profile and the EXIF orientation stay). SVG files go through svgo with
+      # Nothing here changes how an image looks. PNG files are recompressed and keep every chunk that stays valid, which is oxipng's default. JPEG files
+      # lose only comments, IPTC and XMP data, so the color profile and the EXIF orientation stay. SVG files go through svgo with
       # .github/svgo.config.mjs. WebP files are left alone, because a lossless pass over a lossy file only makes it bigger.
       # Only the images of the web app are touched. The visual test snapshots and the e2e fixtures live outside these
       # folders, so a run never changes what a test compares against.
@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           list() { git ls-files -z -- apps/web/public apps/web/src | { grep -ziE "$1" || true; }; }
-          list '\.png$' | xargs -0 -r oxipng --opt 4 --strip safe --quiet
+          list '\.png$' | xargs -0 -r oxipng --opt 4 --quiet
           list '\.jpe?g$' | xargs -0 -r jpegoptim --all-progressive --strip-com --strip-iptc --strip-xmp --quiet
           list '\.svg$' | xargs -0 -r npm exec --yes --package="svgo@${SVGO_VERSION}" -- svgo --config .github/svgo.config.mjs --quiet
           git status --short
