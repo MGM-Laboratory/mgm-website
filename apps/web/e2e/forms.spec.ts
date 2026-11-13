@@ -247,11 +247,11 @@ test.describe("date and time pickers", () => {
 
     // A time from the columns.
     await question(page, "arrival").getByRole("button", { name: "Choose a time" }).click();
-    // A click on a column can land while the list is still settling and be lost, so each pick is retried until the option is selected
-    const pick = async (list: string, name: string, exact = true) => {
+    // A click on a column was lost on Firefox in CI, and the cause is not proven. Each pick is retried until the option is selected.
+    const pick = async (list: string, name: string) => {
       const option = dialog(page)
         .getByRole("listbox", { name: list })
-        .getByRole("option", { name, exact });
+        .getByRole("option", { name, exact: true });
       await expect(async () => {
         await option.click();
         await expect(option).toHaveAttribute("aria-selected", "true", { timeout: 1_000 });
@@ -259,7 +259,7 @@ test.describe("date and time pickers", () => {
     };
     await pick("Hours", "2");
     await pick("Minutes", "30");
-    await pick("AM or PM", "PM", false);
+    await pick("AM or PM", "PM");
     await dialog(page).getByRole("button", { name: "Done" }).click();
     await expect(field(page, "arrival")).toHaveValue("2:30 PM");
 
@@ -268,14 +268,8 @@ test.describe("date and time pickers", () => {
       await field(page, "call").click();
       await expect(dialog(page)).toHaveAttribute("aria-modal", "true");
       await dialog(page).getByRole("gridcell", { name: "Sunday, 27 September 2026" }).click();
-      await dialog(page)
-        .getByRole("listbox", { name: "Hours" })
-        .getByRole("option", { name: "9", exact: true })
-        .click();
-      await dialog(page)
-        .getByRole("listbox", { name: "Minutes" })
-        .getByRole("option", { name: "05", exact: true })
-        .click();
+      await pick("Hours", "9");
+      await pick("Minutes", "05");
       await dialog(page).getByRole("button", { name: "Done" }).click();
     } else {
       // A click opens the panel with focus kept in the field; ArrowDown moves

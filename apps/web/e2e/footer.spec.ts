@@ -55,6 +55,8 @@ test.describe("footer", () => {
       testInfo.project.name.startsWith("mobile"),
       "Touch-only projects do not have a hover state.",
     );
+    // The scroll below may take up to 25 seconds on a slow runner, so the default 30 seconds of a test is not enough
+    test.setTimeout(60_000);
     await page.goto("/");
 
     const instagram = page.locator('footer a[href="https://www.instagram.com/labmgmfilkomub/"]');
