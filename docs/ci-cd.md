@@ -2,7 +2,7 @@
 
 Every merged change to `main` on `github.com/MGM-Laboratory/mgm-website` triggers CI, security scanning, e2e, and the Docker build, publish and sign pipeline. Every pull request runs the same checks plus pre-commit.ci. `main` is protected. Every change goes through a branch, a pull request and the required checks, and it is merged with a merge commit, never squash or rebase. An administrative bypass exists but is not routine practice.
 
-The site is not deployed from this repository. CI publishes the Docker images to Docker Hub, and the images are deployed on MGM infrastructure. See "Deployment" below.
+The site is not deployed from this repository. CI builds the Docker images and publishes them to GitHub Container Registry and Docker Hub, and the images are deployed on MGM infrastructure. See "Deployment" below.
 
 ## GitHub Actions workflows
 
@@ -106,7 +106,7 @@ The old `publish-docker-image*.yml` workflows pushed `labmgm/website-api` and `l
 
 `docker.yaml` never logs in to Docker Hub, because a pull request can change it. `docker-hub-mirror.yaml` starts when it ends. GitHub always runs the copy of the mirror that is on `main`, so a pull request cannot change it. The mirror copies an image only when the signature on it was made by `docker.yaml` on `main` or on a release tag, for the same commit and trigger as the run that started the mirror. For a tag, the commit must also be on `main`, because a person with write access can push a tag on any commit. Pull request images and prerelease tags such as `v1.2.3-rc.1` are never copied. The mirror copies the signature first, checks it on Docker Hub, and only then moves `latest` or a floating version tag.
 
-The push token is the secret `DOCKERHUB_TOKEN` of the `docker-hub` environment. A job that a `workflow_run` starts always runs on the default branch, so the branch rule of that environment does not protect this workflow. The protection is the signature check, the rule that a tag commit is on `main`, and the rulesets `release-tags` and `release-tags-creation`, which let only the release App create `v*` tags. The old `publish-docker-image*.yml` workflows stay until the mirror has copied a first image.
+The push token is the secret `DOCKERHUB_TOKEN` of the `docker-hub` environment. A job that a `workflow_run` starts always runs on the default branch, so the branch rule of that environment does not protect this workflow. The protection is the signature check, the rule that a tag commit is on `main`, and the rulesets `release-tags` and `release-tags-creation`, which let only the release App create `v*` tags.
 
 **Docker Hub credentials.** `DOCKERHUB_USERNAME` is a variable of the GitHub organization. The push token `DOCKERHUB_TOKEN` is a secret of the `docker-hub` environment of this repository, and the pull token `DOCKERHUB_PULL_TOKEN` is a repository secret.
 
@@ -126,6 +126,8 @@ gh run watch -R MGM-Laboratory/mgm-website <id>
 gh workflow run ci.yaml -R MGM-Laboratory/mgm-website --ref main
 cosign verify --new-bundle-format=false --certificate-identity-regexp '^https://github\.com/MGM-Laboratory/mgm-website/\.github/workflows/docker\.yaml@refs/(heads/main|tags/v.+)$' --certificate-oidc-issuer https://token.actions.githubusercontent.com docker.io/labmgm/mgm-website-backend:latest
 ```
+
+The command checks the signature that `docker.yaml` made. A version tag that `resign.yaml` signed again carries the identity `resign\.yaml@refs/heads/main` instead, so use that in the regexp for such a tag.
 
 ## Releases
 

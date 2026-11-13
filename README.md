@@ -36,7 +36,7 @@ Status page: [status.labmgm.org](https://status.labmgm.org)
 - API in `apps/api`. NestJS 12, Prisma 7 and PostgreSQL. Mail goes through Resend, SMTP or AWS SES. Uploads go to an S3 compatible store.
 - Shared code in `packages/shared`.
 - pnpm 11 workspaces and Turborepo on Node 22.
-- CI on GitHub Actions. CI publishes the Docker images to Docker Hub.
+- CI on GitHub Actions. CI builds the Docker images and publishes them to GitHub Container Registry and Docker Hub.
 
 ## Quick start
 
