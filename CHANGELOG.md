@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.3.3](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.2...v1.3.3) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** cut a connection and a silent socket of the object store after a time limit ([c0619aa](https://github.com/MGM-Laboratory/mgm-website/commit/c0619aa0b7e2bb1b8eb7e10305ad675e41fbf986))
+* **api:** cut a connection and a silent socket of the object store after a time limit ([eb7025e](https://github.com/MGM-Laboratory/mgm-website/commit/eb7025e90fbd78876f3fbc81da11239a0d64a59f))
+* **api:** give uploads their own client with a long idle limit ([e3bc119](https://github.com/MGM-Laboratory/mgm-website/commit/e3bc119977c4c0bf4c2cbbb7ffa26408f843e270))
+* **api:** ignore spaces and empty entries in the CORS origin list ([2f730f1](https://github.com/MGM-Laboratory/mgm-website/commit/2f730f1e37e2e1692c79135d472ccd641405e4f4))
+* **api:** ignore spaces and empty entries in the CORS origin list ([38d3e9e](https://github.com/MGM-Laboratory/mgm-website/commit/38d3e9e95e1692d245230711bcaca58da5c83993))
+* **api:** keep a short in-process list of published video keys and share one load ([514d2b6](https://github.com/MGM-Laboratory/mgm-website/commit/514d2b6939a02c1b4ce72c3ebd9e190e74bcde0a))
+* **api:** keep the row of a form upload whose object could not be deleted ([475ce8a](https://github.com/MGM-Laboratory/mgm-website/commit/475ce8a99c43d4a037a594ebd75bd12a745630cf))
+* **api:** keep the row of a form upload whose object could not be deleted ([af182fd](https://github.com/MGM-Laboratory/mgm-website/commit/af182fdbfa423d8cd7a271c934b28f2758cf12b3))
+* **api:** limit the scan of form documents behind a made up media key ([6f7f2da](https://github.com/MGM-Laboratory/mgm-website/commit/6f7f2daf18430950b6018e948b918f6fcf49cb6f))
+* **api:** limit the scan of form documents behind a made up media key ([d9c742f](https://github.com/MGM-Laboratory/mgm-website/commit/d9c742f5e7052968ba14e8c63304b394fea29954))
+* **api:** look a project video up in the cached feed and not with a query for each key ([d2717f9](https://github.com/MGM-Laboratory/mgm-website/commit/d2717f9cc627e25574b12ffc6c8639c00297e9e8))
+* **api:** look a project video up in the cached feed and not with a query for each key ([c4f7a17](https://github.com/MGM-Laboratory/mgm-website/commit/c4f7a1767d8a6fb3615102a072bd247ec78c5812))
+* **api:** remember the keys that a scan found and cap the scans that run at once ([afc4c33](https://github.com/MGM-Laboratory/mgm-website/commit/afc4c33d37798126ca656d3f97fdf2d7b8e84dc2))
+* **api:** sweep the oldest uploads first and skip keys that failed lately ([44bc9c5](https://github.com/MGM-Laboratory/mgm-website/commit/44bc9c5a273577e34880ceb7fc4e7101401653ce))
+* **web:** answer 502 when the stored contact settings cannot be read and document the save ([7d2d5a2](https://github.com/MGM-Laboratory/mgm-website/commit/7d2d5a2cf4389a25887ddebef1fc5aad56c8fda8))
+* **web:** compare the routing by content and not by property order ([86eeb3f](https://github.com/MGM-Laboratory/mgm-website/commit/86eeb3f79da844713775797c970044876b7928f6))
+* **web:** keep the stored mail routing when an admin without the superadmin role saves contact settings ([0719772](https://github.com/MGM-Laboratory/mgm-website/commit/071977204cad1540eccee62b93ef200c5dc34bc0))
+* **web:** keep the stored mail routing when an admin without the superadmin role saves contact settings ([3bef73d](https://github.com/MGM-Laboratory/mgm-website/commit/3bef73de28f5fa2536899c4816638bfae723ef66))
+
 ## [1.3.2](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.1...v1.3.2) (2026-11-13)
 
 
