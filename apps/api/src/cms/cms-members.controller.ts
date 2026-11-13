@@ -14,6 +14,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiTags } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Response } from "express";
 import { z } from "zod";
@@ -40,6 +41,10 @@ const memberSchema = z.object({
   }),
   profile: z.record(z.string(), z.unknown()),
 });
+// `member-<slug>-<uuid>.<ext>`, the shape that the portrait upload writes below.
+const MEMBER_MEDIA_KEY_PATTERN =
+  /^member-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp)$/;
+
 const bootstrapSchema = z.object({ records: z.array(memberSchema).min(1).max(500) });
 const saveMemberSchema = memberSchema.extend({ sourceSlug: z.string().min(1).optional() });
 
@@ -79,9 +84,19 @@ export class CmsMembersController {
     };
   }
 
+  @SkipThrottle()
   @Get("media/:key")
   async media(@Param("key") key: string, @Res() response: Response) {
-    const url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
+    // Only a portrait key is signed here. Any other key belongs to another namespace, such as a CV or an attachment.
+    if (!MEMBER_MEDIA_KEY_PATTERN.test(key)) {
+      throw new BadRequestException("Unknown media key");
+    }
+    let url: string;
+    try {
+      url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
+    } catch {
+      throw new BadRequestException("Media storage is not configured in this environment.");
+    }
     return response.redirect(url);
   }
 
