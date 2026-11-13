@@ -16,7 +16,7 @@ import {
 import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { PrismaService } from "../prisma/prisma.service.js";
-import { withTimeout } from "./with-timeout.js";
+import { outcomeUnknown, withTimeout } from "./with-timeout.js";
 
 // None of the mail clients stops waiting on its own, or they wait for minutes. A
 // provider that goes silent must hand the message to the next one in good time.
@@ -236,7 +236,9 @@ export class MailService {
       try {
         await this.sendVia(providerId, from, params);
       } catch (error) {
-        if (reservation) {
+        // A send that timed out may still have been delivered, so its quota
+        // stays used. Counting one send too many is the safe side of a limit.
+        if (reservation && !outcomeUnknown(error)) {
           try {
             await this.releaseQuota(providerId, limits[providerId], reservation);
           } catch (releaseError) {

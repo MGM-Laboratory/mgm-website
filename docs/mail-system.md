@@ -42,7 +42,7 @@ Only the superadmin changes the routing. A save by another admin keeps the store
 
 Each provider has a limit, so a provider that goes silent hands the message to the next one. SES makes one attempt, because the failover is the retry, and gives up after 10 seconds without a connection and after 30 seconds without data. SMTP gives up after 10 seconds without a connection, 10 seconds without the greeting of the server and 30 seconds without data, and the lookup of the host name has its own limit of 30 seconds. The Resend client cannot be aborted, so the call is dropped after 30 seconds and the next provider takes over.
 
-A timeout means that the outcome is unknown. The provider may have accepted the message before the answer was lost, so any provider that times out can cause a second copy through the next one. With the strategy `loadBalanceLimit`, a timed out send gives its quota reservation back, so a provider that delivered anyway can be counted one send too low.
+A timeout means that the outcome is unknown. The provider may have accepted the message before the answer was lost, so any provider that times out can cause a second copy through the next one. With the strategy `loadBalanceLimit`, a send that timed out keeps its quota reservation, so a provider that did not deliver is counted one send too high, which is the safe side of a limit.
 
 ## Quota accounting (`MailProviderLimitConfig`)
 

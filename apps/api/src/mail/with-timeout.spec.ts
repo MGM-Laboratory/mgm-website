@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { withTimeout } from "./with-timeout.js";
+import { OutcomeUnknownError, outcomeUnknown, withTimeout } from "./with-timeout.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -29,5 +29,30 @@ describe("withTimeout", () => {
     vi.useFakeTimers();
     await withTimeout(Promise.resolve(1), 5000, "Mail");
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("marks the timeout as an unknown outcome", async () => {
+    vi.useFakeTimers();
+    const pending = withTimeout(new Promise<never>(() => undefined), 5000, "Resend");
+    const caught = pending.catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(await caught).toBeInstanceOf(OutcomeUnknownError);
+  });
+});
+
+describe("outcomeUnknown", () => {
+  it("is true for the timeouts of this helper, the AWS SDK and nodemailer", () => {
+    expect(outcomeUnknown(new OutcomeUnknownError("x"))).toBe(true);
+    const sdk = new Error("socket");
+    sdk.name = "TimeoutError";
+    expect(outcomeUnknown(sdk)).toBe(true);
+    expect(outcomeUnknown(Object.assign(new Error("x"), { code: "ETIMEDOUT" }))).toBe(true);
+  });
+
+  it("is false for a refusal that the provider answered and for other values", () => {
+    expect(outcomeUnknown(new Error("Resend: invalid from address"))).toBe(false);
+    expect(outcomeUnknown(Object.assign(new Error("x"), { code: "EAUTH" }))).toBe(false);
+    expect(outcomeUnknown("timeout")).toBe(false);
+    expect(outcomeUnknown(undefined)).toBe(false);
   });
 });
