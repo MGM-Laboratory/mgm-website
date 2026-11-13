@@ -7,6 +7,7 @@ import { LoggerModule } from "nestjs-pino";
 import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";
 import { CacheModule } from "./cache/cache.module.js";
+import { LOG_REDACT } from "./logger-redact.js";
 import { CmsAdminsModule } from "./cms/cms-admins.module.js";
 import { CmsArticlesModule } from "./cms/cms-articles.module.js";
 import { CmsContactInquiriesModule } from "./cms/cms-contact-inquiries.module.js";
@@ -41,6 +42,7 @@ import { StorageModule } from "./storage/storage.module.js";
             ? { target: "pino-pretty", options: { singleLine: true } }
             : undefined,
         autoLogging: true,
+        redact: LOG_REDACT,
       },
     }),
     ThrottlerModule.forRoot({
