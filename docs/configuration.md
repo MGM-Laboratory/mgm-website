@@ -1,6 +1,6 @@
 # Configuration
 
-Every setting of the site is an environment variable. The API reads and checks its settings at start (`apps/api/src/config/env.validation.ts`) and refuses to start when a required one is missing or wrong. The web app reads its settings where it uses them. Leave out a setting that you do not use. An empty value is read as unset only for the optional settings, and an empty `PORT` stops the start.
+Every setting of the site is an environment variable. The API reads and checks its settings at start (`apps/api/src/config/env.validation.ts`) and refuses to start when a required one is missing or wrong. The web app reads its settings where it uses them. Delete a line that you do not use instead of leaving it empty. An empty value is read as unset only for the optional settings, and for most of the others it stops the start or changes the behavior. For example, an empty `CORS_ORIGIN` allows no origin, and an empty `CMS_API_URL` does not fall back to `NEXT_PUBLIC_API_URL`.
 
 Each workspace has an example file with the same names.
 
@@ -10,7 +10,7 @@ Each workspace has an example file with the same names.
 | `apps/api/.env.example` | The API when it runs with `pnpm dev:api`             |
 | `apps/web/.env.example` | The web app when it runs with `pnpm dev:web`         |
 
-A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POSTGRES_PASSWORD` with `openssl rand -hex 64`, and `SHORTLINKS_ENCRYPTION_KEY` with `openssl rand -hex 32`, which gives the 64 characters that it needs. Credentials that a provider issues, such as the AWS, Resend and SMTP settings and `DOMAIN_CONNECT_PRIVATE_KEY`, come from that provider.
+A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POSTGRES_PASSWORD` with `openssl rand -hex 64` (or `-hex 32`), and `SHORTLINKS_ENCRYPTION_KEY` with `openssl rand -hex 32`, which gives the 64 characters that it needs. Credentials that a provider issues, such as the AWS, Resend and SMTP settings and `DOMAIN_CONNECT_PRIVATE_KEY`, come from that provider.
 
 ## API
 
@@ -62,12 +62,13 @@ A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POS
 | `NEXT_PUBLIC_API_URL`             | `http://localhost:4000/api` | The API address that browsers call. It is read when the image is built, so set it as a build argument. |
 | `CMS_API_URL`                     | `NEXT_PUBLIC_API_URL`       | The API address that the web server calls. In compose it is `http://api:4000/api`.                     |
 | `ADMIN_PASSPHRASE`                | none, required              | The superadmin passphrase. It must match the API.                                                      |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | none                        | Turns on the interactive map on event pages. Without it, the page shows the address and a link.        |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | none                        | Turns on the interactive map on event pages. It is read when the image is built. Without it, the page shows the address and a link.        |
 | `CMS_MAX_PAPER_BYTES`             | `209715200`                 | The same limit as the API, checked before the upload is sent.                                          |
 | `CMS_MAX_VIDEO_BYTES`             | `524288000`                 | The same limit as the API.                                                                             |
 | `CMS_MAX_CV_BYTES`                | `104857600`                 | The same limit as the API.                                                                             |
 | `FORMS_MAX_UPLOAD_BYTES`          | `104857600`                 | The same limit as the API.                                                                             |
 | `SHORTLINKS_SITE_HOSTS`           | `labmgm.org,www.labmgm.org` | The host names that count as the site itself and not as a custom short domain.                         |
+| `PORT`                            | `3000`                      | The port the web server listens on. The image sets it, and its health check reads it.                  |
 | `NEXT_PUBLIC_SHOW_QUERY_DEVTOOLS` | none                        | `true` shows the query devtools in development.                                                        |
 
 ## Compose
@@ -83,3 +84,5 @@ A secret has no default and stays out of git. Create `ADMIN_PASSPHRASE` and `POS
 | `ADMIN_PASSPHRASE`  | none, required | The superadmin passphrase for the API and the web app. |
 
 The compose file forwards only these settings from the root `.env` to the API container. They are `CORS_ORIGIN`, `THROTTLE_TTL`, `THROTTLE_LIMIT`, `AWS_REGION`, `AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `SES_FROM_EMAIL`. To use another setting, such as `RESEND_API_KEY`, `AWS_ENDPOINT_URL` or `PUBLIC_WEB_URL`, add it to the `environment` block of the `api` service in `docker-compose.yml`.
+
+The root `.env.example` also lists `DOCKERHUB_NAMESPACE`, `SHORTLINKS_PRIMARY_DOMAIN`, `SHORTLINKS_CNAME_TARGET` and `SHORTLINKS_ENCRYPTION_KEY`. Compose does not read them, so they have no effect there. Use them in `apps/api/.env` for `pnpm dev:api`, or add them to the `api` service as described above.

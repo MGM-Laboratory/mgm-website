@@ -13,7 +13,7 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/MGM-Laboratory/mgm-website/main.svg)](https://results.pre-commit.ci/latest/github/MGM-Laboratory/mgm-website/main)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5%20and%206-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![Turbo](https://img.shields.io/badge/Turbo-monorepo-EF4444?logo=turborepo&logoColor=white)](https://turbo.build)
@@ -48,7 +48,7 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-Set `DATABASE_URL` and `ADMIN_PASSPHRASE` in `apps/api/.env`, and the same `ADMIN_PASSPHRASE` in `apps/web/.env`. Create the passphrase with `openssl rand -hex 64`. Then start the two servers in separate terminals.
+The API needs a reachable PostgreSQL with an empty `mgm_website` database. Put its password in the `DATABASE_URL` of `apps/api/.env`, or run `docker compose up postgres` and use the `POSTGRES_PASSWORD` of the root `.env`. Set `ADMIN_PASSPHRASE` in `apps/api/.env` and the same value in `apps/web/.env`. Create the passphrase with `openssl rand -hex 64`. Then start the two servers in separate terminals.
 
 ```bash
 pnpm dev:web # http://localhost:3000

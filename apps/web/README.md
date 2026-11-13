@@ -1,6 +1,6 @@
 # MGM Laboratory Web
 
-The public MGM Laboratory site and its internal CMS workspace. It is a Next.js 16.3.4 App Router application using React 19, Tailwind v4, GSAP, and `next-themes`; it lives beside the NestJS API in this pnpm monorepo.
+The public MGM Laboratory site and its internal CMS workspace. It is a Next.js 16 App Router application using React 19, Tailwind v4, GSAP, and `next-themes`; it lives beside the NestJS API in this pnpm monorepo.
 
 Read [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`../../docs/README.md`](../../docs/README.md) before changing the app. In particular, this Next version has conventions that differ from older releases: consult the relevant bundled guide in `node_modules/next/dist/docs/` before writing Next-specific code. The design source of truth is [`../../DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md).
 
