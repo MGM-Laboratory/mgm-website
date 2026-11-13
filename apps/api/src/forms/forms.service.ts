@@ -13,6 +13,7 @@ import { PrismaService } from "../prisma/prisma.service.js";
 import { StorageService } from "../storage/storage.service.js";
 import { hashPassphrase } from "../shortlinks/shortlinks.utils.js";
 import { FormsError, parseDocumentInput, storedDocument } from "./forms.common.js";
+import { ScanBudget } from "./scan-budget.js";
 import type { UpdateFormBody } from "./forms.schemas.js";
 import {
   FORM_SLUG_LENGTH,
@@ -38,6 +39,9 @@ function isUniqueViolation(error: unknown) {
 @Injectable()
 export class FormsService {
   private readonly logger = new Logger(FormsService.name);
+  // The scan of every form document is the one expensive step of the public
+  // media route, and a made up key whose form does not exist reaches it.
+  private readonly referenceScans = new ScanBudget(5);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -292,7 +296,10 @@ export class FormsService {
     return rows.length > 0;
   }
 
-  /** A design media key may be served when its form exists or any form still uses it. */
+  /**
+   * A design media key may be served when its form exists or any form still
+   * uses it. The second check is limited to a few scans for each second.
+   */
   async mediaServable(key: string): Promise<boolean> {
     const formId = mediaKeyFormId(key);
     if (!formId) return false;
@@ -300,6 +307,9 @@ export class FormsService {
       where: { id: formId },
       select: { id: true },
     });
-    return owner ? true : this.mediaReferenced(key);
+    if (owner) return true;
+    // Only a key whose form was deleted while another form still uses it
+    // needs the scan, which is rare. Over the budget the key is not served.
+    return this.referenceScans.take() ? this.mediaReferenced(key) : false;
   }
 }
