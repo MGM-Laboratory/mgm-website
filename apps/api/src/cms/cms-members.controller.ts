@@ -22,6 +22,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsMembersService } from "./cms-members.service.js";
+import { MEMBER_MEDIA_KEY_PATTERN } from "./member-media-key.js";
 
 const memberSchema = z.object({
   member: z.object({
@@ -40,6 +41,7 @@ const memberSchema = z.object({
   }),
   profile: z.record(z.string(), z.unknown()),
 });
+
 const bootstrapSchema = z.object({ records: z.array(memberSchema).min(1).max(500) });
 const saveMemberSchema = memberSchema.extend({ sourceSlug: z.string().min(1).optional() });
 
@@ -81,7 +83,16 @@ export class CmsMembersController {
 
   @Get("media/:key")
   async media(@Param("key") key: string, @Res() response: Response) {
-    const url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
+    // Only a portrait key is signed here. Any other key belongs to another namespace, such as a CV or an attachment.
+    if (!MEMBER_MEDIA_KEY_PATTERN.test(key)) {
+      throw new BadRequestException("Unknown media key");
+    }
+    let url: string;
+    try {
+      url = await this.storage.getSignedDownloadUrl(key, 60 * 15);
+    } catch {
+      throw new BadRequestException("Media storage is not configured in this environment.");
+    }
     return response.redirect(url);
   }
 
@@ -139,7 +150,7 @@ export class CmsMembersController {
     }
     const extension =
       contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
-    const key = `member-${slug}-${randomUUID()}.${extension}`;
+    const key = `member-${slug.replace(/[^A-Za-z0-9_-]/g, "-")}-${randomUUID()}.${extension}`;
     await this.storage.uploadFile({ body: buffer, contentType, key });
     return { key };
   }

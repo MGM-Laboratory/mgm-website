@@ -11,6 +11,10 @@ type MediaRouteOptions = {
 
 const IMMUTABLE_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
+// A page or a script from the bucket would run on the site address, so these types are sent as a download.
+const ACTIVE_CONTENT_TYPE =
+  /^(?:text\/(?:html|xml|xsl|javascript|ecmascript|jscript|livescript|x-javascript|x-ecmascript)|application\/(?:javascript|x-javascript|ecmascript|x-ecmascript|xml|[\w.+-]*\+xml)|image\/svg\+xml)$/i;
+
 /**
  * Builds a cacheable public-media route backed by a signed CMS redirect.
  * All media collections share the same streaming and response-header policy;
@@ -35,11 +39,14 @@ export function mediaPlaybackRoute(
       const source = location ? await fetch(location, { cache: "no-store" }) : response;
       if (!source.ok || !source.body) return new NextResponse(null, { status: source.status });
 
+      const contentType = source.headers.get("content-type") ?? "application/octet-stream";
+      const active = ACTIVE_CONTENT_TYPE.test(contentType.split(";")[0].trim());
       const headers = new Headers({
         "cache-control": IMMUTABLE_MEDIA_CACHE_CONTROL,
-        "content-type": source.headers.get("content-type") ?? "application/octet-stream",
+        "content-type": active ? "application/octet-stream" : contentType,
         "x-content-type-options": "nosniff",
       });
+      if (active) headers.set("content-disposition", "attachment");
       const contentLength = source.headers.get("content-length");
       if (contentLength) headers.set("content-length", contentLength);
       return new NextResponse(source.body, { headers });
