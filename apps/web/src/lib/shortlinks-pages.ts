@@ -208,9 +208,10 @@ type PageContent = {
   hint: string;
   form?: { slug: string; error?: string };
   unavailable?: boolean;
+  site?: boolean;
 };
 
-function page({ title, eyebrow, heading, hint, form }: PageContent): string {
+function page({ title, eyebrow, heading, hint, form, site }: PageContent): string {
   let formHtml = "";
   if (form) {
     const errorHtml = form.error ? `<p class="error">${escapeHtml(form.error)}</p>` : "";
@@ -242,13 +243,32 @@ function page({ title, eyebrow, heading, hint, form }: PageContent): string {
     <p class="hint">${escapeHtml(hint)}</p>
     ${formHtml}
     <footer class="footer">
-      <span>Short links by MGM Laboratory · <a href="https://labmgm.org">labmgm.org</a></span>
+      ${
+        site
+          ? '<span><a href="/">Back to the home page</a></span>'
+          : '<span>Short links by MGM Laboratory · <a href="https://labmgm.org">labmgm.org</a></span>'
+      }
       <button id="theme-toggle" class="theme-toggle" type="button">Theme</button>
     </footer>
   </main>
   ${TOGGLE_SCRIPT}
 </body>
 </html>`;
+}
+
+/**
+ * The 404 page of the site's own hosts for an address nothing serves. A
+ * route handler cannot render `app/not-found.tsx` (Next answers a handler's
+ * `notFound()` with an empty body), so the catch-all sends this document.
+ */
+export function renderSiteNotFound(): string {
+  return page({
+    title: "Page not found | MGM Laboratory",
+    eyebrow: "404",
+    heading: "This page does not exist",
+    hint: "The link may be old, or the page may have been unpublished.",
+    site: true,
+  });
 }
 
 export function renderShortlinkPage(

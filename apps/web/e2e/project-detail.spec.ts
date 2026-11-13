@@ -265,7 +265,9 @@ test.describe("project detail page", () => {
     const errors = trackPageErrors(page);
     const response = await page.goto("/projects/e2e-no-such-project");
     expect(response?.status()).toBe(404);
-    await expect(page.getByText("This page could not be found.")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "This page does not exist" }),
+    ).toBeVisible();
     await expect(page.locator("[data-project-detail]")).toHaveCount(0);
     expect(await rootProjectBg(page)).toBe("");
     await expect.poll(() => htmlOverflow(page)).toBe("");

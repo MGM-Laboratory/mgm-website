@@ -18,11 +18,7 @@ import { membersFromRecords, type CmsMemberRecord } from "@/lib/member-cms";
  */
 
 export const readArticle = cache(async (slug: string): Promise<CmsArticleRecord | undefined> => {
-  try {
-    return await fetchArticleRecord(slug);
-  } catch {
-    return undefined;
-  }
+  return fetchArticleRecord(slug);
 });
 
 export const readPublishedFeed = cache(async (): Promise<CmsArticleRecord[]> => {

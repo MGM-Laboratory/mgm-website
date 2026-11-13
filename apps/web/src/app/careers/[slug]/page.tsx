@@ -108,7 +108,7 @@ function MetaPanel({ job }: { job: JobDraft }) {
 
 export default async function CareerDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const record = await fetchCareerRecord(slug).catch(() => undefined);
+  const record = await fetchCareerRecord(slug);
   if (!record) notFound();
 
   const { job, content } = record;
