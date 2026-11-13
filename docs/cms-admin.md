@@ -31,7 +31,7 @@ Only the superadmin can create, edit, or delete delegated administrators. Delega
 | `home`              | Homepage settings         | read, write, delete |
 | `other`             | Other settings namespace  | read, write, delete |
 
-Permissions are rank-expanded: granting `write` also grants `read`; granting `delete` grants all three. Contact inquiries are intentionally read-only for delegated accounts even though the API supports state changes through the superadmin path. If a new collection is added, update the shared page-id list, API validation, Next proxy gates, and the admin studio together; drift between those layers has already caused rejected admin creation requests.
+Permissions are rank-expanded: granting `write` also grants `read`; granting `delete` grants all three. The bulk routes for job applications and event registrations need `write` for every action and also `delete` for the action `delete`, because that action removes the records and their stored files. Contact inquiries are intentionally read-only for delegated accounts even though the API supports state changes through the superadmin path. If a new collection is added, update the shared page-id list, API validation, Next proxy gates, and the admin studio together; drift between those layers has already caused rejected admin creation requests.
 
 ## Editorial collections
 
