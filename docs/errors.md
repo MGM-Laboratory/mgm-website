@@ -28,7 +28,7 @@ A route that calls `schema.parse(body)` and has no guard turns a zod error into 
 
 - `PUT /api/cms/home`
 - `PUT /api/cms/contact-settings`
-- `POST /api/cms/admins/verify`, `POST /api/cms/admins` and `PUT /api/cms/admins/:slug`
+- `POST /api/cms/admins` and `PUT /api/cms/admins/:slug`
 - `PUT /api/cms/members/:slug` and `POST /api/cms/members/:slug/photo`
 - `POST /api/cms/publications/author-photo` and `PUT /api/cms/publications/:slug`
 - `PUT /api/cms/jobs/:slug`, `POST /api/cms/jobs/:slug/media`, `PUT /api/cms/jobs/applications/:slug/state` and `POST /api/cms/jobs/applications/bulk`
@@ -46,7 +46,7 @@ The public job application and the public event registration catch the zod error
 | 409    | A slug or a code is taken, a state conflicts, or a form is closed, full or not open yet                     | A message that names the conflict                                         |
 | 410    | A short link has expired                                                                                    | `That link has expired.`                                                  |
 | 411    | A form respondent upload does not declare its size                                                          | `The upload must declare its size.`                                       |
-| 413    | A body or a file is above its limit                                                                         | `The file is too large.` or `The CV must be under 100 MB.`                |
+| 413    | A body or a file is above its limit                                                                         | `The file is too large.` or `File too large` (the CV apply route)         |
 | 429    | A rate limit budget is used up                                                                              | `ThrottlerException: Too Many Requests`                                   |
 | 500    | An error that the code did not plan                                                                         | `Internal server error`                                                   |
 | 502    | A form respondent file cannot be read from storage                                                          | `The file could not be read from storage.`                                |
@@ -55,7 +55,7 @@ The public job application and the public event registration catch the zod error
 ## Admin routes
 
 - Every admin route of the API reads the header `x-cms-passphrase`. A missing or wrong value answers 401 with `{"message":"Unauthorized","error":"Unauthorized","statusCode":401}`.
-- `POST /api/cms/admins/verify` is public. A wrong passphrase answers 401 with the message `That passphrase does not match.`.
+- `POST /api/cms/admins/verify` is public. A wrong passphrase answers 401 with the message `That passphrase does not match.`, and a body with no passphrase or one over 300 characters answers 400 with `A passphrase is required.`.
 - The route handlers of the web app under `/api/admin/**` check the session first. They answer 401 `{"error":"Unauthorized"}` when there is no valid session, and 403 `{"error":"Forbidden"}` when the account lacks the permission for the page and the action. Otherwise they relay the status and the JSON body of the API.
 - The contact inbox allows only the read action for delegated accounts. Any other action on that page answers 403.
 - The web login route answers with a 303 redirect. A wrong passphrase goes to `/admin/login?error=1`.

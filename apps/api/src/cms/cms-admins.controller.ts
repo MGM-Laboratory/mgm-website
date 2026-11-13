@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -76,8 +77,10 @@ export class CmsAdminsController {
   // ":slug" so a record can never shadow the reserved path.
   @Post("verify")
   async verify(@Body() body: unknown) {
-    const { passphrase } = verifySchema.parse(body);
-    const account = await this.admins.verify(passphrase);
+    // A missing or oversized passphrase is a bad request from the caller and not a server error
+    const parsed = verifySchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException("A passphrase is required.");
+    const account = await this.admins.verify(parsed.data.passphrase);
     if (!account) throw new UnauthorizedException("That passphrase does not match.");
     return { account };
   }
