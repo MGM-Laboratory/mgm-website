@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.3.2](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.1...v1.3.2) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api,web:** count the public admin check, the short link clicks and every page render for the visitor ([0c43b79](https://github.com/MGM-Laboratory/mgm-website/commit/0c43b790d967b129f8716c5bf9569754dc80b408))
+* **api:** accept only web, mail and phone links in a member profile ([5fa9590](https://github.com/MGM-Laboratory/mgm-website/commit/5fa9590efca847d9fae74088517c19377ac7ed8b))
+* **api:** accept only web, mail and phone links in a member profile ([64390f5](https://github.com/MGM-Laboratory/mgm-website/commit/64390f501d273d82f1a7e3cfaec321b27ed9fa61))
+* **api:** apply the upload gate to POST only and fix its answer and the docs ([bf06f55](https://github.com/MGM-Laboratory/mgm-website/commit/bf06f55d78fa189fd1fa4e5557d7ab502a64a500))
+* **api:** read raw upload bodies only on their routes and cap the CV upload ([db884a7](https://github.com/MGM-Laboratory/mgm-website/commit/db884a7920a33d840507df094caa44b0f2fa188d))
+* **api:** read raw upload bodies only on their routes and cap the CV upload ([368dd01](https://github.com/MGM-Laboratory/mgm-website/commit/368dd01b6308fc0f746fc68a30ba53ed5c066fdf))
+* **api:** refuse links that are not strings, name the failing field and fix the docs ([002e524](https://github.com/MGM-Laboratory/mgm-website/commit/002e52403dc0f1c5c79c8d9c141c8bbb04a8401c))
+* **web:** count the public admin check, the short link clicks and every page render for the visitor ([0b03a3d](https://github.com/MGM-Laboratory/mgm-website/commit/0b03a3d2e670c2d5c1f79133e83698c1d5ac1a6b))
+* **web:** give streamed uploads the upload limit, cover the paper download and fix the docs ([c1e7729](https://github.com/MGM-Laboratory/mgm-website/commit/c1e7729eec34dc563cffaf8a0bd9dadb87d9191f))
+* **web:** honor a zero quality for HTML in the catch-all and document the custom host exception ([696e632](https://github.com/MGM-Laboratory/mgm-website/commit/696e632643b3a75fdddd75e59b1788242c014849))
+* **web:** require the delete permission for a bulk delete of applications and registrations ([bd9cf1e](https://github.com/MGM-Laboratory/mgm-website/commit/bd9cf1e2c38d3014c3de8fb35299493428e94724))
+* **web:** require the delete permission for a bulk delete of applications and registrations ([cc8e2b5](https://github.com/MGM-Laboratory/mgm-website/commit/cc8e2b56e6d72e658ced95068b60509d272bdbd5))
+* **web:** send an HTML 404 from the catch-all route and keep the viewport out of the failure path ([c7cf15d](https://github.com/MGM-Laboratory/mgm-website/commit/c7cf15dea1f37f2231ff523a6199c115048b5a58))
+* **web:** show an error page when the API fails and a styled 404 for dead links ([0653d0b](https://github.com/MGM-Laboratory/mgm-website/commit/0653d0bc065e734f4a38449a0a5941998ab7a038))
+* **web:** show an error page when the API fails and a styled 404 for dead links ([f778e6e](https://github.com/MGM-Laboratory/mgm-website/commit/f778e6e8b6b0d8a55936eba3476d794bec2d8125))
+* **web:** stop waiting for the API after a time limit instead of until the socket dies ([d684558](https://github.com/MGM-Laboratory/mgm-website/commit/d684558f08d36cc1d9edc017b16296ac231167cb))
+* **web:** stop waiting for the API after a time limit instead of until the socket dies ([955d879](https://github.com/MGM-Laboratory/mgm-website/commit/955d8790cff77789dfc97b32685ffb0394d9222a))
+* **web:** take the sign in attempt first, count IPv6 visitors by prefix and show the API throttle as such ([ec139f6](https://github.com/MGM-Laboratory/mgm-website/commit/ec139f6e53d830cbf6cd6871334fdddb92326413))
+
 ## [1.3.1](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.0...v1.3.1) (2026-11-13)
 
 
