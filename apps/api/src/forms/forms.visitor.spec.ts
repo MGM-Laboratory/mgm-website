@@ -34,7 +34,8 @@ describe("the visitor details that the web server forwards", () => {
   });
 
   it("uses the address of the peer when the passphrase is missing or wrong", () => {
-    for (const proof of [{}, { "x-cms-passphrase": "wrong" }]) {
+    const proofs: Record<string, string>[] = [{}, { "x-cms-passphrase": "wrong" }];
+    for (const proof of proofs) {
       const req = request({
         ...proof,
         "x-visitor-ip": "203.0.113.9",
