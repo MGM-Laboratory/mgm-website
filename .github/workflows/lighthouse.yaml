@@ -14,7 +14,7 @@ permissions: {}
 jobs:
   changes:
     name: Detect Changes
-    uses: ./.github/workflows/detect-changes.yml
+    uses: ./.github/workflows/detect-changes.yaml
     permissions:
       contents: read
       pull-requests: read

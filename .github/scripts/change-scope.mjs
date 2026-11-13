@@ -82,7 +82,7 @@ export function classifyChanges(files, { force = false } = {}) {
     if (/^\.github\/workflows\//.test(file)) {
       enable("automation", "trivy", "dependencies");
       const name = file.split("/").at(-1);
-      if (["ci.yaml", "detect-changes.yml"].includes(name)) enable(...SCOPES);
+      if (["ci.yaml", "detect-changes.yaml"].includes(name)) enable(...SCOPES);
       if (name === "e2e.yaml") enable("e2e");
       if (name === "lighthouse.yaml") enable("lighthouse");
       if (name === "security.yaml") enable("codeql");

@@ -72,7 +72,7 @@ CI=true PORT=3457 CMS_FIXTURE_PORT=4010 npx playwright test --retries=0 --worker
 
 ## Type & lint gates
 
-`pnpm typecheck` (web: `next typegen && tsc --noEmit`) and `pnpm lint` (web: eslint; api: oxlint) must be clean in CI before declaring done, because they are also the CI gates. `pnpm test` runs api vitest only (web has no test script).
+`pnpm typecheck` (web: `next typegen && tsc --noEmit`) and `pnpm lint` (web: eslint; api: oxlint) must be clean in CI before declaring done, because they are also the CI gates. `pnpm test` runs the vitest unit tests of the api and of the web app. The web specs sit next to the code as `*.spec.ts` under `apps/web/src`, and `apps/web/vitest.config.ts` swaps `server-only` for an empty module, so server code such as the admin session can be tested. The Playwright specs stay in `apps/web/e2e` and test the pages in a browser.
 
 ## Commit & push
 

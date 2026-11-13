@@ -16,7 +16,7 @@ permissions: {}
 jobs:
   changes:
     name: Detect Changes
-    uses: ./.github/workflows/detect-changes.yml
+    uses: ./.github/workflows/detect-changes.yaml
     permissions:
       contents: read
       pull-requests: read
@@ -108,7 +108,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Verify web and shared dependencies
-        run: pnpm turbo run lint typecheck build --filter=web...
+        run: pnpm turbo run lint typecheck test build --filter=web...
 
   hygiene:
     name: Formatting and automation tests

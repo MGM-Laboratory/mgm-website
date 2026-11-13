@@ -55,12 +55,24 @@ test.describe("footer", () => {
       testInfo.project.name.startsWith("mobile"),
       "Touch-only projects do not have a hover state.",
     );
+    // The scroll below may take up to 25 seconds on a slow runner, so the default 30 seconds of a test is not enough
+    test.setTimeout(60_000);
     await page.goto("/");
 
     const instagram = page.locator('footer a[href="https://www.instagram.com/labmgmfilkomub/"]');
-    for (let i = 0; i < 30; i++) {
-      await page.mouse.wheel(0, 500);
-    }
+    // A native scroll to the bottom, repeated until the link shows. On "/" ScrollSmoother follows the native scroll and catches up
+    // a little later. A loop of wheel events did not bring the link into view in CI on macOS WebKit, and the cause is not proven.
+    await expect
+      .poll(
+        async () =>
+          instagram.evaluate((element) => {
+            window.scrollTo(0, document.documentElement.scrollHeight);
+            const box = element.getBoundingClientRect();
+            return box.top >= 0 && box.bottom <= window.innerHeight;
+          }),
+        { intervals: [100], timeout: 25_000 },
+      )
+      .toBe(true);
     await expect(instagram).toBeInViewport();
     await expect
       .poll(() =>
