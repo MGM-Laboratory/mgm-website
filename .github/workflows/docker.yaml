@@ -29,7 +29,9 @@ jobs:
   image:
     name: Build, scan and push ${{ matrix.name }} image
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # The arm64 build runs under emulation, so a Next.js build takes a long time there. A timeout after the push and before the
+    # signature leaves an unsigned image. The mirror workflow copies nothing without a valid signature, so that image stays unused.
+    timeout-minutes: 120
     permissions:
       contents: read
       packages: write
