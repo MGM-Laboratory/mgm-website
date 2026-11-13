@@ -67,6 +67,8 @@ jobs:
           list '\.png$' | xargs -0 -r oxipng --opt 4 --quiet
           list '\.jpe?g$' | xargs -0 -r jpegoptim --all-progressive --strip-com --strip-iptc --strip-xmp --quiet
           list '\.svg$' | xargs -0 -r npm exec --yes --package="svgo@${SVGO_VERSION}" -- svgo --config .github/svgo.config.mjs --quiet
+          # svgo writes a file with no final newline, and the end-of-file check of pre-commit.ci fails on that
+          list '\.svg$' | xargs -0 -r -n 1 sh -c 'if [ -n "$(tail -c 1 "$1")" ]; then printf "\n" >> "$1"; fi' sh
           git status --short
 
       - name: Collect the changes as a patch
