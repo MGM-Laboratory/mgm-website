@@ -1,6 +1,44 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 
+/**
+ * The API origin that the browser calls (the contact form posts there), read from the same variable that the build bakes into the
+ * client code.
+ */
+function apiOrigin() {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A Content-Security-Policy that only reports. Nothing is blocked, so a source that the pages need but this list misses shows up as a
+ * report in the server log (see /api/csp-report) and not as a broken page. The scripts and styles still allow inline code, because
+ * Next writes inline bootstrap scripts, and a nonce policy would make every page render for each request. The list is meant to be read
+ * against the reports, tightened, and then sent as an enforced header in a later change. Two directives are left out on purpose until
+ * then, `frame-ancestors`, because the public forms are meant to be embedded on other sites, and `form-action`, because the short link
+ * gate posts to this site and is answered with a redirect to another site.
+ */
+function contentSecurityPolicy() {
+  const connect = ["'self'", apiOrigin()].filter((value): value is string => Boolean(value));
+  return [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob: https:",
+    `connect-src ${connect.join(" ")}`,
+    "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "report-uri /api/csp-report",
+  ].join("; ");
+}
+
 const nextConfig: NextConfig = {
   output: "standalone",
   // The development route indicator obscures interactive UI while reviewing
@@ -12,6 +50,20 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Only the production build sends it, because the dev server needs a websocket and inline eval that the policy would report all day
+      ...(process.env.NODE_ENV === "production"
+        ? [
+            {
+              source: "/:path*",
+              headers: [
+                {
+                  key: "Content-Security-Policy-Report-Only",
+                  value: contentSecurityPolicy(),
+                },
+              ],
+            },
+          ]
+        : []),
       {
         source: "/members/:path*",
         headers: [
