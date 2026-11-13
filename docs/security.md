@@ -102,6 +102,7 @@ This page describes what the web app and the API protect, who they protect it fr
 - The API and web images run as a user that is not root (`nestjs` and `nextjs`).
 - The API image has a health check that calls `/api/health`.
 - The route `/api/health` runs `SELECT 1` and answers 503 when the database does not respond.
+- The web image has a health check that calls `/healthz`. That route makes no call to the API, so a slow API does not mark a web copy as unhealthy.
 
 ## What CI scans
 
