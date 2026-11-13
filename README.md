@@ -80,6 +80,7 @@ The reading order and the full index are in [`docs/README.md`](docs/README.md). 
 - [`docs/cms-admin.md`](docs/cms-admin.md) describes the CMS and the `/admin` workspace.
 - [`docs/configuration.md`](docs/configuration.md) lists every setting.
 - [`docs/ci-cd.md`](docs/ci-cd.md) lists the workflows and the required checks.
+- [`docs/deployment.md`](docs/deployment.md) explains how to run the Docker images on a host and how to update them.
 
 ## Project layout
 
