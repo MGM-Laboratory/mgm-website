@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.2.0...v1.3.0) (2026-11-13)
+
+
+### Features
+
+* **web:** send a report only content security policy and log its reports ([17425e5](https://github.com/MGM-Laboratory/mgm-website/commit/17425e50539302e548f253daaebc282954a0e998))
+
 ## [1.2.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.1.1...v1.2.0) (2026-11-13)
 
 
