@@ -8,7 +8,7 @@ pnpm workspaces (pnpm 11.3.0, Node 22, Turbo 2.10):
 apps/web/              Next.js 16 site and CMS workspace (React 19.2.8, Tailwind v4, GSAP 3.15)
 apps/api/              NestJS API (ESM, Prisma, oxlint, vitest), port 4000
 packages/shared       shared code (@repo/shared) consumed via workspace:*
-.github/workflows/     ci.yaml + publish-docker-image.yml + publish-docker-image-{latest,staging}.yml
+.github/workflows/     ci.yaml, docker.yaml, docker-hub-mirror.yaml and the other workflows
 ```
 
 `apps/web/package.json` carries most of the interesting dependencies: `gsap`, `lucide-react`, `next-themes`, `framer-motion`, `@tanstack/react-query`, `react-hook-form` + `zod`, `zustand`, `sonner`, `tiptap`, `class-variance-authority` + `tailwind-merge` + `clsx`, `pdfjs-dist` (the publications PDF viewer, worker bundled via `new URL(..., import.meta.url)`). Animation is mostly **GSAP**. `three` drives the WebGL stages (the projects cover stage, the articles world, the forms scenes, the homepage cursor flow, reel and 3D footer mark), `matter-js` runs the compact hero's toy box, and `framer-motion` is used only in the admin forms builder. `animejs` is installed but unused, and the R3F packages are used only by the dead `about/lanyard` code. Check actual usage before assuming a lib is in play.

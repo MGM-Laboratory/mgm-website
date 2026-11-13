@@ -7,7 +7,7 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 [![E2E](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/e2e.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/e2e.yaml)
 [![Lighthouse](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/lighthouse.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/lighthouse.yaml)
 [![Vale](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/vale.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/vale.yaml)
-[![Docker](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/publish-docker-image-latest.yml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/publish-docker-image-latest.yml)
+[![Docker](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker.yaml)
 [![codecov](https://codecov.io/gh/MGM-Laboratory/mgm-website/branch/main/graph/badge.svg)](https://codecov.io/gh/MGM-Laboratory/mgm-website)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MGM-Laboratory/mgm-website/badge)](https://securityscorecards.dev/viewer/?uri=github.com/MGM-Laboratory/mgm-website)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/MGM-Laboratory/mgm-website/main.svg)](https://results.pre-commit.ci/latest/github/MGM-Laboratory/mgm-website/main)
@@ -36,7 +36,7 @@ Status page: [status.labmgm.org](https://status.labmgm.org)
 - API in `apps/api`. NestJS 12, Prisma 7 and PostgreSQL. Mail goes through Resend, SMTP or AWS SES. Uploads go to an S3 compatible store.
 - Shared code in `packages/shared`.
 - pnpm 11 workspaces and Turborepo on Node 22.
-- CI on GitHub Actions. CI publishes the Docker images to Docker Hub.
+- CI on GitHub Actions. CI builds the Docker images and publishes them to GitHub Container Registry and Docker Hub.
 
 ## Quick start
 

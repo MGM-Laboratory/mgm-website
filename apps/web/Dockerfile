@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Build context is the monorepo root:
-#   docker build -f apps/web/Dockerfile -t website-web .
+#   docker build -f apps/web/Dockerfile -t mgm-website-frontend .
 
 FROM node:22-alpine AS base
 RUN corepack enable
