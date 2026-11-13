@@ -8,7 +8,7 @@ import { apiBaseUrl } from "@/lib/cms-api";
  * A redirect back into the admin panel. The Location is relative so it
  * resolves against the request's own origin: forwarded host headers are
  * attacker-controlled and the container's internal address (behind the
- * Railway proxy) is unreachable from a browser, so neither is consulted.
+ * reverse proxy) is unreachable from a browser, so neither is consulted.
  */
 function redirectTo(path: string) {
   return new NextResponse(null, { status: 303, headers: { location: path } });

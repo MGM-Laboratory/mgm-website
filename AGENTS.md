@@ -1,21 +1,6 @@
-# AGENTS.md: entry point for AI agents working in this repo
+# MGM Laboratory Website
 
-This is the **MGM Laboratory** website monorepo (Next.js 16 marketing site + NestJS API), live at `github.com/MGM-Laboratory/mgm-website`.
+Read `README.md`, `CONTRIBUTING.md` and `docs/README.md` before you change anything.
 
-**Read `CLAUDE.md` (repo root) first.** It contains the hard rules every agent must follow (git identity, commit granularity, no AI attribution in commits, the pull request flow) and the reading order. The deep-dive documentation lives in `docs/`:
-
-- `docs/project-overview.md`: product context, all pages, content status
-- `docs/architecture.md`: monorepo layout, components, data, routing
-- `docs/cms-admin.md`: CMS collections, `/admin`, signed sessions, RBAC, and media storage
-- `docs/animation-system.md`: GSAP conventions and known gotchas (read before touching animations)
-- `docs/navigation-menu.md`: the full-screen menu system
-- `docs/page-transition.md`: internal-navigation curtain and homepage entrance behavior
-- `docs/careers-cms.md`: openings, applications, and the careers inbox
-- `docs/mail-system.md`: mail providers, routing, quotas, and outbound SMTP limits on some hosts
-- `docs/ci-cd.md`: GitHub Actions, Docker Hub images and deployment on MGM infrastructure
-- `docs/testing-verification.md`: Playwright verification methodology
-- `docs/repo-history.md`: the repo migration and why the git rules exist
-
-Design decisions must follow `DESIGN_SYSTEM.md` (repo root).
-
-**Next.js 16 warning:** this is not the Next.js from older training data, so APIs and file conventions differ. Before writing Next-specific code, read the relevant guide in `apps/web/node_modules/next/dist/docs/` (resolved from `apps/web/`; see also `apps/web/AGENTS.md`, which is auto-managed by `next dev`, so do not edit it).
+- This is Next.js 16, which differs from older versions. Read the guide in `apps/web/node_modules/next/dist/docs/` before you write Next-specific code.
+- Never let a static CSS class set `transform`, `translate-*`, `rotate-*` or `scale-*` on an element that GSAP also animates. See `docs/animation-system.md`.

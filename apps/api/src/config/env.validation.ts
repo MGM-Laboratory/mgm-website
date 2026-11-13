@@ -12,7 +12,7 @@ const envSchema = z.object({
   // The public web app's own origin - used to build absolute asset/link URLs
   // in outgoing emails, which (unlike a browser) can't resolve relative
   // paths against "the site the user is on".
-  PUBLIC_WEB_URL: z.url().default("https://web-production-589d3f.up.railway.app"),
+  PUBLIC_WEB_URL: z.url().default("http://localhost:3000"),
   THROTTLE_TTL: z.coerce.number().int().positive().default(60000),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
   ADMIN_PASSPHRASE: z.string().min(1, "ADMIN_PASSPHRASE is required"),
@@ -50,24 +50,10 @@ const envSchema = z.object({
   // --- Link shortener ---
   // The site's own domain, where short links live under /s/:slug.
   SHORTLINKS_PRIMARY_DOMAIN: z.string().min(1).default("labmgm.org"),
-  // Where custom short domains' DNS records point (the web service's
-  // Railway domain).
-  SHORTLINKS_CNAME_TARGET: z.string().min(1).default("web-production-589d3f.up.railway.app"),
-  // Railway service ids for attaching custom short domains to the web
-  // service, only used when RAILWAY_API_TOKEN is configured. The project and
-  // environment ids default to this deployment's production values, and on
-  // Railway the platform's injected variables take over, so a preview
-  // environment attaches domains to itself rather than to production.
-  SHORTLINKS_WEB_SERVICE_ID: z.string().min(1).default("4969778e-0bff-4200-9472-6b5a13f037da"),
-  SHORTLINKS_RAILWAY_PROJECT_ID: z
-    .string()
-    .min(1)
-    .default(process.env.RAILWAY_PROJECT_ID ?? "810d3a40-d9d2-410c-b117-289d2aff095f"),
-  SHORTLINKS_RAILWAY_ENV_ID: z
-    .string()
-    .min(1)
-    .default(process.env.RAILWAY_ENVIRONMENT_ID ?? "42acf786-e8f4-41f8-8d4f-715bee1655f8"),
-  RAILWAY_API_TOKEN: optionalString(),
+  // The hostname that custom short domains' CNAME records point at (the
+  // public hostname of the proxy in front of the web app). No default: while
+  // it is unset the admin UI says so and the Cloudflare connect is refused.
+  SHORTLINKS_CNAME_TARGET: optionalString(z.string().min(1)),
   // --- Domain Connect (the one-click Cloudflare DNS setup) ---
   // The provider identity registered with Cloudflare's Domain Connect
   // onboarding (template PR + email). The private key signs each sync

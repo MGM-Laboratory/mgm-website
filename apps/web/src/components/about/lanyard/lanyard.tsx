@@ -313,7 +313,7 @@ function Band({
   // These are mutable three.js objects (a CatmullRomCurve3, a Texture), not reactive
   // React state — setting properties on them in place is the normal three.js idiom.
   // react-hooks/immutability is a React Compiler rule; the compiler itself isn't
-  // enabled in this project (see CLAUDE.md), so it's a false positive here.
+  // enabled in this project, so it is a false positive here.
   // eslint-disable-next-line react-hooks/immutability
   curve.curveType = "chordal";
   // eslint-disable-next-line react-hooks/immutability

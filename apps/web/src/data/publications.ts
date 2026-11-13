@@ -1,7 +1,7 @@
 import type { CmsPublicationRecord } from "@/lib/publication-cms";
 
 /**
- * Seed publications shown on a fresh database (local or Railway) until the
+ * Seed publications shown on a fresh database (local or production) until the
  * editorial team publishes their own. The entries are real papers from the
  * laboratory's publication list; the bootstrap only runs when the collection
  * is empty, so editing or deleting them through the admin keeps them gone.

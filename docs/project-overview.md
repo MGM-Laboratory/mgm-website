@@ -2,7 +2,7 @@
 
 ## What this is
 
-The **MGM Laboratory** company-profile site: a single marketing homepage with a heavily animated, theme-aware design, plus standalone informational pages. MGM Laboratory's identity is "playful, geometric, primary-colored, and human": Bauhaus-style vocabulary (circles, X's, plus signs, leaves, arcs) quoted as a calm premium surface. The full brand philosophy is in `DESIGN_SYSTEM.md` (repo root); the design was built from a pixel-exact mockup the owner keeps locally at `~/lab/tmp/website.svg` (machine-specific, not in the repo).
+The website of **MGM Laboratory**, the Media, Game and Mobile laboratory at the Faculty of Computer Science (FILKOM), Universitas Brawijaya, in Malang, Indonesia. It presents the lab and its work, and the lab team keeps the content up to date in the `/admin` CMS workspace. The site has an animated, theme-aware homepage and pages for the lab's focus areas (game, website, mobile and HCI/UX), members, projects, publications, articles, events and careers. MGM Laboratory's identity is "playful, geometric, primary-colored, and human": Bauhaus-style vocabulary (circles, X's, plus signs, leaves, arcs) quoted as a calm premium surface. The full brand philosophy is in `DESIGN_SYSTEM.md` (repo root); the design was built from a pixel-exact mockup the owner keeps locally at `~/lab/tmp/website.svg` (machine-specific, not in the repo).
 
 - **Public contact email:** `hi@labmgm.org`
 - **Timezone displayed in the menu:** Malang, Indonesia (WIB, `Asia/Jakarta`)

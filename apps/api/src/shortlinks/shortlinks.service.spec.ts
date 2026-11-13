@@ -7,21 +7,14 @@ import { ShortlinksError, ShortlinksService } from "./shortlinks.service.js";
 
 type Env = {
   SHORTLINKS_PRIMARY_DOMAIN: string;
-  SHORTLINKS_CNAME_TARGET: string;
-  SHORTLINKS_WEB_SERVICE_ID: string;
-  SHORTLINKS_RAILWAY_PROJECT_ID: string;
-  SHORTLINKS_RAILWAY_ENV_ID: string;
-  RAILWAY_API_TOKEN?: string;
+  SHORTLINKS_CNAME_TARGET?: string;
   SHORTLINKS_GEOLOCATE: boolean;
 };
 
 function makeConfig(overrides: Partial<Env> = {}): ConfigService<Env, true> {
   const values: Env = {
     SHORTLINKS_PRIMARY_DOMAIN: "labmgm.org",
-    SHORTLINKS_CNAME_TARGET: "web-production-589d3f.up.railway.app",
-    SHORTLINKS_WEB_SERVICE_ID: "web-service-id",
-    SHORTLINKS_RAILWAY_PROJECT_ID: "project-id",
-    SHORTLINKS_RAILWAY_ENV_ID: "env-id",
+    SHORTLINKS_CNAME_TARGET: "edge.example.net",
     SHORTLINKS_GEOLOCATE: false,
     ...overrides,
   };
@@ -43,6 +36,7 @@ function makePrisma(): FakePrisma {
     shortLinkDomain: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       upsert: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
@@ -78,7 +72,6 @@ const DOMAIN = {
   isPrimary: true,
   provider: "local",
   status: "connected",
-  railwayDomainId: null,
 };
 
 const OPEN_LINK = {
@@ -317,5 +310,58 @@ describe("ShortlinksService", () => {
     await expect(service.deleteDomain("domain-1")).rejects.toThrow(
       new ShortlinksError("The site's own domain cannot be deleted."),
     );
+  });
+
+  describe("custom domain DNS records", () => {
+    const CUSTOM_DOMAIN = {
+      ...DOMAIN,
+      id: "domain-2",
+      hostname: "mgm.li",
+      isPrimary: false,
+      provider: "manual",
+      status: "pending",
+      verifyToken: "token123",
+      _count: { links: 0 },
+    };
+
+    it("lists the CNAME and the verification TXT for a custom domain", async () => {
+      const prisma = makePrisma();
+      const service = makeService(prisma);
+      prisma.shortLinkDomain.findMany.mockResolvedValue([
+        { ...DOMAIN, _count: { links: 0 } },
+        CUSTOM_DOMAIN,
+      ]);
+
+      const [primary, custom] = await service.listDomains();
+      expect(primary.records).toBeUndefined();
+      expect(custom.records).toEqual({
+        cname: { name: "mgm.li", content: "edge.example.net" },
+        verifyTxt: { name: "_mgm-verify.mgm.li", content: "token123" },
+      });
+    });
+
+    it("leaves the CNAME out when no target is configured", async () => {
+      const prisma = makePrisma();
+      const service = makeService(prisma, makeConfig({ SHORTLINKS_CNAME_TARGET: undefined }));
+      prisma.shortLinkDomain.findMany.mockResolvedValue([CUSTOM_DOMAIN]);
+
+      const [custom] = await service.listDomains();
+      expect(service.cnameTarget).toBeNull();
+      expect(custom.records?.cname).toBeNull();
+      expect(custom.records?.verifyTxt.content).toBe("token123");
+    });
+
+    it("refuses the Cloudflare connect while no target is configured", async () => {
+      const prisma = makePrisma();
+      const service = makeService(prisma, makeConfig({ SHORTLINKS_CNAME_TARGET: undefined }));
+      prisma.shortLinkDomain.findUnique.mockResolvedValue(CUSTOM_DOMAIN);
+
+      await expect(service.connectDomain("domain-2")).rejects.toThrow(
+        new ShortlinksError(
+          "The CNAME target is not configured. Set SHORTLINKS_CNAME_TARGET on the API first.",
+          409,
+        ),
+      );
+    });
   });
 });

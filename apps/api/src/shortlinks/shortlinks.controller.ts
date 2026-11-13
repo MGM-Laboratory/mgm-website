@@ -213,7 +213,7 @@ export class ShortlinksController {
     this.assertAdmin(passphrase);
     return {
       domains: await this.shortlinks.listDomains(),
-      cnameTarget: this.config.getOrThrow("SHORTLINKS_CNAME_TARGET"),
+      cnameTarget: this.shortlinks.cnameTarget,
     };
   }
 

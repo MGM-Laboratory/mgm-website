@@ -1,8 +1,8 @@
 # MGM Laboratory Web
 
-The public MGM Laboratory site and its internal CMS workspace. It is a Next.js 16.3.4 App Router application using React 19, Tailwind v4, GSAP, and `next-themes`; it lives beside the NestJS API in this pnpm monorepo.
+The public MGM Laboratory site and its internal CMS workspace. It is a Next.js 16 App Router application using React 19, Tailwind v4, GSAP, and `next-themes`; it lives beside the NestJS API in this pnpm monorepo.
 
-Read [`../../CLAUDE.md`](../../CLAUDE.md) before changing the app. In particular, this Next version has conventions that differ from older releases: consult the relevant bundled guide in `node_modules/next/dist/docs/` before writing Next-specific code. The design source of truth is [`../../DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md).
+Read [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`../../docs/README.md`](../../docs/README.md) before changing the app. In particular, this Next version has conventions that differ from older releases: consult the relevant bundled guide in `node_modules/next/dist/docs/` before writing Next-specific code. The design source of truth is [`../../DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md).
 
 ## Local development
 
@@ -14,7 +14,7 @@ cp apps/web/.env.example apps/web/.env
 pnpm dev:web
 ```
 
-The site runs at `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL` and `CMS_API_URL` to the API (`http://localhost:4000/api` locally); `ADMIN_PASSPHRASE` must match the API when using `/admin`. `docker compose up` starts the complete local stack including Postgres.
+The site runs at `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL` and `CMS_API_URL` to the API (`http://localhost:4000/api` locally); `ADMIN_PASSPHRASE` has no default and must match the API when using `/admin` (create it with `openssl rand -hex 64`). `docker compose up` starts the complete local stack including Postgres.
 
 Useful root commands:
 
@@ -42,4 +42,4 @@ Everything must work in light and dark themes and under `prefers-reduced-motion`
 
 ## Deployment
 
-`next.config.ts` uses standalone output so `Dockerfile` can build a compact non-root runtime image from the monorepo root. Railway deploys the production web service from merged `main` changes. See [`../../docs/ci-cd.md`](../../docs/ci-cd.md) for the pull-request, Docker, preview, and production flow.
+`next.config.ts` uses standalone output so `Dockerfile` can build a compact non-root runtime image from the monorepo root. See [`../../docs/ci-cd.md`](../../docs/ci-cd.md) for the pull-request and Docker flow.

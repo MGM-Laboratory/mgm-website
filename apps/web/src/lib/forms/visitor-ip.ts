@@ -4,11 +4,11 @@ import "server-only";
  * The respondent's address for the public form routes, from headers only
  * the hosting can vouch for.
  *
- * Railway's edge overwrites `x-forwarded-for` with the peer it received the
- * request from (checked on a preview: a spoofed value never survives). When
+ * The proxy in front of the site must overwrite `x-forwarded-for` with the
+ * peer it received the request from, so a spoofed value never survives. When
  * the site is reached through Cloudflare (labmgm.org), that peer is a
  * Cloudflare edge and the visitor is in `cf-connecting-ip`, which Cloudflare
- * sets. The Railway domain can be reached directly too, and then a caller
+ * sets. The origin can be reached directly too, and then a caller
  * could send any `cf-connecting-ip`, so that header only counts when the
  * peer is inside Cloudflare's published ranges
  * (https://www.cloudflare.com/ips/).

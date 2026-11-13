@@ -4,8 +4,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-website}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:-mgm_website}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -27,11 +27,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-website}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-mgm_website}?schema=public
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       THROTTLE_TTL: ${THROTTLE_TTL:-60000}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-100}
-      ADMIN_PASSPHRASE: ${ADMIN_PASSPHRASE:-acheronskavos}
+      ADMIN_PASSPHRASE: ${ADMIN_PASSPHRASE:?required}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
@@ -50,7 +50,7 @@ services:
     depends_on:
       - api
     environment:
-      ADMIN_PASSPHRASE: ${ADMIN_PASSPHRASE:-acheronskavos}
+      ADMIN_PASSPHRASE: ${ADMIN_PASSPHRASE:?required}
       CMS_API_URL: http://api:4000/api
     ports:
       - "3000:3000"

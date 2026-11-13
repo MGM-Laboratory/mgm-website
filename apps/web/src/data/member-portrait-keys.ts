@@ -1,7 +1,7 @@
 /**
  * Immutable bucket object keys for the initial CMS bootstrap. Portrait bytes
  * never live in the web deployment; every image resolves through the private
- * Railway Bucket media proxy.
+ * bucket media proxy.
  */
 export const MEMBER_PORTRAIT_KEYS: Readonly<Record<string, string>> = {
   "ade-nugroho": "member-ade-nugroho-eae07c0e-b212-4ddb-a631-c85c4986bf86.png",
