@@ -18,6 +18,10 @@ describe("storedContentType", () => {
     "text/xml",
     "text/javascript",
     "application/javascript",
+    "application/vnd.a+xml",
+    "application/rdf+xml",
+    "application/xslt+xml",
+    "text/xsl",
   ])("stores %s as plain bytes", (type) => {
     expect(storedContentType(type)).toBe("application/octet-stream");
   });

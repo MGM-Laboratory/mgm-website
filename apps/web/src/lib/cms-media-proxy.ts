@@ -13,7 +13,7 @@ const IMMUTABLE_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 // A page or a script from the bucket would run on the site address, so these types are sent as a download.
 const ACTIVE_CONTENT_TYPE =
-  /^(?:text\/(?:html|xml|javascript)|application\/(?:xhtml\+xml|xml|javascript)|image\/svg\+xml)$/i;
+  /^(?:text\/(?:html|xml|xsl|javascript)|application\/(?:javascript|xml|[\w.+-]*\+xml)|image\/svg\+xml)$/i;
 
 /**
  * Builds a cacheable public-media route backed by a signed CMS redirect.

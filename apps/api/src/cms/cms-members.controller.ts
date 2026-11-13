@@ -14,7 +14,6 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiTags } from "@nestjs/swagger";
-import { SkipThrottle } from "@nestjs/throttler";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Response } from "express";
 import { z } from "zod";
@@ -23,6 +22,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsMembersService } from "./cms-members.service.js";
+import { MEMBER_MEDIA_KEY_PATTERN } from "./member-media-key.js";
 
 const memberSchema = z.object({
   member: z.object({
@@ -41,9 +41,6 @@ const memberSchema = z.object({
   }),
   profile: z.record(z.string(), z.unknown()),
 });
-// `member-<slug>-<uuid>.<ext>`, the shape that the portrait upload writes below.
-const MEMBER_MEDIA_KEY_PATTERN =
-  /^member-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:png|jpe?g|webp)$/;
 
 const bootstrapSchema = z.object({ records: z.array(memberSchema).min(1).max(500) });
 const saveMemberSchema = memberSchema.extend({ sourceSlug: z.string().min(1).optional() });
@@ -84,7 +81,6 @@ export class CmsMembersController {
     };
   }
 
-  @SkipThrottle()
   @Get("media/:key")
   async media(@Param("key") key: string, @Res() response: Response) {
     // Only a portrait key is signed here. Any other key belongs to another namespace, such as a CV or an attachment.
