@@ -63,6 +63,12 @@
       "groupSlug": "api-minor-patch"
     },
     {
+      "description": "the turbo version of the app Dockerfiles is a build input of the images, so it takes the commit type of the packages",
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["apps/api/Dockerfile", "apps/web/Dockerfile"],
+      "semanticCommitType": "build"
+    },
+    {
       "matchManagers": ["npm", "custom.regex"],
       "matchUpdateTypes": ["major"],
       "groupName": null,
@@ -74,7 +80,7 @@
       "matchFileNames": ["apps/api/Dockerfile", "apps/web/Dockerfile"],
       "semanticCommitType": "build",
       "groupName": "Dockerfile base images",
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"]
     },
     {
       "matchDepNames": ["node"],
@@ -92,6 +98,14 @@
       "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)\\n\\s*[A-Za-z0-9_]+: (?<currentValue>\\S+)"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "tool versions in the app Dockerfiles that sit under a renovate comment",
+      "managerFilePatterns": ["/^apps/(api|web)/Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)\\nARG [A-Z_]+=(?<currentValue>\\S+)"
       ]
     }
   ],
