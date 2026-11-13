@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   contactSettingsSchema,
   DEFAULT_CONTACT_SETTINGS,
+  type ContactDetails,
   type ContactSettings,
 } from "@repo/shared";
 
@@ -55,5 +56,34 @@ export class CmsContactSettingsService {
     });
     await this.cache.remove(CONTACT_SETTINGS_CACHE_KEY);
     return data;
+  }
+
+  /**
+   * Changes only the contact details and keeps the stored routing. The row is
+   * locked while it is read and written, so two saves queue up and neither one
+   * writes back an older copy of what the other changed.
+   */
+  async saveDetails(details: ContactDetails): Promise<ContactSettings> {
+    const defined = Object.fromEntries(
+      Object.entries(details).filter(([, value]) => value !== undefined),
+    );
+    const saved = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM "CmsContactSettings" WHERE "slug" = ${CONTACT_SETTINGS_SLUG} FOR UPDATE`;
+      const row = await tx.cmsContactSettings.findUnique({
+        where: { slug: CONTACT_SETTINGS_SLUG },
+      });
+      const next = contactSettingsSchema.parse({
+        ...normalize(row?.data ?? DEFAULT_CONTACT_SETTINGS),
+        ...defined,
+      });
+      await tx.cmsContactSettings.upsert({
+        where: { slug: CONTACT_SETTINGS_SLUG },
+        create: { slug: CONTACT_SETTINGS_SLUG, data: next },
+        update: { data: next },
+      });
+      return next;
+    });
+    await this.cache.remove(CONTACT_SETTINGS_CACHE_KEY);
+    return saved;
   }
 }
