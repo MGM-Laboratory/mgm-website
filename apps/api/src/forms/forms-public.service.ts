@@ -70,6 +70,10 @@ function keyedItems(value: unknown): FormFileAnswer[] | null {
 
 const ORPHAN_AGE_MS = 24 * 60 * 60 * 1000;
 const ORPHAN_SWEEP_INTERVAL_MS = 10 * 60 * 1000;
+// A key whose object could not be deleted is left alone for this long, and the
+// list is bounded, so keys that always fail cannot fill every sweep batch.
+const FAILED_DELETE_RETRY_MS = 60 * 60 * 1000;
+const FAILED_DELETE_MAX_KEYS = 1000;
 
 type LoadedForm = { row: Form; document: FormDocument };
 
@@ -78,6 +82,7 @@ type LoadedForm = { row: Form; document: FormDocument };
 export class FormsPublicService {
   private readonly logger = new Logger(FormsPublicService.name);
   private readonly lastSweep = new Map<string, number>();
+  private readonly failedDeletes = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -356,27 +361,58 @@ export class FormsPublicService {
     if (now - (this.lastSweep.get(formId) ?? 0) < ORPHAN_SWEEP_INTERVAL_MS) return;
     this.lastSweep.set(formId, now);
     if (this.lastSweep.size > 5000) this.lastSweep.clear();
-    void (async () => {
-      const orphans = await this.prisma.formUpload.findMany({
-        where: {
-          formId,
-          responseId: null,
-          createdAt: { lt: new Date(now - ORPHAN_AGE_MS) },
-        },
-        select: { key: true },
-        take: 200,
-      });
-      for (const { key } of orphans) {
-        await this.storage.deleteFile(key).catch(() => undefined);
-      }
-      if (orphans.length) {
-        await this.prisma.formUpload.deleteMany({
-          where: { key: { in: orphans.map((orphan) => orphan.key) }, responseId: null },
-        });
-      }
-    })().catch((error: unknown) => {
+    void this.deleteOrphans(formId, now).catch((error: unknown) => {
       this.logger.warn("Orphaned form upload sweep failed", String(error));
     });
+  }
+
+  /**
+   * Deletes the old unsubmitted uploads of a form. A row goes only when its
+   * object is gone, so an object that failed to delete keeps its row and is
+   * tried again after an hour. Without the row nothing would ever find it.
+   * The oldest rows come first, and the rows that failed lately are skipped
+   * so they do not take the place of rows that can still be deleted.
+   */
+  async deleteOrphans(formId: string, now: number): Promise<void> {
+    const backingOff = [...this.failedDeletes]
+      .filter(([, retryAt]) => retryAt > now)
+      .map(([key]) => key);
+    const orphans = await this.prisma.formUpload.findMany({
+      where: {
+        formId,
+        responseId: null,
+        createdAt: { lt: new Date(now - ORPHAN_AGE_MS) },
+        ...(backingOff.length ? { key: { notIn: backingOff } } : {}),
+      },
+      orderBy: { createdAt: "asc" },
+      select: { key: true },
+      take: 200,
+    });
+    const deleted: string[] = [];
+    for (const { key } of orphans) {
+      try {
+        await this.storage.deleteFile(key);
+        deleted.push(key);
+        this.failedDeletes.delete(key);
+      } catch {
+        // The row stays and the key waits before the next try.
+        if (this.failedDeletes.size >= FAILED_DELETE_MAX_KEYS) {
+          const oldest = this.failedDeletes.keys().next().value;
+          if (oldest !== undefined) this.failedDeletes.delete(oldest);
+        }
+        this.failedDeletes.set(key, now + FAILED_DELETE_RETRY_MS);
+      }
+    }
+    if (deleted.length < orphans.length) {
+      this.logger.warn(
+        `Could not delete ${orphans.length - deleted.length} of ${orphans.length} orphaned form files`,
+      );
+    }
+    if (deleted.length) {
+      await this.prisma.formUpload.deleteMany({
+        where: { key: { in: deleted }, responseId: null },
+      });
+    }
   }
 
   // --- Submissions ---
