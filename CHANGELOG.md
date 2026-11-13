@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.1.1...v1.2.0) (2026-11-13)
+
+
+### Features
+
+* **auth:** sign sessions and form unlock tokens with a separate SESSION_SECRET ([eecb2a8](https://github.com/MGM-Laboratory/mgm-website/commit/eecb2a8bfb4e035022fb431b11702732f8877331))
+* **auth:** sign sessions and form unlock tokens with a separate SESSION_SECRET ([c097a53](https://github.com/MGM-Laboratory/mgm-website/commit/c097a533b1bc73dae1ede0f89079dca4eae23d06))
+
+
+### Bug Fixes
+
+* **api:** count the rate limit for each visitor and add the TRUST_PROXY setting ([5bda44d](https://github.com/MGM-Laboratory/mgm-website/commit/5bda44d7fa69c38d16b537fbe4d2738113e0eb40))
+* **api:** count the rate limit for each visitor and add the TRUST_PROXY setting ([b055096](https://github.com/MGM-Laboratory/mgm-website/commit/b0550962853391cd803d42c27836bb99f37f9303))
+* **api:** limit the short link passphrase check, share one trust check and document the proxy setup ([cd3a05c](https://github.com/MGM-Laboratory/mgm-website/commit/cd3a05c170cfab7021a4f47dcdfa365219ad95bb))
+* **api:** type the proof list of the visitor spec ([c93fc6a](https://github.com/MGM-Laboratory/mgm-website/commit/c93fc6a82d8012f8ab7820fa7237372bb8f33014))
+* **auth:** add the leak and deploy notes, name the missing setting in the log and test the token key and the length rule ([20c4bbe](https://github.com/MGM-Laboratory/mgm-website/commit/20c4bbe5dd2e472dbee28c2c9639d3f21ed66b20))
+
 ## [1.1.1](https://github.com/MGM-Laboratory/mgm-website/compare/v1.1.0...v1.1.1) (2026-11-13)
 
 
