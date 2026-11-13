@@ -38,14 +38,14 @@ describe("saveDetails", () => {
     expect(tx.cmsContactSettings.upsert).toHaveBeenCalledOnce();
   });
 
-  it("locks the row before it reads it and clears the cache after the write", async () => {
+  it("takes the lock before it reads the row and clears the cache after the write", async () => {
     const { service, tx, cache } = makeService({ data: STORED });
     await service.saveDetails({ address: "Another street" });
 
     const lockOrder = tx.$queryRaw.mock.invocationCallOrder[0];
     const readOrder = tx.cmsContactSettings.findUnique.mock.invocationCallOrder[0];
     expect(lockOrder).toBeLessThan(readOrder);
-    expect(String(tx.$queryRaw.mock.calls[0][0])).toContain("FOR UPDATE");
+    expect(String(tx.$queryRaw.mock.calls[0][0])).toContain("pg_advisory_xact_lock");
     expect(cache.remove).toHaveBeenCalledWith("cms:contact-settings:v1");
   });
 

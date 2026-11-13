@@ -59,16 +59,17 @@ export class CmsContactSettingsService {
   }
 
   /**
-   * Changes only the contact details and keeps the stored routing. The row is
-   * locked while it is read and written, so two saves queue up and neither one
-   * writes back an older copy of what the other changed.
+   * Changes only the contact details and keeps the stored routing. An advisory
+   * lock of the transaction (it works before the row exists, which a row lock
+   * does not) makes two saves queue up, so neither one writes back an older
+   * copy of what the other changed.
    */
   async saveDetails(details: ContactDetails): Promise<ContactSettings> {
     const defined = Object.fromEntries(
       Object.entries(details).filter(([, value]) => value !== undefined),
     );
     const saved = await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT 1 FROM "CmsContactSettings" WHERE "slug" = ${CONTACT_SETTINGS_SLUG} FOR UPDATE`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${"contact-settings:" + CONTACT_SETTINGS_SLUG}))`;
       const row = await tx.cmsContactSettings.findUnique({
         where: { slug: CONTACT_SETTINGS_SLUG },
       });
