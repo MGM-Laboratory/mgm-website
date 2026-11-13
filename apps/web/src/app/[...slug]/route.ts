@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { acceptsHtml } from "@/lib/accepts-html";
 import { handleShortlinkCatchAll } from "@/lib/shortlinks-http";
 import { renderSiteNotFound } from "@/lib/shortlinks-pages";
 
@@ -17,7 +18,7 @@ type Context = { params: Promise<{ slug: string[] }> };
 // Accept header, so the answer says so for any cache in front of the site.
 function notFound(request: NextRequest) {
   const headers = { vary: "Accept" };
-  if (request.method === "GET" && request.headers.get("accept")?.includes("text/html")) {
+  if (request.method === "GET" && acceptsHtml(request.headers.get("accept"))) {
     return new Response(renderSiteNotFound(), {
       status: 404,
       headers: { ...headers, "content-type": "text/html; charset=utf-8" },
