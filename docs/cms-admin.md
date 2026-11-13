@@ -84,7 +84,7 @@ When adding a media type, enforce the byte limit at the API, preserve the stream
 
 An article record may carry `theme`, one of the same 20 preset ids as projects (`apps/web/src/lib/project-themes.ts`). The editor's Page theme picker (`article-cms-editor.tsx`, reusing the project editor's `ThemePicker`) offers every preset and an Automatic option, which previews the stable pick from the slug (`lib/theme-pick.ts`) that a record without a theme gets. The article page wears it, the library world tints its fog toward it, and the list's cards carry it (`data-article-theme`) so opening one sweeps its color in. See [`articles-page.md`](articles-page.md).
 
-The article save route validates their bodies and answer 400 naming the first invalid field (an unknown theme id included, which the editor shows next to that field), like the project routes, instead of failing with a 500.
+The article save route validates its body and answers 400 naming the first invalid field (an unknown theme id included, which the editor shows next to that field), like the project routes, instead of failing with a 500.
 
 ### Project detail fields
 
