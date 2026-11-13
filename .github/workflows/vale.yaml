@@ -28,7 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      checks: write
       pull-requests: read
     steps:
       - name: Checkout
@@ -37,7 +36,9 @@ jobs:
       - name: Vale
         uses: vale-cli/vale-action@518a9136acc6e6668ce7c00d367051e0941e87ff # v3.0.0
         with:
-          reporter: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'local' || 'github-check' }}
+          # Neither reporter calls the Check Runs API. The old github-check reporter failed at random with a 404 while it updated
+          # its own check run, with no finding at all, and left a pending run behind.
+          reporter: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && 'github-pr-annotations' || 'local' }}
           # nofilter: check every configured file in full on every run, not just
           # lines touched by a PR's diff (the default filter_mode: added would
           # let a pre-existing violation elsewhere in a touched file slip past).
