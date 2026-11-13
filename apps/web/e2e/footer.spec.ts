@@ -60,17 +60,16 @@ test.describe("footer", () => {
     await page.goto("/");
 
     const instagram = page.locator('footer a[href="https://www.instagram.com/labmgmfilkomub/"]');
-    // Scroll with the wheel until the link is in view. A fixed number of wheel events is too many for a slow runner and too few for a
-    // smooth scroll that lags behind, so the loop stops as soon as the link shows.
+    // A native scroll to the bottom, repeated until the link shows. On "/" ScrollSmoother follows the native scroll and catches up
+    // a little later. A loop of wheel events never brought the link into view on macOS WebKit.
     await expect
       .poll(
-        async () => {
-          await page.mouse.wheel(0, 500);
-          return instagram.evaluate((element) => {
+        async () =>
+          instagram.evaluate((element) => {
+            window.scrollTo(0, document.documentElement.scrollHeight);
             const box = element.getBoundingClientRect();
             return box.top >= 0 && box.bottom <= window.innerHeight;
-          });
-        },
+          }),
         { intervals: [100], timeout: 25_000 },
       )
       .toBe(true);
