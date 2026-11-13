@@ -36,7 +36,7 @@ describe("mergeOrdinarySave", () => {
   });
 
   it("accepts routing fields that equal the stored ones", () => {
-    const result = mergeOrdinarySave({ address: "New street", ...current }, current);
+    const result = mergeOrdinarySave({ ...current, address: "New street" }, current);
     expect(result.ok).toBe(true);
   });
 
