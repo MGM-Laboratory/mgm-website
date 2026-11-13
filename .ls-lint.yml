@@ -3,10 +3,14 @@
 ls:
   # a folder is lowercase words joined by hyphens, and a leading dot marks the folder of a tool. The Next.js router adds two more
   # forms, a dynamic segment such as [slug], [...slug] or [[...slug]], a private folder that starts with an underscore such as _lib, a route group such as (site) and a slot such as @modal
-  .dir: regex:\.?[a-z0-9]+(-[a-z0-9]+)*|\[{1,2}(\.\.\.)?[a-zA-Z0-9_]+\]{1,2}|_[a-z]+|\([a-z0-9-]+\)|@[a-z0-9-]+
+  # the pattern is grouped, because ls-lint puts the anchors around the whole text and an alternative without a group would only be anchored on one side
+  .dir: regex:(\.?[a-z0-9]+(-[a-z0-9]+)*|\[{1,2}(\.\.\.)?[a-zA-Z0-9_]+\]{1,2}|_[a-z]+|\([a-z0-9-]+\)|@[a-z0-9-]+)
 
   # every other file is the same, with dots for a variant such as vite-env.d.ts or button.test.tsx
   .*: kebab-case
+  # a name with two or three dots, such as button.test.tsx or vite-env.d.ts, is the same
+  .*.*: kebab-case
+  .*.*.*: kebab-case
 
   # the community files in capitals such as README.md and CODE_OF_CONDUCT.md are allowed next to kebab case
   .md: kebab-case | SCREAMING_SNAKE_CASE
