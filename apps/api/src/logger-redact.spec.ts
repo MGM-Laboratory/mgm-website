@@ -3,9 +3,9 @@ import { Writable } from "node:stream";
 import { pinoHttp } from "pino-http";
 import { describe, expect, it } from "vitest";
 
-import { REDACTED_HEADER_PATHS } from "./logger-redact.js";
+import { LOG_REDACT } from "./logger-redact.js";
 
-describe("REDACTED_HEADER_PATHS", () => {
+describe("LOG_REDACT", () => {
   it("keeps the secret headers out of a log line", () => {
     let output = "";
     const stream = new Writable({
@@ -14,10 +14,7 @@ describe("REDACTED_HEADER_PATHS", () => {
         callback();
       },
     });
-    const logger = pinoHttp(
-      { redact: { paths: REDACTED_HEADER_PATHS, censor: "[redacted]" } },
-      stream,
-    ).logger;
+    const logger = pinoHttp({ redact: LOG_REDACT }, stream).logger;
 
     logger.info({
       req: {
