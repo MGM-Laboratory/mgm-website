@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.0...v1.3.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **images:** end every SVG with a newline and keep that in the image workflow ([95fef58](https://github.com/MGM-Laboratory/mgm-website/commit/95fef589684eece20317c77c9e604f522d57c837))
+
 ## [1.3.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.2.0...v1.3.0) (2026-11-13)
 
 
