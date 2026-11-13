@@ -542,12 +542,18 @@ export class ShortlinksService implements OnApplicationBootstrap {
     for (const link of stale.slice(0, 12)) void this.checkAndStoreUrl(link.id, link.longUrl);
   }
 
+  // Callers start this without awaiting it. The link may be deleted while the check runs, so a failed update is dropped
+  // here, because a rejected promise that nobody handles stops the whole process.
   private async checkAndStoreUrl(id: string, longUrl: string) {
-    const status = await checkLongUrl(longUrl);
-    await this.prisma.shortLink.update({
-      where: { id },
-      data: { longUrlStatus: status, longUrlCheckedAt: new Date() },
-    });
+    try {
+      const status = await checkLongUrl(longUrl);
+      await this.prisma.shortLink.update({
+        where: { id },
+        data: { longUrlStatus: status, longUrlCheckedAt: new Date() },
+      });
+    } catch {
+      // The next listing checks the link again.
+    }
   }
 
   // --- Visits & resolution ---

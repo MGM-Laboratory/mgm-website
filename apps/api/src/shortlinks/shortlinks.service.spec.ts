@@ -364,4 +364,19 @@ describe("ShortlinksService", () => {
       );
     });
   });
+
+  describe("the background check of a long URL", () => {
+    it("does not reject when the link was deleted while the check ran", async () => {
+      const prisma = makePrisma();
+      const service = makeService(prisma);
+      prisma.shortLink.update.mockRejectedValue(new Error("Record to update not found."));
+
+      const check = (
+        service as unknown as { checkAndStoreUrl(id: string, url: string): Promise<void> }
+      ).checkAndStoreUrl("link-1", "javascript:alert(1)");
+
+      await expect(check).resolves.toBeUndefined();
+      expect(prisma.shortLink.update).toHaveBeenCalledTimes(1);
+    });
+  });
 });
