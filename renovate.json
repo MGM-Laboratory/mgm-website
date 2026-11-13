@@ -23,7 +23,8 @@
     "enabled": true,
     "schedule": ["at any time"],
     "labels": ["dependencies", "security"],
-    "semanticCommitType": "fix"
+    "semanticCommitType": "fix",
+    "minimumReleaseAge": null
   },
   "packageRules": [
     {
@@ -61,12 +62,6 @@
       "dependencyDashboardApproval": true
     },
     {
-      "description": "the images of .github/tools/Dockerfile are the tools that CI starts from a workflow, so they take the commit type of the workflows",
-      "matchManagers": ["dockerfile"],
-      "matchFileNames": [".github/tools/Dockerfile"],
-      "semanticCommitType": "ci"
-    },
-    {
       "description": "the base images of the app Dockerfiles are part of the app images, so they take the commit type of the packages",
       "matchManagers": ["dockerfile"],
       "matchFileNames": ["apps/api/Dockerfile", "apps/web/Dockerfile"],
@@ -82,21 +77,6 @@
     {
       "matchDepTypes": ["engines"],
       "enabled": false
-    },
-    {
-      "description": "the tools that CI starts from a workflow, such as ls-lint and Renovate itself, take the commit type of the workflows",
-      "matchManagers": ["custom.regex"],
-      "semanticCommitType": "ci"
-    }
-  ],
-  "customManagers": [
-    {
-      "description": "A version in a workflow that the line above names with a renovate comment, which the bot cannot find in a run step or an action input otherwise",
-      "customType": "regex",
-      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*(?:version|[A-Z][A-Z0-9_]*_VERSION): [\"']?(?<currentValue>[^\"'\\s]+)[\"']?"
-      ]
     }
   ]
 }
