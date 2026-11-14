@@ -87,6 +87,8 @@ Admin:
 | `GET /api/forms/admin/:id/visits`                  | the latest visits                                               |
 | `GET /api/forms/admin/:id/files/:key`              | a signed link to a respondent's upload                          |
 
+The analytics route runs its 16 queries one after the other on one database connection, so it cannot hold the whole pool. A query that takes longer than 15 seconds fails the request, and so does a request that takes longer than 60 seconds in total. Both answer with a 500.
+
 Respondent uploads are personal data: they are only ever served through the admin files route, never a public one.
 
 ## Privacy and abuse
