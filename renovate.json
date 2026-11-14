@@ -13,6 +13,7 @@
   "labels": ["dependencies"],
   "assignees": ["SyafaHadyan"],
   "dependencyDashboard": true,
+  "dependencyDashboardLabels": ["dependencies"],
   "automerge": false,
   "rangeStrategy": "bump",
   "lockFileMaintenance": {
