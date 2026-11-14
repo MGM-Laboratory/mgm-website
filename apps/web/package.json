@@ -12,6 +12,7 @@
     "test:e2e:update-snapshots": "playwright test --update-snapshots",
     "clean": "rm -rf .next",
     "test": "vitest run",
+    "test:cov": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -73,6 +74,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.186.0",
+    "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
