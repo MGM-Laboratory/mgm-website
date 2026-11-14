@@ -5,7 +5,6 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 [![CI](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/ci.yaml)
 [![Security](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/security.yaml)
 [![E2E](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/e2e.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/e2e.yaml)
-[![Lighthouse](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/lighthouse.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/lighthouse.yaml)
 [![Vale](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/vale.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/vale.yaml)
 [![Docker](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker.yaml)
 [![Config lint](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/config.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/config.yaml)
