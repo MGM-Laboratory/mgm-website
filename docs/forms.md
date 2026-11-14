@@ -43,7 +43,7 @@ A form is one JSON document validated by `formDocumentSchema` (`packages/shared/
 
 ## Persistence
 
-Four tables, created at boot by `PrismaService.onModuleInit` like every other table (the migration in `apps/api/prisma/migrations/` is the durable record):
+Five tables, created at boot by `PrismaService.onModuleInit` like every other table (the migration in `apps/api/prisma/migrations/` is the durable record):
 
 | Table          | Holds                                                                                                                                                                                        |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

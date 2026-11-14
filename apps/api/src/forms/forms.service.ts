@@ -28,9 +28,17 @@ type FormStats = FormRecord["stats"];
 
 const EMPTY_STATS: FormStats = { responses: 0, views: 0, starts: 0, lastResponseAt: null };
 
-/** The `FormMedia` rows of a document, for a nested write of a form. */
+/**
+ * The `FormMedia` rows of a document, for a nested write of a form. It skips a
+ * row that exists, so two saves of one form that overlap cannot fail on the key.
+ */
 function mediaRows(document: unknown) {
-  return documentMediaKeys(document).map((key) => ({ key }));
+  return {
+    createMany: {
+      data: documentMediaKeys(document).map((key) => ({ key })),
+      skipDuplicates: true,
+    },
+  };
 }
 
 function isUniqueViolation(error: unknown) {
@@ -197,7 +205,7 @@ export class FormsService implements OnModuleInit {
           status,
           data: document as unknown as Prisma.InputJsonValue,
           publishedAt: status === "published" ? new Date() : null,
-          media: { create: mediaRows(document) },
+          media: mediaRows(document),
         },
       });
       return this.toRecord(row);
@@ -214,7 +222,7 @@ export class FormsService implements OnModuleInit {
       const document = parseDocumentInput(input.document);
       data.data = document as unknown as Prisma.InputJsonValue;
       // The rows of the keys go with the document in one write.
-      data.media = { deleteMany: {}, create: mediaRows(document) };
+      data.media = { deleteMany: {}, ...mediaRows(document) };
     }
     if (input.slug !== undefined && input.slug.trim().toLowerCase() !== row.slug) {
       data.slug = await this.claimSlug(input.slug, id);
@@ -256,7 +264,7 @@ export class FormsService implements OnModuleInit {
         slug,
         status: "draft",
         data: copy as unknown as Prisma.InputJsonValue,
-        media: { create: mediaRows(copy) },
+        media: mediaRows(copy),
       },
     });
     return this.toRecord(created);
@@ -315,23 +323,37 @@ export class FormsService implements OnModuleInit {
   }
 
   /**
-   * Fills `FormMedia` for the forms that were saved before the table existed,
-   * and repairs a row that a failed write left out. It adds rows and never
-   * deletes one, and a second run changes nothing.
+   * Fills `FormMedia` for the forms that were saved before the table existed.
+   * It reads only the forms that have no row, adds rows and never deletes one.
+   * A form that fails is logged and the others go on, and a second run changes
+   * nothing. When a run fails, the forms that it missed stay without rows until
+   * the next start, and a duplicate of a deleted original shows 404 for its
+   * images until then.
    */
   async onModuleInit(): Promise<void> {
+    let failed = 0;
     try {
-      const forms = await this.prisma.form.findMany({ select: { id: true, data: true } });
+      const forms = await this.prisma.form.findMany({
+        where: { media: { none: {} } },
+        select: { id: true, data: true },
+      });
       for (const form of forms) {
         const rows = documentMediaKeys(form.data).map((key) => ({ formId: form.id, key }));
-        if (rows.length)
+        if (!rows.length) continue;
+        try {
           await this.prisma.formMedia.createMany({ data: rows, skipDuplicates: true });
+        } catch {
+          // The form may have been deleted since it was read.
+          failed += 1;
+        }
       }
     } catch (error) {
       this.logger.warn(
         "Could not fill the form media index",
         error instanceof Error ? error.stack : String(error),
       );
+      return;
     }
+    if (failed) this.logger.warn(`Could not fill the form media index for ${failed} forms`);
   }
 }
