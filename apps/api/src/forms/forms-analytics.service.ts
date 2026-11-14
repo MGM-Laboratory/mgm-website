@@ -38,7 +38,7 @@ export const ANALYTICS_TRANSACTION_TIMEOUT_MS = 60_000;
  * stop when the transaction ends, where a queue of sent queries would keep
  * the connection busy long after the time limit.
  */
-async function inOrder<T extends readonly (() => PromiseLike<unknown>)[]>(
+async function inOrder<const T extends readonly (() => PromiseLike<unknown>)[]>(
   tasks: T,
 ): Promise<{ -readonly [K in keyof T]: Awaited<ReturnType<T[K]>> }> {
   const results: unknown[] = [];
