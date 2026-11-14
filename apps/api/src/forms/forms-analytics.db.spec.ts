@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../prisma/prisma.service.js";
 
@@ -8,7 +8,11 @@ const databaseUrl = process.env.DATABASE_URL;
 // CI. It checks what the analytics rely on. A statement that runs too long
 // ends the transaction, and the limit does not stay on the connection.
 describe.skipIf(!databaseUrl)("statement timeout on PostgreSQL", () => {
-  const prisma = new PrismaService({ getOrThrow: () => databaseUrl } as never);
+  let prisma: PrismaService;
+
+  beforeAll(() => {
+    prisma = new PrismaService({ getOrThrow: () => databaseUrl } as never);
+  });
 
   afterAll(async () => {
     await prisma.$disconnect();
