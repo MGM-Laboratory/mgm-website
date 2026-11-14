@@ -6,44 +6,64 @@ const KEY = "form-abc123-0b6a1c52-3f2e-4d7a-9a1b-5c0d8e2f4a61.png";
 
 function makeService(owner: { id: string } | null, referenced: boolean) {
   const prisma = {
-    form: { findUnique: vi.fn().mockResolvedValue(owner) },
-    $queryRaw: vi.fn().mockResolvedValue(referenced ? [{ found: 1 }] : []),
+    form: { findUnique: vi.fn().mockResolvedValue(owner), findMany: vi.fn().mockResolvedValue([]) },
+    formMedia: {
+      findFirst: vi.fn().mockResolvedValue(referenced ? { key: KEY } : null),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
   };
   return { service: new FormsService(prisma as never, {} as never), prisma };
 }
 
 describe("mediaServable", () => {
-  it("serves a key of an existing form without scanning the forms", async () => {
+  it("serves a key of an existing form without looking at the index", async () => {
     const { service, prisma } = makeService({ id: "abc123" }, false);
     expect(await service.mediaServable(KEY)).toBe(true);
-    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    expect(prisma.formMedia.findFirst).not.toHaveBeenCalled();
   });
 
-  it("scans the forms when the owner is gone and serves a key that another form uses", async () => {
-    const { service } = makeService(null, true);
-    expect(await service.mediaServable(KEY)).toBe(true);
-  });
-
-  it("limits the scans of keys whose form does not exist", async () => {
-    const { service, prisma } = makeService(null, false);
-    const answers = await Promise.all(Array.from({ length: 30 }, () => service.mediaServable(KEY)));
-    expect(answers.every((answer) => answer === false)).toBe(true);
-    expect(prisma.$queryRaw.mock.calls.length).toBeLessThanOrEqual(5);
-    expect(prisma.$queryRaw.mock.calls.length).toBeGreaterThan(0);
-  });
-
-  it("serves the images of a copy after its original is deleted, even when the budget is spent", async () => {
+  it("serves a key that another form still uses when its owner is gone", async () => {
     const { service, prisma } = makeService(null, true);
-    const keys = Array.from(
-      { length: 6 },
-      (_, index) => `form-abc123-0b6a1c52-3f2e-4d7a-9a1b-5c0d8e2f4a6${index}.png`,
-    );
-    // The first request for each image scans. The budget lets only a few through at a time.
-    for (const key of keys) await service.mediaServable(key);
-    const scans = prisma.$queryRaw.mock.calls.length;
-    expect(scans).toBeLessThanOrEqual(5);
-    // Every key that was found is served again from memory without a scan.
-    for (const key of keys.slice(0, scans)) expect(await service.mediaServable(key)).toBe(true);
-    expect(prisma.$queryRaw.mock.calls.length).toBe(scans);
+    expect(await service.mediaServable(KEY)).toBe(true);
+    expect(prisma.formMedia.findFirst).toHaveBeenCalledWith({
+      where: { key: KEY },
+      select: { key: true },
+    });
+  });
+
+  it("refuses a key that no form owns or uses", async () => {
+    const { service } = makeService(null, false);
+    expect(await service.mediaServable(KEY)).toBe(false);
+  });
+
+  it("refuses a key that does not look like a form media key without a query", async () => {
+    const { service, prisma } = makeService({ id: "abc123" }, true);
+    expect(await service.mediaServable("not-a-form-key.png")).toBe(false);
+    expect(prisma.form.findUnique).not.toHaveBeenCalled();
+    expect(prisma.formMedia.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe("media index backfill", () => {
+  const document = { design: { cover: { media: { kind: "image", key: KEY } } }, fields: [] };
+
+  it("adds the rows of every form and skips the ones that exist", async () => {
+    const { service, prisma } = makeService(null, false);
+    prisma.form.findMany.mockResolvedValue([
+      { id: "abc123", data: document },
+      { id: "def456", data: { design: {}, fields: [] } },
+    ]);
+    await service.onModuleInit();
+    expect(prisma.formMedia.createMany).toHaveBeenCalledTimes(1);
+    expect(prisma.formMedia.createMany).toHaveBeenCalledWith({
+      data: [{ formId: "abc123", key: KEY }],
+      skipDuplicates: true,
+    });
+  });
+
+  it("does not stop the start of the API when the backfill fails", async () => {
+    const { service, prisma } = makeService(null, false);
+    prisma.form.findMany.mockRejectedValue(new Error("db down"));
+    await expect(service.onModuleInit()).resolves.toBeUndefined();
   });
 });

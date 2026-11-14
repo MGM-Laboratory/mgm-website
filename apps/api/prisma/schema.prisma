@@ -231,6 +231,20 @@ model Form {
   responses      FormResponse[]
   events         FormEvent[]
   uploads        FormUpload[]
+  media          FormMedia[]
+}
+
+// The design media keys that a form document uses. One row for each form and
+// key, so the question "does any form still use this key" is an index lookup
+// and not a scan of every document. A duplicated form keeps the keys of its
+// original, which is why a key may have several rows. Written with the form.
+model FormMedia {
+  formId String
+  key    String
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@id([formId, key])
+  @@index([key])
 }
 
 model FormResponse {

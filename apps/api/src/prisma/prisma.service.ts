@@ -245,6 +245,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "FormMedia" (
+        "formId" TEXT NOT NULL REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        "key" TEXT NOT NULL,
+        CONSTRAINT "FormMedia_pkey" PRIMARY KEY ("formId", "key")
+      )
+    `);
     const indexes = [
       `CREATE UNIQUE INDEX IF NOT EXISTS "Form_slug_key" ON "Form" ("slug")`,
       `CREATE INDEX IF NOT EXISTS "FormResponse_formId_createdAt_idx" ON "FormResponse" ("formId", "createdAt")`,
@@ -254,6 +261,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       `CREATE UNIQUE INDEX IF NOT EXISTS "FormEvent_formId_dedupeKey_key" ON "FormEvent" ("formId", "dedupeKey")`,
       `CREATE INDEX IF NOT EXISTS "FormUpload_formId_createdAt_idx" ON "FormUpload" ("formId", "createdAt")`,
       `CREATE INDEX IF NOT EXISTS "FormUpload_responseId_idx" ON "FormUpload" ("responseId")`,
+      `CREATE INDEX IF NOT EXISTS "FormMedia_key_idx" ON "FormMedia" ("key")`,
     ];
     for (const statement of indexes) await this.$executeRawUnsafe(statement);
   }

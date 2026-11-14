@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 
 import {
   isInputType,
@@ -13,7 +13,6 @@ import { PrismaService } from "../prisma/prisma.service.js";
 import { StorageService } from "../storage/storage.service.js";
 import { hashPassphrase } from "../shortlinks/shortlinks.utils.js";
 import { FormsError, parseDocumentInput, storedDocument } from "./forms.common.js";
-import { ScanBudget } from "./scan-budget.js";
 import type { UpdateFormBody } from "./forms.schemas.js";
 import {
   FORM_SLUG_LENGTH,
@@ -27,10 +26,12 @@ import {
 
 type FormStats = FormRecord["stats"];
 
-// How long and how many keys a copy remembers as used by some form.
-const REFERENCED_KEYS_TTL_MS = 5 * 60 * 1000;
-const REFERENCED_KEYS_MAX = 500;
 const EMPTY_STATS: FormStats = { responses: 0, views: 0, starts: 0, lastResponseAt: null };
+
+/** The `FormMedia` rows of a document, for a nested write of a form. */
+function mediaRows(document: unknown) {
+  return documentMediaKeys(document).map((key) => ({ key }));
+}
 
 function isUniqueViolation(error: unknown) {
   return (
@@ -40,16 +41,8 @@ function isUniqueViolation(error: unknown) {
 
 /** The form rows and their admin-facing shapes: CRUD, slugs, stats, design media. */
 @Injectable()
-export class FormsService {
+export class FormsService implements OnModuleInit {
   private readonly logger = new Logger(FormsService.name);
-  // The scan of every form document is the one expensive step of the public
-  // media route, and a made up key whose form does not exist reaches it.
-  private readonly referenceScans = new ScanBudget(5, 2);
-  // A form that was duplicated keeps pointing at the media of its original, so
-  // once the original is deleted every image of the copy needs the scan. A
-  // key that a scan found is remembered for a while, which leaves the budget
-  // to the keys that are made up.
-  private readonly referencedKeys = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -204,6 +197,7 @@ export class FormsService {
           status,
           data: document as unknown as Prisma.InputJsonValue,
           publishedAt: status === "published" ? new Date() : null,
+          media: { create: mediaRows(document) },
         },
       });
       return this.toRecord(row);
@@ -217,7 +211,10 @@ export class FormsService {
     const row = await this.require(id);
     const data: Prisma.FormUpdateInput = {};
     if (input.document !== undefined) {
-      data.data = parseDocumentInput(input.document) as unknown as Prisma.InputJsonValue;
+      const document = parseDocumentInput(input.document);
+      data.data = document as unknown as Prisma.InputJsonValue;
+      // The rows of the keys go with the document in one write.
+      data.media = { deleteMany: {}, create: mediaRows(document) };
     }
     if (input.slug !== undefined && input.slug.trim().toLowerCase() !== row.slug) {
       data.slug = await this.claimSlug(input.slug, id);
@@ -259,6 +256,7 @@ export class FormsService {
         slug,
         status: "draft",
         data: copy as unknown as Prisma.InputJsonValue,
+        media: { create: mediaRows(copy) },
       },
     });
     return this.toRecord(created);
@@ -294,33 +292,17 @@ export class FormsService {
     if (failed) this.logger.warn(`Could not delete ${failed} of ${keys.length} form files`);
   }
 
-  /** Whether any form's document mentions this media key. */
+  /** Whether any form still uses this media key. An index lookup on `FormMedia`. */
   async mediaReferenced(key: string): Promise<boolean> {
-    // Keys are `[a-z0-9.-]` only (checked by the caller's pattern), so they
-    // carry no LIKE wildcard.
-    const rows = await this.prisma.$queryRaw<{ found: number }[]>`
-      SELECT 1::int AS "found" FROM "Form" WHERE "data"::text LIKE ${`%"${key}"%`} LIMIT 1
-    `;
-    return rows.length > 0;
-  }
-
-  private rememberReferenced(key: string) {
-    const now = Date.now();
-    if (this.referencedKeys.size >= REFERENCED_KEYS_MAX) {
-      for (const [stored, expires] of this.referencedKeys) {
-        if (expires <= now) this.referencedKeys.delete(stored);
-      }
-      if (this.referencedKeys.size >= REFERENCED_KEYS_MAX) {
-        const oldest = this.referencedKeys.keys().next().value;
-        if (oldest !== undefined) this.referencedKeys.delete(oldest);
-      }
-    }
-    this.referencedKeys.set(key, now + REFERENCED_KEYS_TTL_MS);
+    const row = await this.prisma.formMedia.findFirst({ where: { key }, select: { key: true } });
+    return row !== null;
   }
 
   /**
    * A design media key may be served when its form exists or any form still
-   * uses it. The second check is limited to a few scans, and a key that it found is remembered for a few minutes.
+   * uses it. A form that was duplicated keeps the media of its original, so
+   * the second check is what keeps the images of the copy after the original
+   * is deleted.
    */
   async mediaServable(key: string): Promise<boolean> {
     const formId = mediaKeyFormId(key);
@@ -329,13 +311,27 @@ export class FormsService {
       where: { id: formId },
       select: { id: true },
     });
-    if (owner) return true;
-    const known = this.referencedKeys.get(key);
-    if (known !== undefined && known > Date.now()) return true;
-    // Over the budget the key is not served.
-    const found = await this.referenceScans.run(() => this.mediaReferenced(key));
-    if (found !== true) return false;
-    this.rememberReferenced(key);
-    return true;
+    return owner ? true : this.mediaReferenced(key);
+  }
+
+  /**
+   * Fills `FormMedia` for the forms that were saved before the table existed,
+   * and repairs a row that a failed write left out. It adds rows and never
+   * deletes one, and a second run changes nothing.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      const forms = await this.prisma.form.findMany({ select: { id: true, data: true } });
+      for (const form of forms) {
+        const rows = documentMediaKeys(form.data).map((key) => ({ formId: form.id, key }));
+        if (rows.length)
+          await this.prisma.formMedia.createMany({ data: rows, skipDuplicates: true });
+      }
+    } catch (error) {
+      this.logger.warn(
+        "Could not fill the form media index",
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 }
