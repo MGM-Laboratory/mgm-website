@@ -81,7 +81,7 @@ This page describes what the web app and the API protect, who they protect it fr
 ### Link shortener
 
 - A link target must be an `http` or `https` URL of at most 2000 characters.
-- The health check of a target refuses private and reserved addresses. The API resolves the host name itself and checks every address at connection time, so a DNS answer cannot change the target between the check and the connection.
+- The health check of a target refuses the private address ranges that the code lists. The API resolves the host name itself and checks the address at connection time, so a DNS answer cannot change the target between the check and the connection.
 - The passphrase of a link is stored as a scrypt hash with a random salt. The gate page is the only place that asks for it.
 - A link with the "once" expiry counts its click in an atomic update, so two parallel clicks cannot both succeed.
 - A custom domain serves links only after its TXT record and a marker probe prove that it points at the site.
