@@ -7,11 +7,55 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 
 type Tx = Prisma.TransactionClient;
+type Ddl = Pick<Tx, "$executeRawUnsafe">;
 
 const BOOT_DDL_LOCK_NAME = "mgm-website:boot-ddl";
-const BOOT_LOCK_TIMEOUT_MS = 30_000;
+const BOOT_LOCK_TIMEOUT_MS = 10_000;
 const BOOT_STATEMENT_TIMEOUT_MS = 60_000;
-const BOOT_TRANSACTION_TIMEOUT_MS = 180_000;
+const BOOT_CONNECT_WAIT_MS = 10_000;
+const BOOT_TRANSACTION_TIMEOUT_MS = 120_000;
+
+/**
+ * The object that a boot statement creates, as `table:Name`, `index:Name` or
+ * `column:Table.Name`. `IF NOT EXISTS` skips the work, but PostgreSQL takes
+ * the lock on the table first (SHARE for an index, ACCESS EXCLUSIVE for a
+ * column). Reading the catalog takes no such lock, so a statement for an
+ * object that exists is not sent at all.
+ */
+export function ddlTarget(statement: string): string | null {
+  const create = /CREATE\s+(?:UNIQUE\s+)?(TABLE|INDEX)\s+IF\s+NOT\s+EXISTS\s+"([^"]+)"/i.exec(
+    statement,
+  );
+  if (create) return `${create[1]?.toLowerCase()}:${create[2]}`;
+  const alter = /ALTER\s+TABLE\s+"([^"]+)"\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+"([^"]+)"/i.exec(
+    statement,
+  );
+  return alter ? `column:${alter[1]}.${alter[2]}` : null;
+}
+
+/** Sends only the statements whose object is missing, and remembers what it made. */
+function missingOnly(tx: Ddl, existing: Set<string>): Ddl {
+  return {
+    $executeRawUnsafe: (async (statement: string) => {
+      const target = ddlTarget(statement);
+      if (target && existing.has(target)) return 0;
+      const result = await tx.$executeRawUnsafe(statement);
+      if (target) existing.add(target);
+      return result;
+    }) as unknown as Ddl["$executeRawUnsafe"],
+  };
+}
+
+async function existingObjects(tx: Tx): Promise<Set<string>> {
+  const rows = await tx.$queryRaw<{ name: string }[]>`
+    SELECT 'table:' || tablename AS name FROM pg_tables WHERE schemaname = current_schema()
+    UNION ALL
+    SELECT 'index:' || indexname FROM pg_indexes WHERE schemaname = current_schema()
+    UNION ALL
+    SELECT 'column:' || table_name || '.' || column_name
+    FROM information_schema.columns WHERE table_schema = current_schema()`;
+  return new Set(rows.map((row) => row.name));
+}
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
@@ -48,6 +92,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     // The statements run in one transaction behind an advisory lock. Two API
     // copies that start together then create the tables one after the other,
     // and not at the same time, which can fail on the catalog of PostgreSQL.
+    // The catalog is read first, and only a missing object gets a statement,
+    // so a start on a database that is up to date takes no lock on a table.
     // The timeouts keep a start from hanging behind a long transaction of
     // another session. A start that cannot get its locks fails and the
     // container restarts.
@@ -58,13 +104,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
           `SET LOCAL statement_timeout = '${BOOT_STATEMENT_TIMEOUT_MS}ms'`,
         );
         await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${BOOT_DDL_LOCK_NAME}))`;
-        await this.createTables(tx);
+        await this.createTables(missingOnly(tx, await existingObjects(tx)));
       },
-      { maxWait: BOOT_LOCK_TIMEOUT_MS, timeout: BOOT_TRANSACTION_TIMEOUT_MS },
+      { maxWait: BOOT_CONNECT_WAIT_MS, timeout: BOOT_TRANSACTION_TIMEOUT_MS },
     );
   }
 
-  private async createTables(tx: Tx) {
+  private async createTables(tx: Ddl) {
     // The CMS tables are introduced after the original deployment and must be
     // available before the first CMS request. The statements are idempotent so
     // existing and local databases are left intact.
@@ -199,7 +245,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   // Form builder tables, created at boot like the ones above (see
   // prisma/migrations/20260926120000_add_forms for the durable record, which
   // these statements mirror column for column).
-  private async createFormTables(tx: Tx) {
+  private async createFormTables(tx: Ddl) {
     await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Form" (
         "id" TEXT PRIMARY KEY,
