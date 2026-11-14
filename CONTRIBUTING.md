@@ -30,6 +30,7 @@ Every PR runs the checks below. The ruleset requires all of them except pre-comm
 - **Lighthouse**: performance, accessibility, SEO and best-practices budgets on `/`, `/about` and `/contact`, on pull requests.
 - **Prose**: Vale lint of the hand-written Markdown.
 - **Config**: actionlint, Zizmor, Hadolint, dotenv-linter, `docker compose config`, ShellCheck, ls-lint for file names and the Renovate validator.
+- **Images**: the amd64 build of the API image and of the web image, so a change that breaks a Dockerfile cannot merge.
 - **Conventional commits** and **PR format**: the commit messages, the title, the branch name, the label, the assignee and the body of the pull request.
 - **pre-commit.ci** is not required by the ruleset, but its report should be clean. It runs repository hygiene checks and Prettier on every pull-request commit. It reports a formatting problem and does not push a fix, because the ruleset only accepts signed commits. Run Prettier yourself and commit the result.
 
