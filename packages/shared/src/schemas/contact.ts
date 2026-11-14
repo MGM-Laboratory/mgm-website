@@ -132,6 +132,16 @@ export const contactSettingsSchema = z.preprocess((value) => {
 
 export type ContactSettings = z.infer<typeof contactSettingsSchema>;
 
+/**
+ * The part of the settings that every admin with the contact permission may
+ * change. A partial save of these fields leaves the mail routing alone.
+ */
+export const contactDetailsSchema = contactSettingsShape
+  .pick({ emails: true, address: true, lat: true, lng: true })
+  .partial()
+  .strict();
+export type ContactDetails = z.infer<typeof contactDetailsSchema>;
+
 // Used both as the API's fallback when no CMS record has been saved yet, and
 // as the web's fallback if the API is unreachable — so the site never shows
 // a broken contact page just because nobody has opened the CMS editor yet.

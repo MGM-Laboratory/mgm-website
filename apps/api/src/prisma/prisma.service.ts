@@ -71,6 +71,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       CREATE INDEX IF NOT EXISTS "MailSendLog_provider_sentAt_idx" ON "MailSendLog" ("provider", "sentAt")
     `);
     await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "MailOutbox" (
+        "id" TEXT PRIMARY KEY,
+        "params" JSONB NOT NULL,
+        "attempts" INTEGER NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'pending',
+        "nextAttemptAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "lastError" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await this.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "MailOutbox_status_nextAttemptAt_idx" ON "MailOutbox" ("status", "nextAttemptAt")
+    `);
+    await this.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "MailRoutingState" (
         "key" TEXT PRIMARY KEY,
         "value" INTEGER NOT NULL DEFAULT 0

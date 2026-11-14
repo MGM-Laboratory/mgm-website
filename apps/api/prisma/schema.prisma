@@ -129,6 +129,21 @@ model MailSendLog {
   @@index([provider, sentAt])
 }
 
+// Mail that must not be lost to a provider outage (the lab notification of the
+// contact form). A row is claimed with a lease, sent, and deleted when it is
+// sent. A row that keeps failing stays as "failed" for a while for inspection.
+model MailOutbox {
+  id            String   @id @default(uuid())
+  params        Json
+  attempts      Int      @default(0)
+  status        String   @default("pending")
+  nextAttemptAt DateTime @default(now())
+  lastError     String?
+  createdAt     DateTime @default(now())
+
+  @@index([status, nextAttemptAt])
+}
+
 // Single-row cursor for the loadBalanceEqual strategy's round-robin pointer.
 model MailRoutingState {
   key   String @id

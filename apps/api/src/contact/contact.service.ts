@@ -5,6 +5,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 
 import { CmsContactInquiriesService } from "../cms/cms-contact-inquiries.service.js";
 import { CmsContactSettingsService } from "../cms/cms-contact-settings.service.js";
+import { MailOutboxService } from "../mail/mail-outbox.service.js";
 import { MailService } from "../mail/mail.service.js";
 import { sendConfirmationEmail } from "../mail/send-confirmation-email.js";
 import { StorageService } from "../storage/storage.service.js";
@@ -26,6 +27,7 @@ export class ContactService {
 
   constructor(
     private readonly mail: MailService,
+    private readonly outbox: MailOutboxService,
     private readonly storage: StorageService,
     private readonly settings: CmsContactSettingsService,
     private readonly inquiries: CmsContactInquiriesService,
@@ -33,8 +35,10 @@ export class ContactService {
   ) {}
 
   /**
-   * Persists a contact inquiry, then emails the configured recipient through
-   * the saved routing strategy. The inquiry remains stored if delivery fails.
+   * Persists a contact inquiry, then queues the notification mail to the
+   * configured recipient in the outbox, which delivers it through the saved
+   * routing strategy and tries again later when every provider fails. The
+   * visitor never waits for the mail, and no failure of a provider reaches them.
    */
   async send(payload: ContactFormPayload): Promise<void> {
     const attachmentKeys = payload.attachmentKeys ?? [];
@@ -77,22 +81,31 @@ export class ContactService {
 
     const settings = await this.settings.get();
 
-    await this.mail.sendEmail({
-      to: settings.emails,
-      subject: `New contact form message from ${payload.name}`,
-      html,
-      replyTo: payload.email,
-      strategy: settings.mailStrategy,
-      providerOrder: settings.mailProviderOrder,
-      weights: settings.mailProviderWeights,
-      limits: settings.mailProviderLimits,
-    });
+    try {
+      await this.outbox.enqueue({
+        to: settings.emails,
+        subject: `New contact form message from ${payload.name}`,
+        html,
+        replyTo: payload.email,
+        strategy: settings.mailStrategy,
+        providerOrder: settings.mailProviderOrder,
+        weights: settings.mailProviderWeights,
+        limits: settings.mailProviderLimits,
+      });
+      this.outbox.kick();
+    } catch (error) {
+      // The inquiry is stored, and the inbox of the admin workspace shows it.
+      this.logger.error(
+        "Could not queue the contact notification mail",
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
 
     // Fire-and-forget: never block the response on mail delivery. A
     // missing/misconfigured provider must never surface as a failed
     // submission - the inquiry is already safely stored above, and the
-    // notification to the lab already went out (or was attempted) via the
-    // call above. This confirmation is a courtesy, not the source of truth.
+    // notification to the lab is queued above. This confirmation is a
+    // courtesy, not the source of truth.
     sendConfirmationEmail(this.mail, this.logger, "Confirmation email delivery failed", {
       to: payload.email,
       subject: "We've received your message - MGM Laboratory",
