@@ -21,11 +21,12 @@ Start with the [README](../README.md) for the stack and the quick start, and wit
 17. [`data-model.md`](data-model.md) lists the database tables.
 18. [`errors.md`](errors.md) lists the errors that the API and the web handlers return.
 19. [`security.md`](security.md) describes the security controls and the limits of the design.
-20. [`privacy.md`](privacy.md) describes the personal data that the site handles.
-21. [`ci-cd.md`](ci-cd.md) covers GitHub Actions, the Docker images and how they are deployed.
-22. [`deployment.md`](deployment.md) covers how to run the images on a host and how to update them without downtime.
-23. [`testing-verification.md`](testing-verification.md) covers how work is verified.
-24. [`repo-history.md`](repo-history.md) covers the 2026-09-12 migration and why the git rules are strict.
+20. [`assurance-case.md`](assurance-case.md) argues why the security requirements are met.
+21. [`privacy.md`](privacy.md) describes the personal data that the site handles.
+22. [`ci-cd.md`](ci-cd.md) covers GitHub Actions, the Docker images and how they are deployed.
+23. [`deployment.md`](deployment.md) covers how to run the images on a host and how to update them without downtime.
+24. [`testing-verification.md`](testing-verification.md) covers how work is verified.
+25. [`repo-history.md`](repo-history.md) covers the 2026-09-12 migration and why the git rules are strict.
 
 ## Two warnings
 
