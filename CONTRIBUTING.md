@@ -7,7 +7,9 @@ Thanks for taking the time to contribute. This is a pnpm monorepo with the lab's
 - This is Next.js 16, which differs from older versions. Read the relevant guide in `apps/web/node_modules/next/dist/docs/` before you write Next-specific code.
 - Use the tokens of `DESIGN_SYSTEM.md` and no ad-hoc colors. Every element must work in the light and the dark theme (the `.dark` class) and with `prefers-reduced-motion`.
 - Never let a static CSS class set `transform`, `translate-*`, `rotate-*` or `scale-*` on an element that GSAP also animates. GSAP stacks onto the class instead of replacing it. See `docs/animation-system.md`.
-- Add tests with new functionality. A bug fix comes with a test that fails without it. Put web tests in Playwright specs under `apps/web/e2e`. When a change cannot be tested, say why in the pull request.
+- Add tests with new functionality. A bug fix comes with a test that fails without it. Put API and web logic tests in vitest specs next to the code (`*.spec.ts`), and browser tests in Playwright specs under `apps/web/e2e`. When a change cannot be tested, say why in the pull request.
+- This is the test policy of the project. A pull request that adds major new functionality must add tests for it to the automated test suite, and the maintainer does not merge one that does not. CI runs the suite on every pull request and reports the result.
+- Follow the coding standards. TypeScript runs in strict mode. ESLint (`apps/web/eslint.config.mjs`) and oxlint check the code, and Prettier sets the format. CI runs all three and a violation fails the pull request, so every contribution has to comply. An exception is a rare inline comment that names the rule and the reason.
 - Heavy work runs in CI. Push the branch and read the results there. Run a single narrow check locally only when CI cannot explain a failure.
 
 ## Workflow

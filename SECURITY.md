@@ -16,6 +16,14 @@ Instead, email **hi@labmgm.org** with:
 
 You can expect an initial response within 7 days. We'll keep you updated as the issue is triaged and fixed, and we're happy to credit reporters who want it once a fix has shipped.
 
+## How we respond
+
+1. The maintainer reads the report and answers the reporter within 7 days.
+2. The maintainer reproduces the problem and rates its impact, and tells the reporter the result.
+3. The fix is made in a private branch or in a normal pull request, depending on how much detail the change would reveal. It passes the same checks as any other change.
+4. The fix ships in a release. The release notes say that a vulnerability was fixed, without detail that helps an attacker before the users can update.
+5. The reporter is credited in the release notes after the fix has shipped, unless the reporter asks to stay anonymous.
+
 ## Scope notes
 
 - The production deployment of the site and its API is in scope.
