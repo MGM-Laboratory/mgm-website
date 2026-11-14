@@ -176,7 +176,8 @@ describe("MailOutboxService", () => {
     await stopping;
     expect(prisma.mailOutbox.delete).toHaveBeenCalledWith({ where: { id: "a" } });
 
+    // The run that was going claimed no further row after the stop, and a new run does not start.
     await service.processDue();
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
 });
