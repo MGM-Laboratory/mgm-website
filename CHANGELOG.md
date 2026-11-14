@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.4.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.4...v1.4.0) (2026-11-14)
+
+
+### Features
+
+* **api:** index the media keys of each form in a table instead of scanning the forms ([e9e88e0](https://github.com/MGM-Laboratory/mgm-website/commit/e9e88e0c26f05fa718cf05b8d26759469b942bab))
+* **api:** index the media keys of each form in a table instead of scanning the forms ([afd7550](https://github.com/MGM-Laboratory/mgm-website/commit/afd75503c4badbe3dc654e84130e5e556d5e66c0))
+* **api:** keep the contact notification mail in an outbox and try again when every provider fails ([fcc93cd](https://github.com/MGM-Laboratory/mgm-website/commit/fcc93cdc9d0d37f54bf9b3fec32d831e62bbb746))
+* **api:** keep the contact notification mail in an outbox and try again when every provider fails ([9df3ab0](https://github.com/MGM-Laboratory/mgm-website/commit/9df3ab052dd033073ae365ba5b48eb675b152251))
+
+
+### Bug Fixes
+
+* **api:** claim one row at a time, keep a failed delete from resending and wait for a send at shutdown ([46d8f59](https://github.com/MGM-Laboratory/mgm-website/commit/46d8f591c2d255bef24f31040c5748c94e5aaead))
+* **api:** keep the media backfill going per form and test the media writes ([edfa2ca](https://github.com/MGM-Laboratory/mgm-website/commit/edfa2ca3c82e0c7699afdc0f8e939148e0be95ba))
+* **api:** save the contact details under a row lock and keep the stored mail routing ([e39885a](https://github.com/MGM-Laboratory/mgm-website/commit/e39885a7c7de512263a4716fdd953ff0e0259660))
+* **api:** save the contact details under a row lock and keep the stored mail routing ([7b3a553](https://github.com/MGM-Laboratory/mgm-website/commit/7b3a55313dabaaa453c46dd83cb7a69683f225b0))
+* **api:** take the lock of the transaction so it also works before the first save ([6749b0f](https://github.com/MGM-Laboratory/mgm-website/commit/6749b0f0258edc6f315c4f472fa5bee4191fffb7))
+* **api:** take the same lock in the full save of the superadmin ([28472dd](https://github.com/MGM-Laboratory/mgm-website/commit/28472ddaca2c6a2211313cb90aeac3822fbbe681))
+* **api:** type the stored settings of the spec ([9969f8c](https://github.com/MGM-Laboratory/mgm-website/commit/9969f8c858a57013bae655ede71005d6d12b354e))
+* **api:** type the stubs of the media spec ([0dd6e47](https://github.com/MGM-Laboratory/mgm-website/commit/0dd6e478bcf5044125f94b4b5239fcd904938e1b))
+* **web:** search the experience, education and other sections of the CMS profile ([513f7b0](https://github.com/MGM-Laboratory/mgm-website/commit/513f7b06419545bae44ca4c5fc80f487ec9fbbdf))
+* **web:** serve member profiles only from the CMS and drop the static profile files ([b0446ee](https://github.com/MGM-Laboratory/mgm-website/commit/b0446ee3da03c273236e37db3cf88028cdeb6005))
+* **web:** serve member profiles only from the CMS and drop the static profile files ([a2f3795](https://github.com/MGM-Laboratory/mgm-website/commit/a2f3795db7b14fdf158c0f6662742ae0f248f68b))
+
 ## [1.3.4](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.3...v1.3.4) (2026-11-13)
 
 
