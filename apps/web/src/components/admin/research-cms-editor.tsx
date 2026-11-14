@@ -40,6 +40,7 @@ import {
   type ResearchPartner,
   type ResearchStatus,
 } from "@/lib/research-cms";
+import { useRecordVersion } from "@/lib/use-record-version";
 
 const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
   ssr: false,
@@ -579,6 +580,7 @@ export function ResearchEditor({
   onDirtyChange: (isDirty: boolean) => void;
   onSaved: (record: CmsResearchRecord) => void;
 }) {
+  const version = useRecordVersion(initialRecord?.updatedAt);
   const [initial] = useState(() =>
     initialRecord
       ? { draft: researchToDraft(initialRecord.research), body: initialRecord.body }
@@ -733,12 +735,13 @@ export function ResearchEditor({
         `/api/admin/research/${encodeURIComponent(originalRecordSlug ?? research.slug)}`,
         {
           body: JSON.stringify({ research: nextResearch, body }),
-          headers: { "content-type": "application/json" },
+          headers: version.headers(),
           method: "PUT",
         },
       );
       if (!response.ok) throw new Error(await responseError(response, "Research save failed."));
       const savedRecord = (await response.json()) as CmsResearchRecord;
+      version.remember(savedRecord.updatedAt);
       const savedDraft = researchToDraft(savedRecord.research);
       setDraft(savedDraft);
       setSlugTouched(true);

@@ -42,6 +42,7 @@ import {
   type PublicationDraft,
 } from "@/lib/publication-cms";
 import { PhotoCropDialog, type PhotoCropPosition } from "@/components/admin/photo-crop-dialog";
+import { useRecordVersion } from "@/lib/use-record-version";
 
 const inputClass =
   "h-10 w-full rounded-xl border border-[#d9dfeb] bg-white px-3 text-sm text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white dark:placeholder:text-white/25";
@@ -488,6 +489,7 @@ export function PublicationEditor({
   onSaved: (record: CmsPublicationRecord) => void;
   paperLimitBytes: number;
 }) {
+  const version = useRecordVersion(initialRecord?.updatedAt);
   const [initial] = useState(() =>
     initialRecord ? publicationToDraft(initialRecord.publication) : emptyPublicationDraft(),
   );
@@ -694,12 +696,13 @@ export function PublicationEditor({
         `/api/admin/publications/${encodeURIComponent(originalRecordSlug ?? publication.slug)}`,
         {
           body: JSON.stringify({ publication }),
-          headers: { "content-type": "application/json" },
+          headers: version.headers(),
           method: "PUT",
         },
       );
       if (!response.ok) throw new Error(await responseError(response, "Publication save failed."));
       const savedRecord = (await response.json()) as CmsPublicationRecord;
+      version.remember(savedRecord.updatedAt);
       const savedDraft = publicationToDraft(savedRecord.publication);
       setDraft(savedDraft);
       setSlugTouched(true);

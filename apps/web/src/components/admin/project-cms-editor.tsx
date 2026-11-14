@@ -63,6 +63,7 @@ import {
   type DetailErrors,
   type DetailField,
 } from "@/components/admin/project-editor/validation";
+import { useRecordVersion } from "@/lib/use-record-version";
 
 const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
   ssr: false,
@@ -802,6 +803,7 @@ export function ProjectEditor({
   onSaved: (record: CmsProjectRecord) => void;
   videoLimitBytes: number;
 }) {
+  const version = useRecordVersion(initialRecord?.updatedAt);
   const [initial] = useState(() =>
     initialRecord
       ? { draft: projectToDraft(initialRecord.project), body: initialRecord.body }
@@ -1124,12 +1126,13 @@ export function ProjectEditor({
         `/api/admin/projects/${encodeURIComponent(originalRecordSlug ?? project.slug)}`,
         {
           body: JSON.stringify({ project, body }),
-          headers: { "content-type": "application/json" },
+          headers: version.headers(),
           method: "PUT",
         },
       );
       if (!response.ok) throw new Error(await responseError(response, "Project save failed."));
       const savedRecord = (await response.json()) as CmsProjectRecord;
+      version.remember(savedRecord.updatedAt);
       const savedDraft = projectToDraft(savedRecord.project);
       setDraft(savedDraft);
       setSlugTouched(true);

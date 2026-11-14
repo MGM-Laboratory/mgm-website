@@ -4,6 +4,7 @@ import type { AdminAction, AdminPageId } from "@/lib/admin-permissions";
 import { requireAdminPermission, requireSuperadmin, type AdminSession } from "@/lib/admin-session";
 import { apiBaseUrl, cmsApi } from "@/lib/cms-api";
 import { API_UPLOAD_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-timeout";
+import { EXPECTED_VERSION_HEADER } from "@/lib/record-version";
 
 export type AdminGate = { ok: true; session: AdminSession } | { ok: false; response: NextResponse };
 
@@ -117,8 +118,11 @@ export function detailRoute(
       const g = await writeGate();
       if (!g.ok) return g.response;
       const { slug } = await params;
+      // The editor sends the version that it loaded. The API refuses the save with 409 when the record changed since.
+      const expected = request.headers.get(EXPECTED_VERSION_HEADER);
       return proxyJson(cmsPath(slug), {
         body: JSON.stringify(await request.json()),
+        headers: expected ? { [EXPECTED_VERSION_HEADER]: expected } : undefined,
         method: "PUT",
       });
     },
