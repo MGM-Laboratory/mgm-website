@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException } from "@nestjs/common";
 
 export const EXPECTED_VERSION_HEADER = "x-cms-expected-updated-at";
 
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+
 const CONFLICT_MESSAGE =
   "Someone else saved this record after you opened it. Reload the page and apply your change again.";
 
@@ -13,7 +15,7 @@ const CONFLICT_MESSAGE =
 export function parseExpectedVersion(value: string | undefined): Date | undefined {
   const text = value?.trim();
   if (!text) return undefined;
-  const date = new Date(text);
+  const date = ISO_INSTANT.test(text) ? new Date(text) : new Date(Number.NaN);
   if (Number.isNaN(date.getTime())) {
     throw new BadRequestException(`${EXPECTED_VERSION_HEADER}: send the updatedAt of the record.`);
   }
@@ -25,6 +27,14 @@ export function assertVersion(current: { updatedAt: Date }, expected: Date | und
   if (expected && current.updatedAt.getTime() !== expected.getTime()) {
     throw new ConflictException(CONFLICT_MESSAGE);
   }
+}
+
+/**
+ * A save that names a version needs the record to exist. When it is gone or
+ * renamed, the editor must not create it again.
+ */
+export function assertRecordPresent(expected: Date | undefined) {
+  if (expected) throw new ConflictException(CONFLICT_MESSAGE);
 }
 
 function isRecordNotFound(error: unknown) {

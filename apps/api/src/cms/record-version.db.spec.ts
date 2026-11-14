@@ -48,4 +48,46 @@ describe.skipIf(!databaseUrl)("guarded update on PostgreSQL", () => {
     const after = await prisma.cmsArticle.findUniqueOrThrow({ where: { slug } });
     expect(after.data).toEqual({ article: { title: "second" } });
   });
+
+  it("lets only one of two overlapping saves write", async () => {
+    const loaded = await prisma.cmsArticle.findUniqueOrThrow({ where: { slug } });
+    let firstHasWritten: () => void = () => undefined;
+    const written = new Promise<void>((resolve) => {
+      firstHasWritten = resolve;
+    });
+    let releaseFirst: () => void = () => undefined;
+    const release = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    const first = prisma.$transaction(async (tx) => {
+      await tx.cmsArticle.update({
+        where: { slug, updatedAt: loaded.updatedAt },
+        data: { data: { article: { title: "winner" } } },
+      });
+      firstHasWritten();
+      await release;
+    });
+    await written;
+    // The second save reads nothing new. Its update waits for the row of the first one.
+    const second = prisma.$transaction((tx) =>
+      orConflict(() =>
+        tx.cmsArticle.update({
+          where: { slug, updatedAt: loaded.updatedAt },
+          data: { data: { article: { title: "loser" } } },
+        }),
+      ),
+    );
+    const outcome = second.then(
+      () => "written",
+      (error: unknown) => (error instanceof ConflictException ? "conflict" : "other"),
+    );
+    // A short wait makes the second update reach the row lock before the first one commits.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    releaseFirst();
+    await first;
+    expect(await outcome).toBe("conflict");
+    const after = await prisma.cmsArticle.findUniqueOrThrow({ where: { slug } });
+    expect(after.data).toEqual({ article: { title: "winner" } });
+  });
 });

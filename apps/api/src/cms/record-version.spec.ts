@@ -1,7 +1,12 @@
 import { BadRequestException, ConflictException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
 
-import { assertVersion, orConflict, parseExpectedVersion } from "./record-version.js";
+import {
+  assertRecordPresent,
+  assertVersion,
+  orConflict,
+  parseExpectedVersion,
+} from "./record-version.js";
 
 const LOADED = new Date("2026-11-14T05:00:00.123Z");
 
@@ -16,8 +21,10 @@ describe("parseExpectedVersion", () => {
     expect(parseExpectedVersion(LOADED.toISOString())?.getTime()).toBe(LOADED.getTime());
   });
 
-  it("answers 400 for a header that is not a date", () => {
+  it("answers 400 for a header that is not an ISO instant", () => {
     expect(() => parseExpectedVersion("yesterday")).toThrow(BadRequestException);
+    expect(() => parseExpectedVersion("2026")).toThrow(BadRequestException);
+    expect(() => parseExpectedVersion("2026-11-14T05:00:00")).toThrow(BadRequestException);
   });
 });
 
@@ -47,5 +54,15 @@ describe("orConflict", () => {
     const other = new Error("db down");
     await expect(orConflict(() => Promise.reject(other))).rejects.toBe(other);
     await expect(orConflict(() => Promise.resolve(7))).resolves.toBe(7);
+  });
+});
+
+describe("assertRecordPresent", () => {
+  it("lets a save without a version create a record", () => {
+    expect(() => assertRecordPresent(undefined)).not.toThrow();
+  });
+
+  it("answers 409 when a save names a version and the record is gone", () => {
+    expect(() => assertRecordPresent(LOADED)).toThrow(ConflictException);
   });
 });

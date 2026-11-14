@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
-import { assertVersion, orConflict } from "./record-version.js";
+import { assertRecordPresent, assertVersion, orConflict } from "./record-version.js";
 
 type MemberDocument = { member?: { name?: unknown }; sourceSlug?: unknown };
 
@@ -60,6 +60,8 @@ export class CmsMembersService {
       // A new member starts with its first chosen slug. A renamed member must
       // already exist under the URL that was opened in the editor.
       if (!current) {
+        // An editor that loaded a version has lost its record when it is gone or renamed. It must not create it again.
+        assertRecordPresent(expectedVersion);
         const requestedSource = (data as MemberDocument).sourceSlug;
         const sourceRecord =
           typeof requestedSource === "string" && requestedSource !== nextSlug

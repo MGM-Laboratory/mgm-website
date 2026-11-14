@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
-import { assertVersion, orConflict } from "./record-version.js";
+import { assertRecordPresent, assertVersion, orConflict } from "./record-version.js";
 
 const RECORDS_CACHE_KEY = "cms:events:v1";
 const DRAFTS_CACHE_KEY = "cms:events:drafts:v1";
@@ -68,6 +68,8 @@ export class CmsEventsService {
     const record = await this.prisma.$transaction(async (tx) => {
       const current = await tx.cmsEvent.findUnique({ where: { slug: currentSlug } });
       if (!current) {
+        // An editor that loaded a version has lost its record when it is gone or renamed. It must not create it again.
+        assertRecordPresent(expectedVersion);
         if (currentSlug !== nextSlug) throw new NotFoundException("Event not found");
         return tx.cmsEvent.create({ data: { slug: nextSlug, data } });
       }

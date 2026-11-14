@@ -98,12 +98,12 @@ A route that stores a file answers 400 with a message such as `Media storage is 
 ## Link shortener
 
 - `POST /api/shortlinks/verify` answers 404 `That link does not exist.`, 410 `That link has expired.` or 401 `That passphrase is not right.`.
-- The save routes `PUT /api/cms/<collection>/:slug` of members, articles, publications, projects, research, careers and events answer 409 `Someone else saved this record after you opened it. Reload the page and apply your change again.` when the header `x-cms-expected-updated-at` names a version that is no longer stored, or when another save changed the record while this one ran. They answer 400 when the header is not a date.
 - The admin routes answer 400 for an invalid domain name or URL, 409 `That domain is already added.`, 409 `That short code is already taken on this domain.` and 409 `Delete its N links first.` when a domain still has links.
 - A failure to attach a custom domain at the hosting platform answers 400 with the message of the platform API.
 
 ## Careers, events and CMS records
 
+- The save routes `PUT /api/cms/<collection>/:slug` of members, articles, publications, projects, research, jobs and events answer 409 `Someone else saved this record after you opened it. Reload the page and apply your change again.` when the header `x-cms-expected-updated-at` names a version that is no longer stored, or when another save changed the record while this one ran. They also answer 409 when the header is sent and the record is gone or was renamed. They answer 400 when the header is not an ISO timestamp with a Z.
 - `POST /api/cms/jobs/:slug/apply` answers 400 `That role does not exist.` for an unknown slug and 409 `This role is no longer accepting applications.` for a closed role.
 - `POST /api/cms/events/:slug/register` answers 400 `That event does not exist.`, 409 `This event is not accepting registrations.` and 409 `This event has already ended.`.
 - A save of an article, a project, a research initiative, a job, a publication, a member or an event answers 409 when its slug is taken, for example `That article URL is already in use.`. A member rename that matches more than one profile answers 409 `More than one existing profile has this name. Please contact an administrator.`.

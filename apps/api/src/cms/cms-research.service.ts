@@ -3,7 +3,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StorageService } from "../storage/storage.service.js";
-import { assertVersion, orConflict } from "./record-version.js";
+import { assertRecordPresent, assertVersion, orConflict } from "./record-version.js";
 
 const RECORDS_CACHE_KEY = "cms:research:v1";
 const DRAFTS_CACHE_KEY = "cms:research:drafts:v1";
@@ -106,6 +106,8 @@ export class CmsResearchService {
       });
 
       if (!current) {
+        // An editor that loaded a version has lost its record when it is gone or renamed. It must not create it again.
+        assertRecordPresent(expectedVersion);
         if (currentSlug !== nextSlug) throw new NotFoundException("Research initiative not found");
         return transaction.cmsResearchInitiative.create({ data: { slug: nextSlug, data } });
       }
