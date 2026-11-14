@@ -68,8 +68,8 @@ export class CmsContactSettingsService {
   // An advisory lock of the transaction works before the row exists, which a
   // row lock does not, and it is released when the transaction ends. Every
   // writer of the record must take it, or it protects nobody.
-  private async lockSettings(tx: Pick<PrismaService, "$queryRaw">) {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${"contact-settings:" + CONTACT_SETTINGS_SLUG}))`;
+  private async lockSettings(tx: Pick<PrismaService, "$executeRaw">) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"contact-settings:" + CONTACT_SETTINGS_SLUG}))`;
   }
 
   /**

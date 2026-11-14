@@ -12,7 +12,7 @@ const STORED: ContactSettings = {
 
 function makeService(row: { data: unknown } | null) {
   const tx = {
-    $queryRaw: vi.fn().mockResolvedValue([]),
+    $executeRaw: vi.fn().mockResolvedValue([]),
     cmsContactSettings: {
       findUnique: vi.fn().mockResolvedValue(row),
       upsert: vi.fn().mockResolvedValue({}),
@@ -42,10 +42,10 @@ describe("saveDetails", () => {
     const { service, tx, cache } = makeService({ data: STORED });
     await service.saveDetails({ address: "Another street" });
 
-    const lockOrder = tx.$queryRaw.mock.invocationCallOrder[0];
+    const lockOrder = tx.$executeRaw.mock.invocationCallOrder[0];
     const readOrder = tx.cmsContactSettings.findUnique.mock.invocationCallOrder[0];
     expect(lockOrder).toBeLessThan(readOrder);
-    expect(String(tx.$queryRaw.mock.calls[0][0])).toContain("pg_advisory_xact_lock");
+    expect(String(tx.$executeRaw.mock.calls[0][0])).toContain("pg_advisory_xact_lock");
     expect(cache.remove).toHaveBeenCalledWith("cms:contact-settings:v1");
   });
 
@@ -72,10 +72,10 @@ describe("save", () => {
     const record = { ...STORED, mailStrategy: "failover" as const };
     await expect(service.save(record)).resolves.toBe(record);
 
-    const lockOrder = tx.$queryRaw.mock.invocationCallOrder[0];
+    const lockOrder = tx.$executeRaw.mock.invocationCallOrder[0];
     const writeOrder = tx.cmsContactSettings.upsert.mock.invocationCallOrder[0];
     expect(lockOrder).toBeLessThan(writeOrder);
-    expect(String(tx.$queryRaw.mock.calls[0][0])).toContain("pg_advisory_xact_lock");
+    expect(String(tx.$executeRaw.mock.calls[0][0])).toContain("pg_advisory_xact_lock");
     expect(tx.cmsContactSettings.upsert).toHaveBeenCalledWith({
       where: { slug: "contact" },
       create: { slug: "contact", data: record },
@@ -90,6 +90,6 @@ describe("save", () => {
     await first.service.save(STORED);
     await second.service.saveDetails({ address: "Other street" });
 
-    expect(first.tx.$queryRaw.mock.calls[0][1]).toBe(second.tx.$queryRaw.mock.calls[0][1]);
+    expect(first.tx.$executeRaw.mock.calls[0][1]).toBe(second.tx.$executeRaw.mock.calls[0][1]);
   });
 });
