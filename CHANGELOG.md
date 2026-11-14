@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.3](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.2...v1.4.3) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** refuse a CMS record save when the record changed after it was loaded ([42a21d1](https://github.com/MGM-Laboratory/mgm-website/commit/42a21d16d59b62600ecf1d28b0517a575b6ffe93))
+* **api:** refuse a CMS record save when the record changed after it was loaded ([a07e916](https://github.com/MGM-Laboratory/mgm-website/commit/a07e9164efff475c68e1a28ca3359653ad25a341))
+* **api:** refuse a versioned save of a record that is gone and test the guard on PostgreSQL ([56c3530](https://github.com/MGM-Laboratory/mgm-website/commit/56c35300d3ae276504d5c9a157e610890919263d))
+* **web:** send the loaded version with every CMS record save and show the 409 ([35c1beb](https://github.com/MGM-Laboratory/mgm-website/commit/35c1beb760649004959a1071d3a592fd6fc1c9a7))
+* **web:** send the loaded version with every CMS record save and show the 409 ([9605c08](https://github.com/MGM-Laboratory/mgm-website/commit/9605c08c6c5205a07776f4929cb9ddf6174b472a))
+
 ## [1.4.2](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.1...v1.4.2) (2026-11-14)
 
 
