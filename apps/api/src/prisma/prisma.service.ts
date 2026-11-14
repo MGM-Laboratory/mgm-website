@@ -3,7 +3,15 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../generated/prisma/client.js";
+import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
+
+type Tx = Prisma.TransactionClient;
+
+const BOOT_DDL_LOCK_NAME = "mgm-website:boot-ddl";
+const BOOT_LOCK_TIMEOUT_MS = 30_000;
+const BOOT_STATEMENT_TIMEOUT_MS = 60_000;
+const BOOT_TRANSACTION_TIMEOUT_MS = 180_000;
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
@@ -37,11 +45,31 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
   async onModuleInit() {
     await this.$connect();
+    // The statements run in one transaction behind an advisory lock. Two API
+    // copies that start together then create the tables one after the other,
+    // and not at the same time, which can fail on the catalog of PostgreSQL.
+    // The timeouts keep a start from hanging behind a long transaction of
+    // another session. A start that cannot get its locks fails and the
+    // container restarts.
+    await this.$transaction(
+      async (tx) => {
+        await tx.$executeRawUnsafe(`SET LOCAL lock_timeout = '${BOOT_LOCK_TIMEOUT_MS}ms'`);
+        await tx.$executeRawUnsafe(
+          `SET LOCAL statement_timeout = '${BOOT_STATEMENT_TIMEOUT_MS}ms'`,
+        );
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${BOOT_DDL_LOCK_NAME}))`;
+        await this.createTables(tx);
+      },
+      { maxWait: BOOT_LOCK_TIMEOUT_MS, timeout: BOOT_TRANSACTION_TIMEOUT_MS },
+    );
+  }
+
+  private async createTables(tx: Tx) {
     // The CMS tables are introduced after the original deployment and must be
     // available before the first CMS request. The statements are idempotent so
     // existing and local databases are left intact.
     for (const table of PrismaService.JSON_SLUG_TABLES) {
-      await this.$executeRawUnsafe(`
+      await tx.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS "${table}" (
           "slug" TEXT PRIMARY KEY,
           "data" JSONB NOT NULL,
@@ -50,7 +78,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         )
       `);
     }
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "MailProviderUsage" (
         "provider" TEXT PRIMARY KEY,
         "dailyRemaining" INTEGER,
@@ -60,17 +88,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "updatedAt" TIMESTAMP(3) NOT NULL
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "MailSendLog" (
         "id" TEXT PRIMARY KEY,
         "provider" TEXT NOT NULL,
         "sentAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "MailSendLog_provider_sentAt_idx" ON "MailSendLog" ("provider", "sentAt")
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "MailOutbox" (
         "id" TEXT PRIMARY KEY,
         "params" JSONB NOT NULL,
@@ -81,10 +109,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "MailOutbox_status_nextAttemptAt_idx" ON "MailOutbox" ("status", "nextAttemptAt")
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "MailRoutingState" (
         "key" TEXT PRIMARY KEY,
         "value" INTEGER NOT NULL DEFAULT 0
@@ -94,7 +122,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     // prisma/migrations/20260925160000_add_shortlinks for the durable
     // record). Constraints live inside the CREATE statements so repeated
     // boots are no-ops, matching the migration's schema exactly.
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "ShortLinkDomain" (
         "id" TEXT PRIMARY KEY,
         "hostname" TEXT NOT NULL,
@@ -110,7 +138,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         CONSTRAINT "ShortLinkDomain_hostname_key" UNIQUE ("hostname")
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "ShortLink" (
         "id" TEXT PRIMARY KEY,
         "slug" TEXT NOT NULL,
@@ -131,13 +159,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     `);
     // Columns added after the first rollout: the CREATE above only covers
     // fresh tables, this covers databases that already had one.
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       ALTER TABLE "ShortLinkDomain" ADD COLUMN IF NOT EXISTS "railwayDomainId" TEXT
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       ALTER TABLE "ShortLinkDomain" ADD COLUMN IF NOT EXISTS "verifyToken" TEXT
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "ShortLinkVisit" (
         "id" TEXT PRIMARY KEY,
         "linkId" TEXT NOT NULL REFERENCES "ShortLink"("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -159,20 +187,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "ShortLink_domainId_createdAt_idx" ON "ShortLink" ("domainId", "createdAt")
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "ShortLinkVisit_linkId_createdAt_idx" ON "ShortLinkVisit" ("linkId", "createdAt")
     `);
-    await this.createFormTables();
+    await this.createFormTables(tx);
   }
 
   // Form builder tables, created at boot like the ones above (see
   // prisma/migrations/20260926120000_add_forms for the durable record, which
   // these statements mirror column for column).
-  private async createFormTables() {
-    await this.$executeRawUnsafe(`
+  private async createFormTables(tx: Tx) {
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Form" (
         "id" TEXT PRIMARY KEY,
         "slug" TEXT NOT NULL,
@@ -185,7 +213,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "updatedAt" TIMESTAMP(3) NOT NULL
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "FormResponse" (
         "id" TEXT PRIMARY KEY,
         "formId" TEXT NOT NULL REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -221,7 +249,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "FormEvent" (
         "id" TEXT PRIMARY KEY,
         "formId" TEXT NOT NULL REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -244,7 +272,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "FormUpload" (
         "key" TEXT PRIMARY KEY,
         "formId" TEXT NOT NULL REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -259,7 +287,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    await this.$executeRawUnsafe(`
+    await tx.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "FormMedia" (
         "formId" TEXT NOT NULL REFERENCES "Form"("id") ON DELETE CASCADE ON UPDATE CASCADE,
         "key" TEXT NOT NULL,
@@ -277,6 +305,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       `CREATE INDEX IF NOT EXISTS "FormUpload_responseId_idx" ON "FormUpload" ("responseId")`,
       `CREATE INDEX IF NOT EXISTS "FormMedia_key_idx" ON "FormMedia" ("key")`,
     ];
-    for (const statement of indexes) await this.$executeRawUnsafe(statement);
+    for (const statement of indexes) await tx.$executeRawUnsafe(statement);
   }
 }
