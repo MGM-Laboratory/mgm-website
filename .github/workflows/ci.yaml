@@ -26,6 +26,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     services:
@@ -89,6 +90,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     env:
@@ -118,6 +120,7 @@ jobs:
     # test step below is scoped to the `automation` output.
     needs: changes
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -145,6 +148,7 @@ jobs:
     if: always()
     needs: [changes, hygiene, api, web]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Require all selected checks to succeed
         env:
