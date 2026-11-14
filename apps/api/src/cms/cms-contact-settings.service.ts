@@ -47,29 +47,42 @@ export class CmsContactSettingsService {
     return settings;
   }
 
-  /** Upserts the singleton settings record and invalidates its cached value. */
+  /**
+   * Replaces the singleton settings record and invalidates its cached value.
+   * It takes the same lock as `saveDetails`, so a partial save that has read
+   * the record cannot write an older routing over the one that this save sets.
+   */
   async save(data: ContactSettings): Promise<ContactSettings> {
-    await this.prisma.cmsContactSettings.upsert({
-      where: { slug: CONTACT_SETTINGS_SLUG },
-      create: { slug: CONTACT_SETTINGS_SLUG, data },
-      update: { data },
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockSettings(tx);
+      await tx.cmsContactSettings.upsert({
+        where: { slug: CONTACT_SETTINGS_SLUG },
+        create: { slug: CONTACT_SETTINGS_SLUG, data },
+        update: { data },
+      });
     });
     await this.cache.remove(CONTACT_SETTINGS_CACHE_KEY);
     return data;
   }
 
+  // An advisory lock of the transaction works before the row exists, which a
+  // row lock does not, and it is released when the transaction ends. Every
+  // writer of the record must take it, or it protects nobody.
+  private async lockSettings(tx: Pick<PrismaService, "$queryRaw">) {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${"contact-settings:" + CONTACT_SETTINGS_SLUG}))`;
+  }
+
   /**
-   * Changes only the contact details and keeps the stored routing. An advisory
-   * lock of the transaction (it works before the row exists, which a row lock
-   * does not) makes two saves queue up, so neither one writes back an older
-   * copy of what the other changed.
+   * Changes only the contact details and keeps the stored routing. It holds the
+   * lock of `save` while it reads and writes, so two saves queue up and neither
+   * one writes back an older copy of what the other changed.
    */
   async saveDetails(details: ContactDetails): Promise<ContactSettings> {
     const defined = Object.fromEntries(
       Object.entries(details).filter(([, value]) => value !== undefined),
     );
     const saved = await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${"contact-settings:" + CONTACT_SETTINGS_SLUG}))`;
+      await this.lockSettings(tx);
       const row = await tx.cmsContactSettings.findUnique({
         where: { slug: CONTACT_SETTINGS_SLUG },
       });

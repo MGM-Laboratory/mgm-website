@@ -65,3 +65,31 @@ describe("saveDetails", () => {
     expect(saved.lat).toBe(5);
   });
 });
+
+describe("save", () => {
+  it("takes the same lock as a partial save before it writes the whole record", async () => {
+    const { service, tx, cache } = makeService({ data: STORED });
+    const record = { ...STORED, mailStrategy: "failover" as const };
+    await expect(service.save(record)).resolves.toBe(record);
+
+    const lockOrder = tx.$queryRaw.mock.invocationCallOrder[0];
+    const writeOrder = tx.cmsContactSettings.upsert.mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(writeOrder);
+    expect(String(tx.$queryRaw.mock.calls[0][0])).toContain("pg_advisory_xact_lock");
+    expect(tx.cmsContactSettings.upsert).toHaveBeenCalledWith({
+      where: { slug: "contact" },
+      create: { slug: "contact", data: record },
+      update: { data: record },
+    });
+    expect(cache.remove).toHaveBeenCalledWith("cms:contact-settings:v1");
+  });
+
+  it("uses one lock key for both writers", async () => {
+    const first = makeService({ data: STORED });
+    const second = makeService({ data: STORED });
+    await first.service.save(STORED);
+    await second.service.saveDetails({ address: "Other street" });
+
+    expect(first.tx.$queryRaw.mock.calls[0][1]).toBe(second.tx.$queryRaw.mock.calls[0][1]);
+  });
+});

@@ -36,7 +36,7 @@ Configured (or not) purely by which env vars are present. Nothing needs to be "e
 
 `mailProviderOrder` defaults to `["resend", "smtp", "ses"]` when a caller doesn't override it.
 
-Only the superadmin changes the routing. An admin with the contact permission saves only the contact details (the recipient emails, the address and the map position) with `PATCH /api/cms/contact-settings`. The API takes a lock of the transaction, merges those fields into the stored row and keeps the strategy, the order, the weights and the limits as they are. So an editor form that holds an older copy of the routing cannot write it back, and two saves of the contact details at the same time cannot overwrite each other. The superadmin save with `PUT` still replaces the whole record, so it wins over a save that comes before it.
+Only the superadmin changes the routing. An admin with the contact permission saves only the contact details (the recipient emails, the address and the map position) with `PATCH /api/cms/contact-settings`. The API takes a lock of the transaction, merges those fields into the stored row and keeps the strategy, the order, the weights and the limits as they are. So an editor form that holds an older copy of the routing cannot write it back, and two saves of the contact details at the same time cannot overwrite each other. The superadmin save with `PUT` takes the same lock and replaces the whole record, so a partial save that runs at the same time can neither revert the routing that it sets nor be lost, and it wins over a save that comes before it.
 
 ## Timeouts
 
