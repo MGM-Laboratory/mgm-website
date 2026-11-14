@@ -3,6 +3,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StorageService } from "../storage/storage.service.js";
+import { assertVersion, orConflict } from "./record-version.js";
 
 const RECORDS_CACHE_KEY = "cms:publications:v1";
 const DRAFTS_CACHE_KEY = "cms:publications:drafts:v1";
@@ -133,7 +134,12 @@ export class CmsPublicationsService {
     }));
   }
 
-  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+  async save(
+    currentSlug: string,
+    nextSlug: string,
+    data: Prisma.InputJsonValue,
+    expectedVersion?: Date,
+  ) {
     let previousPaperKey: string | undefined;
     let previousPhotoKeys: string[] = [];
     const record = await this.prisma.$transaction(async (transaction) => {
@@ -153,10 +159,13 @@ export class CmsPublicationsService {
 
       previousPaperKey = paperKeyOf(current.data as Record<string, unknown>);
       previousPhotoKeys = authorPhotoKeysOf(current.data as Record<string, unknown>);
-      return transaction.cmsPublication.update({
-        where: { slug: currentSlug },
-        data: { data, slug: nextSlug },
-      });
+      assertVersion(current, expectedVersion);
+      return orConflict(() =>
+        transaction.cmsPublication.update({
+          where: { slug: currentSlug, updatedAt: current.updatedAt },
+          data: { data, slug: nextSlug },
+        }),
+      );
     });
 
     // Replacing or removing a paper orphans its predecessor in storage; a

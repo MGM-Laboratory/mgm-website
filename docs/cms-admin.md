@@ -54,6 +54,8 @@ The API stores each collection as a slug-keyed JSONB `data` record. Prisma defin
 | Home              | `/`                                     | the company profile video for the homepage reel, upload only (see "Home video" below) |
 | Contact settings  | `/contact`                              | addresses, map location, and mail routing strategy                                    |
 
+**Lost updates.** The `PUT /api/cms/<collection>/:slug` save of members, articles, publications, projects, research, careers and events takes the optional header `x-cms-expected-updated-at`, the `updatedAt` of the record that the editor loaded. When the stored `updatedAt` is different, the API answers 409 `Someone else saved this record after you opened it. Reload the page and apply your change again.` and writes nothing. Without the header the save is not checked, as before. In both cases the update runs with the `updatedAt` that the transaction read, so two saves that overlap in time cannot both write, and the later one gets the same 409. A header that is not a date answers 400.
+
 ### Home video
 
 The Home record (`packages/shared/src/schemas/home.ts`, the `CmsHomeContent` singleton) holds one thing: the company profile video the homepage reel plays. There are no editorial fields: the reel's title, description and CTA are written into the page (`apps/web/src/data/reel.ts`).

@@ -23,6 +23,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsResearchService } from "./cms-research.service.js";
+import { EXPECTED_VERSION_HEADER, parseExpectedVersion } from "./record-version.js";
 
 /**
  * Zod failures become readable 400s instead of opaque 500s: the editor
@@ -215,6 +216,7 @@ export class CmsResearchController {
     @Param("slug") slug: string,
     @Body() body: unknown,
     @Headers("x-cms-passphrase") passphrase = "",
+    @Headers(EXPECTED_VERSION_HEADER) expectedUpdatedAt = "",
   ) {
     this.assertAdmin(passphrase);
     const document = parseSafe(saveResearchSchema, body);
@@ -223,6 +225,7 @@ export class CmsResearchController {
         slug,
         document.research.slug,
         document as unknown as Prisma.InputJsonValue,
+        parseExpectedVersion(expectedUpdatedAt),
       );
     } catch (error) {
       if (error instanceof Error && error.message === "CMS_RESEARCH_SLUG_CONFLICT") {

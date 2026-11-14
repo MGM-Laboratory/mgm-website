@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { assertVersion, orConflict } from "./record-version.js";
 
 const RECORDS_CACHE_KEY = "cms:events:v1";
 const DRAFTS_CACHE_KEY = "cms:events:drafts:v1";
@@ -58,7 +59,12 @@ export class CmsEventsService {
     }));
   }
 
-  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+  async save(
+    currentSlug: string,
+    nextSlug: string,
+    data: Prisma.InputJsonValue,
+    expectedVersion?: Date,
+  ) {
     const record = await this.prisma.$transaction(async (tx) => {
       const current = await tx.cmsEvent.findUnique({ where: { slug: currentSlug } });
       if (!current) {
@@ -69,7 +75,13 @@ export class CmsEventsService {
         const destination = await tx.cmsEvent.findUnique({ where: { slug: nextSlug } });
         if (destination) throw new Error("CMS_EVENT_SLUG_CONFLICT");
       }
-      return tx.cmsEvent.update({ where: { slug: currentSlug }, data: { data, slug: nextSlug } });
+      assertVersion(current, expectedVersion);
+      return orConflict(() =>
+        tx.cmsEvent.update({
+          where: { slug: currentSlug, updatedAt: current.updatedAt },
+          data: { data, slug: nextSlug },
+        }),
+      );
     });
     await this.invalidateRecords();
     return {

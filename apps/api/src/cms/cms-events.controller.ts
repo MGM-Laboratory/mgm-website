@@ -29,6 +29,7 @@ import { StorageService } from "../storage/storage.service.js";
 import { CmsEventsService } from "./cms-events.service.js";
 import { CmsEventRegistrationsService } from "./cms-event-registrations.service.js";
 import { buildIcsFeed, buildSingleEventIcs, type IcsEventRecord } from "./cms-events.ics.js";
+import { EXPECTED_VERSION_HEADER, parseExpectedVersion } from "./record-version.js";
 
 /**
  * Zod failures become readable 400s instead of opaque 500s: the editor
@@ -340,6 +341,7 @@ export class CmsEventsController {
     @Param("slug") slug: string,
     @Body() body: unknown,
     @Headers("x-cms-passphrase") passphrase = "",
+    @Headers(EXPECTED_VERSION_HEADER) expectedUpdatedAt = "",
   ) {
     this.assertAdmin(passphrase);
     const document = parseSafe(eventSchema, body);
@@ -348,6 +350,7 @@ export class CmsEventsController {
         slug,
         document.slug,
         document as unknown as Prisma.InputJsonValue,
+        parseExpectedVersion(expectedUpdatedAt),
       );
     } catch (error) {
       if (error instanceof Error && error.message === "CMS_EVENT_SLUG_CONFLICT") {

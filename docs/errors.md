@@ -98,6 +98,7 @@ A route that stores a file answers 400 with a message such as `Media storage is 
 ## Link shortener
 
 - `POST /api/shortlinks/verify` answers 404 `That link does not exist.`, 410 `That link has expired.` or 401 `That passphrase is not right.`.
+- The save routes `PUT /api/cms/<collection>/:slug` of members, articles, publications, projects, research, careers and events answer 409 `Someone else saved this record after you opened it. Reload the page and apply your change again.` when the header `x-cms-expected-updated-at` names a version that is no longer stored, or when another save changed the record while this one ran. They answer 400 when the header is not a date.
 - The admin routes answer 400 for an invalid domain name or URL, 409 `That domain is already added.`, 409 `That short code is already taken on this domain.` and 409 `Delete its N links first.` when a domain still has links.
 - A failure to attach a custom domain at the hosting platform answers 400 with the message of the platform API.
 

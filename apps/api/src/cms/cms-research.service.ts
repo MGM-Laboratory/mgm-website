@@ -3,6 +3,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StorageService } from "../storage/storage.service.js";
+import { assertVersion, orConflict } from "./record-version.js";
 
 const RECORDS_CACHE_KEY = "cms:research:v1";
 const DRAFTS_CACHE_KEY = "cms:research:drafts:v1";
@@ -92,7 +93,12 @@ export class CmsResearchService {
     }));
   }
 
-  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+  async save(
+    currentSlug: string,
+    nextSlug: string,
+    data: Prisma.InputJsonValue,
+    expectedVersion?: Date,
+  ) {
     let previousCoverKey: string | undefined;
     const record = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.cmsResearchInitiative.findUnique({
@@ -112,10 +118,13 @@ export class CmsResearchService {
       }
 
       previousCoverKey = coverKeyOf(current.data as Record<string, unknown>);
-      return transaction.cmsResearchInitiative.update({
-        where: { slug: currentSlug },
-        data: { data, slug: nextSlug },
-      });
+      assertVersion(current, expectedVersion);
+      return orConflict(() =>
+        transaction.cmsResearchInitiative.update({
+          where: { slug: currentSlug, updatedAt: current.updatedAt },
+          data: { data, slug: nextSlug },
+        }),
+      );
     });
 
     // Featured is a spotlight for exactly one published initiative at a

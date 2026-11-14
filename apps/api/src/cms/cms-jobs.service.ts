@@ -3,6 +3,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { assertVersion, orConflict } from "./record-version.js";
 
 const JOBS_RECORDS_CACHE_KEY = "cms:jobs:v1";
 const JOBS_ADMIN_CACHE_KEY = "cms:jobs:admin:v1";
@@ -74,7 +75,12 @@ export class CmsJobsService {
     return records;
   }
 
-  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+  async save(
+    currentSlug: string,
+    nextSlug: string,
+    data: Prisma.InputJsonValue,
+    expectedVersion?: Date,
+  ) {
     const record = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.cmsJobPosting.findUnique({ where: { slug: currentSlug } });
 
@@ -90,10 +96,13 @@ export class CmsJobsService {
         if (destination) throw new Error("CMS_JOB_SLUG_CONFLICT");
       }
 
-      return transaction.cmsJobPosting.update({
-        where: { slug: currentSlug },
-        data: { data, slug: nextSlug },
-      });
+      assertVersion(current, expectedVersion);
+      return orConflict(() =>
+        transaction.cmsJobPosting.update({
+          where: { slug: currentSlug, updatedAt: current.updatedAt },
+          data: { data, slug: nextSlug },
+        }),
+      );
     });
     await this.invalidateRecords();
     return {

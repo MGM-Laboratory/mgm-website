@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { assertVersion, orConflict } from "./record-version.js";
 
 type MemberDocument = { member?: { name?: unknown }; sourceSlug?: unknown };
 
@@ -47,7 +48,12 @@ export class CmsMembersService {
     return publicRecords;
   }
 
-  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+  async save(
+    currentSlug: string,
+    nextSlug: string,
+    data: Prisma.InputJsonValue,
+    expectedVersion?: Date,
+  ) {
     const record = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.cmsMember.findUnique({ where: { slug: currentSlug } });
 
@@ -92,10 +98,13 @@ export class CmsMembersService {
         if (destination) throw new Error("CMS_MEMBER_SLUG_CONFLICT");
       }
 
-      return transaction.cmsMember.update({
-        where: { slug: currentSlug },
-        data: { data, slug: nextSlug },
-      });
+      assertVersion(current, expectedVersion);
+      return orConflict(() =>
+        transaction.cmsMember.update({
+          where: { slug: currentSlug, updatedAt: current.updatedAt },
+          data: { data, slug: nextSlug },
+        }),
+      );
     });
     await this.invalidateRecords();
     return {

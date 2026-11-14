@@ -24,6 +24,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import type { Env } from "../config/env.validation.js";
 import { StorageService } from "../storage/storage.service.js";
 import { CmsPublicationsService } from "./cms-publications.service.js";
+import { EXPECTED_VERSION_HEADER, parseExpectedVersion } from "./record-version.js";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // Full dates for freshly published records; year-only for older records
@@ -234,6 +235,7 @@ export class CmsPublicationsController {
     @Param("slug") slug: string,
     @Req() request: Request,
     @Headers("x-cms-passphrase") passphrase = "",
+    @Headers(EXPECTED_VERSION_HEADER) expectedUpdatedAt = "",
   ) {
     this.assertAdmin(passphrase);
     const document = savePublicationSchema.parse(request.body);
@@ -242,6 +244,7 @@ export class CmsPublicationsController {
         slug,
         document.publication.slug,
         document as unknown as Prisma.InputJsonValue,
+        parseExpectedVersion(expectedUpdatedAt),
       );
     } catch (error) {
       if (error instanceof Error && error.message === "CMS_PUBLICATION_SLUG_CONFLICT") {
