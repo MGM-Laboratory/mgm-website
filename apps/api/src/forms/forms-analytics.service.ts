@@ -25,6 +25,10 @@ import { FormsService } from "./forms.service.js";
 
 const TOP_LIMIT = 15;
 const POINTS_LIMIT = 2000;
+// The admin analytics run on one connection with a limit for each query.
+export const ANALYTICS_STATEMENT_TIMEOUT_MS = 15_000;
+export const ANALYTICS_QUEUE_WAIT_MS = 5_000;
+export const ANALYTICS_TRANSACTION_TIMEOUT_MS = 45_000;
 
 type Point = { latitude: number; longitude: number; count: number };
 
@@ -71,8 +75,14 @@ export class FormsAnalyticsService {
       utmSources,
       viewPoints,
       submitPoints,
-    ] = await Promise.all([
-      this.prisma.$queryRaw<{ bucket: number; views: number; starts: number }[]>`
+    ] = await this.prisma.$transaction(
+      async (tx) => {
+        // One connection and a time limit for each query, so one slow request cannot hold the pool.
+        await tx.$executeRawUnsafe(
+          `SET LOCAL statement_timeout = '${ANALYTICS_STATEMENT_TIMEOUT_MS}ms'`,
+        );
+        return Promise.all([
+          tx.$queryRaw<{ bucket: number; views: number; starts: number }[]>`
         SELECT
           floor((extract(epoch FROM "createdAt") * 1000 + ${shiftMs}) / ${size})::int AS "bucket",
           COUNT(*) FILTER (WHERE "type" = 'view')::int AS "views",
@@ -81,7 +91,7 @@ export class FormsAnalyticsService {
         WHERE "formId" = ${formId} AND "createdAt" >= ${start} AND "type" IN ('view', 'start')
         GROUP BY 1
       `,
-      this.prisma.$queryRaw<{ bucket: number; submissions: number }[]>`
+          tx.$queryRaw<{ bucket: number; submissions: number }[]>`
         SELECT
           floor((extract(epoch FROM "createdAt") * 1000 + ${shiftMs}) / ${size})::int AS "bucket",
           COUNT(*)::int AS "submissions"
@@ -89,7 +99,7 @@ export class FormsAnalyticsService {
         WHERE "formId" = ${formId} AND "createdAt" >= ${start} AND NOT "spam"
         GROUP BY 1
       `,
-      this.prisma.$queryRaw<{ views: number; uniqueVisitors: number; starts: number }[]>`
+          tx.$queryRaw<{ views: number; uniqueVisitors: number; starts: number }[]>`
         SELECT
           COUNT(*) FILTER (WHERE "type" = 'view')::int AS "views",
           COUNT(DISTINCT COALESCE("ip", "sessionId")) FILTER (WHERE "type" = 'view')::int
@@ -98,9 +108,7 @@ export class FormsAnalyticsService {
         FROM "FormEvent"
         WHERE "formId" = ${formId} AND "createdAt" >= ${start}
       `,
-      this.prisma.$queryRaw<
-        { submissions: number; median: number | null; average: number | null }[]
-      >`
+          tx.$queryRaw<{ submissions: number; median: number | null; average: number | null }[]>`
         SELECT
           COUNT(*)::int AS "submissions",
           percentile_cont(0.5) WITHIN GROUP (ORDER BY "durationMs")::float8 AS "median",
@@ -108,7 +116,7 @@ export class FormsAnalyticsService {
         FROM "FormResponse"
         WHERE "formId" = ${formId} AND "createdAt" >= ${start} AND NOT "spam"
       `,
-      this.prisma.$queryRaw<{ weekday: number; hour: number; count: number }[]>`
+          tx.$queryRaw<{ weekday: number; hour: number; count: number }[]>`
         SELECT
           extract(dow FROM "createdAt" + ${tzOffset}::int * interval '1 minute')::int AS "weekday",
           extract(hour FROM "createdAt" + ${tzOffset}::int * interval '1 minute')::int AS "hour",
@@ -118,63 +126,63 @@ export class FormsAnalyticsService {
         GROUP BY 1, 2
         ORDER BY 1, 2
       `,
-      this.prisma.$queryRaw<{ fieldId: string; sessions: number }[]>`
+          tx.$queryRaw<{ fieldId: string; sessions: number }[]>`
         SELECT "fieldId", COUNT(DISTINCT "sessionId")::int AS "sessions"
         FROM "FormEvent"
         WHERE "formId" = ${formId} AND "createdAt" >= ${start}
           AND "type" = 'progress' AND "fieldId" IS NOT NULL
         GROUP BY 1
       `,
-      this.prisma.formEvent.groupBy({
-        by: ["country"],
-        where: { ...views, country: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { country: "desc" } },
-        take: TOP_LIMIT,
-      }),
-      this.prisma.formEvent.groupBy({
-        by: ["city", "country"],
-        where: { ...views, city: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { city: "desc" } },
-        take: TOP_LIMIT,
-      }),
-      this.prisma.formEvent.groupBy({
-        by: ["referer"],
-        where: views,
-        _count: { _all: true },
-        orderBy: { _count: { referer: "desc" } },
-        take: 5000,
-      }),
-      this.prisma.formEvent.groupBy({
-        by: ["device"],
-        where: { ...views, device: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { device: "desc" } },
-        take: TOP_LIMIT,
-      }),
-      this.prisma.formEvent.groupBy({
-        by: ["browser"],
-        where: { ...views, browser: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { browser: "desc" } },
-        take: TOP_LIMIT,
-      }),
-      this.prisma.formEvent.groupBy({
-        by: ["os"],
-        where: { ...views, os: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { os: "desc" } },
-        take: TOP_LIMIT,
-      }),
-      this.prisma.formEvent.groupBy({
-        by: ["language"],
-        where: { ...views, language: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { language: "desc" } },
-        take: TOP_LIMIT,
-      }),
-      this.prisma.$queryRaw<{ source: string; count: number }[]>`
+          tx.formEvent.groupBy({
+            by: ["country"],
+            where: { ...views, country: { not: null } },
+            _count: { _all: true },
+            orderBy: { _count: { country: "desc" } },
+            take: TOP_LIMIT,
+          }),
+          tx.formEvent.groupBy({
+            by: ["city", "country"],
+            where: { ...views, city: { not: null } },
+            _count: { _all: true },
+            orderBy: { _count: { city: "desc" } },
+            take: TOP_LIMIT,
+          }),
+          tx.formEvent.groupBy({
+            by: ["referer"],
+            where: views,
+            _count: { _all: true },
+            orderBy: { _count: { referer: "desc" } },
+            take: 5000,
+          }),
+          tx.formEvent.groupBy({
+            by: ["device"],
+            where: { ...views, device: { not: null } },
+            _count: { _all: true },
+            orderBy: { _count: { device: "desc" } },
+            take: TOP_LIMIT,
+          }),
+          tx.formEvent.groupBy({
+            by: ["browser"],
+            where: { ...views, browser: { not: null } },
+            _count: { _all: true },
+            orderBy: { _count: { browser: "desc" } },
+            take: TOP_LIMIT,
+          }),
+          tx.formEvent.groupBy({
+            by: ["os"],
+            where: { ...views, os: { not: null } },
+            _count: { _all: true },
+            orderBy: { _count: { os: "desc" } },
+            take: TOP_LIMIT,
+          }),
+          tx.formEvent.groupBy({
+            by: ["language"],
+            where: { ...views, language: { not: null } },
+            _count: { _all: true },
+            orderBy: { _count: { language: "desc" } },
+            take: TOP_LIMIT,
+          }),
+          tx.$queryRaw<{ source: string; count: number }[]>`
         SELECT "utm"->>'source' AS "source", COUNT(*)::int AS "count"
         FROM "FormResponse"
         WHERE "formId" = ${formId} AND "createdAt" >= ${start} AND NOT "spam"
@@ -183,7 +191,7 @@ export class FormsAnalyticsService {
         ORDER BY 2 DESC, 1
         LIMIT ${TOP_LIMIT}
       `,
-      this.prisma.$queryRaw<Point[]>`
+          tx.$queryRaw<Point[]>`
         SELECT
           round("latitude"::numeric, 1)::float8 AS "latitude",
           round("longitude"::numeric, 1)::float8 AS "longitude",
@@ -195,7 +203,7 @@ export class FormsAnalyticsService {
         ORDER BY 3 DESC
         LIMIT ${POINTS_LIMIT}
       `,
-      this.prisma.$queryRaw<Point[]>`
+          tx.$queryRaw<Point[]>`
         SELECT
           round("latitude"::numeric, 1)::float8 AS "latitude",
           round("longitude"::numeric, 1)::float8 AS "longitude",
@@ -207,7 +215,10 @@ export class FormsAnalyticsService {
         ORDER BY 3 DESC
         LIMIT ${POINTS_LIMIT}
       `,
-    ]);
+        ]);
+      },
+      { maxWait: ANALYTICS_QUEUE_WAIT_MS, timeout: ANALYTICS_TRANSACTION_TIMEOUT_MS },
+    );
 
     const seriesRows: SeriesRow[] = [
       ...eventSeries.map((row) => ({ ...row, submissions: 0 })),
