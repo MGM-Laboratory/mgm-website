@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.1](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.0...v1.4.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** make the advisory lock spec wait for events and not for time ([7743af4](https://github.com/MGM-Laboratory/mgm-website/commit/7743af4386219e5a2a74f10aa6dbebff4a83eec1))
+* **api:** take the advisory locks with executeRaw because the adapter cannot read a void column ([dabf9be](https://github.com/MGM-Laboratory/mgm-website/commit/dabf9bed3f13c992d71d8277ffa7f03a46e7e38d))
+* **api:** take the advisory locks with executeRaw because the adapter cannot read a void column ([e9a6c4a](https://github.com/MGM-Laboratory/mgm-website/commit/e9a6c4a730ec6600fba6b27f3323dc4babeaf8ac))
+
 ## [1.4.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.3.4...v1.4.0) (2026-11-14)
 
 
