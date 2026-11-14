@@ -8,10 +8,17 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 [![Lighthouse](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/lighthouse.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/lighthouse.yaml)
 [![Vale](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/vale.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/vale.yaml)
 [![Docker](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker.yaml)
-[![codecov](https://codecov.io/gh/MGM-Laboratory/mgm-website/branch/main/graph/badge.svg)](https://codecov.io/gh/MGM-Laboratory/mgm-website)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MGM-Laboratory/mgm-website/badge)](https://securityscorecards.dev/viewer/?uri=github.com/MGM-Laboratory/mgm-website)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16622/badge)](https://www.bestpractices.dev/projects/16622)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/MGM-Laboratory/mgm-website/main.svg)](https://results.pre-commit.ci/latest/github/MGM-Laboratory/mgm-website/main)
+[![Config lint](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/config.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/config.yaml)
+[![Release Please](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/release-please.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/release-please.yaml)
+[![Docker Hub mirror](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker-hub-mirror.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker-hub-mirror.yaml)
+[![Release](https://img.shields.io/github/v/release/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website/releases)
+[![License](https://img.shields.io/github/license/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website/blob/main/LICENSE)
+[![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FMGM-Laboratory%2Fmgm-website%2Fmain%2F.release-please-manifest.json&query=%24%5B%27.%27%5D&label=version)](https://github.com/MGM-Laboratory/mgm-website/blob/main/CHANGELOG.md)
+[![Backend pulls](https://img.shields.io/docker/pulls/labmgm/mgm-website-backend?label=backend%20pulls&logo=docker&logoColor=white)](https://hub.docker.com/r/labmgm/mgm-website-backend)
+[![Backend image size](https://img.shields.io/docker/image-size/labmgm/mgm-website-backend/latest?label=backend%20image)](https://hub.docker.com/r/labmgm/mgm-website-backend)
+[![Frontend pulls](https://img.shields.io/docker/pulls/labmgm/mgm-website-frontend?label=frontend%20pulls&logo=docker&logoColor=white)](https://hub.docker.com/r/labmgm/mgm-website-frontend)
+[![Frontend image size](https://img.shields.io/docker/image-size/labmgm/mgm-website-frontend/latest?label=frontend%20image)](https://hub.docker.com/r/labmgm/mgm-website-frontend)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Flabmgm.org&label=labmgm.org)](https://labmgm.org)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5%20and%206-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -22,6 +29,12 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 
 [![Last commit](https://img.shields.io/github/last-commit/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website/commits/main)
 [![Repo size](https://img.shields.io/github/repo-size/MGM-Laboratory/mgm-website)](https://github.com/MGM-Laboratory/mgm-website)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org)
+[![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen?logo=renovate)](https://docs.renovatebot.com)
+[![codecov](https://codecov.io/gh/MGM-Laboratory/mgm-website/branch/main/graph/badge.svg)](https://codecov.io/gh/MGM-Laboratory/mgm-website)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MGM-Laboratory/mgm-website/badge)](https://securityscorecards.dev/viewer/?uri=github.com/MGM-Laboratory/mgm-website)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16622/badge)](https://www.bestpractices.dev/projects/16622)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/MGM-Laboratory/mgm-website/main.svg)](https://results.pre-commit.ci/latest/github/MGM-Laboratory/mgm-website/main)
 
 <img width="1454" src=".github/screenshots/1.png" alt="Screenshot 1 of the MGM Laboratory website" />
 <img width="1454" src=".github/screenshots/2.png" alt="Screenshot 2 of the MGM Laboratory website" />
