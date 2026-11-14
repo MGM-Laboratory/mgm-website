@@ -109,8 +109,17 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify web and shared dependencies
-        run: pnpm turbo run lint typecheck test build --filter=web...
+      - name: Lint, typecheck and build
+        run: pnpm turbo run lint typecheck build --filter=web...
+      - name: Test with coverage
+        run: pnpm --filter web test:cov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: apps/web/coverage
+          flags: web
+          fail_ci_if_error: false
 
   hygiene:
     name: Formatting and automation tests
