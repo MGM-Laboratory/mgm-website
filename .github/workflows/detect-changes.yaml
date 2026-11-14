@@ -45,6 +45,7 @@ jobs:
   detect:
     name: Detect affected workloads
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       api: ${{ steps.scope.outputs.api }}
       web: ${{ steps.scope.outputs.web }}
