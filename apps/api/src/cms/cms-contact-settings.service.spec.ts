@@ -12,7 +12,7 @@ const STORED: ContactSettings = {
 
 function makeService(row: { data: unknown } | null) {
   const tx = {
-    $executeRaw: vi.fn().mockResolvedValue([]),
+    $executeRaw: vi.fn().mockResolvedValue(0),
     cmsContactSettings: {
       findUnique: vi.fn().mockResolvedValue(row),
       upsert: vi.fn().mockResolvedValue({}),
