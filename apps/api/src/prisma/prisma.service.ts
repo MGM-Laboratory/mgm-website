@@ -103,7 +103,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
         await tx.$executeRawUnsafe(
           `SET LOCAL statement_timeout = '${BOOT_STATEMENT_TIMEOUT_MS}ms'`,
         );
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${BOOT_DDL_LOCK_NAME}))`;
+        // The function returns void, which the driver adapter cannot read through $queryRaw.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${BOOT_DDL_LOCK_NAME}))`;
         await this.createTables(missingOnly(tx, await existingObjects(tx)));
       },
       { maxWait: BOOT_CONNECT_WAIT_MS, timeout: BOOT_TRANSACTION_TIMEOUT_MS },

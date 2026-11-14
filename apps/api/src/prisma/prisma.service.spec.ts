@@ -12,10 +12,13 @@ function makeService(existing: string[] = [], transactionError?: Error) {
       if (/^(CREATE|ALTER)/.test(text)) sent.push(text);
       return Promise.resolve(0);
     }),
-    $queryRaw: vi.fn((strings: TemplateStringsArray) => {
-      const text = strings.join("?");
-      calls.push(text.includes("advisory") ? "LOCK" : "CATALOG");
-      return Promise.resolve(text.includes("advisory") ? [] : existing.map((name) => ({ name })));
+    $executeRaw: vi.fn((strings: TemplateStringsArray) => {
+      calls.push(strings.join("?").includes("advisory") ? "LOCK" : "OTHER");
+      return Promise.resolve(1);
+    }),
+    $queryRaw: vi.fn(() => {
+      calls.push("CATALOG");
+      return Promise.resolve(existing.map((name) => ({ name })));
     }),
   };
   const service = Object.create(PrismaService.prototype) as PrismaService;
