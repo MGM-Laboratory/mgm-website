@@ -1,0 +1,9 @@
+# Each CI job uploads one flag, and a job runs only when its scope changed. Carry the last
+# upload of the other flag forward, so the project percentage does not swing by the size of
+# the flag that a pull request did not run.
+flag_management:
+  default_rules:
+    carryforward: true
+  individual_flags:
+    - name: api
+    - name: web

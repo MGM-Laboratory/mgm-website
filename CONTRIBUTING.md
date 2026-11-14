@@ -26,7 +26,7 @@ There's no `dev` branch. Every change to `main` goes through a pull request:
 
 Every PR runs the checks below. The ruleset requires all of them except pre-commit.ci.
 
-- **CI**: lint, typecheck, `pnpm test` (API unit tests with coverage, and web unit tests), build, for both workspaces.
+- **CI**: lint, typecheck, `pnpm test` (API and web unit tests, both with coverage), build, for both workspaces. Coverage counts every source file of `apps/api/src`, and in the web app the files of `src/lib` and `src/app/api`, whether a test loads them or not.
 - **Security**: CodeQL, dependency review, secret scanning (gitleaks), Trivy filesystem scan.
 - **E2E**: Playwright across Chromium/Firefox/WebKit plus a Windows and a macOS job, including visual-regression screenshots for the primary browser.
 - **Lighthouse**: performance, accessibility, SEO and best-practices budgets on `/`, `/about` and `/contact`, on pull requests.

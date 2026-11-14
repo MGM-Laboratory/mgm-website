@@ -16,5 +16,14 @@ export default defineConfig({
     environment: "node",
     // The Playwright specs live in e2e/, and the unit specs live next to the code
     include: ["src/**/*.spec.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      reportsDirectory: "./coverage",
+      // Only the files of src/lib and src/app/api are counted. The pages and components are
+      // covered by the Playwright specs, which line coverage cannot see, so they are not counted here.
+      include: ["src/lib/**/*.ts", "src/app/api/**/*.ts"],
+      exclude: ["src/**/*.spec.ts", "src/**/*.d.ts"],
+    },
   },
 });
