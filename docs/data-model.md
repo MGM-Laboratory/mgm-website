@@ -43,7 +43,7 @@ Thirteen tables share one shape. The key is `slug` (text, primary key). The colu
 | `MailRoutingState`  | `key`                                  | `value` (integer, default 0)                                                  | The pointer of the round robin strategy                                                      |
 | `MailOutbox`        | `id` (UUID made by Prisma)             | `params`, `attempts`, `status`, `nextAttemptAt`, `lastError`, `createdAt`     | A mail that is waiting for delivery. The index `(status, nextAttemptAt)` serves the claim    |
 
-[Mail system](mail-system.md) explains how the three tables are used.
+[Mail system](mail-system.md) explains how the mail tables are used.
 
 ## Link shortener tables
 

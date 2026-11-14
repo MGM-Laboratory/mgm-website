@@ -38,7 +38,7 @@ export class ContactService {
    * Persists a contact inquiry, then queues the notification mail to the
    * configured recipient in the outbox, which delivers it through the saved
    * routing strategy and tries again later when every provider fails. The
-   * visitor never waits for the mail and never sees a mail error.
+   * visitor never waits for the mail, and no failure of a provider reaches them.
    */
   async send(payload: ContactFormPayload): Promise<void> {
     const attachmentKeys = payload.attachmentKeys ?? [];
