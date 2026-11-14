@@ -370,7 +370,7 @@ export class MailService {
     return this.prisma.$transaction(async (transaction) => {
       // PostgreSQL advisory locks make the quota check and reservation one
       // critical section without locking unrelated providers.
-      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`mail-quota:${id}`}))`;
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`mail-quota:${id}`}))`;
       if (config.dailyLimit) {
         const remaining = await this.rollingRemaining(id, 1, config.dailyLimit, transaction);
         if (remaining <= 0) return null;
