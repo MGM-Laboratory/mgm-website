@@ -24,6 +24,7 @@ import { StorageService } from "../storage/storage.service.js";
 import { CmsMembersService } from "./cms-members.service.js";
 import { MEMBER_MEDIA_KEY_PATTERN } from "./member-media-key.js";
 import { memberProfileSchema } from "./member-profile.schema.js";
+import { EXPECTED_VERSION_HEADER, parseExpectedVersion } from "./record-version.js";
 
 const memberSchema = z.object({
   member: z.object({
@@ -87,6 +88,7 @@ export class CmsMembersController {
     @Param("slug") slug: string,
     @Body() body: unknown,
     @Headers("x-cms-passphrase") passphrase = "",
+    @Headers(EXPECTED_VERSION_HEADER) expectedUpdatedAt = "",
   ) {
     this.assertAdmin(passphrase);
     // A link with an unsafe scheme is a mistake of the editor, so it answers 400 with the reason and not a server error
@@ -104,6 +106,7 @@ export class CmsMembersController {
         slug,
         document.member.slug,
         document as unknown as Prisma.InputJsonValue,
+        parseExpectedVersion(expectedUpdatedAt),
       );
     } catch (error) {
       if (error instanceof Error) {

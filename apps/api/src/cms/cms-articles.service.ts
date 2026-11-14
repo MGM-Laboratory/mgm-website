@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { assertRecordPresent, assertVersion, orConflict } from "./record-version.js";
 
 const ARTICLE_RECORDS_CACHE_KEY = "cms:articles:v1";
 const ARTICLE_DRAFTS_CACHE_KEY = "cms:articles:drafts:v1";
@@ -78,11 +79,18 @@ export class CmsArticlesService {
     }));
   }
 
-  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+  async save(
+    currentSlug: string,
+    nextSlug: string,
+    data: Prisma.InputJsonValue,
+    expectedVersion?: Date,
+  ) {
     const record = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.cmsArticle.findUnique({ where: { slug: currentSlug } });
 
       if (!current) {
+        // An editor that loaded a version has lost its record when it is gone or renamed. It must not create it again.
+        assertRecordPresent(expectedVersion);
         if (currentSlug !== nextSlug) throw new NotFoundException("Article record not found");
         return transaction.cmsArticle.create({ data: { slug: nextSlug, data } });
       }
@@ -92,10 +100,13 @@ export class CmsArticlesService {
         if (destination) throw new Error("CMS_ARTICLE_SLUG_CONFLICT");
       }
 
-      return transaction.cmsArticle.update({
-        where: { slug: currentSlug },
-        data: { data, slug: nextSlug },
-      });
+      assertVersion(current, expectedVersion);
+      return orConflict(() =>
+        transaction.cmsArticle.update({
+          where: { slug: currentSlug, updatedAt: current.updatedAt },
+          data: { data, slug: nextSlug },
+        }),
+      );
     });
     await this.invalidateRecords();
     return {

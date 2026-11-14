@@ -4,6 +4,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { StorageService } from "../storage/storage.service.js";
+import { assertRecordPresent, assertVersion, orConflict } from "./record-version.js";
 
 const RECORDS_CACHE_KEY = "cms:projects:v1";
 const DRAFTS_CACHE_KEY = "cms:projects:drafts:v1";
@@ -289,13 +290,20 @@ export class CmsProjectsService {
     }));
   }
 
-  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+  async save(
+    currentSlug: string,
+    nextSlug: string,
+    data: Prisma.InputJsonValue,
+    expectedVersion?: Date,
+  ) {
     let previousMediaKeys: string[] = [];
     let previousVideoKeys: string[] = [];
     let previousPhotoKeys: string[] = [];
     const record = await this.prisma.$transaction(async (tx) => {
       const current = await tx.cmsProject.findUnique({ where: { slug: currentSlug } });
       if (!current) {
+        // An editor that loaded a version has lost its record when it is gone or renamed. It must not create it again.
+        assertRecordPresent(expectedVersion);
         if (currentSlug !== nextSlug) throw new NotFoundException("Project record not found");
         return tx.cmsProject.create({ data: { slug: nextSlug, data } });
       }
@@ -306,7 +314,13 @@ export class CmsProjectsService {
       previousMediaKeys = mediaKeysOf(current.data as Record<string, unknown>);
       previousVideoKeys = videoKeysOf(current.data as Record<string, unknown>);
       previousPhotoKeys = contributorPhotoKeysOf(current.data as Record<string, unknown>);
-      return tx.cmsProject.update({ where: { slug: currentSlug }, data: { data, slug: nextSlug } });
+      assertVersion(current, expectedVersion);
+      return orConflict(() =>
+        tx.cmsProject.update({
+          where: { slug: currentSlug, updatedAt: current.updatedAt },
+          data: { data, slug: nextSlug },
+        }),
+      );
     });
 
     const nextMediaKeys = mediaKeysOf(data as Record<string, unknown>);

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CacheService } from "../cache/cache.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { assertRecordPresent, assertVersion, orConflict } from "./record-version.js";
 
 type MemberDocument = { member?: { name?: unknown }; sourceSlug?: unknown };
 
@@ -47,13 +48,20 @@ export class CmsMembersService {
     return publicRecords;
   }
 
-  async save(currentSlug: string, nextSlug: string, data: Prisma.InputJsonValue) {
+  async save(
+    currentSlug: string,
+    nextSlug: string,
+    data: Prisma.InputJsonValue,
+    expectedVersion?: Date,
+  ) {
     const record = await this.prisma.$transaction(async (transaction) => {
       const current = await transaction.cmsMember.findUnique({ where: { slug: currentSlug } });
 
       // A new member starts with its first chosen slug. A renamed member must
       // already exist under the URL that was opened in the editor.
       if (!current) {
+        // An editor that loaded a version has lost its record when it is gone or renamed. It must not create it again.
+        assertRecordPresent(expectedVersion);
         const requestedSource = (data as MemberDocument).sourceSlug;
         const sourceRecord =
           typeof requestedSource === "string" && requestedSource !== nextSlug
@@ -92,10 +100,13 @@ export class CmsMembersService {
         if (destination) throw new Error("CMS_MEMBER_SLUG_CONFLICT");
       }
 
-      return transaction.cmsMember.update({
-        where: { slug: currentSlug },
-        data: { data, slug: nextSlug },
-      });
+      assertVersion(current, expectedVersion);
+      return orConflict(() =>
+        transaction.cmsMember.update({
+          where: { slug: currentSlug, updatedAt: current.updatedAt },
+          data: { data, slug: nextSlug },
+        }),
+      );
     });
     await this.invalidateRecords();
     return {

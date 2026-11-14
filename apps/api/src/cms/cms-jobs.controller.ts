@@ -32,6 +32,7 @@ import { buildJobApplicationConfirmationEmail } from "../mail/templates/job-appl
 import { StorageService } from "../storage/storage.service.js";
 import { CmsJobsService, isOpenJob } from "./cms-jobs.service.js";
 import { CmsJobApplicationsService } from "./cms-jobs-applications.service.js";
+import { EXPECTED_VERSION_HEADER, parseExpectedVersion } from "./record-version.js";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -332,6 +333,7 @@ export class CmsJobsController {
     @Param("slug") slug: string,
     @Body() body: unknown,
     @Headers("x-cms-passphrase") passphrase = "",
+    @Headers(EXPECTED_VERSION_HEADER) expectedUpdatedAt = "",
   ) {
     this.assertAdmin(passphrase);
     const document = saveJobSchema.parse(body);
@@ -340,6 +342,7 @@ export class CmsJobsController {
         slug,
         document.job.slug,
         document as unknown as Prisma.InputJsonValue,
+        parseExpectedVersion(expectedUpdatedAt),
       );
     } catch (error) {
       if (error instanceof Error && error.message === "CMS_JOB_SLUG_CONFLICT") {
