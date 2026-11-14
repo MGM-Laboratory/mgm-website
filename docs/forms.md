@@ -72,20 +72,22 @@ Public:
 
 Admin:
 
-| Route                                              | What it does                                                                                                                                                                                   |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`, `POST /api/forms/admin`                     | the forms list, create                                                                                                                                                                         |
-| `GET /api/forms/admin/slug-available`              | whether a slug is free, with a suggestion                                                                                                                                                      |
-| `GET`, `PUT`, `DELETE /api/forms/admin/:id`        | read, update (document, slug, status, passphrase), delete                                                                                                                                      |
-| `POST /api/forms/admin/:id/duplicate`              | a draft copy                                                                                                                                                                                   |
-| `POST /api/forms/admin/:id/media`                  | a design image (data URL) or video (raw MP4 or WebM)                                                                                                                                           |
-| `GET /api/forms/admin/:id/responses`               | every response, newest first                                                                                                                                                                   |
-| `PATCH /api/forms/admin/:id/responses/:responseId` | edit answers, star, flag, review, tags, note                                                                                                                                                   |
-| `POST /api/forms/admin/:id/responses/bulk`         | bulk star, flag, review, spam, tag and delete                                                                                                                                                  |
-| `POST /api/forms/admin/:id/responses/apply`        | write cleaned answers back                                                                                                                                                                     |
-| `GET /api/forms/admin/:id/analytics`               | traffic analytics for a range, bucketed in the admin's timezone. It runs its 16 queries on one database connection, and a query that takes longer than 15 seconds fails the request with a 500 |
-| `GET /api/forms/admin/:id/visits`                  | the latest visits                                                                                                                                                                              |
-| `GET /api/forms/admin/:id/files/:key`              | a signed link to a respondent's upload                                                                                                                                                         |
+| Route                                              | What it does                                                    |
+| -------------------------------------------------- | --------------------------------------------------------------- |
+| `GET`, `POST /api/forms/admin`                     | the forms list, create                                          |
+| `GET /api/forms/admin/slug-available`              | whether a slug is free, with a suggestion                       |
+| `GET`, `PUT`, `DELETE /api/forms/admin/:id`        | read, update (document, slug, status, passphrase), delete       |
+| `POST /api/forms/admin/:id/duplicate`              | a draft copy                                                    |
+| `POST /api/forms/admin/:id/media`                  | a design image (data URL) or video (raw MP4 or WebM)            |
+| `GET /api/forms/admin/:id/responses`               | every response, newest first                                    |
+| `PATCH /api/forms/admin/:id/responses/:responseId` | edit answers, star, flag, review, tags, note                    |
+| `POST /api/forms/admin/:id/responses/bulk`         | bulk star, flag, review, spam, tag and delete                   |
+| `POST /api/forms/admin/:id/responses/apply`        | write cleaned answers back                                      |
+| `GET /api/forms/admin/:id/analytics`               | traffic analytics for a range, bucketed in the admin's timezone |
+| `GET /api/forms/admin/:id/visits`                  | the latest visits                                               |
+| `GET /api/forms/admin/:id/files/:key`              | a signed link to a respondent's upload                          |
+
+The analytics route runs its 16 queries one after the other on one database connection, so it cannot hold the whole pool. A query that takes longer than 15 seconds fails the request, and so does a request that takes longer than 60 seconds in total. Both answer with a 500.
 
 Respondent uploads are personal data: they are only ever served through the admin files route, never a public one.
 
