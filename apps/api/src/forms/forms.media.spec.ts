@@ -110,6 +110,10 @@ describe("media index writes", () => {
     updatedAt: new Date(0),
     ...extra,
   });
+  function stubRecord(service: FormsService) {
+    (service as unknown as { recordWithStats: () => Promise<unknown> }).recordWithStats = () =>
+      Promise.resolve({});
+  }
   function makeWriter(row: unknown) {
     const prisma = {
       form: {
@@ -141,8 +145,8 @@ describe("media index writes", () => {
   it("replaces the rows of a form together with its document", async () => {
     const document = makeDocument(OTHER);
     const { service, prisma } = makeWriter(rowOf(makeDocument(KEY)));
-    vi.spyOn(service as never, "recordWithStats" as never).mockResolvedValue({} as never);
-    await service.update("abc123", { document });
+    stubRecord(service);
+    await service.update("abc123", { document, passphraseAction: "keep" });
     const data = prisma.form.update.mock.calls[0]?.[0].data;
     expect(data.media).toEqual({
       deleteMany: {},
@@ -152,8 +156,8 @@ describe("media index writes", () => {
 
   it("leaves the rows alone when a save does not change the document", async () => {
     const { service, prisma } = makeWriter(rowOf(makeDocument(KEY)));
-    vi.spyOn(service as never, "recordWithStats" as never).mockResolvedValue({} as never);
-    await service.update("abc123", { status: "closed" });
+    stubRecord(service);
+    await service.update("abc123", { status: "closed", passphraseAction: "keep" });
     expect(prisma.form.update.mock.calls[0]?.[0].data.media).toBeUndefined();
   });
 
