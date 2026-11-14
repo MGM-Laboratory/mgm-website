@@ -81,6 +81,7 @@ import type { CmsContactInquiryRecord } from "@/lib/contact-inquiries-cms";
 import type { CmsJobApplicationRecord, CmsJobRecord } from "@/lib/career-cms";
 import type { CmsResearchRecord } from "@/lib/research-cms";
 import type { CmsEventRecord, CmsEventRegistrationRecord } from "@/lib/events-cms";
+import { useRecordVersion } from "@/lib/use-record-version";
 
 type EditorTab = "profile" | "experience" | "education" | "credentials";
 type EditorialSection =
@@ -1395,6 +1396,7 @@ export function MemberCmsStudio({
                       activeTab={activeTab}
                       initialMember={editingNew ? undefined : currentMember}
                       initialProfile={editingNew ? undefined : selectedRecord?.profile}
+                      initialUpdatedAt={editingNew ? undefined : selectedRecord?.updatedAt}
                       onDeleted={(slug) => {
                         setRecords((current) => current.filter((item) => item.slug !== slug));
                         setSelectedSlug(undefined);
@@ -1707,6 +1709,7 @@ function MemberEditor({
   activeTab,
   initialMember,
   initialProfile,
+  initialUpdatedAt,
   onDeleted,
   onDirtyChange,
   onSaved,
@@ -1716,6 +1719,7 @@ function MemberEditor({
   activeTab: EditorTab;
   initialMember?: Member;
   initialProfile?: CmsMemberProfile;
+  initialUpdatedAt?: string;
   onDeleted: (slug: string) => void;
   onDirtyChange: (isDirty: boolean) => void;
   onSaved: (record: CmsMemberRecord) => void;
@@ -1748,6 +1752,7 @@ function MemberEditor({
   const [photoToEdit, setPhotoToEdit] = useState<string>();
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
+  const version = useRecordVersion(initialUpdatedAt);
   const [originalRecordSlug] = useState(sourceRecordSlug);
   const fileInput = useRef<HTMLInputElement>(null);
   const [baseline, setBaseline] = useState(() => JSON.stringify({ draft, profile }));
@@ -1816,12 +1821,13 @@ function MemberEditor({
         `/api/admin/members/${encodeURIComponent(originalRecordSlug ?? member.slug)}`,
         {
           body: JSON.stringify({ member, profile: nextProfile, sourceSlug: sourceMemberSlug }),
-          headers: { "content-type": "application/json" },
+          headers: version.headers(),
           method: "PUT",
         },
       );
       if (!response.ok) throw new Error(await responseError(response, "Profile save failed."));
       const savedRecord = (await response.json()) as CmsMemberRecord;
+      version.remember(savedRecord.updatedAt);
       const savedDraft = memberToDraft(savedRecord.member);
       const savedProfile = copyProfile(savedRecord.profile);
       setDraft(savedDraft);

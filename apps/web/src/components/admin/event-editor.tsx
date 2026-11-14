@@ -30,6 +30,7 @@ import {
   type EventRundownItem,
   type EventSpeaker,
 } from "@/lib/events-cms";
+import { useRecordVersion } from "@/lib/use-record-version";
 
 const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
   ssr: false,
@@ -231,6 +232,7 @@ export function EventEditor({
   onDirtyChange: (dirty: boolean) => void;
   onSaved: (record: CmsEventRecord) => void;
 }) {
+  const version = useRecordVersion(initialRecord?.updatedAt);
   const [draft, setDraft] = useState<EventDraft>(() =>
     initialRecord
       ? {
@@ -487,7 +489,7 @@ export function EventEditor({
     try {
       const response = await fetch(`/api/admin/events/${encodeURIComponent(uploadSlug)}`, {
         body: JSON.stringify({ ...draft, content }),
-        headers: { "content-type": "application/json" },
+        headers: version.headers(),
         method: "PUT",
       });
       const payload = (await response.json().catch(() => ({}))) as Partial<CmsEventRecord> & {
@@ -500,6 +502,7 @@ export function EventEditor({
             : responseError(response),
         );
       }
+      version.remember(payload.updatedAt);
       onSaved(payload as CmsEventRecord);
       window.dispatchEvent(
         new CustomEvent("mgm:event-updated", { detail: payload as CmsEventRecord }),

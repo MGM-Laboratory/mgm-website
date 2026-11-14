@@ -20,6 +20,7 @@ import {
   type JobMode,
   type JobStatus,
 } from "@/lib/career-cms";
+import { useRecordVersion } from "@/lib/use-record-version";
 
 const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
   ssr: false,
@@ -92,6 +93,7 @@ export function CareersJobEditor({
   const [perkInput, setPerkInput] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
+  const version = useRecordVersion(initialRecord?.updatedAt);
   const sourceSlug = initialRecord?.slug;
 
   const baseline = useMemo(
@@ -160,7 +162,7 @@ export function CareersJobEditor({
         `/api/admin/careers/${encodeURIComponent(sourceSlug ?? draft.slug)}`,
         {
           body: JSON.stringify({ job: draft, content }),
-          headers: { "content-type": "application/json" },
+          headers: version.headers(),
           method: "PUT",
         },
       );
@@ -176,6 +178,7 @@ export function CareersJobEditor({
             : responseError(response),
         );
       }
+      version.remember(payload.updatedAt);
       onSaved(payload as CmsJobRecord);
       window.dispatchEvent(
         new CustomEvent("mgm:career-updated", { detail: payload as CmsJobRecord }),

@@ -33,6 +33,7 @@ import {
   type ArticleDraft,
   type CmsArticleRecord,
 } from "@/lib/article-cms";
+import { useRecordVersion } from "@/lib/use-record-version";
 
 const BlocknoteEditor = dynamic(() => import("./blocknote-editor"), {
   ssr: false,
@@ -345,6 +346,7 @@ export function ArticleEditor({
   onDirtyChange: (isDirty: boolean) => void;
   onSaved: (record: CmsArticleRecord) => void;
 }) {
+  const version = useRecordVersion(initialRecord?.updatedAt);
   const [initial] = useState(() =>
     initialRecord
       ? { draft: articleToDraft(initialRecord.article), content: initialRecord.content }
@@ -460,12 +462,13 @@ export function ArticleEditor({
         `/api/admin/articles/${encodeURIComponent(originalRecordSlug ?? article.slug)}`,
         {
           body: JSON.stringify({ article: nextArticle, content }),
-          headers: { "content-type": "application/json" },
+          headers: version.headers(),
           method: "PUT",
         },
       );
       if (!response.ok) throw new Error(await responseError(response, "Article save failed."));
       const savedRecord = (await response.json()) as CmsArticleRecord;
+      version.remember(savedRecord.updatedAt);
       const savedDraft = articleToDraft(savedRecord.article);
       setDraft(savedDraft);
       setSlugTouched(true);
