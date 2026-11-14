@@ -79,17 +79,18 @@ The code of the web app has no advertising and no analytics script. The main sit
 
 The code has no retention period for personal data. Records stay until an editor deletes them. The exceptions are in the table.
 
-| Data                                        | Rule in the code                                                                                                                                                     |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Form uploads that no response claims        | The API deletes them after one day, when a later upload to the same form runs the cleanup                                                                            |
-| A form response                             | Stays until an editor deletes it, or deletes the form. Deleting a response also deletes its files                                                                    |
-| A form                                      | Deleting a form deletes its responses, events and uploads, with the stored files                                                                                     |
-| A job application                           | Stays until an editor deletes it. The delete also removes the CV from storage                                                                                        |
-| A contact message                           | Stays until an editor deletes it. The delete removes the record and leaves the attachment files in storage                                                           |
-| A contact attachment that no message claims | The browser uploads an attachment before it sends the message. The code has no cleanup for contact attachments, so an upload that no message claims stays in storage |
-| An event registration                       | Stays until an editor deletes it                                                                                                                                     |
-| A short link visit                          | Stays until an editor deletes the link, and the delete removes its visits                                                                                            |
-| The geolocation cache                       | Lives in the memory of the API process and goes with a restart                                                                                                       |
+| Data                                        | Rule in the code                                                                                                                                                                                                            |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Form uploads that no response claims        | The API deletes them after one day, when a later upload to the same form runs the cleanup                                                                                                                                   |
+| A mail that waits in the outbox             | The row holds the name, email and message of a contact notification until it is sent, and the code deletes it then. A row that failed for good stays for 30 days, and a row that was sent but not removed stays for one day |
+| A form response                             | Stays until an editor deletes it, or deletes the form. Deleting a response also deletes its files                                                                                                                           |
+| A form                                      | Deleting a form deletes its responses, events and uploads, with the stored files                                                                                                                                            |
+| A job application                           | Stays until an editor deletes it. The delete also removes the CV from storage                                                                                                                                               |
+| A contact message                           | Stays until an editor deletes it. The delete removes the record and leaves the attachment files in storage                                                                                                                  |
+| A contact attachment that no message claims | The browser uploads an attachment before it sends the message. The code has no cleanup for contact attachments, so an upload that no message claims stays in storage                                                        |
+| An event registration                       | Stays until an editor deletes it                                                                                                                                                                                            |
+| A short link visit                          | Stays until an editor deletes the link, and the delete removes its visits                                                                                                                                                   |
+| The geolocation cache                       | Lives in the memory of the API process and goes with a restart                                                                                                                                                              |
 
 ## Requests from a person
 

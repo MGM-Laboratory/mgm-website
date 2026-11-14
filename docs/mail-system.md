@@ -38,6 +38,15 @@ Configured (or not) purely by which env vars are present. Nothing needs to be "e
 
 Only the superadmin changes the routing. An admin with the contact permission saves only the contact details (the recipient emails, the address and the map position) with `PATCH /api/cms/contact-settings`. The API takes a lock of the transaction, merges those fields into the stored row and keeps the strategy, the order, the weights and the limits as they are. So an editor form that holds an older copy of the routing cannot write it back, and two saves of the contact details at the same time cannot overwrite each other. The superadmin save with `PUT` takes the same lock and replaces the whole record, so a partial save that runs at the same time can neither revert the routing that it sets nor be lost, and it wins over a save that comes before it.
 
+## Outbox (`apps/api/src/mail/mail-outbox.service.ts`)
+
+The notification mail of the contact form goes through the table `MailOutbox`, so an outage of every provider does not lose it. The visitor never waits for it, and no failure of a provider reaches them. The inquiry is stored first, then the mail is queued, and one run of the outbox starts at once. If the queue itself cannot be written, the failure is logged and the inquiry still shows in the inbox of the admin workspace.
+
+- A run claims one due row at a time, up to 10 for each run, with `FOR UPDATE SKIP LOCKED`, and gives it a lease of 5 minutes on the clock of the database. The longest send is far below the lease, so the two API copies do not send the same row at the same time. A copy that dies during a send leaves its row to the next claim after the lease.
+- A row is deleted when its mail is sent. When the mail was sent and only the delete failed, the row gets the status `sent` and is deleted after one day, and the mail is not sent again. A copy that stops waits up to 25 seconds for a send that is running. A mail that fails is tried again after 1, 5, 30, 120, 360 and then 720 minutes. After 8 attempts the row gets the status `failed` and stays for 30 days, with the last error text, and it is not tried again.
+- Every API copy runs the outbox once a minute. A mail waits for the first run after its time, so a retry can be late by up to a minute.
+- A send that timed out may have been delivered, so a retry can deliver a second copy. The confirmation mail to the visitor does not use the outbox, and a failure of it is only logged.
+
 ## Timeouts
 
 Each provider has a limit, so a provider that goes silent hands the message to the next one. SES makes one attempt, because the failover is the retry, and gives up after 10 seconds without a connection and after 30 seconds without data. SMTP gives up after 10 seconds without a connection, 10 seconds without the greeting of the server and 30 seconds without data, and the lookup of the host name has its own limit of 30 seconds. The Resend client cannot be aborted, so the call is dropped after 30 seconds and the next provider takes over.
