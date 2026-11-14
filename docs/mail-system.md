@@ -36,7 +36,7 @@ Configured (or not) purely by which env vars are present. Nothing needs to be "e
 
 `mailProviderOrder` defaults to `["resend", "smtp", "ses"]` when a caller doesn't override it.
 
-Only the superadmin changes the routing. A save by another admin keeps the stored strategy, order, weights and limits, because the web server adds them to the request before it reaches the API, which would otherwise fill the missing fields with their defaults (the strategy `failover`, the order `resend`, `smtp`, `ses`, and empty weights and limits). A save that tries to change one of them answers 403. A save answers 502 when the web server cannot read the stored settings first.
+Only the superadmin changes the routing. An admin with the contact permission saves only the contact details (the recipient emails, the address and the map position) with `PATCH /api/cms/contact-settings`. The API takes a lock of the transaction, merges those fields into the stored row and keeps the strategy, the order, the weights and the limits as they are. So an editor form that holds an older copy of the routing cannot write it back, and two saves of the contact details at the same time cannot overwrite each other. The superadmin save with `PUT` takes the same lock and replaces the whole record, so a partial save that runs at the same time can neither revert the routing that it sets nor be lost, and it wins over a save that comes before it.
 
 ## Outbox (`apps/api/src/mail/mail-outbox.service.ts`)
 
@@ -69,6 +69,7 @@ Singleton settings row (`CmsContactSettings`, fixed slug `"contact"`), cached fo
 - `GET /api/cms/contact-settings`: admin (`x-cms-passphrase`). The contact page reads it through the web server, which sends the passphrase on every call, and gives the browser only the first email, the address and the map position. Returns `{ record }`: `emails[]`, `address`, `lat`/`lng`, `mailStrategy`, `mailProviderOrder`, `mailProviderWeights`, `mailProviderLimits`.
 - `GET /api/cms/contact-settings/mail-provider-status`: admin (`x-cms-passphrase`). Returns `{configured, dailyRemaining?, longRemaining?, ...}` per provider plus `fromEmailConfigured`, never credentials, and limits come from the saved settings server-side (not caller input).
 - `PUT /api/cms/contact-settings`: admin. `contactSettingsSchema.parse(body)`, then saved (invalidates the cache).
+- `PATCH /api/cms/contact-settings`: admin. A partial body with `emails`, `address`, `lat` and `lng` only (`contactDetailsSchema`, a field that is not one of these answers 400). It keeps the stored routing, runs under a lock of the transaction and invalidates the cache.
 
 `DEFAULT_CONTACT_SETTINGS`: `emails: ["hi@labmgm.org"]`, the FILKOM UB address/coordinates, `mailStrategy: "failover"`, `mailProviderOrder: ["resend","smtp","ses"]`.
 

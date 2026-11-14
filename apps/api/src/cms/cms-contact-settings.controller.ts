@@ -1,9 +1,18 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { Body, Controller, Get, Headers, Put, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Patch,
+  Put,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiTags } from "@nestjs/swagger";
-import { contactSettingsSchema } from "@repo/shared";
+import { contactDetailsSchema, contactSettingsSchema } from "@repo/shared";
 
 import type { Env } from "../config/env.validation.js";
 import { MailService } from "../mail/mail.service.js";
@@ -48,6 +57,22 @@ export class CmsContactSettingsController {
     this.assertAdmin(passphrase);
     const data = contactSettingsSchema.parse(body);
     return { record: await this.settings.save(data) };
+  }
+
+  // The contact details only. The mail routing stays as it is stored, so a save
+  // from an editor that holds an older copy of the routing cannot write it back.
+  @Patch()
+  async saveDetails(@Body() body: unknown, @Headers("x-cms-passphrase") passphrase = "") {
+    this.assertAdmin(passphrase);
+    const parsed = contactDetailsSchema.safeParse(body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues.at(0);
+      throw new BadRequestException(
+        issue ? `${issue.path.join(".")}: ${issue.message}`.replace(/^: /, "") : "Invalid request",
+      );
+    }
+    const details = parsed.data;
+    return { record: await this.settings.saveDetails(details) };
   }
 
   private assertAdmin(value: string) {

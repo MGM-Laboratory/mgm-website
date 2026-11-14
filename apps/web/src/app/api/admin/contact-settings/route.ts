@@ -1,9 +1,6 @@
-import { NextResponse } from "next/server";
 import type { ContactSettings } from "@repo/shared";
 
 import { gateAdminRequest, proxyJson } from "@/lib/admin-proxy";
-import { cmsApi } from "@/lib/cms-api";
-import { mergeOrdinarySave } from "@/lib/contact-settings-merge";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -12,18 +9,6 @@ export async function GET() {
   const gate = await gateAdminRequest("contact", "read");
   if (!gate.ok) return gate.response;
   return proxyJson("/cms/contact-settings");
-}
-
-/** The stored settings, or undefined when the API fails, times out or answers something else. */
-async function readStoredSettings(): Promise<ContactSettings | undefined> {
-  try {
-    const response = await cmsApi("/cms/contact-settings");
-    if (!response.ok) return undefined;
-    const { record } = (await response.json()) as { record?: ContactSettings };
-    return record;
-  } catch {
-    return undefined;
-  }
 }
 
 export async function PUT(request: Request) {
@@ -35,26 +20,13 @@ export async function PUT(request: Request) {
   // Mail routing (strategy, provider order, weights, per-provider limits) is
   // superadmin-only: everything else on this form (recipient email, address,
   // map coordinates) stays gated on the ordinary "contact" write permission
-  // above. The API fills a missing routing field with its default, so an
-  // ordinary save carries the stored routing along and never resets it.
-  let payload = body;
+  // above. An ordinary admin saves only the contact details. The API merges
+  // them into the stored settings under a row lock, so the routing the form
+  // carries (possibly an older copy) is never written and never refused.
   if (gate.session.role !== "superadmin") {
-    const record = await readStoredSettings();
-    if (!record) {
-      return NextResponse.json(
-        { error: "The current settings could not be read. Please try again." },
-        { status: 502 },
-      );
-    }
-    const merged = mergeOrdinarySave(body, record);
-    if (!merged.ok) {
-      return NextResponse.json(
-        { error: "Only the superadmin can change mail routing settings." },
-        { status: 403 },
-      );
-    }
-    payload = merged.payload;
+    const details = { emails: body.emails, address: body.address, lat: body.lat, lng: body.lng };
+    return proxyJson("/cms/contact-settings", { body: JSON.stringify(details), method: "PATCH" });
   }
 
-  return proxyJson("/cms/contact-settings", { body: JSON.stringify(payload), method: "PUT" });
+  return proxyJson("/cms/contact-settings", { body: JSON.stringify(body), method: "PUT" });
 }
