@@ -41,7 +41,7 @@ export function useMemberRecords(initialRecords: readonly CmsMemberRecord[] = []
       }
     } catch {
       // Retain the server snapshot (or a just-published record) on transient
-      // failures instead of falling back to an older static profile.
+      // failures.
     } finally {
       if (!signal?.aborted) setReady(true);
     }
