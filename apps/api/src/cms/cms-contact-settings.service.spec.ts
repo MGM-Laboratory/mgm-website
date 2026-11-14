@@ -1,12 +1,12 @@
-import { DEFAULT_CONTACT_SETTINGS } from "@repo/shared";
+import { DEFAULT_CONTACT_SETTINGS, type ContactSettings } from "@repo/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { CmsContactSettingsService } from "./cms-contact-settings.service.js";
 
-const STORED = {
+const STORED: ContactSettings = {
   ...DEFAULT_CONTACT_SETTINGS,
-  mailStrategy: "loadBalanceWeighted" as const,
-  mailProviderOrder: ["ses", "smtp", "resend"] as const,
+  mailStrategy: "loadBalanceWeighted",
+  mailProviderOrder: ["ses", "smtp", "resend"],
   mailProviderWeights: { ses: 3, smtp: 1 },
 };
 
