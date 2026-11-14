@@ -43,7 +43,7 @@ A form is one JSON document validated by `formDocumentSchema` (`packages/shared/
 
 ## Persistence
 
-Four tables, created at boot by `PrismaService.onModuleInit` like every other table (the migration in `apps/api/prisma/migrations/` is the durable record):
+Five tables, created at boot by `PrismaService.onModuleInit` like every other table (the migration in `apps/api/prisma/migrations/` is the durable record):
 
 | Table          | Holds                                                                                                                                                                                        |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -51,6 +51,7 @@ Four tables, created at boot by `PrismaService.onModuleInit` like every other ta
 | `FormResponse` | answers, score, ending, spam flag, the visitor's IP, client and geolocation, client context (language, timezone, screen, UTM), duration, and the admin's star, flag, reviewed, tags and note |
 | `FormEvent`    | one row per session and step: `view`, `start`, `progress` (a question answered) and `submit`, deduplicated per session, step and question                                                    |
 | `FormUpload`   | every respondent upload with its form, question and session, linked to its response on submit                                                                                                |
+| `FormMedia`    | the design media keys of each form, so a file that a duplicated form shares is found without scanning the form documents                                                                     |
 
 Deleting a form deletes its responses, events and uploads, storage objects included.
 

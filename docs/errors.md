@@ -89,7 +89,7 @@ A route that stores a file answers 400 with a message such as `Media storage is 
 ## Forms
 
 - The public routes answer 404 `That form does not exist.` for an unknown slug or a draft.
-- `GET /api/forms/media/:key` answers 404 `Unknown media key` for a key that does not fit the pattern and for a key whose form does not exist and that no other form uses. A key whose form was deleted while a duplicate still uses it needs a scan of the form documents. Each API copy runs at most five of those scans for each second and two at a time, and remembers a key that a scan found for five minutes. A key that needs a scan while the budget is spent answers 404 as well. A key of an existing form never needs the scan.
+- `GET /api/forms/media/:key` answers 404 `Unknown media key` for a key that does not fit the pattern and for a key whose form does not exist and that no other form uses. A key whose form was deleted while a duplicate still uses it is found in the `FormMedia` table, which lists the media keys of every form. A key of an existing form never needs that lookup.
 - A form with a passphrase answers `GET /api/forms/public/:slug` with 200 and the state `locked`. The events, uploads and responses routes answer 401 `This form is locked.` until the visitor unlocks the form. A wrong passphrase on the unlock route answers 401 `That passphrase is not right.`.
 - A form that cannot take a response answers 409 with `This form is closed.`, `This form is not open yet.` or `This form has reached its response limit.`.
 - A response answers 400 with `errors` when an answer fails its question, 409 `You have already responded to this form.` for the rule of one response for each device, and 409 `One of the files was already submitted.` when two submissions claim one upload.
