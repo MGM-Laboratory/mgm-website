@@ -10,6 +10,7 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 [![Docker](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker.yaml/badge.svg)](https://github.com/MGM-Laboratory/mgm-website/actions/workflows/docker.yaml)
 [![codecov](https://codecov.io/gh/MGM-Laboratory/mgm-website/branch/main/graph/badge.svg)](https://codecov.io/gh/MGM-Laboratory/mgm-website)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MGM-Laboratory/mgm-website/badge)](https://securityscorecards.dev/viewer/?uri=github.com/MGM-Laboratory/mgm-website)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16622/badge)](https://www.bestpractices.dev/projects/16622)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/MGM-Laboratory/mgm-website/main.svg)](https://results.pre-commit.ci/latest/github/MGM-Laboratory/mgm-website/main)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
