@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.2](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.1...v1.4.2) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** keep the tuple type of the analytics queries ([688cc45](https://github.com/MGM-Laboratory/mgm-website/commit/688cc45bf32c4c64df49e36e68254ac5f9c2d2f8))
+* **api:** run the boot DDL in one locked transaction with lock and statement timeouts ([5ec342c](https://github.com/MGM-Laboratory/mgm-website/commit/5ec342c7b1b1151d418dc6c75275cea8155fae6c))
+* **api:** run the form analytics queries on one connection with a statement timeout ([6d3e16e](https://github.com/MGM-Laboratory/mgm-website/commit/6d3e16e2413e1e9dd62e5869ca7bcfb45044373a))
+
 ## [1.4.1](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.0...v1.4.1) (2026-11-14)
 
 
