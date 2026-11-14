@@ -22,7 +22,7 @@ describe.skipIf(!databaseUrl)("statement timeout on PostgreSQL", () => {
     await expect(
       prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = '200ms'`);
-        await tx.$queryRaw`SELECT pg_sleep(2)`;
+        await tx.$queryRaw`SELECT 1 AS "done" FROM pg_sleep(2)`;
       }),
     ).rejects.toThrow();
 
