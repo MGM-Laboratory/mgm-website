@@ -147,7 +147,7 @@ describe("endings", () => {
 
 describe("referencesTo", () => {
   it("finds rules, jumps, pipes and ending rules that name a field", () => {
-    const rule = (subject: string) => ({ id: "r", subject, op: "equals", value: "x" });
+    const rule = (subject: string) => ({ subject, operator: "equals" as const, value: "x" });
     const document = {
       title: "T",
       fields: [

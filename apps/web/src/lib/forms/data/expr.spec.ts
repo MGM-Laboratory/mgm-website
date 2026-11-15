@@ -300,7 +300,13 @@ describe("functions", () => {
   });
 
   it("falls back to empty for a node it does not know", () => {
-    const ast = { type: "call", name: "ghost", args: [], start: 0, end: 0 } as const;
+    const ast: Parameters<typeof evaluate>[0] = {
+      type: "call",
+      name: "ghost",
+      args: [],
+      start: 0,
+      end: 0,
+    };
     expect(evaluate(ast, () => null)).toBeNull();
     const odd = { type: "weird", start: 0, end: 0 } as unknown as Parameters<typeof evaluate>[0];
     expect(evaluate(odd, () => null)).toBeNull();

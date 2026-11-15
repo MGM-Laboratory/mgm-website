@@ -1,4 +1,4 @@
-import type { FormField, PublicFormDocument } from "@repo/shared";
+import type { FormAnswerValue, FormField, PublicFormDocument } from "@repo/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -173,13 +173,13 @@ describe("sanitizeDraft", () => {
   it("keeps only the string parts of a name or an address", () => {
     expect(
       sanitizeDraft(document, {
-        who: { first: "Ada", last: 5, extra: "x" } as unknown as FormAnswers,
+        who: { first: "Ada", last: 5, extra: "x" } as unknown as FormAnswerValue,
         where: {
           line1: "Street",
           city: "Malang",
           postal: ["x"],
           hacked: "y",
-        } as unknown as FormAnswers,
+        } as unknown as FormAnswerValue,
       }),
     ).toEqual({ who: { first: "Ada" }, where: { line1: "Street", city: "Malang" } });
   });

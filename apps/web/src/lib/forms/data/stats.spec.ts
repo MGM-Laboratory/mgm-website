@@ -322,7 +322,7 @@ describe("relationships", () => {
     const monotonic = spearman([1, 2, 3, 4, 5], [1, 8, 27, 64, 125]);
     expect(monotonic.r).toBe(1);
     const tied = spearman([1, 2, 2, 4, 5], [5, 6, 7, 8, 7]);
-    expect(Number.isFinite(tied.r)).toBe(true);
+    expect(tied.r).toBeCloseTo(0.763158, 6);
     expect(spearman([1, 2, 3, 4, 5, 6], [1, 2, 3]).n).toBe(3);
   });
 
