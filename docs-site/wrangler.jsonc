@@ -1,0 +1,20 @@
+{
+  // The API documentation site. Cloudflare Workers Builds runs npm run build in this folder, which turns openapi.yaml into
+  // dist/index.html, and then deploys that folder as static assets. The name has to match the Workers project.
+  "name": "mgm-website-api-docs",
+  "compatibility_date": "2026-11-16",
+  "assets": {
+    "directory": "./dist",
+  },
+  // The site is served on api-docs.labmgm.org only, so the workers.dev address and the version URLs are off
+  "workers_dev": false,
+  "preview_urls": false,
+  // Declaring the domain keeps this file and Cloudflare in step, and a deploy attaches it again if it is ever removed.
+  // It needs the zone to be on the same Cloudflare account
+  "routes": [
+    {
+      "pattern": "api-docs.labmgm.org",
+      "custom_domain": true,
+    },
+  ],
+}
