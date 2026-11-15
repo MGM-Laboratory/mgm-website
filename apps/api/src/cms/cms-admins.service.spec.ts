@@ -200,7 +200,9 @@ describe("CmsAdminsService reads", () => {
       },
     ]);
 
-    const records = await service.all();
+    const records = (await service.all()) as unknown as Array<{
+      permissions: Record<string, string[]>;
+    }>;
 
     expect(model.findMany).toHaveBeenCalledWith({ orderBy: { createdAt: "asc" } });
     expect(records[0]).toMatchObject({

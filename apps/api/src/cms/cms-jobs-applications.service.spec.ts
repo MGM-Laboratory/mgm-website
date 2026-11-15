@@ -137,7 +137,7 @@ describe("CmsJobApplicationsService bulk", () => {
 
   it("copes with a stored record that has no application", async () => {
     const { service } = makeService([
-      { slug: "a", data: {}, createdAt: CREATED, updatedAt: UPDATED },
+      { slug: "a", data: {} as never, createdAt: CREATED, updatedAt: UPDATED },
     ]);
 
     await expect(service.bulk(["a"], "delete")).resolves.toEqual({
