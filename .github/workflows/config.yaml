@@ -243,7 +243,7 @@ jobs:
 
       - name: Install the docs tools
         working-directory: docs-site
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Lint the spec
         working-directory: docs-site
@@ -252,6 +252,13 @@ jobs:
       - name: Build the site
         working-directory: docs-site
         run: npm run build
+
+      - name: Check the built files
+        working-directory: docs-site
+        run: |
+          test -s dist/index.html
+          test -s dist/_headers
+          test -s dist/favicon.ico
 
   # The one check that the ruleset requires, so a job can be added or renamed here without a change of the ruleset
   gate:

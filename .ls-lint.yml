@@ -44,8 +44,8 @@ ignore:
   # the tools read these exact names
   - .pre-commit-config.yaml
   - pnpm-workspace.yaml
+  - pnpm-lock.yaml
   # the docs site follows kibooz-backend, where the headers file keeps the name that Cloudflare reads and the OpenAPI files keep .yaml
   - docs-site/docs/_headers
   - docs-site/openapi.yaml
   - docs-site/redocly.yaml
-  - pnpm-lock.yaml

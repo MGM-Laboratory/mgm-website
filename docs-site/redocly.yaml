@@ -1,6 +1,2 @@
 extends:
   - recommended
-
-rules:
-  # The routes of the API are not all kebab case, so only the shape of the documentation is checked
-  no-server-example.com: off

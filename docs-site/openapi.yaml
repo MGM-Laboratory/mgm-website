@@ -17,7 +17,7 @@ servers:
     description: A deployment, with the host that its operator gives you
     variables:
       host:
-        default: labmgm.org
+        default: api.labmgm.org
 tags:
   - name: Health
     description: Whether the API and its database answer.
@@ -42,6 +42,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+        "429":
+          description: The client went over the rate limit.
+          headers:
+            Retry-After:
+              description: Seconds to wait before the next request.
+              schema:
+                type: integer
 components:
   securitySchemes:
     adminPassphrase:
