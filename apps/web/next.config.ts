@@ -41,6 +41,9 @@ function contentSecurityPolicy() {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // The image build sets BUILD_ID to the commit, so two builds of one commit give the same build id. Without it Next.js makes a
+  // random id on every build.
+  generateBuildId: async () => process.env.BUILD_ID || null,
   // The development route indicator obscures interactive UI while reviewing
   // the site locally. Compile and runtime errors remain available in the
   // terminal and browser overlay.
