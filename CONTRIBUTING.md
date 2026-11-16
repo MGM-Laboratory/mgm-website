@@ -42,6 +42,31 @@ These are the same commands that CI runs, listed in the table under Local setup.
 
 To run the same focused checks before committing, install [pre-commit](https://pre-commit.com/) and run `pre-commit install` once, then use `pre-commit run --all-files` when needed. The existing Husky hook continues to format staged files.
 
+## Code review
+
+Every change is reviewed before it ships. This section says how.
+
+### How a review is done
+
+- The code owner named in `.github/CODEOWNERS` reviews each pull request from a contributor and has to approve it before it can merge. A member of the maintainer team who opens a pull request can merge it without that approval, and the required checks and the signed commits still apply in full.
+- CodeRabbit adds an automated review to each pull request. It does not replace the review of a person.
+- The reviewer reads the whole diff, reads the result of every check, and runs the change when it touches behavior that the checks do not cover.
+- A new push dismisses an earlier approval, so the reviewer looks at the new commits again.
+- The author answers or fixes every review thread. A thread is resolved only when it is handled, and the ruleset blocks the merge while a thread is open.
+
+### What the reviewer checks
+
+- The pull request is one change with one purpose, and the commits, the branch, the label and the body follow the rules above.
+- A new feature comes with tests, and a bug fix comes with a test that fails without the fix. Code that depends on how PostgreSQL behaves has a test in a `.db.spec.ts` file, which CI runs on a real database.
+- A change to a route updates the API reference in `docs-site/openapi.yaml`, and a change of behavior updates the matching page in `docs/`. A claim in a doc is true against the code.
+- Inputs are validated on the server, no secret or token is added, and nothing in a public text names an unfixed weakness.
+- A change to the interface follows the design system in `DESIGN_SYSTEM.md` and the accessibility rules in `ACCESSIBILITY.md`.
+- The change uses no deprecated API, which the typecheck enforces, and adds no dependency without a reason.
+
+### When a change is acceptable
+
+A pull request is acceptable when every required check is green, no review thread is open, the code owner has approved it or the author is in the maintainer team, and nobody has an open request for changes. The reviewer says in a comment when a change is not acceptable and why.
+
 ## Local setup
 
 ```bash
