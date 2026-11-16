@@ -8,6 +8,26 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // A browser spec takes `test` from the guard fixture, so a Content-Security-Policy violation fails it.
+  {
+    files: ["e2e/**/*.ts"],
+    ignores: ["e2e/support/csp-guard.ts", "e2e/support/projects.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@playwright/test",
+              importNames: ["test"],
+              message:
+                "Import test from ./support/csp-guard so that the Content-Security-Policy guard runs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
