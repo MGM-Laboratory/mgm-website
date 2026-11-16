@@ -31,7 +31,10 @@ RUN pnpm turbo run build --filter=api
 FROM base AS prod-deps
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+# pnpm writes its own bookkeeping with timestamps into node_modules. The runtime starts node directly, so it never reads these
+# two files, and without them two builds of one commit give the same files.
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts \
+    && rm -f node_modules/.modules.yaml node_modules/.pnpm-workspace-state-v1.json
 
 # 4. Final runtime image
 FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS runner

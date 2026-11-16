@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Reorder, useDragControls } from "framer-motion";
+import { Reorder, useDragControls } from "motion/react";
 import { ArrowDown, ArrowUp, DotsSixVertical, EyeSlash, PushPin, X } from "@phosphor-icons/react";
 
 import { AdminDatePicker } from "../builder/admin-pickers";
