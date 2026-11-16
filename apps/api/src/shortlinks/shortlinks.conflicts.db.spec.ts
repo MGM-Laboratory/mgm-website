@@ -1,9 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../prisma/prisma.service.js";
 import { ShortlinksError, ShortlinksService } from "./shortlinks.service.js";
 
-const dns = vi.hoisted(() => ({ resolveNs: vi.fn(), resolveTxt: vi.fn() }));
+const dns = vi.hoisted(() => ({ resolveNs: vi.fn(), resolveTxt: vi.fn(), lookup: vi.fn() }));
 vi.mock("node:dns/promises", () => dns);
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -42,6 +42,7 @@ describe.skipIf(!databaseUrl)("short link conflicts on PostgreSQL", () => {
 
   beforeAll(async () => {
     dns.resolveNs.mockRejectedValue(new Error("ENOTFOUND"));
+    dns.lookup.mockRejectedValue(new Error("ENOTFOUND"));
     prisma = new PrismaService({ getOrThrow: () => databaseUrl } as never);
     await prisma.onModuleInit();
     await prisma.shortLinkDomain.deleteMany({ where: { hostname: { in: [HOST, NEW_HOST] } } });
@@ -57,18 +58,20 @@ describe.skipIf(!databaseUrl)("short link conflicts on PostgreSQL", () => {
     service = new ShortlinksService(prisma, config as never);
   });
 
-  afterAll(async () => {
+  afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterAll(async () => {
     await prisma.shortLinkDomain.deleteMany({ where: { hostname: { in: [HOST, NEW_HOST] } } });
     await prisma.$disconnect();
   });
 
   it("answers 409 when a custom code is taken between the check and the write", async () => {
     await service.createLink(link("taken-on-create"));
-    const check = skipSlugCheck();
+    skipSlugCheck();
 
     expect(await status(service.createLink(link("taken-on-create")))).toBe(409);
-    check.mockRestore();
     expect(await prisma.shortLink.count({ where: { domainId, slug: "taken-on-create" } })).toBe(1);
   });
 
@@ -86,12 +89,11 @@ describe.skipIf(!databaseUrl)("short link conflicts on PostgreSQL", () => {
   it("answers 409 when a renamed code is taken between the check and the write", async () => {
     await service.createLink(link("rename-target"));
     const other = await service.createLink(link("rename-source"));
-    const check = skipSlugCheck();
+    skipSlugCheck();
 
     const outcome = await status(
       service.updateLink(other.id, { slug: "rename-target", passphraseAction: "keep" }),
     );
-    check.mockRestore();
 
     expect(outcome).toBe(409);
     const stored = await prisma.shortLink.findUniqueOrThrow({ where: { id: other.id } });
@@ -105,7 +107,7 @@ describe.skipIf(!databaseUrl)("short link conflicts on PostgreSQL", () => {
       .mockResolvedValueOnce(null as never);
 
     expect(await status(service.createDomain(NEW_HOST))).toBe(409);
-    lookup.mockRestore();
+    expect(lookup).toHaveBeenCalledTimes(1);
     expect(await prisma.shortLinkDomain.count({ where: { hostname: NEW_HOST } })).toBe(1);
   });
 });
