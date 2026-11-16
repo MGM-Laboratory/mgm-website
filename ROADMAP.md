@@ -14,7 +14,7 @@ The website is in maintenance. This page says what the maintainer does now. A ro
 
 The maintainer plans to keep the site running and current, and to take no new direction beyond that.
 
-- Keep the dependencies, the base images and the Node and pnpm versions current through Renovate.
+- Keep the dependencies, the base images and the pnpm version current through Renovate, and keep Node current within version 22.
 - Fix every security report and every confirmed bug that follows the rules above.
 - Keep the documentation and the automated checks in step with the code.
 - Decide larger changes through feature requests, as [GOVERNANCE.md](GOVERNANCE.md) describes.
