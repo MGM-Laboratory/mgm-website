@@ -17,6 +17,7 @@ If you need logo, it's available in lovo.svg (./logo.svg). If you need to genera
 ```css
 :root {
   /* Surfaces */
+  --background: #f7f7f5; /* the page canvas, #15181e in dark */
   --bg: #ffffff; /* plain white, used for fades. Pages sit on --background (#f7f7f5, #15181e in dark) */
   --surface: #ffffff; /* card / panel surface */
   --surface-muted: #f7f7f5; /* very subtle off-white for zoning */
@@ -70,12 +71,12 @@ For high-contrast dark sections (testimonials, dramatic stats, big quote breaks)
 
 - No purple, no teal, no pink, no orange. The palette is closed.
 - No gradients between brand colors. No tie-dye. No mesh gradients.
-- No tinted page backgrounds. The page background is white. Always.
+- No tinted page backgrounds. The page background is `--background`, the calm off-white canvas, and never a brand tint.
 - No drop shadows on colored fills (a yellow chip with a yellow shadow is forbidden).
 
 ### 2.5 Themed pages: projects, the articles library and forms (a scoped exception)
 
-Each project detail page (`/projects/[slug]`), each article page (`/articles/[slug]`) and each public form (`/forms/[slug]`) wears one of 20 preset themes, picked per record in the admin editor. These, and the articles library around them, are the only places the closed palette and the untinted page background don't apply: the page, its ambient scene and the site header on that page take the record's own colours, the way a case study carries its client's identity. Everywhere else the rules above hold.
+Each project detail page (`/projects/[slug]`), each article page (`/articles/[slug]`) and each public form (`/forms/[slug]`) wears one of 20 preset themes, picked per record in the admin editor. These, and the articles library around them, are the only places the closed palette and the plain site page background don't apply: the page, its ambient scene and the site header on that page take the record's own colours, the way a case study carries its client's identity. Everywhere else the rules above hold.
 
 - The presets live in `apps/web/src/lib/project-themes.ts`. Four of them are built from the brand colours (Laboratory, Sunburst, Signal, Grove). Editors choose from the list and never enter free colours.
 - Every theme has a light and a dark variant, and the page follows the site's light or dark mode.
