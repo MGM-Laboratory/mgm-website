@@ -20,7 +20,7 @@ import {
   ThumbsUpIcon,
   CircleIcon,
   UploadSimpleIcon,
-  ImageIcon as ImageIcon,
+  ImageIcon,
   VideoCameraIcon,
   QuotesIcon,
   EyeSlashIcon,

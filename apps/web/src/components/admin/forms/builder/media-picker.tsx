@@ -12,7 +12,7 @@ import {
   CloudArrowUpIcon,
   CrosshairIcon,
   FilmStripIcon,
-  ImageIcon as ImageIcon,
+  ImageIcon,
   LinkSimpleIcon,
   PencilSimpleIcon,
   PlayCircleIcon,

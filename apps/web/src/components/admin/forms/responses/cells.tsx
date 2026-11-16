@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  FileIcon as FileIcon,
+  FileIcon,
   FileAudioIcon,
   FileDocIcon,
   FileImageIcon,
