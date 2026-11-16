@@ -60,7 +60,7 @@ A real failure anywhere in the group fails the gate. A job that correctly skippe
 
 Two jobs are deliberately **not** gated:
 
-- **`secret-scan` (gitleaks)**: a secret can be pasted into a markdown file as easily as into source, so it has to scan doc-only diffs too. It runs with `--redact=100`, so the log and the SARIF report never show any part of a finding.
+- **`secret-scan` (gitleaks)**: a secret can be pasted into a markdown file as easily as into source, so it has to scan doc-only diffs too. It runs with `--redact=100`, so the log and the SARIF report never show any part of the secret value.
 - **`scorecard`**: restricted to the weekly schedule or an explicit dispatch on `main`. It scores the whole repo's posture, not a diff.
 
 `hygiene`'s format-check step is unconditional for the same reason. `prettier --check .` covers the whole repo, not just the CI scripts, so it needs to catch a formatting regression in any workspace regardless of scope. Only that job's other step, testing the CI scripts themselves, is gated on the `automation` scope.
