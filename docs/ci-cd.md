@@ -131,10 +131,11 @@ The pre-commit.ci GitHub App runs `.pre-commit-config.yaml` on every pull-reques
 gh run list -R MGM-Laboratory/mgm-website
 gh run watch -R MGM-Laboratory/mgm-website <id>
 gh workflow run ci.yaml -R MGM-Laboratory/mgm-website --ref main
+gh release verify <tag> -R MGM-Laboratory/mgm-website
 cosign verify --new-bundle-format=false --certificate-identity-regexp '^https://github\.com/MGM-Laboratory/mgm-website/\.github/workflows/docker\.yaml@refs/(heads/main|tags/v.+)$' --certificate-oidc-issuer https://token.actions.githubusercontent.com docker.io/labmgm/mgm-website-backend:latest
 ```
 
-The command checks the signature that `docker.yaml` made. A version tag that `resign.yaml` signed again carries the identity `resign\.yaml@refs/heads/main` instead, so use that in the regexp for such a tag.
+`gh release verify` checks the attestation of an immutable GitHub release, so it confirms that the tag and the assets of the release match the attestation that GitHub made when the release was published. The `cosign verify` command checks the signature that `docker.yaml` made. A version tag that `resign.yaml` signed again carries the identity `resign\.yaml@refs/heads/main` instead, so use that in the regexp for such a tag.
 
 ## Releases
 

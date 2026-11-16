@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Reorder, useDragControls } from "framer-motion";
+import { Reorder, useDragControls } from "motion/react";
 import { toast } from "sonner";
 import {
   Broom,
