@@ -2,9 +2,10 @@
 
 This file lists who looks after the website and what that person can do. [GOVERNANCE.md](GOVERNANCE.md) explains how decisions are made, and this file follows it.
 
-| GitHub account                                 | Role                 | Looks after                                                                      |
-| ---------------------------------------------- | -------------------- | -------------------------------------------------------------------------------- |
-| [@SyafaHadyan](https://github.com/SyafaHadyan) | Owner and maintainer | Merging, releases, deployment, repository settings, secrets and security reports |
+| GitHub account                                 | Role                 | Looks after                                                                        |
+| ---------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| [@SyafaHadyan](https://github.com/SyafaHadyan) | Owner and maintainer | Merging, releases, deployment, repository settings, secrets and security reports   |
+| [@BangNopall](https://github.com/BangNopall)   | Repository admin     | Repository settings, secrets, releases and deployment, when the maintainer is away |
 
 ## What the role means
 
@@ -19,6 +20,10 @@ A contributor opens a pull request like anyone else. Every change to `main` goes
 - Report a barrier in the site as [ACCESSIBILITY.md](ACCESSIBILITY.md) describes.
 - Send a question for the lab, or a report about behavior in the community, to **hi@labmgm.org**. The [Code of Conduct](CODE_OF_CONDUCT.md) explains what happens next.
 
+## Continuity
+
+The repository has two admins, @SyafaHadyan and @BangNopall. Both can manage the repository settings, the rulesets, the secrets and the releases, and both have access to the accounts and credentials that the releases and the deployment need, including the container registries. The organization has four owners, so the access does not depend on one person. If the maintainer is lost, the other admin can triage issues, merge pull requests that pass the required checks, publish a release and deploy it, following [docs/deployment.md](docs/deployment.md) and [docs/ci-cd.md](docs/ci-cd.md).
+
 ## Known limit
 
-The project has one maintainer, as [GOVERNANCE.md](GOVERNANCE.md) says. That file also says that becoming a maintainer has no fixed process yet. This file changes the day a second maintainer is added.
+The project has one maintainer who merges, as [GOVERNANCE.md](GOVERNANCE.md) says, and a second admin who can step in. That file also says that becoming a maintainer has no fixed process yet. This file changes the day a second maintainer is added.
