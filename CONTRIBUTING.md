@@ -82,7 +82,7 @@ docker compose up
 | `pnpm dev`, `pnpm dev:web`, `pnpm dev:api` | Run everything, the web app (port 3000) or the API (port 4000).  |
 | `pnpm build`                               | Build all workspaces with Turbo.                                 |
 | `pnpm lint`                                | ESLint for the web app and oxlint for the API.                   |
-| `pnpm typecheck`                           | Type check both workspaces.                                      |
+| `pnpm typecheck`                           | Type check both workspaces. It also fails on a deprecated API.   |
 | `pnpm test`                                | Run the unit tests of the API and the web app with vitest.       |
 | `pnpm format`, `pnpm format:check`         | Run Prettier over the repo. A hook also runs it on staged files. |
 | `docker compose up`                        | Start the local Postgres, API and web stack. See `.env.example`. |

@@ -19,6 +19,7 @@
     },
     "typecheck": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "../../.github/scripts/check-deprecated.mjs"],
       "outputs": []
     },
     "test": {
