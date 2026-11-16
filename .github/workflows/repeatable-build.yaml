@@ -11,6 +11,7 @@ on:
       - "apps/api/Dockerfile"
       - "apps/web/Dockerfile"
       - "apps/web/next.config.ts"
+      - "turbo.json"
       - ".github/scripts/hash-image-files.sh"
       - ".github/workflows/repeatable-build.yaml"
   schedule:
@@ -64,6 +65,7 @@ jobs:
             if [ "$IMAGE" = "frontend" ]; then
               echo "NEXT_PUBLIC_API_URL=${API_URL}"
               echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${MAPS_KEY}"
+              echo "BUILD_ID=${GITHUB_SHA}"
             fi
             echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
