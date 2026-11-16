@@ -20,7 +20,7 @@ There's no `dev` branch. Every change to `main` goes through a pull request:
 1. Fork the repo (or branch directly if you're a collaborator).
 2. Make your change, following the conventions in `docs/` (especially `docs/animation-system.md` if you're touching anything animated).
 3. Open a PR against `main`. Keep PRs focused: one discrete change per PR is easier to review than a bundle of unrelated fixes.
-4. Automated checks run on every PR (see below). All of them need to be green before the PR can merge, and the code owner has to approve it. This holds for every PR that a contributor opens, including a PR that you opened yourself.
+4. Automated checks run on every PR (see below). All of them need to be green before the PR can merge, and the code owner has to approve it. This holds for every PR that a contributor opens. A member of the maintainer team can merge without the approval, as the Code review section says.
 5. Only a member of the maintainer team merges the PR, with a merge commit (never squash or rebase), once the checks are green and, for a contributor PR, the approval is given. Nobody can push to `main` directly, and every commit has to be signed. See `GOVERNANCE.md` for how larger decisions get made.
 
 ## Required checks
@@ -42,6 +42,32 @@ All of these need to actually succeed, not just avoid failing outright. A lint w
 These are the same commands that CI runs, listed in the table under Local setup. Run one locally only when CI cannot explain a failure.
 
 To run the same focused checks before committing, install [pre-commit](https://pre-commit.com/) and run `pre-commit install` once, then use `pre-commit run --all-files` when needed. The existing Husky hook continues to format staged files.
+
+## Code review
+
+Every change goes through a pull request and the required checks. This section says how a change is reviewed, and it also says what the rules do not guarantee.
+
+### How a review is done
+
+- The code owner named in `.github/CODEOWNERS` reviews each pull request from a contributor and has to approve it before it can merge. Three files have no owner because bots rewrite them, which are `pnpm-lock.yaml`, `CHANGELOG.md` and `.release-please-manifest.json`. A pull request that changes only those files does not ask the code owner for a review, and it still needs the one approval that the ruleset requires.
+- A member of the maintainer team can merge a pull request without that approval, through the ruleset bypass. The required checks and the signed commits still apply in full. The ruleset does not guarantee a second person for such a pull request, so a maintainer may ask another member of the team to look at a larger change.
+- An automated review bot, CodeRabbit, comments on pull requests from people. It does not replace the review of a person.
+- The reviewer reads the whole diff, reads the result of every check, and runs the change when it touches behavior that the checks do not cover.
+- A new push dismisses an earlier approval, so the reviewer looks at the new commits again.
+- The author answers or fixes every review thread. A thread is resolved only when it is handled, and the ruleset blocks the merge while a thread is open.
+
+### What the reviewer checks
+
+- The pull request is one change with one purpose, and the commits, the branch, the label and the body follow the rules above.
+- A new feature comes with tests, and a bug fix comes with a test that fails without the fix. Code that depends on how PostgreSQL behaves has a test in a `.db.spec.ts` file, which CI runs on a real database.
+- A change to a route updates the API reference in `docs-site/openapi.yaml`, and a change of behavior updates the matching page in `docs/`. A claim in a doc is true against the code.
+- Inputs are validated on the server, no secret or token is added, and nothing in a public text names an unfixed weakness.
+- A change to the interface follows the design system in `DESIGN_SYSTEM.md` and the accessibility rules in `ACCESSIBILITY.md`.
+- The change adds no deprecated API and no dependency without a reason.
+
+### When a change is acceptable
+
+A pull request is acceptable when every required check is green, no review thread is open, and the code owner has approved it or a member of the maintainer team merges it under the ruleset bypass. A reviewer who asks for changes says in a comment what is wrong and why, and nobody should merge the pull request while that request is open.
 
 ## Local setup
 
