@@ -56,7 +56,7 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      // Only the production build sends them, because the dev server needs a websocket and inline eval that the policy would report all day
+      // Only the production build sends them. The dev server needs a websocket and inline eval that the policy would report all day, and it runs over plain HTTP, where HSTS does nothing
       ...(process.env.NODE_ENV === "production"
         ? [
             {

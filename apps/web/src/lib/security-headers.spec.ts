@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import nextConfig, { FRAME_PROTECTED_SOURCE } from "../../next.config";
 
-// The compiled copy of path-to-regexp is the one that Next uses to match the `source` of a header rule.
+// The compiled copy of path-to-regexp is the one that Next uses to match the `source` of a header rule. It is an internal path of
+// Next, so a Next upgrade can move it, and then this import is what needs a new path.
 const nextRequire = createRequire(require.resolve("next/package.json"));
 const { pathToRegexp } = nextRequire("next/dist/compiled/path-to-regexp") as {
   pathToRegexp: (path: string) => RegExp;
