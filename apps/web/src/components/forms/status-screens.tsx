@@ -135,7 +135,7 @@ export function LockedGate({
   const [shake, setShake] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || !value.trim()) {
       inputRef.current?.focus();

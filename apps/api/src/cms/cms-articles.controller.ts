@@ -51,7 +51,7 @@ const blockSchema = z
     content: z.unknown().optional(),
     children: z.array(z.unknown()).optional(),
   })
-  .passthrough();
+  .loose();
 
 const articleSchema = z.object({
   article: z.object({

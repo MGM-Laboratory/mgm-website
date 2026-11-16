@@ -23,6 +23,13 @@ export type QrOptions = {
 
 const LOGO_FRACTION = 0.22;
 
+// btoa only takes Latin-1, so the UTF-8 bytes go in one by one.
+function utf8ToBase64(text: string) {
+  let binary = "";
+  for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
 export type QrModel = {
   total: number;
   path: string;
@@ -125,7 +132,7 @@ async function fetchLogoDataUrl(): Promise<string | undefined> {
     .then(async (request) => {
       if (!request.ok) return undefined;
       const text = await request.text();
-      return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(text)))}`;
+      return `data:image/svg+xml;base64,${utf8ToBase64(text)}`;
     })
     .catch(() => undefined);
 }
@@ -182,7 +189,7 @@ export function QrCard({
       const svg = qrSvgString(qrModel(url, options), colors, logo);
       const image = new Image();
       image.decoding = "async";
-      const source = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+      const source = `data:image/svg+xml;base64,${utf8ToBase64(svg)}`;
       await new Promise<void>((resolve, reject) => {
         image.onload = () => {
           resolve();

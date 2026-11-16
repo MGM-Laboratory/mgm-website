@@ -90,7 +90,7 @@ const COLOR_NAMES = new Map<RichTextColor, string>([
 ]);
 
 const isMac = () =>
-  typeof navigator !== "undefined" && /Mac|iP(hone|ad|od)/.test(navigator.platform);
+  typeof navigator !== "undefined" && /Mac|iP(hone|ad|od)/.test(navigator.userAgent);
 const mod = (keys: string) => (isMac() ? keys.replace("Mod", "⌘") : keys.replace("Mod", "Ctrl"));
 
 function sameDoc(left: RichTextDoc | undefined, right: RichTextDoc | undefined) {

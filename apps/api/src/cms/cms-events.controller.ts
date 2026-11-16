@@ -77,7 +77,7 @@ const blockSchema = z
     content: z.unknown().optional(),
     children: z.array(z.unknown()).optional(),
   })
-  .passthrough();
+  .loose();
 
 const speakerSchema = z.object({
   name: z.string().trim().min(1).max(120),

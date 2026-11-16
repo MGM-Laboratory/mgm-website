@@ -18,6 +18,7 @@ import {
   contactFormSchema,
 } from "@repo/shared";
 import type { Request, Response } from "express";
+import { z } from "zod";
 
 import { storedContentType } from "../storage/content-type.js";
 import { StorageConfigurationError, StorageService } from "../storage/storage.service.js";
@@ -126,7 +127,7 @@ export class ContactController {
     if (!parsed.success) {
       throw new BadRequestException({
         message: "Validation failed",
-        errors: parsed.error.flatten().fieldErrors,
+        errors: z.flattenError(parsed.error).fieldErrors,
       });
     }
     await this.contact.send(parsed.data);
