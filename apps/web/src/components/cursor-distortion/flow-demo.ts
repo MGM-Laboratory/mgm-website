@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { CanvasTexture, Mesh, MeshBasicMaterial, NoColorSpace, PlaneGeometry } from "three";
 
 import type { GlHost } from "@/lib/gl-host";

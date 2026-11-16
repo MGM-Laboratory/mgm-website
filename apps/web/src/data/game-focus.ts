@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Content for the /game Focus page. Voice is casual and specific on
 // purpose — a pitch to people who already love games and XR, not a
 // corporate capability statement. See docs/project-overview.md for how this

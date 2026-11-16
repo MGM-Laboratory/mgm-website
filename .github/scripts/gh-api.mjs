@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Minimal GitHub REST API helper shared by the CI scripts.
 // Deliberately dependency-free (plain fetch) so these scripts don't need an
 // `npm install` step in CI.

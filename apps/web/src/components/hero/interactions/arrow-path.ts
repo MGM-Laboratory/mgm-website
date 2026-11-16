@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The hero's connector arrow, in real pixels of its own box: a top arm
  * running left from near the clover to a rounded corner, down the shared

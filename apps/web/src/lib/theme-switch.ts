@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Lets a page stage the light/dark switch the header toggle asks for. The
  * articles library, for one, plays a wave from the toggle across its world

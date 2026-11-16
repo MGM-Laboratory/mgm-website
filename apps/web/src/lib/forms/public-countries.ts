@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Every ISO 3166-1 alpha-2 country with its calling code, for the country,
  * address and phone fields. Names come from `Intl.DisplayNames` in the

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Content for the /website Focus page. Copy is written casual and specific
 // on purpose — this page is a pitch to working web developers, not a
 // corporate capability statement. See docs/project-overview.md for how this

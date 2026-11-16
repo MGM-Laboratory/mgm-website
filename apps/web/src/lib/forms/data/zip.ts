@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * A minimal ZIP writer (store method, no compression) for the .xlsx export
  * and the "all uploaded files" download. Entries are CRC-32 checked and

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { forwardPublicUpload, type SlugContext } from "../../_lib/public";
 
 export const dynamic = "force-dynamic";

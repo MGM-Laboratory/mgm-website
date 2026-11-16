@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * DOM probing for the adaptive header (see `header-tone.ts`): what colour a
  * viewport point behind the glass header or menu panel shows.

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Browser-side file handling for the project editor's media sections:
  * preparing images for the JSON upload route, probing videos for their size,

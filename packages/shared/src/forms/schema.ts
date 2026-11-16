@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { z } from "zod";
 
 import { PROJECT_THEME_IDS } from "../schemas/project-detail.js";

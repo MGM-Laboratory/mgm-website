@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { NextRequest } from "next/server";
 
 import { handleShortlinkGet, handleShortlinkPost } from "@/lib/shortlinks-http";

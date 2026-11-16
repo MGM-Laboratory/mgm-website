@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Programmatic page scrolling that cooperates with whatever scroller the
  * current page runs. A page with its own JS smooth scroller (the /projects

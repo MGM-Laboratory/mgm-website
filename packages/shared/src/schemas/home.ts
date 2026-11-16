@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { z } from "zod";
 
 export const HOME_VIDEO_MODES = ["none", "upload"] as const;

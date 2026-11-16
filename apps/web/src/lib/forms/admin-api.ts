@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Browser-side calls to the forms admin routes (`/api/admin/forms/**`), each
  * gated by the `forms` permission in its Next route handler. Every helper

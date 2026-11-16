@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The library world's own palette, for both schemes. Light mode is the
  * heavenly archive: pearl fog, ivory stone and paper, warm white light.

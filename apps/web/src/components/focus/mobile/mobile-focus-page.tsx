@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { BauhausField } from "@/components/about/bauhaus-field";
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { DeviceStatsSection } from "./device-stats-section";

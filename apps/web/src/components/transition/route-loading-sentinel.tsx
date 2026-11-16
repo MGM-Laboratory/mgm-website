@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Dropped into every route's loading.tsx fallback. RouteTransition can't
  * tell a genuinely-finished navigation (usePathname() changed because real

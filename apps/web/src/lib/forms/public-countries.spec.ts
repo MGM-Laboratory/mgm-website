@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { countries, countryByCode, matchCountry } from "./public-countries";

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { NextResponse } from "next/server";
 
 import { gateAdminRequest } from "@/lib/admin-proxy";

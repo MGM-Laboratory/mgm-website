@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Color, Vector2, Vector4 } from "three";
 
 import { FRONT_BAND, FRONT_EDGE_GLSL } from "@/components/articles/world/fx/theme-front";

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * One shared reading of the pointer for every effect that follows it (the
  * cursor distortion, magnetic buttons, the hero's proximity reactions). A

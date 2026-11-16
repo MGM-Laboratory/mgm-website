@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { FormDocument, FormRecord } from "@repo/shared";
 
 import type { DocumentChange } from "@/lib/forms/builder-history";

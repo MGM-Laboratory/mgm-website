@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { PROJECT_THEME_IDS, type FormDesign } from "@repo/shared";
 import { describe, expect, it } from "vitest";
 

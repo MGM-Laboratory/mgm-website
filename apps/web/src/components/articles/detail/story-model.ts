@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { ArticleBlock } from "@/lib/article-cms";
 import { hashSlug } from "@/lib/theme-pick";
 

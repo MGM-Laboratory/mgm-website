@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Document helpers for the form builder: the blank form, the problems list
  * (schema issues plus the cross-references the schema cannot check), and

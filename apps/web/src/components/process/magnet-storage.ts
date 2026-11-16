@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Where the visitor left the magnets, kept in this browser only. Each
  * magnet is stored by its word as an offset from its home plus its resting

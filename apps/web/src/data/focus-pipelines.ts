@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Same reasoning as focus-toolkits.ts: every Focus page's pipeline-stepper
 // content shares the {label, detail} shape by design (so it renders through
 // FocusPipelineSection), and duplication checks mask string

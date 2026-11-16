@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { FocusPipelineSection } from "../shared/focus-pipeline-section";
 import { INFRA_TOOLS } from "@/data/website-focus";
 import { pipelineStagesFor } from "@/data/focus-pipelines";

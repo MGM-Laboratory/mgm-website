@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { ArticlesTransitionsHost } from "@/components/articles/transitions/articles-transitions-host";
 import { ArticlesWorldHost } from "@/components/articles/world/world-host";
 

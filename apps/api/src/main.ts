@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import compression from "compression";
 import { json, raw, type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import Image from "next/image";
 
 import { STORY_BEATS } from "@/data/about-content";

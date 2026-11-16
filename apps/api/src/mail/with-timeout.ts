@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** A send whose answer never came, so the provider may or may not have delivered it. */
 export class OutcomeUnknownError extends Error {
   constructor(message: string) {

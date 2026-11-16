@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * `member-<slug>-<uuid>.<ext>`, the shape that the portrait upload of the members controller writes. The slug part is
  * what the editor typed, with every character other than letters, digits, underscores and hyphens replaced by a hyphen when the key is made. It may hold repeated or edge hyphens, and an older slug may hold capitals or underscores.

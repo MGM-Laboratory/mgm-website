@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Type only (erased): the engine and three.js stay in the dynamic import.
 import type { FlowEngine, FlowFailure } from "@/components/cursor-distortion/flow-engine";
 import { FlowSurfaces, pageColor } from "@/components/cursor-distortion/flow-surfaces";

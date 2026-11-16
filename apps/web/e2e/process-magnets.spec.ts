@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { expect, test, type Locator } from "@playwright/test";
 
 // The process section's fridge magnets (components/process/magnet-board.ts).

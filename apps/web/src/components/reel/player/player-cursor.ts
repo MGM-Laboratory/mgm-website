@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { alignTo, glyphPoints, outlinePath, POINTS, type Glyph } from "./cursor-shapes";
 import { LabelRoller } from "./label-roller";
 import { approach, clamp, damp, ease, fit, saturate, smoothstep, Spring } from "./springs";

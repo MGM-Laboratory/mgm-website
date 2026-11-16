@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { randomBetween } from "@/lib/random";
 
 import { ease, saturate } from "./springs";

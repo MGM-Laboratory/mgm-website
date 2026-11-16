@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { RevealSection } from "@/components/about/reveal-section";
 import { PROOF_STACK } from "@/data/website-focus";
 import { BrowserChrome } from "./browser-chrome";

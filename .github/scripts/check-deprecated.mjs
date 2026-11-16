@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Fails when the TypeScript compiler reports a use of a deprecated API.
 // Run it from a workspace folder, for example `node ../../.github/scripts/check-deprecated.mjs`.
 // It reads the tsconfig.json of the current folder and the typescript package that the

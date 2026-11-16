@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Small, allocation-free helpers for the detail page's per-frame maths. */
 
 export const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { describe, expect, it } from "vitest";
 
 import { EXPIRY_OPTIONS, STATUS_HINT, STATUS_LABEL } from "./links-cms";

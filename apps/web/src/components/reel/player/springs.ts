@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The small maths the full-screen reel player moves with: a second-order
  * spring (the "procedural animation" dynamics lusion.co's player cursor
