@@ -155,7 +155,7 @@ Known false positives get suppressed at the source (an inline comment next to th
 
 ## Uptime monitoring
 
-A self-hosted [Gatus](https://github.com/twin/gatus) instance at `status.labmgm.org` watches the live site (`labmgm.org`) alongside the rest of the company's internal services, under the endpoint key `core_mgm-website`. It's separate infrastructure, not part of this repo or its CI, so there's nothing here to run or configure. The README's "Status" section reads Gatus's own badge endpoints directly and links each one to that endpoint's detail page (`status.labmgm.org/endpoints/core_mgm-website`):
+A self-hosted [Gatus](https://github.com/twin/gatus) instance at `status.labmgm.org` watches the live site. It checks the public site and the public API health route every minute, and it also checks each of the two web copies and the two API copies directly, so a failed copy shows even when the other copy keeps the public route up. It runs next to the site on the same host, so it cannot report an outage of that host. The website check has the endpoint key `core_mgm-website`. Gatus is not part of this repo or its CI, so there is nothing here to run or configure. The README's "Status" section reads Gatus's own badge endpoints directly and links each one to that endpoint's detail page (`status.labmgm.org/endpoints/core_mgm-website`):
 
 ```
 https://status.labmgm.org/api/v1/endpoints/core_mgm-website/health/badge.svg
