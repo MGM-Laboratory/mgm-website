@@ -22,7 +22,9 @@ A contributor opens a pull request like anyone else. Every change to `main` goes
 
 ## Continuity
 
-The repository has two admins, @SyafaHadyan and @BangNopall. Both can manage the repository settings, the rulesets, the secrets and the releases, and both have access to the accounts and credentials that the releases and the deployment need, including the container registries. The organization has four owners, so the access does not depend on one person. If the maintainer is lost, the other admin can triage issues, merge pull requests that pass the required checks, publish a release and deploy it, following [docs/deployment.md](docs/deployment.md) and [docs/ci-cd.md](docs/ci-cd.md).
+The repository has two named admins, @SyafaHadyan and @BangNopall. Both can manage the repository settings, the rulesets and the secrets. The maintainer says that both have access to the accounts and credentials that the releases and the deployment need, including the container registries. The organization has four owners, so the access does not depend on one person.
+
+Only the maintainer can merge today, because the ruleset bypass and the code owner approval name one account. If the maintainer is not available, the other admin can triage issues, change the ruleset and the code owners to restore merging and releases, and then deploy by following [docs/deployment.md](docs/deployment.md) and [docs/ci-cd.md](docs/ci-cd.md).
 
 ## Known limit
 
