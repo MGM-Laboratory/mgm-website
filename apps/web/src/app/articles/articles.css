@@ -1336,12 +1336,16 @@ html[data-articles-world="gl"]
   grid-row: 5;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.5rem 1.5rem;
+  gap: 0 1.5rem;
   color: var(--world-ink-soft);
   font-size: 0.8125rem;
 }
 
+/* A 44 px tall target, the minimum for a touch, around a 13 px line of text. */
 .articles-legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   border-radius: 2px;
   text-decoration: underline;
   text-decoration-color: transparent;
