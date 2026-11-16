@@ -1,7 +1,8 @@
 // Copyright (c) MGM Laboratory contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./support/csp-guard";
 
 // The suite's CMS fixture API (e2e/fixtures/cms) serves three projects, so
 // /projects renders its list here, while a reused local server can show a

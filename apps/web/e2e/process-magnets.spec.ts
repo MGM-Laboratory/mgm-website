@@ -1,7 +1,8 @@
 // Copyright (c) MGM Laboratory contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, type Locator } from "@playwright/test";
+import { test } from "./support/csp-guard";
 
 // The process section's fridge magnets (components/process/magnet-board.ts).
 // Reduced motion keeps every interaction but makes each one instant, and

@@ -1,7 +1,8 @@
 // Copyright (c) MGM Laboratory contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { test, expect } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./support/csp-guard";
 
 test.describe("theme toggle", () => {
   test("toggles the .dark class on <html>", async ({ page }) => {

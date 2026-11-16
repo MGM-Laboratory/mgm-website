@@ -1,7 +1,8 @@
 // Copyright (c) MGM Laboratory contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, type APIRequestContext } from "@playwright/test";
+import { test } from "./support/csp-guard";
 
 // The public short-link pages, rendered from the CMS fixture API's
 // shortlinks routes (e2e/fixtures/cms-fixture-server.mjs). These cover the

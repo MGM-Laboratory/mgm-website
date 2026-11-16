@@ -1,7 +1,8 @@
 // Copyright (c) MGM Laboratory contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./support/csp-guard";
 
 // The fixture API (e2e/fixtures/cms-fixture-server.mjs) drops the connection
 // for every route it does not serve, such as the event pages. That is how a
