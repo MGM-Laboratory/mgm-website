@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { MailProviderId, MailProviderLimitConfig } from "@repo/shared";
 
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -31,10 +31,13 @@ describe.skipIf(!databaseUrl)("mail quota reservation on PostgreSQL", () => {
   beforeAll(async () => {
     prisma = new PrismaService({ getOrThrow: () => databaseUrl } as never);
     await prisma.onModuleInit();
-    await prisma.mailSendLog.deleteMany({ where: { provider: "smtp" } });
-    await prisma.mailProviderUsage.deleteMany({ where: { provider: "ses" } });
     const config = { get: () => undefined };
     reserver = new MailService(config as never, prisma) as unknown as Reserver;
+  });
+
+  beforeEach(async () => {
+    await prisma.mailSendLog.deleteMany({ where: { provider: "smtp" } });
+    await prisma.mailProviderUsage.deleteMany({ where: { provider: "ses" } });
   });
 
   afterAll(async () => {
