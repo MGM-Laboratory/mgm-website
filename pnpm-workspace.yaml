@@ -9,7 +9,7 @@ overrides:
   # of provider, so it's a real vulnerable dependency, not a dead one.
   # Exact versions on purpose, not a >= range, so a routine lockfile
   # refresh can't silently pull in an unreviewed future major.
-  mysql2: "3.24.4"
+  mysql2: "3.24.6"
   deepmerge-ts: "8.0.2"
   # Transitive dev tool dependencies with open advisories. vitest accepts any
   # vite from 6 to 8, so pnpm kept the older 8.2.2. eslint tooling takes
