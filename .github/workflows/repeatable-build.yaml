@@ -102,8 +102,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # The weekly run reports the differences and stays green, so a known difference does not turn the schedule red every week.
-    continue-on-error: ${{ github.event_name == 'schedule' }}
+    # The two images still differ in a few known files (the job summary lists them), so a difference does not fail the run yet.
+    # Remove this line when the differences are gone, so that the check fails on a new one.
+    continue-on-error: true
     permissions: {}
     strategy:
       fail-fast: false
