@@ -44,7 +44,7 @@ To run the same focused checks before committing, install [pre-commit](https://p
 
 ## Code review
 
-Every change goes through a pull request, the required checks and a review. This section says how, and it also says what the rules do not guarantee.
+Every change goes through a pull request and the required checks. This section says how a change is reviewed, and it also says what the rules do not guarantee.
 
 ### How a review is done
 
