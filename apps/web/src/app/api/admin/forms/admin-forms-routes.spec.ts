@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { requireAdminPermission, cmsApi } = vi.hoisted(() => ({
   requireAdminPermission: vi.fn(),
@@ -12,7 +12,8 @@ type Handler = (request: Request, context: { params: Promise<never> }) => Promis
 
 type Case = {
   name: string;
-  load: () => Promise<Record<string, Handler | undefined>>;
+  // A route module also exports `dynamic` and `runtime`, so only the method named by the case is read as a handler
+  load: () => Promise<Record<string, unknown>>;
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   action: "read" | "write" | "delete";
   params?: Record<string, string>;
@@ -152,7 +153,7 @@ const cases: Case[] = [
 ];
 
 async function call(testCase: Case) {
-  const handler = (await testCase.load())[testCase.method];
+  const handler = (await testCase.load())[testCase.method] as Handler | undefined;
   if (!handler) throw new Error(`${testCase.name} has no ${testCase.method} handler`);
   const request = new Request(`http://localhost/api/admin/forms${testCase.query ?? ""}`, {
     method: testCase.method,
@@ -169,6 +170,10 @@ beforeEach(() => {
   requireAdminPermission.mockReset();
   cmsApi.mockReset();
   cmsApi.mockResolvedValue(Response.json({ upstream: true }, { status: 201 }));
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe.each(cases)("admin forms route $name", (testCase) => {
@@ -338,7 +343,12 @@ describe("POST /api/admin/forms/[id]/media", () => {
     return POST(
       new Request("http://localhost/api/admin/forms/f1/media", {
         method: "POST",
-        body: contentType?.startsWith("video/") ? "bytes" : json({ image: "data" }),
+        // A string body would make the Request add text/plain, so the missing type case sends bytes
+        body: contentType?.startsWith("video/")
+          ? "bytes"
+          : contentType === null
+            ? new TextEncoder().encode(json({ image: "data" }))
+            : json({ image: "data" }),
         headers: { ...(contentType === null ? {} : { "content-type": contentType }), ...headers },
       }),
       context,
@@ -374,7 +384,10 @@ describe("POST /api/admin/forms/[id]/media", () => {
   it("treats a request that names no video type as JSON", async () => {
     await post(null);
 
-    expect(cmsApi.mock.calls[0]?.[1]).toMatchObject({ method: "POST" });
+    expect(cmsApi).toHaveBeenCalledWith("/forms/admin/f%201/media", {
+      method: "POST",
+      body: json({ image: "data" }),
+    });
   });
 
   it("refuses a video type other than MP4 and WebM with 400", async () => {
@@ -389,10 +402,19 @@ describe("POST /api/admin/forms/[id]/media", () => {
     vi.stubEnv("CMS_MAX_VIDEO_BYTES", String(1024 * 1024));
 
     const response = await post("video/webm", { "content-length": "1048577" });
-    vi.unstubAllEnvs();
 
     expect(response.status).toBe(413);
     expect(await response.json()).toEqual({ message: "The video must be under 1 MB." });
+    expect(cmsApi).not.toHaveBeenCalled();
+  });
+
+  it("uses a limit of 500 MB when the environment sets none", async () => {
+    vi.stubEnv("CMS_MAX_VIDEO_BYTES", undefined);
+
+    const response = await post("video/webm", { "content-length": "524288001" });
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ message: "The video must be under 500 MB." });
     expect(cmsApi).not.toHaveBeenCalled();
   });
 

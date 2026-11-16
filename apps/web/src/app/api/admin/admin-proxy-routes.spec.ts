@@ -15,7 +15,8 @@ vi.mock("@/lib/admin-session", () => ({
 vi.mock("@/lib/cms-api", () => ({ apiBaseUrl: () => "http://api.test/api", cmsApi }));
 
 type Handler = (request: Request, context: { params: Promise<never> }) => Promise<Response>;
-type RouteModule = Record<string, Handler | undefined>;
+// A route module also exports `dynamic` and `runtime`, so only the method named by the case is read as a handler
+type RouteModule = Record<string, unknown>;
 
 type Case = {
   name: string;
@@ -545,7 +546,7 @@ function requestFor(testCase: Case) {
 
 async function call(testCase: Case) {
   const module = await testCase.load();
-  const handler = module[testCase.method];
+  const handler = module[testCase.method] as Handler | undefined;
   if (!handler) throw new Error(`${testCase.name} has no ${testCase.method} handler`);
   const context = { params: Promise.resolve(testCase.params ?? {}) } as never;
   return handler(requestFor(testCase), context);
