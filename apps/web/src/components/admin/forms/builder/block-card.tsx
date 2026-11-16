@@ -1,15 +1,15 @@
 "use client";
 
 import {
-  ArrowBendDownRight,
-  ArrowDown,
-  ArrowUp,
-  Copy,
-  DotsSixVertical,
-  Eye,
-  Plus,
-  Trash,
-  Warning,
+  ArrowBendDownRightIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CopyIcon,
+  DotsSixVerticalIcon,
+  EyeIcon,
+  PlusIcon,
+  TrashIcon,
+  WarningIcon,
 } from "@phosphor-icons/react";
 import type { DragControls } from "motion/react";
 import { memo } from "react";
@@ -134,7 +134,7 @@ export const BlockCard = memo(function BlockCard({
         title="Move up (Alt+↑)"
         type="button"
       >
-        <ArrowUp size={15} />
+        <ArrowUpIcon size={15} />
       </button>
       <button
         aria-label="Move down"
@@ -147,7 +147,7 @@ export const BlockCard = memo(function BlockCard({
         title="Move down (Alt+↓)"
         type="button"
       >
-        <ArrowDown size={15} />
+        <ArrowDownIcon size={15} />
       </button>
       <button
         aria-label="Duplicate"
@@ -159,7 +159,7 @@ export const BlockCard = memo(function BlockCard({
         title="Duplicate (Cmd/Ctrl+D)"
         type="button"
       >
-        <Copy size={15} />
+        <CopyIcon size={15} />
       </button>
       <button
         aria-label="Add a block below"
@@ -171,7 +171,7 @@ export const BlockCard = memo(function BlockCard({
         title="Add below"
         type="button"
       >
-        <Plus size={15} weight="bold" />
+        <PlusIcon size={15} weight="bold" />
       </button>
       <button
         aria-label="Delete"
@@ -183,7 +183,7 @@ export const BlockCard = memo(function BlockCard({
         title="Delete"
         type="button"
       >
-        <Trash size={15} />
+        <TrashIcon size={15} />
       </button>
     </div>
   );
@@ -200,7 +200,7 @@ export const BlockCard = memo(function BlockCard({
       title="Drag to reorder"
       type="button"
     >
-      <DotsSixVertical size={18} weight="bold" />
+      <DotsSixVerticalIcon size={18} weight="bold" />
     </button>
   );
 
@@ -251,19 +251,19 @@ export const BlockCard = memo(function BlockCard({
           />
           {jumpSummary ? (
             <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full bg-brand-yellow-50 px-2 py-0.5 text-[11px] font-semibold text-[#8a6412] dark:bg-brand-yellow/15 dark:text-brand-yellow">
-              <ArrowBendDownRight size={12} weight="bold" />
+              <ArrowBendDownRightIcon size={12} weight="bold" />
               <span className="truncate">{jumpSummary}</span>
             </span>
           ) : null}
           {hasRules ? (
-            <Eye aria-label="Has visibility rules" className="text-brand-blue" size={14} />
+            <EyeIcon aria-label="Has visibility rules" className="text-brand-blue" size={14} />
           ) : null}
           {issue ? (
             <span
               className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-red"
               title={issue}
             >
-              <Warning size={13} weight="fill" />
+              <WarningIcon size={13} weight="fill" />
               Problem
             </span>
           ) : null}
@@ -311,7 +311,7 @@ export const BlockCard = memo(function BlockCard({
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
           {issue ? (
             <span className="text-brand-red" title={issue}>
-              <Warning aria-label={issue} size={14} weight="fill" />
+              <WarningIcon aria-label={issue} size={14} weight="fill" />
             </span>
           ) : null}
           {hasRules ? (
@@ -319,7 +319,7 @@ export const BlockCard = memo(function BlockCard({
               className="inline-flex items-center gap-1 rounded-full bg-brand-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-blue dark:bg-brand-blue/15"
               title="Shown only when its rules match"
             >
-              <Eye aria-hidden="true" size={11} weight="bold" />
+              <EyeIcon aria-hidden="true" size={11} weight="bold" />
               Logic
             </span>
           ) : null}

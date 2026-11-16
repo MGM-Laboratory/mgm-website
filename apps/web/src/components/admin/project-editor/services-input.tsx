@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { PROJECT_DETAIL_LIMITS } from "@/lib/project-cms";
@@ -92,7 +92,7 @@ export function ServicesInput({
               onClick={() => remove(index)}
               type="button"
             >
-              <X size={10} weight="bold" />
+              <XIcon size={10} weight="bold" />
             </button>
           </span>
         ))}

@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  ArrowLeft,
-  ArrowRight,
-  ArrowSquareOut,
-  ArrowsOutSimple,
-  DownloadSimple,
-  MagnifyingGlassMinus,
-  MagnifyingGlassPlus,
-  X,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowSquareOutIcon,
+  ArrowsOutSimpleIcon,
+  DownloadSimpleIcon,
+  MagnifyingGlassMinusIcon,
+  MagnifyingGlassPlusIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import {
   AnnotationLayer,
@@ -462,7 +462,7 @@ export function PdfViewerDialog({
             onClick={onClose}
             type="button"
           >
-            <X size={18} />
+            <XIcon size={18} />
           </button>
           <p className="min-w-0 truncate text-sm font-medium text-white/90" title={title}>
             {title}
@@ -477,7 +477,7 @@ export function PdfViewerDialog({
             onClick={() => jumpTo(currentPage - 1)}
             type="button"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeftIcon size={16} />
           </button>
           <div className="flex items-center gap-1 rounded-lg bg-white/[0.07] px-2">
             <input
@@ -501,19 +501,19 @@ export function PdfViewerDialog({
             onClick={() => jumpTo(currentPage + 1)}
             type="button"
           >
-            <ArrowRight size={16} />
+            <ArrowRightIcon size={16} />
           </button>
         </div>
 
         <div className="flex w-full shrink-0 items-center justify-center gap-1 sm:w-auto sm:justify-start">
           <button aria-label="Zoom out" className={toolbarButton} onClick={zoomOut} type="button">
-            <MagnifyingGlassMinus size={16} />
+            <MagnifyingGlassMinusIcon size={16} />
           </button>
           <span className="w-12 text-center font-mono text-xs text-white/70">
             {Math.round(scale * 100)}%
           </span>
           <button aria-label="Zoom in" className={toolbarButton} onClick={zoomIn} type="button">
-            <MagnifyingGlassPlus size={16} />
+            <MagnifyingGlassPlusIcon size={16} />
           </button>
           <button
             aria-label="Fit to width"
@@ -523,13 +523,13 @@ export function PdfViewerDialog({
             title="Fit to width"
             type="button"
           >
-            <ArrowsOutSimple size={16} />
+            <ArrowsOutSimpleIcon size={16} />
           </button>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
           <a aria-label="Download PDF" className={toolbarButton} download={fileName} href={url}>
-            <DownloadSimple size={16} />
+            <DownloadSimpleIcon size={16} />
           </a>
           <a
             aria-label="Open PDF in a new tab"
@@ -538,7 +538,7 @@ export function PdfViewerDialog({
             rel="noreferrer"
             target="_blank"
           >
-            <ArrowSquareOut size={16} />
+            <ArrowSquareOutIcon size={16} />
           </a>
         </div>
       </header>

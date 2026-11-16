@@ -1,9 +1,9 @@
 import {
-  CalendarBlank,
-  CalendarX,
-  MapPin,
-  Microphone,
-  Ticket,
+  CalendarBlankIcon,
+  CalendarXIcon,
+  MapPinIcon,
+  MicrophoneIcon,
+  TicketIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
@@ -42,7 +42,7 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
           <img alt="" className="size-full object-cover" src={thumbnail} />
         ) : (
           <div className="grid size-full place-items-center text-[var(--ink-3)]">
-            <CalendarBlank size={28} weight="duotone" />
+            <CalendarBlankIcon size={28} weight="duotone" />
           </div>
         )}
       </div>
@@ -65,12 +65,12 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[var(--ink-3)]">
           {event.location ? (
             <span className="inline-flex items-center gap-1.5">
-              <MapPin size={14} weight="bold" /> {event.location}
+              <MapPinIcon size={14} weight="bold" /> {event.location}
             </span>
           ) : null}
           {speakerNames ? (
             <span className="inline-flex items-center gap-1.5">
-              <Microphone size={14} weight="bold" /> {speakerNames}
+              <MicrophoneIcon size={14} weight="bold" /> {speakerNames}
             </span>
           ) : null}
         </div>
@@ -79,7 +79,7 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
       {event.registrationEnabled ? (
         isPast ? (
           <span className="relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full border border-[var(--line)] px-3.5 text-xs font-semibold text-[var(--ink-3)] dark:border-white/10">
-            <CalendarX size={14} weight="bold" />
+            <CalendarXIcon size={14} weight="bold" />
             Event ended
           </span>
         ) : (
@@ -87,7 +87,7 @@ export function EventCard({ event }: { event: CmsEventRecord }) {
             className="relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full bg-brand-blue px-3.5 text-xs font-semibold text-white transition hover:bg-brand-blue/90"
             href={`/events/${event.slug}`}
           >
-            <Ticket size={14} weight="bold" />
+            <TicketIcon size={14} weight="bold" />
             Register
           </Link>
         )

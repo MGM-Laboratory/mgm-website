@@ -6,7 +6,7 @@
  * inspector's section chrome. Styling follows the rest of /admin.
  */
 
-import { X } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -188,7 +188,7 @@ export function Dialog({
             ) : null}
           </div>
           <button aria-label="Close" className={iconButtonClass} onClick={onClose} type="button">
-            <X size={18} weight="bold" />
+            <XIcon size={18} weight="bold" />
           </button>
         </div>
         <div className={`min-h-0 flex-1 overflow-y-auto ${bare ? "" : "px-5 py-5 sm:px-6"}`}>

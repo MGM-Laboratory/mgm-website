@@ -1,10 +1,10 @@
 import {
-  CalendarX,
-  Clock,
-  MapPin,
-  Microphone,
-  UsersThree,
-  VideoCamera,
+  CalendarXIcon,
+  ClockIcon,
+  MapPinIcon,
+  MicrophoneIcon,
+  UsersThreeIcon,
+  VideoCameraIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -102,7 +102,7 @@ export default async function EventPage({ params }: EventPageProps) {
             {event.registrationEnabled ? (
               isPast ? (
                 <span className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--line)] px-4 text-sm font-semibold text-[var(--ink-3)] dark:border-white/10">
-                  <CalendarX size={16} weight="bold" />
+                  <CalendarXIcon size={16} weight="bold" />
                   Registration closed
                 </span>
               ) : (
@@ -132,7 +132,7 @@ export default async function EventPage({ params }: EventPageProps) {
             {event.location ? (
               <InfoRow label="Location">
                 <span className="flex items-center gap-2">
-                  <MapPin size={15} weight="bold" />
+                  <MapPinIcon size={15} weight="bold" />
                   {locationLinkable ? (
                     <a
                       className="text-brand-blue hover:underline"
@@ -156,7 +156,7 @@ export default async function EventPage({ params }: EventPageProps) {
                   rel="noreferrer noopener"
                   target="_blank"
                 >
-                  <VideoCamera size={15} weight="bold" /> Join online
+                  <VideoCameraIcon size={15} weight="bold" /> Join online
                 </a>
               </InfoRow>
             ) : null}
@@ -170,7 +170,7 @@ export default async function EventPage({ params }: EventPageProps) {
           {event.speakers.length ? (
             <div className="mt-10">
               <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-[var(--ink)] dark:text-white">
-                <Microphone size={19} weight="bold" /> Speakers
+                <MicrophoneIcon size={19} weight="bold" /> Speakers
               </h2>
               <div className="mt-4 space-y-3">
                 {event.speakers.map((speaker, index) => (
@@ -187,7 +187,7 @@ export default async function EventPage({ params }: EventPageProps) {
                       />
                     ) : (
                       <div className="grid size-12 shrink-0 place-items-center rounded-full bg-[var(--surface-muted)] text-[var(--ink-3)]">
-                        <UsersThree size={20} weight="bold" />
+                        <UsersThreeIcon size={20} weight="bold" />
                       </div>
                     )}
                     <div className="min-w-0">
@@ -207,7 +207,7 @@ export default async function EventPage({ params }: EventPageProps) {
           {event.rundown.length ? (
             <div className="mt-10">
               <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-[var(--ink)] dark:text-white">
-                <Clock size={19} weight="bold" /> Rundown
+                <ClockIcon size={19} weight="bold" /> Rundown
               </h2>
               <ol className="mt-4 space-y-3 border-l-2 border-[var(--line)] pl-5">
                 {event.rundown.map((item, index) => (

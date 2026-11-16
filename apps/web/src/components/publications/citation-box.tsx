@@ -1,6 +1,6 @@
 "use client";
 
-import { DownloadSimple } from "@phosphor-icons/react";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -106,7 +106,7 @@ export function CitationBox({ publication }: { publication: PublicationDraft }) 
               onClick={() => downloadText(`${fileBase}.bib`, citations.bibtex, "BibTeX")}
               type="button"
             >
-              <DownloadSimple size={15} />
+              <DownloadSimpleIcon size={15} />
               .bib
             </button>
             <button
@@ -114,7 +114,7 @@ export function CitationBox({ publication }: { publication: PublicationDraft }) 
               onClick={() => downloadText(`${fileBase}.ris`, citations.ris, "RIS")}
               type="button"
             >
-              <DownloadSimple size={15} />
+              <DownloadSimpleIcon size={15} />
               .ris
             </button>
             <button
@@ -122,7 +122,7 @@ export function CitationBox({ publication }: { publication: PublicationDraft }) 
               onClick={() => downloadText(`${fileBase}.txt`, citations.plain, "Plain text")}
               type="button"
             >
-              <DownloadSimple size={15} />
+              <DownloadSimpleIcon size={15} />
               .txt
             </button>
           </div>

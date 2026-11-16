@@ -1,6 +1,6 @@
 "use client";
 
-import { BracketsCurly } from "@phosphor-icons/react";
+import { BracketsCurlyIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import type { FormField } from "@repo/shared";
@@ -113,7 +113,7 @@ export function PipingInput({
         title={candidates.length ? "Insert an earlier answer ({{)" : "No earlier questions to pipe"}
         type="button"
       >
-        <BracketsCurly size={16} weight="bold" />
+        <BracketsCurlyIcon size={16} weight="bold" />
       </button>
       {open && candidates.length ? (
         <div

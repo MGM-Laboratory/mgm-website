@@ -1,22 +1,22 @@
 "use client";
 
 import {
-  ArrowClockwise,
-  ArrowCounterClockwise,
-  ArrowLeft,
-  ArrowSquareOut,
-  BookmarkSimple,
-  CheckCircle,
-  CircleNotch,
-  Copy,
-  DotsThree,
-  Export,
-  Eye,
-  Play,
-  RocketLaunch,
-  Trash,
-  Warning,
-  WarningCircle,
+  ArrowClockwiseIcon,
+  ArrowCounterClockwiseIcon,
+  ArrowLeftIcon,
+  ArrowSquareOutIcon,
+  BookmarkSimpleIcon,
+  CheckCircleIcon,
+  CircleNotchIcon,
+  CopyIcon,
+  DotsThreeIcon,
+  ExportIcon,
+  EyeIcon,
+  PlayIcon,
+  RocketLaunchIcon,
+  TrashIcon,
+  WarningIcon,
+  WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -80,14 +80,14 @@ function SaveIndicator({ onRetry, status }: { onRetry: () => void; status: SaveS
     case "saved":
       return (
         <span className={`${base} text-[#69748a] dark:text-white/45`}>
-          <CheckCircle className="text-brand-green" size={15} weight="fill" />
+          <CheckCircleIcon className="text-brand-green" size={15} weight="fill" />
           <span className="hidden sm:inline">Saved</span>
         </span>
       );
     case "saving":
       return (
         <span className={`${base} text-[#69748a] dark:text-white/45`}>
-          <CircleNotch className="animate-spin motion-reduce:animate-none" size={15} />
+          <CircleNotchIcon className="animate-spin motion-reduce:animate-none" size={15} />
           <span className="hidden sm:inline">Saving…</span>
         </span>
       );
@@ -101,7 +101,7 @@ function SaveIndicator({ onRetry, status }: { onRetry: () => void; status: SaveS
     case "invalid":
       return (
         <span className={`${base} text-brand-red`}>
-          <Warning size={15} weight="fill" />
+          <WarningIcon size={15} weight="fill" />
           <span className="hidden sm:inline">
             Fix {status.count} problem{status.count === 1 ? "" : "s"} to save
           </span>
@@ -115,7 +115,7 @@ function SaveIndicator({ onRetry, status }: { onRetry: () => void; status: SaveS
           title={status.message}
           type="button"
         >
-          <WarningCircle size={15} weight="fill" />
+          <WarningCircleIcon size={15} weight="fill" />
           <span className="hidden sm:inline">Not saved · Retry</span>
         </button>
       );
@@ -138,7 +138,7 @@ function ProblemsButton({
       buttonClassName={`inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition ${errors ? "bg-brand-red-50 text-brand-red dark:bg-brand-red/15" : "bg-brand-yellow-50 text-[#8a6412] dark:bg-brand-yellow/15 dark:text-brand-yellow"}`}
       buttonContent={
         <>
-          <Warning size={14} weight="fill" />
+          <WarningIcon size={14} weight="fill" />
           {problems.length}
           <span className="hidden md:inline">{errors ? "problems" : "warnings"}</span>
         </>
@@ -147,9 +147,9 @@ function ProblemsButton({
         label: problem.message,
         icon:
           problem.severity === "error" ? (
-            <WarningCircle className="text-brand-red" size={15} weight="fill" />
+            <WarningCircleIcon className="text-brand-red" size={15} weight="fill" />
           ) : (
-            <Warning className="text-brand-yellow" size={15} weight="fill" />
+            <WarningIcon className="text-brand-yellow" size={15} weight="fill" />
           ),
         onSelect: () => {
           onPick(problem);
@@ -374,7 +374,7 @@ export function FormBuilder({
             title="All forms"
             type="button"
           >
-            <ArrowLeft size={18} weight="bold" />
+            <ArrowLeftIcon size={18} weight="bold" />
           </button>
           <div className="flex min-w-0 flex-1 basis-48 items-center gap-2">
             <input
@@ -414,7 +414,7 @@ export function FormBuilder({
                   title="Undo (Cmd/Ctrl+Z)"
                   type="button"
                 >
-                  <ArrowCounterClockwise size={17} />
+                  <ArrowCounterClockwiseIcon size={17} />
                 </button>
                 <button
                   aria-label="Redo"
@@ -424,7 +424,7 @@ export function FormBuilder({
                   title="Redo (Shift+Cmd/Ctrl+Z)"
                   type="button"
                 >
-                  <ArrowClockwise size={17} />
+                  <ArrowClockwiseIcon size={17} />
                 </button>
               </>
             ) : null}
@@ -435,7 +435,7 @@ export function FormBuilder({
               }}
               type="button"
             >
-              <Play size={15} weight="fill" />
+              <PlayIcon size={15} weight="fill" />
               Preview
             </button>
             <button
@@ -446,7 +446,7 @@ export function FormBuilder({
               }}
               type="button"
             >
-              <Eye size={17} />
+              <EyeIcon size={17} />
             </button>
             {record.status !== "draft" ? (
               <a
@@ -456,17 +456,17 @@ export function FormBuilder({
                 rel="noreferrer"
                 target="_blank"
               >
-                <ArrowSquareOut size={15} />
+                <ArrowSquareOutIcon size={15} />
                 View live
               </a>
             ) : null}
             <Menu
-              buttonContent={<DotsThree size={20} weight="bold" />}
+              buttonContent={<DotsThreeIcon size={20} weight="bold" />}
               items={[
-                { label: "Export JSON", icon: <Export size={16} />, onSelect: exportDocument },
+                { label: "Export JSON", icon: <ExportIcon size={16} />, onSelect: exportDocument },
                 {
                   label: "Save as template",
-                  icon: <BookmarkSimple size={16} />,
+                  icon: <BookmarkSimpleIcon size={16} />,
                   onSelect: () => {
                     setTemplateDialog(true);
                   },
@@ -475,14 +475,14 @@ export function FormBuilder({
                   ? [
                       {
                         label: "View live",
-                        icon: <ArrowSquareOut size={16} />,
+                        icon: <ArrowSquareOutIcon size={16} />,
                         onSelect: () => window.open(publicUrl, "_blank", "noopener"),
                       },
                     ]
                   : []),
                 {
                   label: "Duplicate form",
-                  icon: <Copy size={16} />,
+                  icon: <CopyIcon size={16} />,
                   disabled: readOnly,
                   onSelect: () => {
                     onDuplicate(record);
@@ -491,7 +491,7 @@ export function FormBuilder({
                 "separator",
                 {
                   label: "Delete form",
-                  icon: <Trash size={16} />,
+                  icon: <TrashIcon size={16} />,
                   danger: true,
                   disabled: !canDelete,
                   onSelect: () => {
@@ -509,7 +509,7 @@ export function FormBuilder({
                 }}
                 type="button"
               >
-                <RocketLaunch size={16} weight="fill" />
+                <RocketLaunchIcon size={16} weight="fill" />
                 {record.status === "draft" ? "Publish" : "Link & status"}
               </button>
             ) : null}
@@ -824,7 +824,7 @@ export function FormBuilderLoader(
           onClick={rest.onBack}
           type="button"
         >
-          <ArrowLeft size={18} weight="bold" />
+          <ArrowLeftIcon size={18} weight="bold" />
         </button>
         {error ? null : <div className="builder-skeleton h-7 w-64 rounded-lg" />}
       </div>

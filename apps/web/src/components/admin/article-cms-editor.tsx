@@ -1,18 +1,18 @@
 "use client";
 
 import {
-  ArrowSquareOut,
-  CalendarBlank,
-  Check,
-  FloppyDisk,
-  ImageSquare,
-  LinkSimple,
-  Plus,
-  Tag,
-  Trash,
-  User,
-  UsersThree,
-  X,
+  ArrowSquareOutIcon,
+  CalendarBlankIcon,
+  CheckIcon,
+  FloppyDiskIcon,
+  ImageSquareIcon,
+  LinkSimpleIcon,
+  PlusIcon,
+  TagIcon,
+  TrashIcon,
+  UserIcon,
+  UsersThreeIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -137,7 +137,7 @@ function CoverCropDialog({
             onClick={onClose}
             type="button"
           >
-            <X size={17} />
+            <XIcon size={17} />
           </button>
         </div>
         <div className="relative mt-4 aspect-[1200/482] w-full overflow-hidden rounded-xl bg-[#e8ecf4] dark:bg-[#1a202b]">
@@ -166,7 +166,7 @@ function CoverCropDialog({
             onClick={confirm}
             type="button"
           >
-            <Check size={16} weight="bold" />
+            <CheckIcon size={16} weight="bold" />
             {busy ? "Cropping…" : "Use cover"}
           </button>
         </div>
@@ -213,7 +213,7 @@ function AuthorPicker({
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        <User className="shrink-0 text-[#8490a5]" size={16} />
+        <UserIcon className="shrink-0 text-[#8490a5]" size={16} />
         <span className="min-w-0 flex-1 truncate text-[#171b25] dark:text-white">
           {selected.length
             ? selected
@@ -247,7 +247,7 @@ function AuthorPicker({
                   <span
                     className={`grid size-4 shrink-0 place-items-center rounded border transition ${active ? "border-brand-blue bg-brand-blue text-white" : "border-[#c6cedd] dark:border-white/20"}`}
                   >
-                    {active ? <Check size={11} weight="bold" /> : null}
+                    {active ? <CheckIcon size={11} weight="bold" /> : null}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{member.name}</span>
                   <span className="shrink-0 truncate text-[11px] text-[#9ba4b5]">
@@ -284,7 +284,7 @@ function CategoryEditor({
   return (
     <div>
       <div className="relative">
-        <Tag
+        <TagIcon
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
           size={16}
         />
@@ -306,7 +306,7 @@ function CategoryEditor({
           onClick={commit}
           type="button"
         >
-          <Plus size={16} weight="bold" />
+          <PlusIcon size={16} weight="bold" />
         </button>
       </div>
       {values.length ? (
@@ -323,7 +323,7 @@ function CategoryEditor({
                 onClick={() => onRemove(category)}
                 type="button"
               >
-                <X size={12} weight="bold" />
+                <XIcon size={12} weight="bold" />
               </button>
             </span>
           ))}
@@ -542,9 +542,9 @@ export function ArticleEditor({
             type="button"
           >
             {status === "saved" ? (
-              <Check size={18} weight="bold" />
+              <CheckIcon size={18} weight="bold" />
             ) : (
-              <FloppyDisk size={18} weight="bold" />
+              <FloppyDiskIcon size={18} weight="bold" />
             )}
             {status === "saving"
               ? "Saving…"
@@ -581,7 +581,7 @@ export function ArticleEditor({
             ) : (
               <span className="grid h-full place-items-center">
                 <span className="flex flex-col items-center gap-2 text-[#8490a5] dark:text-white/40">
-                  <ImageSquare size={30} weight="duotone" />
+                  <ImageSquareIcon size={30} weight="duotone" />
                   <span className="text-sm font-medium">Upload a cover image</span>
                   <span className="font-mono text-[10px] tracking-[0.12em] uppercase">
                     1200 × 482 · JPEG, PNG, or WebP
@@ -669,7 +669,7 @@ export function ArticleEditor({
           <div className="space-y-4 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
             <Field label="Article URL">
               <div className="flex items-center gap-1.5">
-                <LinkSimple className="shrink-0 text-[#8490a5]" size={16} />
+                <LinkSimpleIcon className="shrink-0 text-[#8490a5]" size={16} />
                 <span className="shrink-0 text-xs text-[#9ba4b5]">/articles/</span>
                 <input
                   className="h-10 w-full min-w-0 rounded-xl border border-[#d9dfeb] bg-white px-3 font-mono text-xs text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white"
@@ -681,7 +681,7 @@ export function ArticleEditor({
             </Field>
             <Field label="Date">
               <div className="relative">
-                <CalendarBlank
+                <CalendarBlankIcon
                   className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                   size={16}
                 />
@@ -716,7 +716,7 @@ export function ArticleEditor({
                 selected={draft.authorSlugs}
               />
               <p className="mt-1.5 flex items-center gap-1.5 text-[11px] leading-5 text-[#9ba4b5] dark:text-white/35">
-                <UsersThree size={13} />
+                <UsersThreeIcon size={13} />
                 Authors link to their member profiles on the public page.
               </p>
             </Field>
@@ -748,7 +748,7 @@ export function ArticleEditor({
                 href={`/articles/${encodeURIComponent(originalRecordSlug ?? "")}`}
                 target="_blank"
               >
-                <ArrowSquareOut size={15} />
+                <ArrowSquareOutIcon size={15} />
                 View article
               </Link>
             ) : (
@@ -762,7 +762,7 @@ export function ArticleEditor({
                 onClick={remove}
                 type="button"
               >
-                <Trash size={15} />
+                <TrashIcon size={15} />
                 Delete
               </button>
             ) : null}

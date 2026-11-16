@@ -1,6 +1,6 @@
 "use client";
 
-import { WarningCircle } from "@phosphor-icons/react";
+import { WarningCircleIcon } from "@phosphor-icons/react";
 
 import { formatCount, formatPercent, growStyle, useReveal } from "./viz";
 
@@ -67,7 +67,7 @@ export function Funnel({ steps }: { steps: FunnelStep[] }) {
               <span
                 className={`inline-flex w-20 shrink-0 items-center justify-end gap-1 tabular-nums ${isBiggest ? "font-semibold text-brand-red" : "text-[#8a93a6] dark:text-white/40"}`}
               >
-                {isBiggest ? <WarningCircle aria-hidden size={13} weight="bold" /> : null}
+                {isBiggest ? <WarningCircleIcon aria-hidden size={13} weight="bold" /> : null}
                 {index ? `−${formatPercent(drop, 0)}` : ""}
               </span>
             </div>

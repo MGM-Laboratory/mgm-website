@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowSquareOut } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { CmsEventRegistrationRecord } from "@/lib/events-cms";
@@ -97,7 +97,7 @@ export function EventRegistrationsInbox({
           rel="noreferrer"
           target="_blank"
         >
-          <ArrowSquareOut size={15} weight="bold" />
+          <ArrowSquareOutIcon size={15} weight="bold" />
           View event
         </a>
       )}

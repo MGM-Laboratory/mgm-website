@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenText, DownloadSimple } from "@phosphor-icons/react";
+import { BookOpenTextIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
 import { getDocument } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
 
@@ -104,7 +104,7 @@ export function PaperPreview({
             className={`absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/80 to-transparent px-6 pt-28 pb-9 transition ${ready ? "opacity-100" : "opacity-0"}`}
           >
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition group-hover:bg-[#2f5db4]">
-              <BookOpenText size={17} />
+              <BookOpenTextIcon size={17} />
               Read the full text
             </span>
             <span className="text-xs text-[var(--ink-3)]">
@@ -120,7 +120,7 @@ export function PaperPreview({
           download={fileName}
           href={url}
         >
-          <DownloadSimple size={15} />
+          <DownloadSimpleIcon size={15} />
           Download PDF
         </a>
       </div>

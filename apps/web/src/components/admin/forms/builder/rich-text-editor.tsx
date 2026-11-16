@@ -9,29 +9,29 @@
  */
 
 import {
-  ArrowArcLeft,
-  ArrowArcRight,
-  Code,
-  Eraser,
-  Highlighter,
-  LinkSimple,
-  LinkBreak,
-  ListBullets,
-  ListNumbers,
-  Minus,
-  Quotes,
-  TextAlignCenter,
-  TextAlignJustify,
-  TextAlignLeft,
-  TextAlignRight,
-  TextB,
-  TextHOne,
-  TextHThree,
-  TextHTwo,
-  TextItalic,
-  TextStrikethrough,
-  TextUnderline,
-  TextAa,
+  ArrowArcLeftIcon,
+  ArrowArcRightIcon,
+  CodeIcon,
+  EraserIcon,
+  HighlighterIcon,
+  LinkSimpleIcon,
+  LinkBreakIcon,
+  ListBulletsIcon,
+  ListNumbersIcon,
+  MinusIcon,
+  QuotesIcon,
+  TextAlignCenterIcon,
+  TextAlignJustifyIcon,
+  TextAlignLeftIcon,
+  TextAlignRightIcon,
+  TextBIcon,
+  TextHOneIcon,
+  TextHThreeIcon,
+  TextHTwoIcon,
+  TextItalicIcon,
+  TextStrikethroughIcon,
+  TextUnderlineIcon,
+  TextAaIcon,
 } from "@phosphor-icons/react";
 import {
   RICH_TEXT_COLORS,
@@ -328,7 +328,7 @@ function LinkPopover({
           onClick={onRemove}
           type="button"
         >
-          <LinkBreak size={14} />
+          <LinkBreakIcon size={14} />
           Remove link
         </button>
       ) : null}
@@ -457,7 +457,7 @@ function Toolbar({
         onClick={() => chain().toggleBold().run()}
         shortcut="Mod+B"
       >
-        <TextB size={16} weight="bold" />
+        <TextBIcon size={16} weight="bold" />
       </ToolButton>
       <ToolButton
         active={state.italic}
@@ -465,7 +465,7 @@ function Toolbar({
         onClick={() => chain().toggleItalic().run()}
         shortcut="Mod+I"
       >
-        <TextItalic size={16} weight="bold" />
+        <TextItalicIcon size={16} weight="bold" />
       </ToolButton>
       <ToolButton
         active={state.underline}
@@ -473,7 +473,7 @@ function Toolbar({
         onClick={() => chain().toggleUnderline().run()}
         shortcut="Mod+U"
       >
-        <TextUnderline size={16} weight="bold" />
+        <TextUnderlineIcon size={16} weight="bold" />
       </ToolButton>
       <ToolButton
         active={state.strike}
@@ -481,7 +481,7 @@ function Toolbar({
         onClick={() => chain().toggleStrike().run()}
         shortcut="Mod+Shift+S"
       >
-        <TextStrikethrough size={16} weight="bold" />
+        <TextStrikethroughIcon size={16} weight="bold" />
       </ToolButton>
       <ToolButton
         active={state.code}
@@ -489,7 +489,7 @@ function Toolbar({
         onClick={() => chain().toggleCode().run()}
         shortcut="Mod+E"
       >
-        <Code size={16} weight="bold" />
+        <CodeIcon size={16} weight="bold" />
       </ToolButton>
       <Divider />
       {full ? (
@@ -500,7 +500,7 @@ function Toolbar({
             onClick={() => chain().toggleHeading({ level: 1 }).run()}
             shortcut="Mod+Alt+1"
           >
-            <TextHOne size={16} weight="bold" />
+            <TextHOneIcon size={16} weight="bold" />
           </ToolButton>
           <ToolButton
             active={state.h2}
@@ -508,7 +508,7 @@ function Toolbar({
             onClick={() => chain().toggleHeading({ level: 2 }).run()}
             shortcut="Mod+Alt+2"
           >
-            <TextHTwo size={16} weight="bold" />
+            <TextHTwoIcon size={16} weight="bold" />
           </ToolButton>
           <ToolButton
             active={state.h3}
@@ -516,7 +516,7 @@ function Toolbar({
             onClick={() => chain().toggleHeading({ level: 3 }).run()}
             shortcut="Mod+Alt+3"
           >
-            <TextHThree size={16} weight="bold" />
+            <TextHThreeIcon size={16} weight="bold" />
           </ToolButton>
           <Divider />
         </>
@@ -527,7 +527,7 @@ function Toolbar({
         onClick={() => chain().toggleBulletList().run()}
         shortcut="Mod+Shift+8"
       >
-        <ListBullets size={16} weight="bold" />
+        <ListBulletsIcon size={16} weight="bold" />
       </ToolButton>
       <ToolButton
         active={state.ordered}
@@ -535,7 +535,7 @@ function Toolbar({
         onClick={() => chain().toggleOrderedList().run()}
         shortcut="Mod+Shift+7"
       >
-        <ListNumbers size={16} weight="bold" />
+        <ListNumbersIcon size={16} weight="bold" />
       </ToolButton>
       <ToolButton
         active={state.quote}
@@ -543,7 +543,7 @@ function Toolbar({
         onClick={() => chain().toggleBlockquote().run()}
         shortcut="Mod+Shift+B"
       >
-        <Quotes size={16} weight="bold" />
+        <QuotesIcon size={16} weight="bold" />
       </ToolButton>
       {full ? (
         <>
@@ -552,7 +552,7 @@ function Toolbar({
             onClick={() => chain().setHorizontalRule().run()}
             pressable={false}
           >
-            <Minus size={16} weight="bold" />
+            <MinusIcon size={16} weight="bold" />
           </ToolButton>
           <Divider />
           <ToolButton
@@ -561,7 +561,7 @@ function Toolbar({
             onClick={() => chain().unsetTextAlign().run()}
             shortcut="Mod+Shift+L"
           >
-            <TextAlignLeft size={16} weight="bold" />
+            <TextAlignLeftIcon size={16} weight="bold" />
           </ToolButton>
           <ToolButton
             active={state.align === "center"}
@@ -569,7 +569,7 @@ function Toolbar({
             onClick={() => chain().setTextAlign("center").run()}
             shortcut="Mod+Shift+E"
           >
-            <TextAlignCenter size={16} weight="bold" />
+            <TextAlignCenterIcon size={16} weight="bold" />
           </ToolButton>
           <ToolButton
             active={state.align === "right"}
@@ -577,7 +577,7 @@ function Toolbar({
             onClick={() => chain().setTextAlign("right").run()}
             shortcut="Mod+Shift+R"
           >
-            <TextAlignRight size={16} weight="bold" />
+            <TextAlignRightIcon size={16} weight="bold" />
           </ToolButton>
           <ToolButton
             active={state.align === "justify"}
@@ -585,7 +585,7 @@ function Toolbar({
             onClick={() => chain().setTextAlign("justify").run()}
             shortcut="Mod+Shift+J"
           >
-            <TextAlignJustify size={16} weight="bold" />
+            <TextAlignJustifyIcon size={16} weight="bold" />
           </ToolButton>
         </>
       ) : null}
@@ -601,7 +601,7 @@ function Toolbar({
           }}
           shortcut="Mod+K"
         >
-          <LinkSimple size={16} weight="bold" />
+          <LinkSimpleIcon size={16} weight="bold" />
         </ToolButton>
         {linkOpen ? (
           <LinkPopover
@@ -646,7 +646,7 @@ function Toolbar({
             setColorOpen((open) => (open === "highlight" ? null : "highlight"));
           }}
         >
-          <Highlighter size={16} weight="bold" />
+          <HighlighterIcon size={16} weight="bold" />
         </ToolButton>
         {colorOpen === "highlight" ? (
           <ColorPopover
@@ -678,7 +678,7 @@ function Toolbar({
           }}
         >
           <span className="relative grid place-items-center">
-            <TextAa size={16} weight="bold" />
+            <TextAaIcon size={16} weight="bold" />
             <span
               aria-hidden="true"
               className="absolute -bottom-1 h-[3px] w-4 rounded-full"
@@ -707,7 +707,7 @@ function Toolbar({
         onClick={() => chain().unsetAllMarks().clearNodes().unsetTextAlign().run()}
         pressable={false}
       >
-        <Eraser size={16} weight="bold" />
+        <EraserIcon size={16} weight="bold" />
       </ToolButton>
       <span className="ml-auto flex items-center gap-0.5">
         <ToolButton
@@ -717,7 +717,7 @@ function Toolbar({
           pressable={false}
           shortcut="Mod+Z"
         >
-          <ArrowArcLeft size={16} weight="bold" />
+          <ArrowArcLeftIcon size={16} weight="bold" />
         </ToolButton>
         <ToolButton
           disabled={!state.canRedo}
@@ -726,7 +726,7 @@ function Toolbar({
           pressable={false}
           shortcut="Mod+Shift+Z"
         >
-          <ArrowArcRight size={16} weight="bold" />
+          <ArrowArcRightIcon size={16} weight="bold" />
         </ToolButton>
       </span>
     </div>

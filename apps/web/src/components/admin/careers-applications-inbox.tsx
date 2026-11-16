@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowSquareOut, DownloadSimple, FileText } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, DownloadSimpleIcon, FileTextIcon } from "@phosphor-icons/react";
 import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { toast } from "sonner";
 
@@ -74,14 +74,14 @@ function CvDownload({
         download
         href={state.url}
       >
-        <DownloadSimple size={16} weight="bold" />
+        <DownloadSimpleIcon size={16} weight="bold" />
         Download CV
       </a>
     );
   } else {
     action = (
       <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d9dfeb] px-4 text-sm font-semibold text-[#8490a5] dark:border-white/10">
-        <FileText size={16} weight="bold" />
+        <FileTextIcon size={16} weight="bold" />
         CV unavailable
       </span>
     );
@@ -223,7 +223,7 @@ export function ApplicationsInbox({
           rel="noreferrer"
           target="_blank"
         >
-          <ArrowSquareOut size={15} weight="bold" />
+          <ArrowSquareOutIcon size={15} weight="bold" />
           View role
         </a>
       )}

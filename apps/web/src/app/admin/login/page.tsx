@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Keyhole } from "@phosphor-icons/react/dist/ssr";
+import { KeyholeIcon } from "@phosphor-icons/react/dist/ssr";
 
 export default async function AdminLoginPage({
   searchParams,
@@ -11,7 +11,7 @@ export default async function AdminLoginPage({
     <main className="admin-shell grid min-h-[100dvh] place-items-center px-5 py-10">
       <section className="admin-login-panel w-full max-w-md rounded-[1.75rem] border border-[#dfe4ee] bg-white p-7 text-[#171b25] shadow-[0_26px_70px_-40px_rgba(26,42,72,0.4)] sm:p-10">
         <div className="flex size-12 items-center justify-center rounded-2xl bg-brand-blue text-white shadow-[0_12px_26px_-14px_rgba(78,117,200,0.9)]">
-          <Keyhole size={25} weight="bold" />
+          <KeyholeIcon size={25} weight="bold" />
         </div>
         <p className="mt-8 font-mono text-[11px] tracking-[0.18em] text-[#778299] uppercase">
           MGM Laboratory

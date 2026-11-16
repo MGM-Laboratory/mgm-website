@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { DownloadSimple } from "@phosphor-icons/react";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { encode } from "uqr";
 import type { FormRecord } from "@repo/shared";
 
@@ -317,14 +317,14 @@ export function QrCard({
             onClick={() => void downloadSvg()}
             type="button"
           >
-            <DownloadSimple size={15} /> SVG
+            <DownloadSimpleIcon size={15} /> SVG
           </button>
           <button
             className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#d9dfeb] px-3 text-sm font-semibold hover:border-brand-blue hover:text-brand-blue dark:border-white/10"
             onClick={() => void downloadPng()}
             type="button"
           >
-            <DownloadSimple size={15} /> PNG 1024 px
+            <DownloadSimpleIcon size={15} /> PNG 1024 px
           </button>
         </div>
       </div>

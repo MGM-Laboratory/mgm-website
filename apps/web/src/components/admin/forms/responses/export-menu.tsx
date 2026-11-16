@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { DownloadSimple, FileArchive, Printer, X } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, FileArchiveIcon, PrinterIcon, XIcon } from "@phosphor-icons/react";
 import type { FormRecord } from "@repo/shared";
 
 import { formFileUrl } from "@/lib/forms/admin-api";
@@ -420,7 +420,7 @@ export function ExportMenu({
           </label>
         </div>
         <button className={`${primaryButton} w-full justify-center`} onClick={run} type="button">
-          <DownloadSimple size={15} weight="bold" /> Export{" "}
+          <DownloadSimpleIcon size={15} weight="bold" /> Export{" "}
           {FORMATS.find((item) => item.id === format)?.label}
         </button>
         <div className="border-t border-[#eef0f4] pt-3 dark:border-white/5">
@@ -439,7 +439,7 @@ export function ExportMenu({
                   onClick={() => abort.current?.abort()}
                   type="button"
                 >
-                  <X size={12} /> Cancel
+                  <XIcon size={12} /> Cancel
                 </button>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-[#eef0f4] dark:bg-white/10">
@@ -452,7 +452,7 @@ export function ExportMenu({
           ) : (
             <div className="flex flex-wrap gap-2">
               <button className={ghostButton} onClick={() => void zipFiles()} type="button">
-                <FileArchive size={15} /> All uploaded files (.zip)
+                <FileArchiveIcon size={15} /> All uploaded files (.zip)
               </button>
               <button
                 className={ghostButton}
@@ -462,7 +462,7 @@ export function ExportMenu({
                 }}
                 type="button"
               >
-                <Printer size={15} /> Print report
+                <PrinterIcon size={15} /> Print report
               </button>
             </div>
           )}

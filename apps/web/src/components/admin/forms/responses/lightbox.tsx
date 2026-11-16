@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowLeft,
-  ArrowRight,
-  ArrowSquareOut,
-  DownloadSimple,
-  MagnifyingGlassMinus,
-  MagnifyingGlassPlus,
-  X,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowSquareOutIcon,
+  DownloadSimpleIcon,
+  MagnifyingGlassMinusIcon,
+  MagnifyingGlassPlusIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import type { FormFileAnswer } from "@repo/shared";
 
@@ -130,7 +130,7 @@ export function Lightbox({
               }}
               type="button"
             >
-              <MagnifyingGlassMinus size={18} />
+              <MagnifyingGlassMinusIcon size={18} />
             </button>
             <button
               aria-label="Zoom in"
@@ -141,7 +141,7 @@ export function Lightbox({
               }}
               type="button"
             >
-              <MagnifyingGlassPlus size={18} />
+              <MagnifyingGlassPlusIcon size={18} />
             </button>
           </>
         ) : null}
@@ -152,7 +152,7 @@ export function Lightbox({
           rel="noreferrer"
           target="_blank"
         >
-          <ArrowSquareOut size={18} />
+          <ArrowSquareOutIcon size={18} />
         </a>
         <a
           aria-label="Download"
@@ -160,10 +160,10 @@ export function Lightbox({
           download={item.name}
           href={formFileUrl(formId, item.key, "download")}
         >
-          <DownloadSimple size={18} />
+          <DownloadSimpleIcon size={18} />
         </a>
         <button aria-label="Close" className={buttonClass} onClick={onClose} type="button">
-          <X size={18} />
+          <XIcon size={18} />
         </button>
       </div>
       <div
@@ -239,7 +239,7 @@ export function Lightbox({
               download={item.name}
               href={formFileUrl(formId, item.key, "download")}
             >
-              <DownloadSimple size={16} weight="bold" /> Download
+              <DownloadSimpleIcon size={16} weight="bold" /> Download
             </a>
           </div>
         )}
@@ -253,7 +253,7 @@ export function Lightbox({
               }}
               type="button"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeftIcon size={18} />
             </button>
             <button
               aria-label="Next file"
@@ -263,7 +263,7 @@ export function Lightbox({
               }}
               type="button"
             >
-              <ArrowRight size={18} />
+              <ArrowRightIcon size={18} />
             </button>
           </>
         ) : null}

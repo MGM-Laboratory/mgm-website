@@ -4,22 +4,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import {
-  ArrowsClockwise,
-  Broom,
-  CheckCircle,
-  Columns,
-  DownloadSimple,
-  Flag,
-  GridFour,
-  Images,
-  MagnifyingGlass,
-  Prohibit,
-  Rows,
-  SquaresFour,
-  Star,
-  Tag,
-  Trash,
-  X,
+  ArrowsClockwiseIcon,
+  BroomIcon,
+  CheckCircleIcon,
+  ColumnsIcon,
+  DownloadSimpleIcon,
+  FlagIcon,
+  GridFourIcon,
+  ImagesIcon,
+  MagnifyingGlassIcon,
+  ProhibitIcon,
+  RowsIcon,
+  SquaresFourIcon,
+  StarIcon,
+  TagIcon,
+  TrashIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import type {
   FormAnswerValue,
@@ -465,7 +465,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
       <div className="flex flex-wrap items-center gap-2">
         <label className="relative min-w-0 flex-1 basis-56">
           <span className="sr-only">Search responses</span>
-          <MagnifyingGlass
+          <MagnifyingGlassIcon
             aria-hidden
             className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[#9ba4b5]"
             size={15}
@@ -487,9 +487,9 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
         >
           {(
             [
-              ["table", "Table", Rows],
-              ["cards", "Cards", SquaresFour],
-              ["gallery", "Gallery", Images],
+              ["table", "Table", RowsIcon],
+              ["cards", "Cards", SquaresFourIcon],
+              ["gallery", "Gallery", ImagesIcon],
             ] as const
           ).map(([id, label, Icon]) => (
             <button
@@ -516,7 +516,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
               }}
               type="button"
             >
-              <Columns size={15} /> <span className="hidden sm:inline">Columns</span>
+              <ColumnsIcon size={15} /> <span className="hidden sm:inline">Columns</span>
             </button>
             <button
               aria-label={`Density: ${config.density}`}
@@ -535,7 +535,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
               title="Row density"
               type="button"
             >
-              <GridFour size={15} />{" "}
+              <GridFourIcon size={15} />{" "}
               <span className="hidden capitalize sm:inline">{config.density}</span>
             </button>
           </>
@@ -549,7 +549,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           }}
           type="button"
         >
-          <Broom size={15} /> <span className="hidden sm:inline">Clean data</span>
+          <BroomIcon size={15} /> <span className="hidden sm:inline">Clean data</span>
           {state.pipeline.length ? (
             <span className="rounded-full bg-brand-green px-1.5 text-[10px] text-white tabular-nums">
               {state.pipeline.filter((step) => step.enabled).length}
@@ -565,7 +565,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
           }}
           type="button"
         >
-          <DownloadSimple size={15} /> <span className="hidden sm:inline">Export</span>
+          <DownloadSimpleIcon size={15} /> <span className="hidden sm:inline">Export</span>
         </button>
         <div className="flex items-center gap-1">
           <button
@@ -575,7 +575,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             title="Refresh"
             type="button"
           >
-            <ArrowsClockwise
+            <ArrowsClockwiseIcon
               className={refreshing ? "animate-spin motion-reduce:animate-none" : ""}
               size={15}
             />
@@ -684,7 +684,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
                 }}
                 type="button"
               >
-                <X size={10} weight="bold" />
+                <XIcon size={10} weight="bold" />
               </button>
             </span>
           ))}
@@ -711,21 +711,21 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             <>
               <BulkButton
                 disabled={busy}
-                icon={<Star size={13} />}
+                icon={<StarIcon size={13} />}
                 label="Star"
                 onClick={() => void bulk("star")}
               />
               <BulkButton disabled={busy} label="Unstar" onClick={() => void bulk("unstar")} />
               <BulkButton
                 disabled={busy}
-                icon={<Flag size={13} />}
+                icon={<FlagIcon size={13} />}
                 label="Flag"
                 onClick={() => void bulk("flag")}
               />
               <BulkButton disabled={busy} label="Unflag" onClick={() => void bulk("unflag")} />
               <BulkButton
                 disabled={busy}
-                icon={<CheckCircle size={13} />}
+                icon={<CheckCircleIcon size={13} />}
                 label="Reviewed"
                 onClick={() => void bulk("review")}
               />
@@ -736,14 +736,14 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
               />
               <BulkButton
                 disabled={busy}
-                icon={<Prohibit size={13} />}
+                icon={<ProhibitIcon size={13} />}
                 label="Spam"
                 onClick={() => void bulk("spam")}
               />
               <BulkButton disabled={busy} label="Not spam" onClick={() => void bulk("unspam")} />
               <BulkButton
                 disabled={busy}
-                icon={<Tag size={13} />}
+                icon={<TagIcon size={13} />}
                 label="Tag"
                 onClick={(event) => {
                   setTagAnchor({
@@ -765,7 +765,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             </>
           ) : null}
           <BulkButton
-            icon={<DownloadSimple size={13} />}
+            icon={<DownloadSimpleIcon size={13} />}
             label="Export"
             onClick={(event) => {
               setExportAnchor(event.currentTarget.getBoundingClientRect());
@@ -775,7 +775,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             <BulkButton
               danger
               disabled={busy}
-              icon={<Trash size={13} />}
+              icon={<TrashIcon size={13} />}
               label="Delete"
               onClick={() => void bulk("delete")}
             />
@@ -788,7 +788,7 @@ export function FormResponsesPanel({ form, canWrite, canDelete }: FormResponsesP
             }}
             type="button"
           >
-            <X size={14} />
+            <XIcon size={14} />
           </button>
         </div>
       ) : null}

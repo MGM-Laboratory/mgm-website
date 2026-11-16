@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Check, Sparkle } from "@phosphor-icons/react";
+import { ArrowUpRightIcon, CheckIcon, SparkleIcon } from "@phosphor-icons/react";
 import { useRef } from "react";
 
 import { PROJECT_THEME_IDS, projectThemeId, type ProjectThemeId } from "@/lib/project-cms";
@@ -118,7 +118,7 @@ export function ThemePicker({
             <Swatch theme={theme} />
             <span className="flex min-w-0 items-center gap-1 px-0.5">
               {choice ? null : (
-                <Sparkle className="shrink-0 text-brand-blue" size={11} weight="fill" />
+                <SparkleIcon className="shrink-0 text-brand-blue" size={11} weight="fill" />
               )}
               <span className="truncate text-[11px] font-semibold text-[#3c4659] dark:text-white/75">
                 {choice ? theme.name : "Automatic"}
@@ -131,7 +131,7 @@ export function ThemePicker({
             )}
             {selected ? (
               <span className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-brand-blue text-white shadow">
-                <Check size={9} weight="bold" />
+                <CheckIcon size={9} weight="bold" />
               </span>
             ) : null}
           </button>
@@ -194,7 +194,7 @@ function PreviewPanel({
         <span
           className={`grid size-7 place-items-center rounded-full bg-[var(--project-icon-bg)] text-[var(--project-icon-color)] ${ctaLabel ? "" : "opacity-45"}`}
         >
-          <ArrowUpRight size={12} weight="bold" />
+          <ArrowUpRightIcon size={12} weight="bold" />
         </span>
       </div>
       <div className="mt-auto min-w-0">

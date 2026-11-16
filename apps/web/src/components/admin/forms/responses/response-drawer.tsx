@@ -4,17 +4,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import {
-  CaretDown,
-  CaretUp,
-  CheckCircle,
-  Copy,
-  Flag,
-  PencilSimple,
-  Printer,
-  Prohibit,
-  Star,
-  Trash,
-  X,
+  CaretDownIcon,
+  CaretUpIcon,
+  CheckCircleIcon,
+  CopyIcon,
+  FlagIcon,
+  PencilSimpleIcon,
+  PrinterIcon,
+  ProhibitIcon,
+  StarIcon,
+  TrashIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import {
   isAnswered,
@@ -285,7 +285,7 @@ export function ResponseDrawer({
             title="Previous (K)"
             type="button"
           >
-            <CaretUp size={16} weight="bold" />
+            <CaretUpIcon size={16} weight="bold" />
           </button>
           <button
             aria-label="Next response (J)"
@@ -297,7 +297,7 @@ export function ResponseDrawer({
             title="Next (J)"
             type="button"
           >
-            <CaretDown size={16} weight="bold" />
+            <CaretDownIcon size={16} weight="bold" />
           </button>
           <button
             aria-label="Close"
@@ -305,7 +305,7 @@ export function ResponseDrawer({
             onClick={onClose}
             type="button"
           >
-            <X size={16} />
+            <XIcon size={16} />
           </button>
         </header>
 
@@ -323,7 +323,7 @@ export function ResponseDrawer({
               }}
               type="button"
             >
-              <Star size={14} weight={record.admin.starred ? "fill" : "regular"} />{" "}
+              <StarIcon size={14} weight={record.admin.starred ? "fill" : "regular"} />{" "}
               {record.admin.starred ? "Starred" : "Star"}
             </button>
             <button
@@ -338,7 +338,7 @@ export function ResponseDrawer({
               }}
               type="button"
             >
-              <Flag size={14} weight={record.admin.flagged ? "fill" : "regular"} />{" "}
+              <FlagIcon size={14} weight={record.admin.flagged ? "fill" : "regular"} />{" "}
               {record.admin.flagged ? "Flagged" : "Flag"}
             </button>
             <button
@@ -353,7 +353,7 @@ export function ResponseDrawer({
               }}
               type="button"
             >
-              <CheckCircle size={14} weight={record.admin.reviewed ? "fill" : "regular"} />{" "}
+              <CheckCircleIcon size={14} weight={record.admin.reviewed ? "fill" : "regular"} />{" "}
               {record.admin.reviewed ? "Reviewed" : "Mark reviewed"}
             </button>
             <button
@@ -368,7 +368,7 @@ export function ResponseDrawer({
               }}
               type="button"
             >
-              <Prohibit size={14} /> {record.spam ? "Spam" : "Mark spam"}
+              <ProhibitIcon size={14} /> {record.spam ? "Spam" : "Mark spam"}
             </button>
           </div>
 
@@ -393,7 +393,7 @@ export function ResponseDrawer({
                           }}
                           type="button"
                         >
-                          <PencilSimple size={13} />
+                          <PencilSimpleIcon size={13} />
                         </button>
                       ) : null}
                     </dt>
@@ -475,7 +475,7 @@ export function ResponseDrawer({
                       }
                       type="button"
                     >
-                      <X size={10} weight="bold" />
+                      <XIcon size={10} weight="bold" />
                     </button>
                   ) : null}
                 </span>
@@ -576,14 +576,14 @@ export function ResponseDrawer({
             onClick={() => void copyJson()}
             type="button"
           >
-            <Copy size={14} /> Copy JSON
+            <CopyIcon size={14} /> Copy JSON
           </button>
           <button
             className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#d9dfeb] px-3 text-xs font-semibold text-[#3b4150] hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/70"
             onClick={print}
             type="button"
           >
-            <Printer size={14} /> Print
+            <PrinterIcon size={14} /> Print
           </button>
           <span className="ml-auto hidden text-[11px] text-[#9ba4b5] sm:inline">
             J / K to move · Esc to close
@@ -594,7 +594,7 @@ export function ResponseDrawer({
               onClick={() => void remove()}
               type="button"
             >
-              <Trash size={14} /> Delete
+              <TrashIcon size={14} /> Delete
             </button>
           ) : null}
         </footer>

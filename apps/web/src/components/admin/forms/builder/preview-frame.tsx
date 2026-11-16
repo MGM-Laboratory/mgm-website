@@ -8,13 +8,13 @@
  */
 
 import {
-  ArrowClockwise,
-  Desktop,
-  DeviceMobile,
-  DeviceTablet,
-  Moon,
-  Sun,
-  X,
+  ArrowClockwiseIcon,
+  DesktopIcon,
+  DeviceMobileIcon,
+  DeviceTabletIcon,
+  MoonIcon,
+  SunIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -257,7 +257,7 @@ export function PreviewFrame({
                     }}
                     type="button"
                   >
-                    <ArrowClockwise size={15} weight="bold" />
+                    <ArrowClockwiseIcon size={15} weight="bold" />
                     Retry
                   </button>
                 </div>
@@ -302,17 +302,17 @@ export function PreviewToolbar({
         options={[
           {
             value: "phone",
-            label: <DeviceMobile aria-label="Phone" size={16} />,
+            label: <DeviceMobileIcon aria-label="Phone" size={16} />,
             title: "Phone (390 px)",
           },
           {
             value: "tablet",
-            label: <DeviceTablet aria-label="Tablet" size={16} />,
+            label: <DeviceTabletIcon aria-label="Tablet" size={16} />,
             title: "Tablet (820 px)",
           },
           {
             value: "desktop",
-            label: <Desktop aria-label="Desktop" size={16} />,
+            label: <DesktopIcon aria-label="Desktop" size={16} />,
             title: "Desktop (1280 px)",
           },
         ]}
@@ -323,8 +323,8 @@ export function PreviewToolbar({
         label="Preview colour scheme"
         onChange={onScheme}
         options={[
-          { value: "light", label: <Sun aria-label="Light" size={15} />, title: "Light" },
-          { value: "dark", label: <Moon aria-label="Dark" size={15} />, title: "Dark" },
+          { value: "light", label: <SunIcon aria-label="Light" size={15} />, title: "Light" },
+          { value: "dark", label: <MoonIcon aria-label="Dark" size={15} />, title: "Dark" },
         ]}
         size="sm"
         value={scheme}
@@ -430,7 +430,7 @@ export function PreviewOverlay({
           onClick={onClose}
           type="button"
         >
-          <X size={18} weight="bold" />
+          <XIcon size={18} weight="bold" />
         </button>
       </div>
       <PreviewFrame

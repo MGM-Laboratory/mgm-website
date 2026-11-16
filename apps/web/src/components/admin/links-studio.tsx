@@ -3,17 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  ArrowsClockwise,
-  ChartBar,
-  CloudArrowUp,
-  Copy,
-  Globe,
-  LinkSimple,
-  MagnifyingGlass,
-  PencilSimple,
-  Plus,
-  Trash,
-  X,
+  ArrowsClockwiseIcon,
+  ChartBarIcon,
+  CloudArrowUpIcon,
+  CopyIcon,
+  GlobeIcon,
+  LinkSimpleIcon,
+  MagnifyingGlassIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  TrashIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 
 import type {
@@ -239,7 +239,7 @@ function AnalyticsPanel({ analytics, onClose }: { analytics: LinkAnalytics; onCl
           onClick={onClose}
           type="button"
         >
-          <X size={16} />
+          <XIcon size={16} />
         </button>
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -421,7 +421,7 @@ function EditLinkModal({
             onClick={onClose}
             type="button"
           >
-            <X size={16} />
+            <XIcon size={16} />
           </button>
         </div>
         <div className="space-y-3">
@@ -564,7 +564,7 @@ function RecordRow({ label, name, content }: { label: string; name: string; cont
         title={`Copy the ${label} record`}
         type="button"
       >
-        <Copy size={13} />
+        <CopyIcon size={13} />
       </button>
     </div>
   );
@@ -627,7 +627,7 @@ function DomainCard({
           title="Check now"
           type="button"
         >
-          <ArrowsClockwise size={16} />
+          <ArrowsClockwiseIcon size={16} />
         </button>
         {canDelete ? (
           <button
@@ -638,7 +638,7 @@ function DomainCard({
             title="Remove domain"
             type="button"
           >
-            <Trash size={16} />
+            <TrashIcon size={16} />
           </button>
         ) : null}
       </div>
@@ -652,7 +652,7 @@ function DomainCard({
                 onClick={() => onConnect(domain)}
                 type="button"
               >
-                <CloudArrowUp size={16} />
+                <CloudArrowUpIcon size={16} />
                 {connectBusy ? "Opening…" : "Connect with Cloudflare"}
               </button>
               <p className="min-w-0 flex-1 text-xs leading-5 text-[#778299] dark:text-white/45">
@@ -749,7 +749,7 @@ function DomainsModal({
             onClick={onClose}
             type="button"
           >
-            <X size={16} />
+            <XIcon size={16} />
           </button>
         </div>
         <p className="mb-4 text-xs leading-5 text-[#778299] dark:text-white/45">
@@ -1189,7 +1189,7 @@ export function LinksStudio({
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <LinkSimple className="text-brand-green" size={26} weight="duotone" />
+        <LinkSimpleIcon className="text-brand-green" size={26} weight="duotone" />
         <div>
           <h2 className="text-lg font-bold">Link shortener</h2>
           <p className="text-sm text-[#778299] dark:text-white/45">
@@ -1242,7 +1242,7 @@ export function LinksStudio({
                 onClick={() => void createLink()}
                 type="button"
               >
-                <Plus size={16} weight="bold" />
+                <PlusIcon size={16} weight="bold" />
                 Shorten
               </button>
             </div>
@@ -1317,7 +1317,7 @@ export function LinksStudio({
                 onClick={() => setDomainsOpen(true)}
                 type="button"
               >
-                <Globe size={16} />
+                <GlobeIcon size={16} />
                 Domains
               </button>
             </div>
@@ -1331,7 +1331,7 @@ export function LinksStudio({
             {filteredLinks.length} link{filteredLinks.length === 1 ? "" : "s"}
           </div>
           <div className="relative">
-            <MagnifyingGlass
+            <MagnifyingGlassIcon
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
               size={16}
             />
@@ -1367,7 +1367,7 @@ export function LinksStudio({
                   title="Copy short link"
                   type="button"
                 >
-                  <Copy size={16} />
+                  <CopyIcon size={16} />
                 </button>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -1423,7 +1423,7 @@ export function LinksStudio({
                     title="Analytics"
                     type="button"
                   >
-                    <ChartBar size={16} />
+                    <ChartBarIcon size={16} />
                   </button>
                   {canWrite ? (
                     <button
@@ -1433,7 +1433,7 @@ export function LinksStudio({
                       title="Edit link"
                       type="button"
                     >
-                      <PencilSimple size={16} />
+                      <PencilSimpleIcon size={16} />
                     </button>
                   ) : null}
                   {canDelete ? (
@@ -1444,7 +1444,7 @@ export function LinksStudio({
                       title="Delete link"
                       type="button"
                     >
-                      <Trash size={16} />
+                      <TrashIcon size={16} />
                     </button>
                   ) : null}
                 </div>

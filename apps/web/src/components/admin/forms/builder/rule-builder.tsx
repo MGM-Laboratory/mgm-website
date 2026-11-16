@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash, Warning } from "@phosphor-icons/react";
+import { PlusIcon, TrashIcon, WarningIcon } from "@phosphor-icons/react";
 import { memo, useId, useMemo } from "react";
 
 import {
@@ -348,7 +348,7 @@ const RuleRow = memo(function RuleRow({
   if (!known) {
     return (
       <li className="flex items-center gap-2 rounded-xl border border-brand-yellow/50 bg-brand-yellow-50 px-3 py-2 text-xs text-[#8a6412] dark:bg-brand-yellow/10 dark:text-brand-yellow">
-        <Warning className="shrink-0" size={15} weight="fill" />
+        <WarningIcon className="shrink-0" size={15} weight="fill" />
         <span className="min-w-0 flex-1">
           {isScore
             ? "This rule looks at the score, but scoring is off."
@@ -441,7 +441,7 @@ const RuleRow = memo(function RuleRow({
           }}
           type="button"
         >
-          <Trash size={15} />
+          <TrashIcon size={15} />
         </button>
       )}
     </li>
@@ -554,7 +554,7 @@ export function RuleBuilder({
           onClick={addRule}
           type="button"
         >
-          <Plus size={13} weight="bold" />
+          <PlusIcon size={13} weight="bold" />
           Add rule
         </button>
       ) : !readOnly && !subjects.length && !allowScore ? (

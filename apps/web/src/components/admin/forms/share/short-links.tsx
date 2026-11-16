@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowSquareOut, LinkSimple, Plus, QrCode } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, LinkSimpleIcon, PlusIcon, QrCodeIcon } from "@phosphor-icons/react";
 import type { FormRecord } from "@repo/shared";
 
 import {
@@ -268,7 +268,7 @@ export function ShortLinks({
               data-testid="short-link-row"
               key={link.id}
             >
-              <LinkSimple className="shrink-0 text-brand-green" size={16} />
+              <LinkSimpleIcon className="shrink-0 text-brand-green" size={16} />
               <div className="min-w-0 flex-1 basis-48">
                 <p className="truncate font-mono text-sm font-semibold">{link.shortUrl}</p>
                 <p className="truncate text-[11px] text-[#8a93a6]" title={link.longUrl}>
@@ -301,7 +301,7 @@ export function ShortLinks({
                   }}
                   type="button"
                 >
-                  <QrCode size={16} />
+                  <QrCodeIcon size={16} />
                 </button>
                 <a
                   aria-label={`Open ${link.shortUrl}`}
@@ -310,7 +310,7 @@ export function ShortLinks({
                   rel="noreferrer"
                   target="_blank"
                 >
-                  <ArrowSquareOut size={16} />
+                  <ArrowSquareOutIcon size={16} />
                 </a>
               </div>
             </li>
@@ -478,7 +478,7 @@ export function ShortLinks({
               onClick={() => void create()}
               type="button"
             >
-              <Plus size={16} weight="bold" /> {busy ? "Shortening…" : "Shorten"}
+              <PlusIcon size={16} weight="bold" /> {busy ? "Shortening…" : "Shorten"}
             </button>
           </div>
           {!domains.length ? (
