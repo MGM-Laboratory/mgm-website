@@ -7,8 +7,9 @@ info:
 
     Every route starts with `/api`. Admin routes need the header `x-cms-passphrase`. The web app adds that header on the server side, so a browser never sees it.
 
-    A request that goes over a rate limit answers `429` with a `Retry-After` header. A body that fails validation answers `400`. A record that
-    changed after an editor loaded it answers `409` when the request carries the header `x-cms-expected-updated-at`.
+    A request that goes over a rate limit answers `429` with a `Retry-After` header. A body that fails validation answers `400` on most routes. A few admin routes answer `500` for an invalid body. The page [docs/errors.md](https://github.com/MGM-Laboratory/mgm-website/blob/main/docs/errors.md) of the repository lists them. A record that changed after an editor loaded it answers `409` when the request carries the header `x-cms-expected-updated-at`.
+
+    A body over the size limit of the server answers `413`. The body of that answer is not always JSON, so this document does not repeat the `413` on every route.
   license:
     name: GNU General Public License v3.0
     url: https://github.com/MGM-Laboratory/mgm-website/blob/main/LICENSE
@@ -17,7 +18,7 @@ servers:
     description: A deployment, with the host that its operator gives you
     variables:
       host:
-        default: api.labmgm.org
+        default: api.example.org
 tags:
   - name: Health
     description: Whether the API and its database answer.
@@ -88,7 +89,7 @@ paths:
       tags:
         - Forms (public)
       summary: Read a form as a respondent
-      description: Returns the form in one of three states. `open` carries the public document. `locked` means the form needs a passphrase. `unavailable` means the form is closed, not open yet or full. The slug is matched in lowercase. This route has no rate limit of its own.
+      description: Returns the form in one of three states. `open` carries the public document. `locked` means the form needs a passphrase. `unavailable` means the form is closed, not open yet or full. The slug is matched in lowercase.
       security: []
       parameters:
         - name: slug
@@ -305,7 +306,7 @@ paths:
       tags:
         - Forms (public)
       summary: Send a response
-      description: Checks every answer against its question with the same rules as the form page. Answers to questions that the respondent never met are dropped. File answers must name keys from the upload route. A `400` for answers has an `errors` object that maps question ids to error codes. The `website` field is a honeypot and a real person leaves it empty. A response that is too fast or has the honeypot filled is stored and marked as spam. The limit is 10 requests each minute for each visitor.
+      description: Checks every answer against its question with the same rules as the form page. Answers to questions that the respondent never met are dropped. File answers must name keys from the upload route. A `400` for answers has an `errors` object that maps question ids to error codes. A real person leaves the `website` field empty. The limit is 10 requests each minute for each visitor.
       security: []
       parameters:
         - name: slug
@@ -344,7 +345,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/FormSubmissionResult"
         "400":
-          description: The body is not valid, or some answers failed. When answers failed, the body has `message` and `errors`.
+          description: The body is not valid, some answers failed, or the form allows one response for each device and the body has no `deviceId`. When answers failed, the body has `message` and `errors`.
           content:
             application/json:
               schema:
@@ -373,7 +374,7 @@ paths:
       tags:
         - Forms (public)
       summary: Load a design image or video of a form
-      description: Redirects to a signed storage link that is valid for 15 minutes. Only keys that an admin upload made are served, and only while a form uses them. This route has no rate limit of its own.
+      description: Redirects to a signed storage link that is valid for 15 minutes. Only keys that an admin upload made are served, and only while a form uses them.
       security: []
       parameters:
         - name: key
@@ -975,25 +976,16 @@ paths:
         - name: range
           in: query
           required: false
-          description: The time range. An unknown value gives `30d`.
+          description: The time range. The known values are `24h`, `7d`, `30d`, `90d`, `365d` and `all`. A missing or unknown value gives `30d`.
           schema:
             type: string
-            enum:
-              - 24h
-              - 7d
-              - 30d
-              - 90d
-              - 365d
-              - all
             default: 30d
         - name: tzOffset
           in: query
           required: false
-          description: Minutes east of UTC for the local time of the admin. The value is cut to the range -840 to 840.
+          description: Minutes east of UTC for the local time of the admin. A value outside -840 to 840 is cut to the nearest end, and a missing or invalid value gives 0.
           schema:
             type: integer
-            minimum: -840
-            maximum: 840
             default: 0
       responses:
         "200":
@@ -1078,7 +1070,7 @@ paths:
         - Admins
       operationId: verifyAdminAccount
       summary: Check the passphrase of an admin account
-      description: The login page calls this route. It compares the passphrase with every active account that has not expired and records the login time of the account that matches. This route has its own limit of 10 requests a minute for each visitor, and successful requests count too.
+      description: The login page calls this route. It checks the passphrase against the active accounts that have not expired and records the login time of the account that matches. This route has its own limit of 10 requests a minute for each visitor, and successful requests count too.
       security: []
       requestBody:
         required: true
@@ -1087,7 +1079,7 @@ paths:
             schema:
               $ref: "#/components/schemas/AdminVerifyInput"
       responses:
-        "200":
+        "201":
           description: The passphrase matches an active account.
           content:
             application/json:
@@ -1151,7 +1143,7 @@ paths:
                 contact-inquiries:
                   - read
       responses:
-        "200":
+        "201":
           description: The account was created.
           content:
             application/json:
@@ -1311,7 +1303,7 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        "201":
           description: The video was stored.
           content:
             application/json:
@@ -1335,7 +1327,7 @@ paths:
         - Home content
       operationId: getHomeVideo
       summary: Play the home page video
-      description: Public. Redirects to a signed storage address that works for one hour. Only the video that the saved home content names can be played. This route has no rate limit.
+      description: Public. Redirects to a signed storage address that works for one hour. Only the video that the saved home content names can be played.
       security: []
       parameters:
         - name: key
@@ -1398,8 +1390,8 @@ paths:
               emails:
                 - contact@example.org
               address: Example Street 1, Example City
-              lat: -7.95
-              lng: 112.61
+              lat: 0.0
+              lng: 0.0
               mailStrategy: failover
               mailProviderOrder:
                 - resend
@@ -1555,7 +1547,7 @@ paths:
                 - inquiry-00000000-0000-4000-8000-000000000001
               action: markRead
       responses:
-        "200":
+        "201":
           description: The action ran.
           content:
             application/json:
@@ -1614,7 +1606,7 @@ paths:
         - Events
       operationId: getEventsCalendarFeed
       summary: Download the iCalendar feed of the published events
-      description: Calendar apps poll this URL to subscribe to every published event. The answer is an RFC 5545 document with the header `Cache-Control` set to `public, max-age=900`. This route has no rate limit.
+      description: Calendar apps poll this URL to subscribe to every published event. The answer is an RFC 5545 document with the header `Cache-Control` set to `public, max-age=900`. The general rate limit does not apply to this route, so calendar apps can poll it.
       security: []
       responses:
         "200":
@@ -1731,7 +1723,7 @@ paths:
             schema:
               $ref: "#/components/schemas/EventMapsLinkInput"
             example:
-              url: https://www.google.com/maps/place/Example/@-7.9526,112.6121,17z
+              url: https://www.google.com/maps/place/Example/@0.0000,0.0000,17z
       responses:
         "201":
           description: The coordinates that the link holds.
@@ -1740,8 +1732,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/EventCoordinates"
               example:
-                lat: -7.9526
-                lng: 112.6121
+                lat: 0.0
+                lng: 0.0
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1782,7 +1774,7 @@ paths:
         - Events
       operationId: getEventMedia
       summary: Redirect to an event image
-      description: Answers `302` with a signed storage URL that stays valid for 15 minutes. The key must have the form `event-<slug>-<uuid>.<png|jpg|jpeg|webp>`. This route has no rate limit. The route does not check that the object exists.
+      description: Answers `302` with a signed storage URL that stays valid for 15 minutes. The key must have the form `event-<slug>-<uuid>.<png|jpg|jpeg|webp>`.
       security: []
       parameters:
         - name: key
@@ -1914,7 +1906,7 @@ paths:
         - Events
       operationId: getEventCalendarFile
       summary: Download the iCalendar file of one event
-      description: Returns a VCALENDAR document with one VEVENT. The response sets `Content-Disposition` to an attachment named `<slug>.ics` and is not cached. A draft answers `404`. This route has no rate limit.
+      description: Returns a VCALENDAR document with one VEVENT. The response sets `Content-Disposition` to an attachment named `<slug>.ics` and is not cached. A draft answers `404`.
       security: []
       responses:
         "200":
@@ -2099,7 +2091,7 @@ paths:
         - Research
       operationId: getResearchMedia
       summary: Redirect to a research cover image
-      description: Answers `302` with a signed storage URL that stays valid for 15 minutes. The key must have the form `research-<slug>-<uuid>.<png|jpg|jpeg|webp>`. This route has no rate limit. The route does not check that the object exists.
+      description: Answers `302` with a signed storage URL that stays valid for 15 minutes. The key must have the form `research-<slug>-<uuid>.<png|jpg|jpeg|webp>`.
       security: []
       parameters:
         - name: key
@@ -2321,7 +2313,7 @@ paths:
         - Articles
       operationId: getArticleMedia
       summary: Redirect to an article cover image
-      description: Answers `302` with a signed storage URL that stays valid for 15 minutes. The key must have the form `article-<slug>-<uuid>.<png|jpg|jpeg|webp>`. This route has no rate limit. The route does not check that the object exists.
+      description: Answers `302` with a signed storage URL that stays valid for 15 minutes. The key must have the form `article-<slug>-<uuid>.<png|jpg|jpeg|webp>`.
       security: []
       parameters:
         - name: key
@@ -2593,7 +2585,7 @@ paths:
         - Projects
       operationId: getProjectMedia
       summary: Open a project image
-      description: Redirects to a signed storage URL that stays valid for 15 minutes. The key must have the shape of a project image key. The route has no rate limit.
+      description: Redirects to a signed storage URL that stays valid for 15 minutes. The key must have the shape of a project image key.
       security: []
       parameters:
         - name: key
@@ -2623,7 +2615,7 @@ paths:
         - Projects
       operationId: getProjectVideo
       summary: Open a project video
-      description: Redirects to a signed storage URL that stays valid for 1 hour. The video must be the demo video or a video section of a published project. The route has no rate limit.
+      description: Redirects to a signed storage URL that stays valid for 1 hour. The video must be the demo video or a video section of a published project.
       security: []
       parameters:
         - name: key
@@ -3385,7 +3377,7 @@ paths:
         - Short links
       operationId: listShortLinkHosts
       summary: List the custom domains that the web proxy routes
-      description: Returns every custom short domain with its connection status. The primary domain of the site is not in the list. This route has no rate limit.
+      description: Returns every custom short domain with its connection status. The primary domain of the site is not in the list.
       security: []
       responses:
         "200":
@@ -3409,15 +3401,15 @@ paths:
       parameters:
         - name: slug
           in: query
-          required: true
-          description: The short code of the link.
+          required: false
+          description: The short code of the link. A missing value is read as an empty string, and the answer is still `200` with a status.
           schema:
             type: string
           example: launch
         - name: host
           in: query
-          required: true
-          description: The host name that the visitor used. A host that is not a short domain falls back to the primary domain of the site.
+          required: false
+          description: The host name that the visitor used. A host that is not a short domain falls back to the primary domain of the site. A missing value is read as an empty string.
           schema:
             type: string
           example: go.example.org
@@ -3450,8 +3442,8 @@ paths:
             type: string
         - name: host
           in: query
-          required: true
-          description: The host name that the visitor used.
+          required: false
+          description: The host name that the visitor used. A missing value is read as an empty string, and the answer is still `200` with a status.
           schema:
             type: string
           example: go.example.org
@@ -3906,7 +3898,7 @@ paths:
         - Jobs
       operationId: bulkUpdateJobApplications
       summary: Change many applications at once
-      description: Applies one action to up to 200 applications. An id that matches no application is skipped. The action `delete` also removes the stored CV files, and a failure to remove a file is ignored.
+      description: Applies one action to up to 200 applications. An id that matches no application is skipped. The action `delete` also removes the stored CV files.
       security:
         - adminPassphrase: []
       requestBody:
@@ -4002,7 +3994,7 @@ paths:
         - Jobs
       operationId: getJobMedia
       summary: Redirect to an image of a role
-      description: Answers with a redirect to a signed download URL that works for 15 minutes. The key must come from the media upload route. This route has no rate limit, because a role page asks for many images at once.
+      description: Answers with a redirect to a signed download URL that works for 15 minutes. The key must come from the media upload route.
       security: []
       parameters:
         - name: key
@@ -4164,6 +4156,9 @@ paths:
           multipart/form-data:
             schema:
               $ref: "#/components/schemas/JobApplyInput"
+            encoding:
+              cv:
+                contentType: application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document
       responses:
         "201":
           description: The application was stored.
@@ -4707,7 +4702,7 @@ components:
         website:
           type: string
           maxLength: 2000
-          description: The honeypot input. A real person leaves it empty.
+          description: A real person leaves this field empty.
         token:
           type: string
           maxLength: 200
@@ -4988,7 +4983,7 @@ components:
           nullable: true
         spam:
           type: boolean
-          description: True when the honeypot was filled, the response came faster than `minSeconds`, or an admin marked it.
+          description: True when the response is marked as spam.
         meta:
           type: object
           required:
@@ -5915,10 +5910,12 @@ components:
         minDate:
           type: string
           maxLength: 40
+          pattern: ^\d{4}-\d{2}-\d{2}$
           description: A day as YYYY-MM-DD.
         maxDate:
           type: string
           maxLength: 40
+          pattern: ^\d{4}-\d{2}-\d{2}$
           description: A day as YYYY-MM-DD.
         accept:
           type: array
@@ -6294,7 +6291,7 @@ components:
           minimum: 0
           maximum: 600
           default: 3
-          description: Responses faster than this many seconds are marked as spam.
+          description: Settings of the form.
     FormSettings:
       description: The settings of a stored form. They add the notification list and the full receipt settings.
       allOf:
@@ -7176,7 +7173,8 @@ components:
       properties:
         ok:
           type: boolean
-          example: true
+          enum:
+            - true
     EventMediaUpload:
       type: object
       required:
@@ -7632,7 +7630,8 @@ components:
       properties:
         ok:
           type: boolean
-          example: true
+          enum:
+            - true
     ResearchCoverUpload:
       type: object
       required:
@@ -7804,7 +7803,8 @@ components:
       properties:
         ok:
           type: boolean
-          example: true
+          enum:
+            - true
     ArticleCoverUpload:
       type: object
       required:
@@ -7960,9 +7960,11 @@ components:
         startDate:
           type: string
           format: date
+          pattern: ^\d{4}-\d{2}-\d{2}$
         endDate:
           type: string
           format: date
+          pattern: ^\d{4}-\d{2}-\d{2}$
           description: Must not be earlier than `startDate`.
         role:
           type: string
@@ -8880,10 +8882,18 @@ components:
         - verifyTxt
       properties:
         cname:
-          allOf:
-            - $ref: "#/components/schemas/ShortLinkRecord"
+          type: object
           nullable: true
           description: The routing CNAME. It is null while the API has no routing target set.
+          required:
+            - name
+            - content
+          properties:
+            name:
+              type: string
+              example: go.example.org
+            content:
+              type: string
         verifyTxt:
           allOf:
             - $ref: "#/components/schemas/ShortLinkRecord"
@@ -9419,6 +9429,7 @@ components:
         deadline:
           type: string
           format: date
+          pattern: ^\d{4}-\d{2}-\d{2}$
           description: The last open day. The role stays open through this day, counted in UTC.
         perks:
           type: array
