@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch --preserveWatchOutput",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && node ../../.github/scripts/check-deprecated.mjs",
     "lint": "echo 'no lint configured for @repo/shared'",
     "clean": "rm -rf dist"
   },
