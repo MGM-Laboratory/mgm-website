@@ -23,7 +23,7 @@ export const test = base.extend({
         const report = (window as unknown as { __reportCspViolation?: (summary: string) => void })
           .__reportCspViolation;
         report?.(
-          `${event.effectiveDirective} blocked ${event.blockedURI || "inline"} on ${event.documentURI}`,
+          `${event.effectiveDirective} blocked ${event.blockedURI || "inline"} on ${event.documentURI} from ${event.sourceFile}:${event.lineNumber}:${event.columnNumber}`,
         );
       });
     });
