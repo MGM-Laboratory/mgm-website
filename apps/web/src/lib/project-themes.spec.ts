@@ -61,7 +61,7 @@ describe("PROJECT_THEMES", () => {
     }
   });
 
-  it("uses the same name in both variants of a theme", () => {
+  it("gives every theme a name of its own", () => {
     const names = Object.values(PROJECT_THEMES).map((theme) => theme.name);
 
     expect(new Set(names).size).toBe(names.length);

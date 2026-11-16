@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EXPIRY_OPTIONS, STATUS_HINT, STATUS_LABEL } from "./links-cms";
 
 describe("shortlink labels", () => {
-  it("offers the expiry options once each, never first", () => {
+  it("offers the expiry options once each, with never first", () => {
     const ids = EXPIRY_OPTIONS.map((option) => option.id);
 
     expect(new Set(ids).size).toBe(ids.length);

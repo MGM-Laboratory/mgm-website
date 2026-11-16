@@ -249,7 +249,7 @@ describe("videoUploadRoute", () => {
   });
 
   it("sends an empty passphrase when none is configured and skips the size check without a length", async () => {
-    vi.stubEnv("ADMIN_PASSPHRASE", undefined as unknown as string);
+    vi.stubEnv("ADMIN_PASSPHRASE", undefined);
     fetchWithTimeout.mockResolvedValue(Response.json({}));
 
     await POST(upload({ "content-type": "video/webm" }));

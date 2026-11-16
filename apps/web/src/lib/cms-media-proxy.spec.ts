@@ -93,13 +93,11 @@ describe("mediaPlaybackRoute", () => {
   });
 
   it("defaults the content type", async () => {
-    cmsApi.mockResolvedValue(new Response("x"));
+    cmsApi.mockResolvedValue(new Response(new Uint8Array([1])));
 
     const response = await route.GET(req(), ctx("a"));
 
-    expect(response.headers.get("content-type")).toMatch(
-      /^(application\/octet-stream|text\/plain)/,
-    );
+    expect(response.headers.get("content-type")).toBe("application/octet-stream");
     expect(response.headers.has("content-length")).toBe(false);
   });
 

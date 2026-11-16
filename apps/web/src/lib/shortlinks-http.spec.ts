@@ -9,7 +9,7 @@ const fetchMock = vi.fn<typeof fetch>();
 async function load(env: Record<string, string | undefined> = {}) {
   vi.resetModules();
   for (const [key, value] of Object.entries(env)) {
-    if (value === undefined) vi.stubEnv(key, undefined as unknown as string);
+    if (value === undefined) vi.stubEnv(key, undefined);
     else vi.stubEnv(key, value);
   }
   return import("./shortlinks-http");
@@ -117,17 +117,17 @@ describe("handleShortlinkGet", () => {
   });
 
   it("falls back to the public API url and then to localhost", async () => {
-    fetchMock.mockResolvedValue(json({ status: "not_found" }));
+    fetchMock.mockImplementation(async () => json({ status: "not_found" }));
 
-    vi.stubEnv("CMS_API_URL", undefined as unknown as string);
+    vi.stubEnv("CMS_API_URL", undefined);
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://public.test/api");
     let mod = await load();
     await mod.handleShortlinkGet(request("s.test"), "a");
     expect(String(fetchMock.mock.calls[0][0])).toMatch(/^http:\/\/public\.test\/api\/shortlinks/);
 
     vi.unstubAllEnvs();
-    vi.stubEnv("CMS_API_URL", undefined as unknown as string);
-    vi.stubEnv("NEXT_PUBLIC_API_URL", undefined as unknown as string);
+    vi.stubEnv("CMS_API_URL", undefined);
+    vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);
     mod = await load();
     await mod.handleShortlinkGet(request("s.test"), "a");
     expect(String(fetchMock.mock.calls[1][0])).toMatch(/^http:\/\/localhost:4000\/api\/shortlinks/);
@@ -255,7 +255,7 @@ describe("handleShortlinkCatchAll", () => {
   });
 
   it("answers the verification marker for a known host only", async () => {
-    fetchMock.mockResolvedValue(hostsAnswer());
+    fetchMock.mockImplementation(async () => hostsAnswer());
     const { handleShortlinkCatchAll } = await load();
 
     const known = await handleShortlinkCatchAll(request("go.custom.test"), [
@@ -282,7 +282,7 @@ describe("handleShortlinkCatchAll", () => {
   });
 
   it("answers 404 for the root and for unknown hosts", async () => {
-    fetchMock.mockResolvedValue(hostsAnswer());
+    fetchMock.mockImplementation(async () => hostsAnswer());
     const { handleShortlinkCatchAll } = await load();
 
     expect((await handleShortlinkCatchAll(request("go.custom.test"), []))?.status).toBe(404);

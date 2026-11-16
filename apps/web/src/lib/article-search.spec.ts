@@ -136,8 +136,13 @@ describe("searchArticles", () => {
 
     expect(searchArticles(records, "quantim").map((entry) => entry.slug)).toEqual(["a"]);
     expect(searchArticles(records, "quanttm").map((entry) => entry.slug)).toEqual(["a"]);
+    // exactly 2 edits (quantum -> quantxx) is still inside the cap for a long term
+    expect(searchArticles(records, "quantxx").map((entry) => entry.slug)).toEqual(["a"]);
+    // 3 edits is past it
     expect(searchArticles(records, "qxxxtum")).toEqual([]);
     expect(searchArticles(records, "cots").map((entry) => entry.slug)).toEqual(["b"]);
+    // exactly 2 edits (cats -> cogs) is past the cap of 1 for a short term
+    expect(searchArticles(records, "cogs")).toEqual([]);
     expect(searchArticles(records, "dogs")).toEqual([]);
   });
 

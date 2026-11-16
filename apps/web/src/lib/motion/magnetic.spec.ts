@@ -47,6 +47,7 @@ const pointerAt = (x: number, y: number, extra: Record<string, unknown> = {}) =>
 
 beforeEach(() => {
   now = 1000;
+  rect.x = 100;
   windowHandlers.clear();
   const setters: Setter[] = [];
   mocks.quickTo.mockReset();
@@ -250,6 +251,5 @@ describe("attachMagnetic", () => {
     pointerAt(150, 125);
 
     expect(toX.mock.calls.at(-1)).toEqual([0]);
-    rect.x = 100;
   });
 });

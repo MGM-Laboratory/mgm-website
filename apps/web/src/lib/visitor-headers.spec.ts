@@ -48,7 +48,7 @@ describe("provenVisitorHeaders", () => {
   });
 
   it("sends an empty passphrase when none is configured", () => {
-    vi.stubEnv("ADMIN_PASSPHRASE", undefined as unknown as string);
+    vi.stubEnv("ADMIN_PASSPHRASE", undefined);
     visitorAddress.mockReturnValue(undefined);
 
     expect(provenVisitorHeaders(request())).toEqual({ "x-cms-passphrase": "" });

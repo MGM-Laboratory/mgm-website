@@ -333,14 +333,22 @@ describe("decideTone", () => {
   });
 
   it("asks for more contrast over imagery than over a flat colour", () => {
-    const flat = decideTone([{ color: [140, 140, 140], media: false }], preferences, {
-      textMix: 1,
-    });
-    const imagery = decideTone([{ color: [140, 140, 140], media: true }], preferences, {
-      textMix: 1,
-    });
+    // A bare tint with the same ink in both tones, over a backdrop where the
+    // ink reads (above 4.5) but stays under the 4.5 + margin that imagery needs.
+    const bare: TonePreferences = {
+      ...preferences,
+      alpha: 0,
+      light: { ink: preferences.preferred.ink, surface: [255, 255, 255] },
+    };
+    const color: Rgb = [136, 136, 136];
+    const flat = decideTone([{ color, media: false }], bare, { textMix: 1 });
+    const imagery = decideTone([{ color, media: true }], bare, { textMix: 1 });
 
-    expect(imagery.alpha).toBeGreaterThanOrEqual(flat.alpha);
+    expect(flat.contrast).toBeGreaterThanOrEqual(TEXT_CONTRAST);
+    expect(flat.contrast).toBeLessThan(TEXT_CONTRAST + 0.8);
+    expect(flat.alpha).toBe(0);
+    expect(imagery.alpha).toBeGreaterThan(flat.alpha);
+    expect(imagery.contrast).toBeGreaterThanOrEqual(TEXT_CONTRAST + 0.8);
     expect(imagery.media).toBe(true);
     expect(flat.media).toBe(false);
   });

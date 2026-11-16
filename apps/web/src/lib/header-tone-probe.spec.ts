@@ -174,6 +174,11 @@ beforeEach(() => {
   contextMissing = false;
   drawn.length = 0;
   images.length = 0;
+  // body and html are shared by every test, so each test starts from the same page
+  body.style = { backgroundColor: "rgb(250, 250, 250)", backgroundImage: "none" };
+  html.style = { backgroundColor: "rgba(0, 0, 0, 0)", backgroundImage: "none" };
+  body.descendants = [];
+  html.descendants = [];
   installDom();
 });
 
@@ -196,8 +201,6 @@ describe("pageBaseColor", () => {
 
     html.style.backgroundColor = "rgba(0, 0, 0, 0)";
     expect(probe.pageBaseColor()).toEqual([255, 255, 255]);
-
-    body.style.backgroundColor = "rgb(250, 250, 250)";
   });
 });
 
@@ -731,7 +734,6 @@ describe("hidden pictures under the first element", () => {
 
     stack = [Object.assign(body, { descendants: [hiddenImage] })];
     expect(probe.probePoint(50, 50, noSkip, base).media).toBe(false);
-    body.descendants = [];
 
     stack = [card([hiddenImage], { width: 2000, height: 1000 })];
     expect(probe.probePoint(50, 50, noSkip, base).media).toBe(false);
@@ -745,6 +747,5 @@ describe("hidden pictures under the first element", () => {
 
     stack = [Object.assign(html, { descendants: [hiddenImage] })];
     expect(probe.probePoint(50, 50, noSkip, base).media).toBe(false);
-    html.descendants = [];
   });
 });

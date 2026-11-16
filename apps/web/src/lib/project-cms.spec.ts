@@ -1,3 +1,4 @@
+import { PROJECT_THEME_IDS } from "@repo/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -199,8 +200,15 @@ describe("description helpers", () => {
 });
 
 describe("projectThemeId", () => {
-  it("is stable for a slug", () => {
-    expect(projectThemeId({ slug: "x" })).toBe(projectThemeId({ slug: "x" }));
+  it("keeps the picked theme", () => {
+    expect(projectThemeId({ slug: "x", theme: "graphite" })).toBe("graphite");
+  });
+
+  it("picks the same listed theme for a slug every time", () => {
+    const picked = projectThemeId({ slug: "x" });
+
+    expect(picked).toBe(projectThemeId({ slug: "x" }));
+    expect(PROJECT_THEME_IDS).toContain(picked);
   });
 });
 

@@ -1,3 +1,4 @@
+import { DEFAULT_HOME_CONTENT } from "@repo/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { cmsApi } = vi.hoisted(() => ({
@@ -36,7 +37,6 @@ import {
   fetchPublicationRecords,
 } from "./publication-cms-server";
 import {
-  ensureResearchCmsSeeded,
   fetchResearchAdminList,
   fetchResearchFeed,
   fetchResearchRecord,
@@ -169,8 +169,9 @@ describe("fetchHomeContent", () => {
     cmsApi.mockRejectedValueOnce(new Error("offline"));
     const offline = await fetchHomeContent();
 
-    expect(refused).toEqual(withoutRecord);
-    expect(offline).toEqual(withoutRecord);
+    expect(withoutRecord).toEqual(DEFAULT_HOME_CONTENT);
+    expect(refused).toEqual(DEFAULT_HOME_CONTENT);
+    expect(offline).toEqual(DEFAULT_HOME_CONTENT);
   });
 });
 
@@ -218,7 +219,14 @@ describe("readProjectDetail", () => {
 });
 
 describe("ensureResearchCmsSeeded", () => {
+  // The module keeps the import promise, so every test loads a fresh copy and the order does not matter.
+  const load = async () => {
+    vi.resetModules();
+    return (await import("./research-cms-server")).ensureResearchCmsSeeded;
+  };
+
   it("returns the existing records without importing", async () => {
+    const ensureResearchCmsSeeded = await load();
     cmsApi.mockResolvedValue(json({ records: [{ slug: "a" }] }));
 
     expect(await ensureResearchCmsSeeded()).toEqual([{ slug: "a" }]);
@@ -226,6 +234,7 @@ describe("ensureResearchCmsSeeded", () => {
   });
 
   it("imports the seed when the store is empty, once for parallel callers, and rereads", async () => {
+    const ensureResearchCmsSeeded = await load();
     let imported = false;
     cmsApi.mockImplementation(async (path, init) => {
       if (path === "/cms/research/bootstrap") {
@@ -253,15 +262,13 @@ describe("ensureResearchCmsSeeded", () => {
     cmsApi.mockImplementation(async (path) =>
       path === "/cms/research/bootstrap" ? fail() : json({ records: [] }),
     );
-    // the earlier test left a finished import behind, so only a fresh module can fail here
-    vi.resetModules();
-    const fresh = await import("./research-cms-server");
+    const ensureResearchCmsSeeded = await load();
 
-    await expect(fresh.ensureResearchCmsSeeded()).rejects.toThrow(/could not be imported/);
+    await expect(ensureResearchCmsSeeded()).rejects.toThrow(/could not be imported/);
 
     cmsApi.mockImplementation(async (path) =>
       path === "/cms/research/bootstrap" ? json({}) : json({ records: [{ slug: "later" }] }),
     );
-    expect(await fresh.ensureResearchCmsSeeded()).toEqual([{ slug: "later" }]);
+    expect(await ensureResearchCmsSeeded()).toEqual([{ slug: "later" }]);
   });
 });

@@ -1,6 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { random, randomBetween, randomInt, randomPick } from "./random";
+type RandomModule = typeof import("./random");
+
+let random: RandomModule["random"];
+let randomBetween: RandomModule["randomBetween"];
+let randomInt: RandomModule["randomInt"];
+let randomPick: RandomModule["randomPick"];
+
+// The generator seeds itself from the clock on import, so a fixed clock gives every test the same sequence.
+beforeEach(async () => {
+  vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+  vi.spyOn(performance, "now").mockReturnValue(12_345.678);
+  vi.resetModules();
+  ({ random, randomBetween, randomInt, randomPick } = await import("./random"));
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("random", () => {
   it("returns floats in [0, 1) that are not all the same", () => {

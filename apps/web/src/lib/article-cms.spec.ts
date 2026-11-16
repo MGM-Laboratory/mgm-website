@@ -1,3 +1,4 @@
+import { PROJECT_THEME_IDS } from "@repo/shared";
 import { describe, expect, it } from "vitest";
 
 import type { Member } from "@/data/members";
@@ -99,9 +100,16 @@ describe("articleAuthors", () => {
 });
 
 describe("articleThemeId", () => {
-  it("keeps the picked theme and picks stably otherwise", () => {
-    expect(articleThemeId({ slug: "x", theme: "ocean" as never })).toBeDefined();
-    expect(articleThemeId({ slug: "same" })).toBe(articleThemeId({ slug: "same" }));
+  it("keeps the picked theme", () => {
+    expect(articleThemeId({ slug: "x", theme: "graphite" })).toBe("graphite");
+    expect(articleThemeId({ slug: "x", theme: "sunburst" })).toBe("sunburst");
+  });
+
+  it("picks the same listed theme for a slug every time", () => {
+    const picked = articleThemeId({ slug: "same" });
+
+    expect(picked).toBe(articleThemeId({ slug: "same" }));
+    expect(PROJECT_THEME_IDS).toContain(picked);
   });
 });
 

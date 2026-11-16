@@ -17,7 +17,7 @@ describe("env", () => {
   });
 
   it("falls back to the local API when it is unset", async () => {
-    vi.stubEnv("NEXT_PUBLIC_API_URL", undefined as unknown as string);
+    vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);
 
     expect((await load()).NEXT_PUBLIC_API_URL).toBe("http://localhost:4000/api");
   });
