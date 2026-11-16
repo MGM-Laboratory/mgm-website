@@ -75,6 +75,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 afterEach(() => {
   vi.clearAllMocks();
+  utils.checkLongUrl.mockReset();
   vi.useRealTimers();
 });
 

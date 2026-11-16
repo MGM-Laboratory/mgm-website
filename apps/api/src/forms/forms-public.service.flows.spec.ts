@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { formDocumentSchema } from "@repo/shared";
 
+import { Prisma } from "../generated/prisma/client.js";
 import { hashPassphrase } from "../shortlinks/shortlinks.utils.js";
 import { FormsError } from "./forms.common.js";
 import { FormsPublicService } from "./forms-public.service.js";
@@ -127,6 +128,7 @@ function tokenFor(hash: string) {
 
 afterEach(() => {
   vi.clearAllMocks();
+  geo.lookupGeo.mockReset();
 });
 
 describe("FormsPublicService.publicForm and unlock", () => {
@@ -525,7 +527,7 @@ describe("FormsPublicService.submit extra paths", () => {
     const data = (
       prisma.formResponse.create.mock.calls[0] as unknown as [{ data: Record<string, unknown> }]
     )[0].data;
-    expect(String(data.utm)).not.toContain("source");
+    expect(data.utm).toBe(Prisma.DbNull);
   });
 
   it("answers 409 when two submissions race for one upload", async () => {
@@ -590,11 +592,13 @@ describe("FormsPublicService.submit extra paths", () => {
     expect(error.errors).toHaveProperty("doc");
   });
 
-  it("ignores a file answer that is not a list of keyed items", async () => {
+  it("rejects a file answer that is not a list of keyed items without reading uploads", async () => {
     const { prisma, service } = make();
-    await service
-      .submit("survey", input({ answers: { doc: "nope", name: "Ana" } }), META)
-      .catch(() => undefined);
+    const error = await expectError(
+      service.submit("survey", input({ answers: { doc: "nope", name: "Ana" } }), META),
+      400,
+    );
+    expect(error.errors).toHaveProperty("doc");
     expect(prisma.formUpload.findMany).not.toHaveBeenCalled();
   });
 

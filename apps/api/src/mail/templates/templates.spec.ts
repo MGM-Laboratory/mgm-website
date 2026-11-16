@@ -193,18 +193,21 @@ describe("sendConfirmationEmail", () => {
     const mail = { sendEmail: vi.fn(async () => undefined) };
     const logger = { warn: vi.fn() };
     sendConfirmationEmail(mail as never, logger as never, "failed", params);
-    await Promise.resolve();
+    await new Promise((resolve) => setImmediate(resolve));
     expect(mail.sendEmail).toHaveBeenCalledWith(params);
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
-  it("logs only the stack when the send fails", async () => {
-    const error = new Error("secret transport detail");
+  it("logs the error stack, and not the error object, when the send fails", async () => {
+    // The stack starts with the message, so the message text is in the log too.
+    // This pins that the logger gets the stack string as its second argument.
+    const error = new Error("transport detail");
     const mail = { sendEmail: vi.fn(async () => Promise.reject(error)) };
     const logger = { warn: vi.fn() };
     sendConfirmationEmail(mail as never, logger as never, "failed", params);
     await new Promise((resolve) => setImmediate(resolve));
     expect(logger.warn).toHaveBeenCalledWith("failed", error.stack);
+    expect(logger.warn).not.toHaveBeenCalledWith("failed", error);
   });
 
   it("logs a non Error rejection as a string", async () => {

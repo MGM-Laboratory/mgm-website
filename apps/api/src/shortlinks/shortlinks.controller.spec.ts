@@ -1,5 +1,5 @@
 import { HttpException, UnauthorizedException } from "@nestjs/common";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ShortlinksController } from "./shortlinks.controller.js";
 import { ShortlinksError } from "./shortlinks.service.js";
@@ -43,7 +43,11 @@ async function status(work: Promise<unknown>) {
 }
 
 beforeEach(() => {
-  process.env.ADMIN_PASSPHRASE = PASS;
+  vi.stubEnv("ADMIN_PASSPHRASE", PASS);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("ShortlinksController public routes", () => {
@@ -84,12 +88,11 @@ describe("ShortlinksController.verify", () => {
 
   it("answers 400 naming the first bad field", async () => {
     const { controller } = makeController();
-    expect(
-      await status(controller.verify({ host: "", passphrase: "p", slug: "abc" }, request())),
-    ).toEqual({
-      message: "host: Too small: expected string to have >=1 characters",
-      status: 400,
-    });
+    const first = await status(
+      controller.verify({ host: "", passphrase: "p", slug: "abc" }, request()),
+    );
+    expect(first).toMatchObject({ status: 400 });
+    expect((first as { message: string }).message).toMatch(/^host: /);
     expect(
       await status(controller.verify({ host: "h", passphrase: "p", slug: "bad slug!" }, request())),
     ).toMatchObject({ status: 400 });

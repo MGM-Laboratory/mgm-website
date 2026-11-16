@@ -159,15 +159,34 @@ describe("FormsAnalyticsService.analytics results", () => {
   });
 
   it("fills the series from the event and response buckets", async () => {
-    const { service } = make({ raw: [[], [], [], []] });
+    const hour = 3_600_000;
+    const current = Math.floor(NOW / hour);
+    const { service } = make({
+      raw: [
+        [
+          { bucket: current, starts: 2, views: 5 },
+          { bucket: current - 1, starts: 0, views: 1 },
+        ],
+        [{ bucket: current, submissions: 3 }],
+        [],
+        [],
+      ],
+    });
     const result = await service.analytics("form1", "24h", 0, NOW);
-    expect(result.series.length).toBeGreaterThan(0);
-    expect(
-      result.series.every(
-        (point: { views: number; submissions: number }) =>
-          point.views === 0 && point.submissions === 0,
-      ),
-    ).toBe(true);
+    expect(result.series).toHaveLength(24);
+    expect(result.series.at(-1)).toEqual({
+      bucket: new Date(current * hour).toISOString(),
+      starts: 2,
+      submissions: 3,
+      views: 5,
+    });
+    expect(result.series.at(-2)).toEqual({
+      bucket: new Date((current - 1) * hour).toISOString(),
+      starts: 0,
+      submissions: 0,
+      views: 1,
+    });
+    expect(result.series[0]).toMatchObject({ starts: 0, submissions: 0, views: 0 });
   });
 
   it("fails with the refusal of the form lookup before any query", async () => {

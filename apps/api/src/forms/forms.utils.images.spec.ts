@@ -106,6 +106,7 @@ describe("imageDimensions", () => {
       Buffer.alloc(8, 0xff),
     ]);
     expect(() => imageDimensions(broken, "image/jpeg")).not.toThrow();
+    expect(imageDimensions(broken, "image/jpeg")).toBeNull();
   });
 });
 

@@ -67,6 +67,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  connect.buildConnectUrl.mockReset();
+  connect.resolveCloudflareSync.mockReset();
   fetchMock.mockReset();
   vi.unstubAllGlobals();
 });

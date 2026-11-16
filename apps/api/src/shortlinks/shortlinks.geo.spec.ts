@@ -1,8 +1,16 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { enrichVisit, lookupGeo } from "./shortlinks.geo.js";
+type GeoModule = typeof import("./shortlinks.geo.js");
 
 const fetchMock = vi.fn();
+// The module keeps a process wide cache, so every test loads a fresh copy of it.
+let enrichVisit: GeoModule["enrichVisit"];
+let lookupGeo: GeoModule["lookupGeo"];
+
+beforeEach(async () => {
+  vi.resetModules();
+  ({ enrichVisit, lookupGeo } = await import("./shortlinks.geo.js"));
+});
 
 function answer(body: unknown, ok = true) {
   fetchMock.mockResolvedValueOnce({ ok, json: async () => body });
@@ -81,16 +89,21 @@ describe("lookupGeo", () => {
     expect(await lookupGeo("203.0.113.52")).toBeNull();
   });
 
-  it("returns null for a non 2xx answer", async () => {
+  it("returns null for a non 2xx answer and caches the miss with no expiry (today's behavior)", async () => {
     stub();
     answer({ country: "x", success: true }, false);
     expect(await lookupGeo("203.0.113.53")).toBeNull();
+    // Describes the current code. A failed lookup stays cached as null for the life of the
+    // process, so the address is never retried. Change this test if a TTL is added.
+    expect(await lookupGeo("203.0.113.53")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns null and caches the miss when the provider throws", async () => {
+  it("returns null and caches the miss with no expiry when the provider throws (today's behavior)", async () => {
     stub();
     fetchMock.mockRejectedValueOnce(new Error("network down"));
     expect(await lookupGeo("203.0.113.54")).toBeNull();
+    // Describes the current code. The miss has no TTL, so the second call never reaches fetch.
     expect(await lookupGeo("203.0.113.54")).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

@@ -102,6 +102,15 @@ describe("validateEnv defaults", () => {
   });
 
   it("names every problem in one error", () => {
-    expect(() => validateEnv({})).toThrow(/Invalid environment variables/);
+    let message = "";
+    try {
+      validateEnv({});
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toMatch(/^Invalid environment variables/);
+    expect(message).toContain("DATABASE_URL");
+    expect(message).toContain("ADMIN_PASSPHRASE");
+    expect(message).toContain("SESSION_SECRET");
   });
 });

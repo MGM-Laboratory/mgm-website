@@ -116,13 +116,22 @@ describe("StorageService with a bucket", () => {
     await expect(service.readFile("k", 10)).rejects.toThrow("Object k has no body");
   });
 
-  it("treats a missing content length as small and checks the body size by reading it", async () => {
+  it("returns an empty body when the content length is missing", async () => {
     const { internals, service } = makeService();
     internals.client.send.mockResolvedValue({
       Body: { transformToByteArray: async () => new Uint8Array() },
     });
     // An empty array is still a body, so the buffer is empty and not an error.
     expect((await service.readFile("k", 10)).length).toBe(0);
+  });
+
+  it("does not size check a body that has no content length (today's behavior)", async () => {
+    const { internals, service } = makeService();
+    internals.client.send.mockResolvedValue({
+      Body: { transformToByteArray: async () => new Uint8Array(11) },
+    });
+    // readFile checks only ContentLength, so a body without it is read in full even over the limit.
+    expect((await service.readFile("k", 10)).length).toBe(11);
   });
 
   it("deletes through the shared client", async () => {

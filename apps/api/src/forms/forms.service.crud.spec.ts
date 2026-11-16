@@ -325,15 +325,23 @@ describe("FormsService.update", () => {
     });
   });
 
-  it("refuses to set a blank passphrase", async () => {
-    const { prisma, service } = withRow();
+  it("refuses to set a blank or missing passphrase", async () => {
+    const blank = withRow();
     await expect(
-      service.update("abc123", { passphrase: "   ", passphraseAction: "set" }),
-    ).rejects.toMatchObject({ status: 400 });
-    await expect(service.update("abc123", { passphraseAction: "set" })).rejects.toMatchObject({
-      status: 404,
+      blank.service.update("abc123", { passphrase: "   ", passphraseAction: "set" }),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("Enter a passphrase"),
+      status: 400,
     });
-    expect(prisma.form.update).not.toHaveBeenCalled();
+    expect(blank.prisma.form.update).not.toHaveBeenCalled();
+    const missing = withRow();
+    await expect(
+      missing.service.update("abc123", { passphraseAction: "set" }),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("Enter a passphrase"),
+      status: 400,
+    });
+    expect(missing.prisma.form.update).not.toHaveBeenCalled();
   });
 
   it("answers 409 on a unique violation at write time and rethrows other errors", async () => {

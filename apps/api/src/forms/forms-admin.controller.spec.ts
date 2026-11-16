@@ -228,12 +228,41 @@ describe("FormsAdminController.uploadMedia", () => {
     );
   });
 
-  it("refuses a video that is not an MP4 or WebM body", async () => {
+  it("refuses a video whose body is not a real MP4 or WebM file", async () => {
+    const { controller, storage } = make();
+    const error = await controller
+      .uploadMedia(
+        "f1",
+        { body: Buffer.from("text"), headers: { "content-type": "video/mp4" } } as never,
+        PASS,
+      )
+      .catch((caught: unknown) => caught);
+    expect((error as HttpException).getStatus()).toBe(400);
+    expect((error as HttpException).message).toBe("That file is not a valid video.");
+    expect(storage.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it("refuses a video body that is not a Buffer", async () => {
     const { controller } = make();
     const error = await controller
       .uploadMedia("f1", { body: "text", headers: { "content-type": "video/mp4" } } as never, PASS)
       .catch((caught: unknown) => caught);
     expect((error as HttpException).getStatus()).toBe(400);
+  });
+
+  it("refuses a video over CMS_MAX_VIDEO_BYTES", async () => {
+    const { controller, storage } = make();
+    const mp4 = Buffer.concat([
+      Buffer.from([0, 0, 0, 0x18]),
+      Buffer.from("ftypisom"),
+      Buffer.alloc(1000),
+    ]);
+    const error = await controller
+      .uploadMedia("f1", { body: mp4, headers: { "content-type": "video/mp4" } } as never, PASS)
+      .catch((caught: unknown) => caught);
+    expect((error as HttpException).getStatus()).toBe(400);
+    expect((error as HttpException).message).toContain("The video must be under");
+    expect(storage.uploadFile).not.toHaveBeenCalled();
   });
 
   it("answers 503 when storage fails", async () => {
