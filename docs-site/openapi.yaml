@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: MGM Laboratory website API
+  version: "1"
+  description: |
+    REST API of the MGM Laboratory website. The public pages read content from it, and the admin workspace writes content through it.
+
+    Every route starts with `/api`. Admin routes need the header `x-cms-passphrase`. The web app adds that header on the server side, so a browser never sees it.
+
+    A request that goes over a rate limit answers `429` with a `Retry-After` header. A body that fails validation answers `400`. A record that
+    changed after an editor loaded it answers `409` when the request carries the header `x-cms-expected-updated-at`.
+  license:
+    name: GNU General Public License v3.0
+    url: https://github.com/MGM-Laboratory/mgm-website/blob/main/LICENSE
+servers:
+  - url: https://{host}
+    description: A deployment, with the host that its operator gives you
+    variables:
+      host:
+        default: api.labmgm.org
+tags:
+  - name: Health
+    description: Whether the API and its database answer.
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: Check that the API and its database answer
+      description: Runs `SELECT 1` on the database. The web status chip and the container health check call this route.
+      security: []
+      responses:
+        "200":
+          description: The API and the database answer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: The database does not answer. The body has the same shape with `status` set to `error`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "429":
+          description: The client went over the rate limit.
+          headers:
+            Retry-After:
+              description: Seconds to wait before the next request.
+              schema:
+                type: integer
+components:
+  securitySchemes:
+    adminPassphrase:
+      type: apiKey
+      in: header
+      name: x-cms-passphrase
+      description: The shared admin passphrase. The web app sets it on the server side for the admin routes.
+  schemas:
+    Health:
+      type: object
+      required: [status, uptime, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        uptime:
+          type: number
+          description: Seconds since the API process started.
+        timestamp:
+          type: string
+          format: date-time
