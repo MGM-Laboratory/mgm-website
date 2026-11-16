@@ -11,6 +11,7 @@ on:
       - "apps/api/Dockerfile"
       - "apps/web/Dockerfile"
       - "apps/web/next.config.ts"
+      - "turbo.json"
       - ".github/scripts/hash-image-files.sh"
       - ".github/workflows/repeatable-build.yaml"
   schedule:
