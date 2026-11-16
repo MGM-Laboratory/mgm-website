@@ -1,23 +1,23 @@
 "use client";
 
 import {
-  ArrowSquareOut,
-  ArrowDown,
-  ArrowUp,
-  CalendarBlank,
-  Check,
-  Eye,
-  EyeSlash,
-  FilePdf,
-  FloppyDisk,
-  ImageSquare,
-  LinkSimple,
-  MagnifyingGlass,
-  Plus,
-  Tag,
-  Trash,
-  User,
-  X,
+  ArrowSquareOutIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CalendarBlankIcon,
+  CheckIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  FilePdfIcon,
+  FloppyDiskIcon,
+  ImageSquareIcon,
+  LinkSimpleIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  TagIcon,
+  TrashIcon,
+  UserIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -80,7 +80,7 @@ function KeywordEditor({
   return (
     <div>
       <div className="relative">
-        <Tag
+        <TagIcon
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
           size={16}
         />
@@ -102,7 +102,7 @@ function KeywordEditor({
           onClick={commit}
           type="button"
         >
-          <Plus size={16} weight="bold" />
+          <PlusIcon size={16} weight="bold" />
         </button>
       </div>
       {values.length ? (
@@ -119,7 +119,7 @@ function KeywordEditor({
                 onClick={() => onRemove(keyword)}
                 type="button"
               >
-                <X size={12} weight="bold" />
+                <XIcon size={12} weight="bold" />
               </button>
             </span>
           ))}
@@ -187,7 +187,7 @@ function MemberPicker({
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        <User className="shrink-0 text-[#8490a5]" size={16} />
+        <UserIcon className="shrink-0 text-[#8490a5]" size={16} />
         <span
           className={`min-w-0 flex-1 truncate ${selected ? "text-[#171b25] dark:text-white" : "text-[#9ba4b5] dark:text-white/25"}`}
         >
@@ -203,7 +203,7 @@ function MemberPicker({
             }}
             role="button"
           >
-            <X size={12} weight="bold" />
+            <XIcon size={12} weight="bold" />
           </span>
         ) : (
           <span className="shrink-0 font-mono text-[10px] text-[#9ba4b5]">{members.length}</span>
@@ -217,7 +217,7 @@ function MemberPicker({
           role="listbox"
         >
           <div className="relative">
-            <MagnifyingGlass
+            <MagnifyingGlassIcon
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
               size={14}
             />
@@ -247,7 +247,7 @@ function MemberPicker({
                   <span
                     className={`grid size-4 shrink-0 place-items-center rounded border transition ${active ? "border-brand-blue bg-brand-blue text-white" : "border-[#c6cedd] dark:border-white/20"}`}
                   >
-                    {active ? <Check size={11} weight="bold" /> : null}
+                    {active ? <CheckIcon size={11} weight="bold" /> : null}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{member.name}</span>
                   <span className="shrink-0 truncate text-[11px] text-[#9ba4b5]">
@@ -343,7 +343,7 @@ function AuthorRow({
             onClick={() => onMove(-1)}
             type="button"
           >
-            <ArrowUp size={14} />
+            <ArrowUpIcon size={14} />
           </button>
           <button
             aria-label="Move author down"
@@ -352,7 +352,7 @@ function AuthorRow({
             onClick={() => onMove(1)}
             type="button"
           >
-            <ArrowDown size={14} />
+            <ArrowDownIcon size={14} />
           </button>
           <button
             aria-label="Remove author"
@@ -360,7 +360,7 @@ function AuthorRow({
             onClick={onRemove}
             type="button"
           >
-            <Trash size={14} />
+            <TrashIcon size={14} />
           </button>
         </div>
       </div>
@@ -407,7 +407,7 @@ function AuthorRow({
           <div className="grid items-start gap-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
             <Field label="Public profile link">
               <div className="flex items-center gap-1.5">
-                <LinkSimple className="shrink-0 text-[#8490a5]" size={16} />
+                <LinkSimpleIcon className="shrink-0 text-[#8490a5]" size={16} />
                 <input
                   className={`${inputClass} font-mono text-xs`}
                   onChange={(event) => onChange({ ...author, url: event.target.value })}
@@ -443,7 +443,7 @@ function AuthorRow({
                       }
                     />
                   ) : (
-                    <ImageSquare size={17} />
+                    <ImageSquareIcon size={17} />
                   )}
                 </button>
                 <button
@@ -787,9 +787,9 @@ export function PublicationEditor({
             type="button"
           >
             {status === "saved" ? (
-              <Check size={18} weight="bold" />
+              <CheckIcon size={18} weight="bold" />
             ) : (
-              <FloppyDisk size={18} weight="bold" />
+              <FloppyDiskIcon size={18} weight="bold" />
             )}
             {status === "saving"
               ? "Saving…"
@@ -841,7 +841,7 @@ export function PublicationEditor({
               <div className="mt-3 rounded-xl border border-[#dfe4ee] bg-[#f8fafd] p-3.5 dark:border-white/10 dark:bg-white/[0.03]">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-red-50 text-brand-red dark:bg-brand-red/15">
-                    <FilePdf size={20} weight="duotone" />
+                    <FilePdfIcon size={20} weight="duotone" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">
@@ -899,7 +899,7 @@ export function PublicationEditor({
                 onClick={() => fileInput.current?.click()}
                 type="button"
               >
-                <FilePdf className="text-brand-green" size={30} weight="duotone" />
+                <FilePdfIcon className="text-brand-green" size={30} weight="duotone" />
                 <span className="text-sm font-semibold text-brand-green">Upload the paper</span>
                 <span className="font-mono text-[10px] tracking-[0.12em] text-[#8490a5] uppercase">
                   PDF · up to {paperLimitMb} MB
@@ -939,9 +939,9 @@ export function PublicationEditor({
                   type="button"
                 >
                   {paperHiddenState ? (
-                    <EyeSlash size={14} weight="bold" />
+                    <EyeSlashIcon size={14} weight="bold" />
                   ) : (
-                    <Eye size={14} weight="bold" />
+                    <EyeIcon size={14} weight="bold" />
                   )}
                   {paperHiddenState ? "Hidden" : "Visible"}
                 </button>
@@ -964,7 +964,7 @@ export function PublicationEditor({
                 onClick={addAuthor}
                 type="button"
               >
-                <Plus size={13} weight="bold" />
+                <PlusIcon size={13} weight="bold" />
                 Add author
               </button>
             </div>
@@ -1039,7 +1039,7 @@ export function PublicationEditor({
           <div className="space-y-4 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
             <Field label="Publication URL">
               <div className="flex items-center gap-1.5">
-                <LinkSimple className="shrink-0 text-[#8490a5]" size={16} />
+                <LinkSimpleIcon className="shrink-0 text-[#8490a5]" size={16} />
                 <span className="shrink-0 text-xs text-[#9ba4b5]">/publications/</span>
                 <input
                   className="h-10 w-full min-w-0 rounded-xl border border-[#d9dfeb] bg-white px-3 font-mono text-xs text-[#171b25] outline-none transition placeholder:text-[#9ba4b5] focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-white/10 dark:bg-white/[0.045] dark:text-white"
@@ -1066,7 +1066,7 @@ export function PublicationEditor({
             </Field>
             <Field label="Date">
               <div className="relative">
-                <CalendarBlank
+                <CalendarBlankIcon
                   className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                   size={16}
                 />
@@ -1175,7 +1175,7 @@ export function PublicationEditor({
                 href={`/publications/${encodeURIComponent(originalRecordSlug ?? "")}`}
                 target="_blank"
               >
-                <ArrowSquareOut size={15} />
+                <ArrowSquareOutIcon size={15} />
                 View publication
               </Link>
             ) : (
@@ -1189,7 +1189,7 @@ export function PublicationEditor({
                 onClick={remove}
                 type="button"
               >
-                <Trash size={15} />
+                <TrashIcon size={15} />
                 Delete
               </button>
             ) : null}

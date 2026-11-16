@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenText, DownloadSimple, Quotes } from "@phosphor-icons/react";
+import { BookOpenTextIcon, DownloadSimpleIcon, QuotesIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { PaperPreview } from "@/components/publications/paper-preview";
@@ -54,7 +54,7 @@ export function PaperSection({
               onClick={() => setViewerOpen(true)}
               type="button"
             >
-              <BookOpenText size={17} />
+              <BookOpenTextIcon size={17} />
               Read full text
             </button>
             <a
@@ -62,14 +62,14 @@ export function PaperSection({
               download={safeFileName}
               href={url}
             >
-              <DownloadSimple size={16} />
+              <DownloadSimpleIcon size={16} />
               Download PDF
             </a>
             <a
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--line-strong)] px-5 text-sm font-semibold text-[var(--ink-2)] transition hover:border-brand-blue/50 hover:text-brand-blue dark:text-white/70 dark:hover:text-white"
               href="#cite"
             >
-              <Quotes size={16} />
+              <QuotesIcon size={16} />
               Cite
             </a>
           </div>

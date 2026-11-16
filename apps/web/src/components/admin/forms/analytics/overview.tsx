@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Minus } from "@phosphor-icons/react";
+import { ArrowDownRightIcon, ArrowUpRightIcon, MinusIcon } from "@phosphor-icons/react";
 import type { FormAnalytics, FormAnalyticsRange, FormRecord } from "@repo/shared";
 
 import { BarList, ColumnChart, Donut } from "@/components/admin/forms/charts/bars";
@@ -81,7 +81,7 @@ function DeltaBadge({ delta }: { delta: Delta }) {
   const down = delta.value < -0.0005;
   const good = (up && delta.goodWhenUp) || (down && !delta.goodWhenUp);
   const tone = !up && !down ? "text-[#8a93a6]" : good ? "text-brand-green" : "text-brand-red";
-  const Icon = up ? ArrowUpRight : down ? ArrowDownRight : Minus;
+  const Icon = up ? ArrowUpRightIcon : down ? ArrowDownRightIcon : MinusIcon;
   return (
     <span
       className={`inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums ${tone}`}

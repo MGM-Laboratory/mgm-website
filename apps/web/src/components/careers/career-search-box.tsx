@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -43,7 +43,7 @@ export function CareerSearchBox({ initialQuery = "" }: { initialQuery?: string }
 
   return (
     <div className="relative w-full">
-      <MagnifyingGlass
+      <MagnifyingGlassIcon
         aria-hidden="true"
         className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-3)]"
         size={18}
@@ -73,7 +73,7 @@ export function CareerSearchBox({ initialQuery = "" }: { initialQuery?: string }
           }}
           type="button"
         >
-          <X size={15} weight="bold" />
+          <XIcon size={15} weight="bold" />
         </button>
       ) : null}
     </div>

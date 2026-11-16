@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  ArrowDown,
-  ArrowUp,
-  CaretDown,
-  CaretRight,
-  ListBullets,
-  Plus,
-  TextAlignLeft,
-  X,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CaretDownIcon,
+  CaretRightIcon,
+  ListBulletsIcon,
+  PlusIcon,
+  TextAlignLeftIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 
@@ -124,7 +124,7 @@ export function OptionsEditor({
           }}
           type="button"
         >
-          {bulk === null ? <TextAlignLeft size={14} /> : <ListBullets size={14} />}
+          {bulk === null ? <TextAlignLeftIcon size={14} /> : <ListBulletsIcon size={14} />}
           {bulk === null ? "Edit as text" : "Edit as list"}
         </button>
       </div>
@@ -182,7 +182,7 @@ export function OptionsEditor({
                     }}
                     type="button"
                   >
-                    {open ? <CaretDown size={13} /> : <CaretRight size={13} />}
+                    {open ? <CaretDownIcon size={13} /> : <CaretRightIcon size={13} />}
                   </button>
                   <input
                     aria-invalid={!option.label.trim() || undefined}
@@ -250,7 +250,7 @@ export function OptionsEditor({
                       }}
                       type="button"
                     >
-                      <ArrowUp size={13} />
+                      <ArrowUpIcon size={13} />
                     </button>
                     <button
                       aria-label={`Move ${option.label} down`}
@@ -261,7 +261,7 @@ export function OptionsEditor({
                       }}
                       type="button"
                     >
-                      <ArrowDown size={13} />
+                      <ArrowDownIcon size={13} />
                     </button>
                     <button
                       aria-label={`Remove ${option.label}`}
@@ -277,7 +277,7 @@ export function OptionsEditor({
                       }
                       type="button"
                     >
-                      <X size={13} weight="bold" />
+                      <XIcon size={13} weight="bold" />
                     </button>
                   </span>
                 </div>
@@ -358,7 +358,7 @@ export function OptionsEditor({
           onClick={() => addLabels([`Option ${options.length + 1}`])}
           type="button"
         >
-          <Plus size={13} weight="bold" />
+          <PlusIcon size={13} weight="bold" />
           Add option
           <span className="font-normal text-[#9ba4b5]">· or paste several lines</span>
         </button>

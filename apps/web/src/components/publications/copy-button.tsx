@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy } from "@phosphor-icons/react";
+import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -33,7 +33,7 @@ export function CopyButton({ label, value }: { label: string; value: string }) {
       onClick={copy}
       type="button"
     >
-      {copied ? <Check size={15} weight="bold" /> : <Copy size={15} />}
+      {copied ? <CheckIcon size={15} weight="bold" /> : <CopyIcon size={15} />}
       {copied ? "Copied" : label}
     </button>
   );

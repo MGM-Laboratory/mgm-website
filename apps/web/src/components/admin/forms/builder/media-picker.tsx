@@ -9,16 +9,16 @@
  */
 
 import {
-  CloudArrowUp,
-  Crosshair,
-  FilmStrip,
-  Image as ImageIcon,
-  LinkSimple,
-  PencilSimple,
-  PlayCircle,
-  Trash,
-  X,
-  YoutubeLogo,
+  CloudArrowUpIcon,
+  CrosshairIcon,
+  FilmStripIcon,
+  ImageIcon as ImageIcon,
+  LinkSimpleIcon,
+  PencilSimpleIcon,
+  PlayCircleIcon,
+  TrashIcon,
+  XIcon,
+  YoutubeLogoIcon,
 } from "@phosphor-icons/react";
 import { SAFE_URL_PATTERN, type FormMedia } from "@repo/shared";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -234,7 +234,7 @@ function MediaThumb({
       <span
         className={`grid place-items-center bg-[#eef1f7] text-[#8490a5] dark:bg-white/[0.06] dark:text-white/35 ${className}`}
       >
-        {media.kind === "image" ? <ImageIcon size={22} /> : <FilmStrip size={22} />}
+        {media.kind === "image" ? <ImageIcon size={22} /> : <FilmStripIcon size={22} />}
       </span>
     );
   }
@@ -406,7 +406,7 @@ function DropZone({
           />
         </div>
         <button className={`${ghostButtonClass} mt-3`} onClick={onCancel} type="button">
-          <X size={14} weight="bold" />
+          <XIcon size={14} weight="bold" />
           Cancel
         </button>
       </div>
@@ -429,7 +429,7 @@ function DropZone({
         if (file) onFile(file);
       }}
     >
-      <CloudArrowUp className="mx-auto text-brand-blue" size={34} weight="duotone" />
+      <CloudArrowUpIcon className="mx-auto text-brand-blue" size={34} weight="duotone" />
       <p className="mt-2 text-sm font-semibold text-[#2b3345] dark:text-white/85">
         Drop a file here, or{" "}
         <label
@@ -486,13 +486,13 @@ function MediaDialog({
 }) {
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     ...(accept.includes("image") || accept.includes("video")
-      ? [{ id: "upload" as const, label: "Upload", icon: <CloudArrowUp size={15} /> }]
+      ? [{ id: "upload" as const, label: "Upload", icon: <CloudArrowUpIcon size={15} /> }]
       : []),
     ...(accept.includes("image") || accept.includes("video")
-      ? [{ id: "link" as const, label: "Link", icon: <LinkSimple size={15} /> }]
+      ? [{ id: "link" as const, label: "Link", icon: <LinkSimpleIcon size={15} /> }]
       : []),
     ...(accept.includes("embed")
-      ? [{ id: "embed" as const, label: "YouTube & Vimeo", icon: <YoutubeLogo size={15} /> }]
+      ? [{ id: "embed" as const, label: "YouTube & Vimeo", icon: <YoutubeLogoIcon size={15} /> }]
       : []),
   ];
   const initialTab: Tab =
@@ -824,7 +824,7 @@ function MediaDialog({
                 <div className="relative overflow-hidden rounded-xl bg-[#eef1f7] dark:bg-white/[0.05]">
                   <MediaThumb className="block aspect-video w-full" media={draft} />
                   {isEmbed ? (
-                    <PlayCircle
+                    <PlayCircleIcon
                       className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow-lg"
                       size={44}
                       weight="fill"
@@ -1038,7 +1038,7 @@ export function MediaPicker({
             title="Remove"
             type="button"
           >
-            <Trash size={15} />
+            <TrashIcon size={15} />
           </button>
         </div>
         {dialog}
@@ -1058,9 +1058,9 @@ export function MediaPicker({
             {value.kind === "image" ? (
               <ImageIcon size={11} weight="bold" />
             ) : value.kind === "video" ? (
-              <FilmStrip size={11} weight="bold" />
+              <FilmStripIcon size={11} weight="bold" />
             ) : (
-              <PlayCircle size={11} weight="bold" />
+              <PlayCircleIcon size={11} weight="bold" />
             )}
             {kindLabel(value.kind)}
           </span>
@@ -1089,7 +1089,7 @@ export function MediaPicker({
             }}
             type="button"
           >
-            <PencilSimple size={14} />
+            <PencilSimpleIcon size={14} />
             Edit
           </button>
           {focal ? (
@@ -1102,7 +1102,7 @@ export function MediaPicker({
               title="Focal point"
               type="button"
             >
-              <Crosshair size={14} />
+              <CrosshairIcon size={14} />
             </button>
           ) : null}
           <button
@@ -1113,7 +1113,7 @@ export function MediaPicker({
             }}
             type="button"
           >
-            <Trash size={14} />
+            <TrashIcon size={14} />
             Remove
           </button>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { Copy } from "@phosphor-icons/react";
+import { CopyIcon } from "@phosphor-icons/react";
 
 export const labelClass =
   "text-[11px] font-bold uppercase tracking-[0.14em] text-[#7e899d] dark:text-white/35";
@@ -43,7 +43,7 @@ export function CopyButton({
       onClick={() => void copyText(text, what)}
       type="button"
     >
-      <Copy size={15} /> <span className="hidden sm:inline">Copy</span>
+      <CopyIcon size={15} /> <span className="hidden sm:inline">Copy</span>
     </button>
   );
 }
@@ -88,7 +88,7 @@ export function SnippetBox({ code, what }: { code: string; what: string }) {
         onClick={() => void copyText(code, what)}
         type="button"
       >
-        <Copy size={13} /> Copy
+        <CopyIcon size={13} /> Copy
       </button>
     </div>
   );

@@ -1,18 +1,18 @@
 "use client";
 
 import {
-  File as FileIcon,
-  FileAudio,
-  FileDoc,
-  FileImage,
-  FilePdf,
-  FilePpt,
-  FileText,
-  FileVideo,
-  FileXls,
-  FileZip,
-  Signature,
-  Star,
+  FileIcon as FileIcon,
+  FileAudioIcon,
+  FileDocIcon,
+  FileImageIcon,
+  FilePdfIcon,
+  FilePptIcon,
+  FileTextIcon,
+  FileVideoIcon,
+  FileXlsIcon,
+  FileZipIcon,
+  SignatureIcon,
+  StarIcon,
 } from "@phosphor-icons/react";
 import {
   OTHER_OPTION_ID,
@@ -63,23 +63,23 @@ export function FileTypeIcon({
   const type = file.type;
   const name = file.name.toLowerCase();
   const Icon = isImageFile(file)
-    ? FileImage
+    ? FileImageIcon
     : isVideoFile(file)
-      ? FileVideo
+      ? FileVideoIcon
       : type.startsWith("audio/")
-        ? FileAudio
+        ? FileAudioIcon
         : type === "application/pdf" || name.endsWith(".pdf")
-          ? FilePdf
+          ? FilePdfIcon
           : /sheet|excel|csv/.test(type) || /\.(xlsx?|ods|csv)$/.test(name)
-            ? FileXls
+            ? FileXlsIcon
             : /presentation|powerpoint/.test(type) || /\.(pptx?|odp)$/.test(name)
-              ? FilePpt
+              ? FilePptIcon
               : /word|opendocument\.text|rtf/.test(type) || /\.(docx?|odt|rtf)$/.test(name)
-                ? FileDoc
+                ? FileDocIcon
                 : /zip|7z/.test(type) || /\.(zip|7z)$/.test(name)
-                  ? FileZip
+                  ? FileZipIcon
                   : type.startsWith("text/")
-                    ? FileText
+                    ? FileTextIcon
                     : FileIcon;
   return <Icon aria-hidden className="shrink-0" size={size} weight="duotone" />;
 }
@@ -145,7 +145,7 @@ export function FileChips({
             type="button"
           >
             {signature ? (
-              <Signature aria-hidden size={13} />
+              <SignatureIcon aria-hidden size={13} />
             ) : (
               <FileTypeIcon file={file} size={13} />
             )}
@@ -177,7 +177,7 @@ export function RatingStars({ value, max = 5 }: { value: number; max?: number })
       role="img"
     >
       {Array.from({ length: count }, (_, index) => (
-        <Star
+        <StarIcon
           aria-hidden
           className={
             index < Math.round(value) ? "text-[#e0a82a]" : "text-[#d6dbe6] dark:text-white/15"

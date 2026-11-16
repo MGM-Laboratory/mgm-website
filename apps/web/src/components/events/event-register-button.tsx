@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Ticket, X } from "@phosphor-icons/react";
+import { CheckCircleIcon, TicketIcon, XIcon } from "@phosphor-icons/react";
 import gsap from "gsap";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -136,7 +136,7 @@ function RegisterModal({
         {status === "done" ? (
           <div className="py-4 text-center">
             <span className="mx-auto grid size-12 place-items-center rounded-full bg-brand-green-50 text-brand-green dark:bg-brand-green/15">
-              <CheckCircle size={26} weight="fill" />
+              <CheckCircleIcon size={26} weight="fill" />
             </span>
             <p className="mt-4 font-display text-lg font-semibold text-[var(--ink)] dark:text-white">
               You&apos;re registered!
@@ -160,7 +160,7 @@ function RegisterModal({
                   className="flex items-center gap-2 font-display text-lg font-semibold text-[var(--ink)] dark:text-white"
                   id="event-register-title"
                 >
-                  <Ticket size={19} weight="bold" /> Register for this event
+                  <TicketIcon size={19} weight="bold" /> Register for this event
                 </h3>
                 {registrationCapacity ? (
                   <p className="mt-1 text-xs text-[var(--ink-3)]">
@@ -174,7 +174,7 @@ function RegisterModal({
                 onClick={requestClose}
                 type="button"
               >
-                <X size={17} weight="bold" />
+                <XIcon size={17} weight="bold" />
               </button>
             </div>
 
@@ -278,7 +278,7 @@ export function EventRegisterButton({
         onClick={() => setOpen(true)}
         type="button"
       >
-        <Ticket size={16} weight="bold" />
+        <TicketIcon size={16} weight="bold" />
         Register
       </button>
       {open ? (

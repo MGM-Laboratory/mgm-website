@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowsClockwise, MagnifyingGlass } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import type { FormEventType, FormRecord, FormVisit } from "@repo/shared";
 
 import { EmptyChart, cardClass } from "@/components/admin/forms/charts/viz";
@@ -96,7 +96,7 @@ export function VisitorLog({ form }: { form: FormRecord }) {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <label className="relative min-w-0 flex-1 basis-56">
           <span className="sr-only">Search visits</span>
-          <MagnifyingGlass
+          <MagnifyingGlassIcon
             aria-hidden
             className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[#9ba4b5]"
             size={14}
@@ -132,7 +132,7 @@ export function VisitorLog({ form }: { form: FormRecord }) {
           onClick={() => void load(limit)}
           type="button"
         >
-          <ArrowsClockwise
+          <ArrowsClockwiseIcon
             className={loading ? "animate-spin motion-reduce:animate-none" : ""}
             size={15}
           />

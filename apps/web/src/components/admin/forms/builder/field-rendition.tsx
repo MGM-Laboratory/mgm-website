@@ -7,24 +7,24 @@
  */
 
 import {
-  CalendarBlank,
-  CaretDown,
-  Clock,
-  Heart,
-  Lightning,
-  MapPin,
-  Palette,
-  PenNib,
-  Smiley,
-  Star,
-  ThumbsUp,
-  Circle,
-  UploadSimple,
-  Image as ImageIcon,
-  VideoCamera,
-  Quotes,
-  EyeSlash,
-  DotsSixVertical,
+  CalendarBlankIcon,
+  CaretDownIcon,
+  ClockIcon,
+  HeartIcon,
+  LightningIcon,
+  MapPinIcon,
+  PaletteIcon,
+  PenNibIcon,
+  SmileyIcon,
+  StarIcon,
+  ThumbsUpIcon,
+  CircleIcon,
+  UploadSimpleIcon,
+  ImageIcon as ImageIcon,
+  VideoCameraIcon,
+  QuotesIcon,
+  EyeSlashIcon,
+  DotsSixVerticalIcon,
 } from "@phosphor-icons/react";
 
 import { richTextToPlain, type FormField, type RatingIcon } from "@repo/shared";
@@ -34,13 +34,13 @@ import { mediaPreviewUrl } from "@/lib/forms/builder-media";
 const box =
   "rounded-lg border border-[#dfe4ee] bg-[#fbfcfe] px-3 text-[13px] text-[#9ba4b5] dark:border-white/10 dark:bg-white/[0.03] dark:text-white/30";
 
-const RATING_ICONS: Record<RatingIcon, typeof Star> = {
-  star: Star,
-  heart: Heart,
-  circle: Circle,
-  thumb: ThumbsUp,
-  bolt: Lightning,
-  smile: Smiley,
+const RATING_ICONS: Record<RatingIcon, typeof StarIcon> = {
+  star: StarIcon,
+  heart: HeartIcon,
+  circle: CircleIcon,
+  thumb: ThumbsUpIcon,
+  bolt: LightningIcon,
+  smile: SmileyIcon,
 };
 
 function Line({ text, className = "h-9" }: { text?: string; className?: string }) {
@@ -133,7 +133,7 @@ function MediaThumb({ field, kind }: { field: FormField; kind: "image" | "video"
       ) : kind === "image" ? (
         <ImageIcon size={22} />
       ) : (
-        <VideoCamera size={22} />
+        <VideoCameraIcon size={22} />
       )}
     </div>
   );
@@ -188,7 +188,7 @@ export function FieldRendition({ field }: { field: FormField }) {
             {field.type === "multiselect" ? "Choose any" : "Choose one"} ·{" "}
             {field.options?.length ?? 0} options
           </span>
-          <CaretDown size={14} />
+          <CaretDownIcon size={14} />
         </div>
       );
     case "picture_choice":
@@ -273,7 +273,7 @@ export function FieldRendition({ field }: { field: FormField }) {
               className="flex items-center gap-2 rounded-lg border border-[#e3e7f0] bg-white px-2 py-1.5 text-[13px] text-[#3c4659] dark:border-white/10 dark:bg-white/[0.03] dark:text-white/70"
               key={option.id}
             >
-              <DotsSixVertical className="text-[#b3bccb]" size={14} />
+              <DotsSixVerticalIcon className="text-[#b3bccb]" size={14} />
               <span className="font-mono text-[10px] text-[#8490a5]">{index + 1}</span>
               <span className="truncate">{option.label}</span>
             </li>
@@ -328,14 +328,14 @@ export function FieldRendition({ field }: { field: FormField }) {
     case "datetime":
       return (
         <div className={`${box} flex h-9 max-w-xs items-center gap-2`}>
-          <CalendarBlank size={15} />
+          <CalendarBlankIcon size={15} />
           {field.type === "date" ? "DD / MM / YYYY" : "DD / MM / YYYY, HH:MM"}
         </div>
       );
     case "time":
       return (
         <div className={`${box} flex h-9 max-w-[10rem] items-center gap-2`}>
-          <Clock size={15} />
+          <ClockIcon size={15} />
           HH:MM
         </div>
       );
@@ -343,7 +343,7 @@ export function FieldRendition({ field }: { field: FormField }) {
     case "image_upload":
       return (
         <div className="flex h-16 max-w-md items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-[#cfd6e3] text-[13px] text-[#8490a5] dark:border-white/15">
-          <UploadSimple size={16} />
+          <UploadSimpleIcon size={16} />
           {field.type === "image_upload" ? "Upload images" : "Upload files"}
           <span className="font-mono text-[10px]">
             · {field.maxFiles ?? 1} max · {field.maxFileMb ?? 10} MB
@@ -353,7 +353,7 @@ export function FieldRendition({ field }: { field: FormField }) {
     case "signature":
       return (
         <div className="flex h-16 max-w-md items-end rounded-lg border border-[#dfe4ee] bg-[#fbfcfe] px-3 pb-2 dark:border-white/10 dark:bg-white/[0.03]">
-          <PenNib className="mr-2 text-[#b3bccb]" size={16} />
+          <PenNibIcon className="mr-2 text-[#b3bccb]" size={16} />
           <span className="h-px flex-1 bg-[#cfd6e3] dark:bg-white/15" />
         </div>
       );
@@ -379,17 +379,17 @@ export function FieldRendition({ field }: { field: FormField }) {
       return (
         <div className={`${box} flex h-9 max-w-xs items-center justify-between`}>
           <span className="flex items-center gap-2">
-            <MapPin size={14} />
+            <MapPinIcon size={14} />
             Choose a country
           </span>
-          <CaretDown size={14} />
+          <CaretDownIcon size={14} />
         </div>
       );
     case "color":
       return (
         <div className="flex items-center gap-2">
           <span className="grid size-9 place-items-center rounded-lg border border-[#dfe4ee] bg-brand-blue text-white dark:border-white/10">
-            <Palette size={15} />
+            <PaletteIcon size={15} />
           </span>
           <span className="font-mono text-xs text-[#8490a5]">#3A6DC5</span>
         </div>
@@ -406,7 +406,7 @@ export function FieldRendition({ field }: { field: FormField }) {
     case "hidden":
       return (
         <p className="flex items-center gap-2 font-mono text-[11px] text-[#8490a5]">
-          <EyeSlash size={14} />?{field.prefillParam || "param"}=…
+          <EyeSlashIcon size={14} />?{field.prefillParam || "param"}=…
         </p>
       );
     case "paragraph":
@@ -420,7 +420,7 @@ export function FieldRendition({ field }: { field: FormField }) {
     case "quote":
       return (
         <div className="flex gap-2 border-l-2 border-[#cfd6e3] pl-3 dark:border-white/15">
-          <Quotes className="shrink-0 text-[#b3bccb]" size={16} weight="fill" />
+          <QuotesIcon className="shrink-0 text-[#b3bccb]" size={16} weight="fill" />
           <RichSnippet fallback="Empty quote" field={field} />
         </div>
       );

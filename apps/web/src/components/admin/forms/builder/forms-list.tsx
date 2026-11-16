@@ -1,21 +1,21 @@
 "use client";
 
 import {
-  ArrowSquareOut,
-  ChartLineUp,
-  ClipboardText,
-  Copy,
-  DotsThree,
-  Eye,
-  LinkSimple,
-  ListBullets,
-  MagnifyingGlass,
-  PencilSimple,
-  Plus,
-  SquaresFour,
-  Trash,
-  Tray,
-  UploadSimple,
+  ArrowSquareOutIcon,
+  ChartLineUpIcon,
+  ClipboardTextIcon,
+  CopyIcon,
+  DotsThreeIcon,
+  EyeIcon,
+  LinkSimpleIcon,
+  ListBulletsIcon,
+  MagnifyingGlassIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  SquaresFourIcon,
+  TrashIcon,
+  TrayIcon,
+  UploadSimpleIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -95,25 +95,25 @@ function FormActions({
 }) {
   return (
     <Menu
-      buttonContent={<DotsThree size={20} weight="bold" />}
+      buttonContent={<DotsThreeIcon size={20} weight="bold" />}
       items={[
         {
           label: canWrite ? "Open builder" : "Open",
-          icon: <PencilSimple size={16} />,
+          icon: <PencilSimpleIcon size={16} />,
           onSelect: () => {
             onAction("open", form);
           },
         },
         {
           label: "Open responses",
-          icon: <Tray size={16} />,
+          icon: <TrayIcon size={16} />,
           onSelect: () => {
             onAction("responses", form);
           },
         },
         {
           label: "Analytics",
-          icon: <ChartLineUp size={16} />,
+          icon: <ChartLineUpIcon size={16} />,
           onSelect: () => {
             onAction("analytics", form);
           },
@@ -121,14 +121,14 @@ function FormActions({
         "separator",
         {
           label: "Copy public link",
-          icon: <LinkSimple size={16} />,
+          icon: <LinkSimpleIcon size={16} />,
           onSelect: () => {
             onAction("copy", form);
           },
         },
         {
           label: "View live",
-          icon: <ArrowSquareOut size={16} />,
+          icon: <ArrowSquareOutIcon size={16} />,
           disabled: form.status === "draft",
           hint: form.status === "draft" ? "draft" : undefined,
           onSelect: () => {
@@ -137,7 +137,7 @@ function FormActions({
         },
         {
           label: "Duplicate",
-          icon: <Copy size={16} />,
+          icon: <CopyIcon size={16} />,
           disabled: !canWrite,
           onSelect: () => {
             onAction("duplicate", form);
@@ -146,7 +146,7 @@ function FormActions({
         "separator",
         {
           label: "Delete",
-          icon: <Trash size={16} />,
+          icon: <TrashIcon size={16} />,
           danger: true,
           disabled: !canDelete,
           onSelect: () => {
@@ -392,11 +392,11 @@ export function FormsList({
         {canWrite ? (
           <div className="flex flex-wrap gap-2">
             <button className={secondaryButtonClass} onClick={onImport} type="button">
-              <UploadSimple size={16} weight="bold" />
+              <UploadSimpleIcon size={16} weight="bold" />
               Import JSON
             </button>
             <button className={primaryButtonClass} onClick={onNew} type="button">
-              <Plus size={16} weight="bold" />
+              <PlusIcon size={16} weight="bold" />
               New form
             </button>
           </div>
@@ -407,7 +407,7 @@ export function FormsList({
         <>
           <div className="mt-8 flex flex-wrap items-center gap-2.5">
             <div className="relative min-w-0 flex-1 basis-60 sm:max-w-xs">
-              <MagnifyingGlass
+              <MagnifyingGlassIcon
                 aria-hidden="true"
                 className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[#8490a5]"
                 size={17}
@@ -461,12 +461,12 @@ export function FormsList({
                   options={[
                     {
                       value: "grid",
-                      label: <SquaresFour aria-label="Grid" size={16} />,
+                      label: <SquaresFourIcon aria-label="Grid" size={16} />,
                       title: "Grid",
                     },
                     {
                       value: "list",
-                      label: <ListBullets aria-label="List" size={16} />,
+                      label: <ListBulletsIcon aria-label="List" size={16} />,
                       title: "List",
                     },
                   ]}
@@ -546,7 +546,7 @@ export function FormsList({
         >
           <div className="flex flex-wrap items-start gap-6">
             <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-brand-red-50 text-brand-red dark:bg-brand-red/15">
-              <ClipboardText size={28} weight="duotone" />
+              <ClipboardTextIcon size={28} weight="duotone" />
             </span>
             <div className="min-w-0 flex-1 basis-72">
               <h2
@@ -569,11 +569,11 @@ export function FormsList({
                     }}
                     type="button"
                   >
-                    <Plus size={16} weight="bold" />
+                    <PlusIcon size={16} weight="bold" />
                     Blank form
                   </button>
                   <button className={secondaryButtonClass} onClick={onNew} type="button">
-                    <Eye size={16} />
+                    <EyeIcon size={16} />
                     Browse all templates
                   </button>
                 </div>

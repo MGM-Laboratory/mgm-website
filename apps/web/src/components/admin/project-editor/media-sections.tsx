@@ -1,16 +1,16 @@
 "use client";
 
 import {
-  ArrowClockwise,
-  ArrowDown,
-  ArrowUp,
-  DotsSixVertical,
-  FilmStrip,
-  ImageSquare,
-  Play,
-  Trash,
-  UploadSimple,
-  WarningCircle,
+  ArrowClockwiseIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  DotsSixVerticalIcon,
+  FilmStripIcon,
+  ImageSquareIcon,
+  PlayIcon,
+  TrashIcon,
+  UploadSimpleIcon,
+  WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -193,16 +193,16 @@ function Thumbnail({
       ) : (
         <span className="grid size-full place-items-center text-[#8490a5] dark:text-white/40">
           {item.kind === "image" ? (
-            <ImageSquare size={22} weight="duotone" />
+            <ImageSquareIcon size={22} weight="duotone" />
           ) : (
-            <FilmStrip size={22} weight="duotone" />
+            <FilmStripIcon size={22} weight="duotone" />
           )}
         </span>
       )}
       {item.kind === "video" ? (
         <span className="absolute inset-0 grid place-items-center">
           <span className="grid size-7 place-items-center rounded-full bg-[#0e1116]/65 text-white backdrop-blur-sm">
-            <Play size={12} weight="fill" />
+            <PlayIcon size={12} weight="fill" />
           </span>
         </span>
       ) : null}
@@ -689,7 +689,7 @@ export function MediaSections({
           className="flex items-start gap-2 rounded-xl bg-brand-red-50 px-3 py-2 text-xs font-semibold text-brand-red dark:bg-brand-red/15"
           role="alert"
         >
-          <WarningCircle className="mt-0.5 shrink-0" size={14} weight="bold" />
+          <WarningCircleIcon className="mt-0.5 shrink-0" size={14} weight="bold" />
           {generalError}
         </p>
       ) : null}
@@ -741,7 +741,7 @@ export function MediaSections({
                       onPointerDown={(event) => startDrag(item.id, event)}
                       type="button"
                     >
-                      <DotsSixVertical size={16} weight="bold" />
+                      <DotsSixVerticalIcon size={16} weight="bold" />
                     </button>
                     <Thumbnail
                       item={item}
@@ -831,7 +831,7 @@ export function MediaSections({
                           }}
                           type="button"
                         >
-                          <UploadSimple size={14} />
+                          <UploadSimpleIcon size={14} />
                           Replace
                         </button>
                         <button
@@ -842,7 +842,7 @@ export function MediaSections({
                           onClick={() => step(item.id, -1, "up")}
                           type="button"
                         >
-                          <ArrowUp size={14} />
+                          <ArrowUpIcon size={14} />
                         </button>
                         <button
                           aria-label={`Move section ${position} down`}
@@ -852,7 +852,7 @@ export function MediaSections({
                           onClick={() => step(item.id, 1, "down")}
                           type="button"
                         >
-                          <ArrowDown size={14} />
+                          <ArrowDownIcon size={14} />
                         </button>
                         <button
                           aria-label={`Remove section ${position}`}
@@ -860,7 +860,7 @@ export function MediaSections({
                           onClick={() => remove(item.id)}
                           type="button"
                         >
-                          <Trash size={14} />
+                          <TrashIcon size={14} />
                         </button>
                       </div>
                     </div>
@@ -886,7 +886,7 @@ export function MediaSections({
                         className="flex flex-wrap items-center gap-2 rounded-xl bg-brand-red-50 px-3 py-2 text-xs text-brand-red dark:bg-brand-red/15"
                         role="alert"
                       >
-                        <WarningCircle className="shrink-0" size={14} weight="bold" />
+                        <WarningCircleIcon className="shrink-0" size={14} weight="bold" />
                         <span className="min-w-0 flex-1 font-semibold">
                           {pendingNew
                             ? "Upload failed: "
@@ -898,7 +898,7 @@ export function MediaSections({
                           onClick={() => retry(item.id)}
                           type="button"
                         >
-                          <ArrowClockwise size={13} weight="bold" />
+                          <ArrowClockwiseIcon size={13} weight="bold" />
                           Retry
                         </button>
                         {pendingNew ? null : (
@@ -938,7 +938,7 @@ export function MediaSections({
         type="button"
       >
         <span className="inline-flex items-center gap-2 text-sm font-semibold">
-          <UploadSimple size={17} weight="bold" />
+          <UploadSimpleIcon size={17} weight="bold" />
           {full ? `All ${mediaMax} sections used` : dropActive ? "Drop to add" : "Add media"}
         </span>
         <span className="text-xs text-[#8490a5] dark:text-white/40">

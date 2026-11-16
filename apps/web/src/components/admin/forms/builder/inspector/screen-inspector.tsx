@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Flag, HandWaving, Trash } from "@phosphor-icons/react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  FlagIcon,
+  HandWavingIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
 
 import {
   SAFE_URL_PATTERN,
@@ -60,7 +66,7 @@ export function WelcomeInspector({
     <fieldset className="min-w-0" disabled={readOnly}>
       <Header
         description="The first thing respondents see."
-        icon={<HandWaving size={16} weight="bold" />}
+        icon={<HandWavingIcon size={16} weight="bold" />}
         title="Welcome screen"
       />
       <Section title="Screen">
@@ -194,7 +200,7 @@ export function EndingInspector({
               ? "Shown when its rules match."
               : "Never reached: an earlier ending without rules is the default."
         }
-        icon={<Flag size={16} weight="bold" />}
+        icon={<FlagIcon size={16} weight="bold" />}
         title={`Ending ${index + 1}`}
       />
       <div className="flex items-center gap-1 px-4 pt-3">
@@ -206,7 +212,7 @@ export function EndingInspector({
           }}
           type="button"
         >
-          <ArrowUp size={13} /> Earlier
+          <ArrowUpIcon size={13} /> Earlier
         </button>
         <button
           className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-[#5d687d] hover:bg-[#eef1f7] disabled:opacity-30 dark:text-white/55 dark:hover:bg-white/[0.07]"
@@ -216,7 +222,7 @@ export function EndingInspector({
           }}
           type="button"
         >
-          <ArrowDown size={13} /> Later
+          <ArrowDownIcon size={13} /> Later
         </button>
         <button
           className="ml-auto inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-brand-red hover:bg-brand-red-50 disabled:opacity-30 dark:hover:bg-brand-red/15"
@@ -230,7 +236,7 @@ export function EndingInspector({
           }
           type="button"
         >
-          <Trash size={13} /> Delete
+          <TrashIcon size={13} /> Delete
         </button>
       </div>
       <Section title="Content">
@@ -412,7 +418,7 @@ export function FormInspector({
     <fieldset className="min-w-0" disabled={readOnly}>
       <Header
         description="Select a block to edit it, or edit the form here."
-        icon={<Flag size={16} weight="bold" />}
+        icon={<FlagIcon size={16} weight="bold" />}
         title="Form"
       />
       <Section title="Form">

@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 
 import { ApplicationsInbox } from "@/components/admin/careers-applications-inbox";
@@ -116,7 +116,7 @@ export function CareersCmsStudio({
             <div className="flex min-h-0 flex-col lg:h-full">
               <div className="shrink-0">
                 <div className="relative">
-                  <MagnifyingGlass
+                  <MagnifyingGlassIcon
                     className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                     size={17}
                   />
@@ -132,7 +132,7 @@ export function CareersCmsStudio({
                   onClick={startNew}
                   type="button"
                 >
-                  <Plus size={17} weight="bold" />
+                  <PlusIcon size={17} weight="bold" />
                   New opening
                 </button>
                 <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">

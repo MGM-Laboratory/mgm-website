@@ -1,6 +1,14 @@
 "use client";
 
-import { Asterisk, Copy, Flag, HandWaving, Plus, Trash, X } from "@phosphor-icons/react";
+import {
+  AsteriskIcon,
+  CopyIcon,
+  FlagIcon,
+  HandWavingIcon,
+  PlusIcon,
+  TrashIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { Reorder, useDragControls } from "motion/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -257,7 +265,7 @@ export function Canvas({
       <div aria-label="Form blocks" aria-multiselectable="true" role="listbox">
         <ScreenCard
           active={selection === "welcome"}
-          icon={<HandWaving size={13} weight="bold" />}
+          icon={<HandWavingIcon size={13} weight="bold" />}
           label={welcome.enabled ? "Welcome screen" : "Welcome screen (off)"}
           onSelect={() => {
             onSelectScreen("welcome");
@@ -377,7 +385,7 @@ export function Canvas({
             return (
               <ScreenCard
                 active={selection === `ending:${ending.id}`}
-                icon={<Flag size={13} weight="bold" />}
+                icon={<FlagIcon size={13} weight="bold" />}
                 key={ending.id}
                 label={`Ending ${index + 1}${isDefault ? " · default" : ending.when?.rules.length ? " · by rule" : ""}`}
                 onSelect={() => {
@@ -408,7 +416,7 @@ export function Canvas({
               onClick={onAddEnding}
               type="button"
             >
-              <Plus size={15} weight="bold" />
+              <PlusIcon size={15} weight="bold" />
               Add an ending
             </button>
           ) : null}
@@ -430,7 +438,7 @@ export function Canvas({
               }}
               type="button"
             >
-              <Asterisk size={15} weight="bold" /> Require
+              <AsteriskIcon size={15} weight="bold" /> Require
             </button>
             <button
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold hover:bg-[#f2f5fa] dark:hover:bg-white/[0.07]"
@@ -448,7 +456,7 @@ export function Canvas({
               }}
               type="button"
             >
-              <Copy size={15} /> Duplicate
+              <CopyIcon size={15} /> Duplicate
             </button>
             <button
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-brand-red hover:bg-brand-red-50 dark:hover:bg-brand-red/15"
@@ -457,7 +465,7 @@ export function Canvas({
               }}
               type="button"
             >
-              <Trash size={15} /> Delete
+              <TrashIcon size={15} /> Delete
             </button>
             <button
               aria-label="Clear selection"
@@ -465,7 +473,7 @@ export function Canvas({
               onClick={onClearMulti}
               type="button"
             >
-              <X size={15} weight="bold" />
+              <XIcon size={15} weight="bold" />
             </button>
           </div>
         </div>

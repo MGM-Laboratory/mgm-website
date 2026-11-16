@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  Clock,
-  FileArrowUp,
-  MagnifyingGlass,
-  Plus,
-  Question,
-  Trash,
-  UploadSimple,
+  ClockIcon,
+  FileArrowUpIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  QuestionIcon,
+  TrashIcon,
+  UploadSimpleIcon,
 } from "@phosphor-icons/react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 
@@ -110,11 +110,11 @@ function TileMeta({ document }: { document: FormDocument }) {
   return (
     <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-[#7e899d] dark:text-white/40">
       <span className="inline-flex items-center gap-1">
-        <Question aria-hidden="true" size={12} weight="bold" />
+        <QuestionIcon aria-hidden="true" size={12} weight="bold" />
         {stats.questions} questions
       </span>
       <span className="inline-flex items-center gap-1">
-        <Clock aria-hidden="true" size={12} weight="bold" />
+        <ClockIcon aria-hidden="true" size={12} weight="bold" />
         {stats.minutes} min
       </span>
       <span
@@ -254,7 +254,7 @@ export function TemplateGallery({
         <div className="shrink-0 border-b border-[#e3e7f0] px-5 pt-4 sm:px-6 dark:border-white/10">
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="relative min-w-0 flex-1 basis-56 sm:max-w-sm">
-              <MagnifyingGlass
+              <MagnifyingGlassIcon
                 aria-hidden="true"
                 className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[#8490a5]"
                 size={17}
@@ -272,7 +272,7 @@ export function TemplateGallery({
               />
             </div>
             <button className={`${secondaryButtonClass} ml-auto`} onClick={onImport} type="button">
-              <UploadSimple size={16} weight="bold" />
+              <UploadSimpleIcon size={16} weight="bold" />
               Import JSON
             </button>
           </div>
@@ -336,7 +336,7 @@ export function TemplateGallery({
                 type="button"
               >
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-blue text-white shadow-[0_14px_28px_-16px_rgba(58,109,197,0.9)] transition group-hover:scale-105 motion-reduce:group-hover:scale-100">
-                  <Plus size={22} weight="bold" />
+                  <PlusIcon size={22} weight="bold" />
                 </span>
                 <span>
                   <span className="block text-sm font-semibold text-[#171b25] dark:text-white">
@@ -383,7 +383,7 @@ export function TemplateGallery({
                         }}
                         type="button"
                       >
-                        <Trash size={15} />
+                        <TrashIcon size={15} />
                       </button>
                     </div>
                   );
@@ -474,7 +474,7 @@ export function ImportDialog({
             onClick={() => fileRef.current?.click()}
             type="button"
           >
-            <FileArrowUp size={16} />
+            <FileArrowUpIcon size={16} />
             Choose file
           </button>
           <input

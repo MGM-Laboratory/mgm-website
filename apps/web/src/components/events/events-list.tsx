@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretDown, MagnifyingGlass } from "@phosphor-icons/react";
+import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 
 import { EventCard } from "@/components/events/event-card";
@@ -32,7 +32,7 @@ export function EventsList({ records }: { records: readonly CmsEventRecord[] }) 
   return (
     <div>
       <div className="relative w-full">
-        <MagnifyingGlass
+        <MagnifyingGlassIcon
           className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-3)]"
           size={18}
         />
@@ -82,7 +82,7 @@ export function EventsList({ records }: { records: readonly CmsEventRecord[] }) 
                 onClick={() => setShowPast(true)}
                 type="button"
               >
-                <CaretDown size={16} weight="bold" />
+                <CaretDownIcon size={16} weight="bold" />
                 Show past events ({past.length})
               </button>
             </div>

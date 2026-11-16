@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Warning } from "@phosphor-icons/react";
+import { CheckIcon, CopyIcon, WarningIcon } from "@phosphor-icons/react";
 import { memo, useCallback, useId, useState } from "react";
 
 import { isChoiceType, isInputType, type FormDocument, type FormField } from "@repo/shared";
@@ -43,7 +43,11 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       title={label}
       type="button"
     >
-      {copied ? <Check className="text-brand-green" size={15} weight="bold" /> : <Copy size={15} />}
+      {copied ? (
+        <CheckIcon className="text-brand-green" size={15} weight="bold" />
+      ) : (
+        <CopyIcon size={15} />
+      )}
     </button>
   );
 }
@@ -116,7 +120,7 @@ export const FieldInspector = memo(function FieldInspector({
         >
           {issues.map((issue) => (
             <p className="flex gap-1.5" key={issue}>
-              <Warning className="mt-0.5 shrink-0" size={13} weight="fill" />
+              <WarningIcon className="mt-0.5 shrink-0" size={13} weight="fill" />
               {issue}
             </p>
           ))}

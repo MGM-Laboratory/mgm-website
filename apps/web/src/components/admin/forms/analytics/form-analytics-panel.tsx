@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowsClockwise, Printer } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, PrinterIcon } from "@phosphor-icons/react";
 import type { FormAnalytics, FormAnalyticsRange, FormRecord } from "@repo/shared";
 
 import { VIZ_ROOT, formatCount } from "@/components/admin/forms/charts/viz";
@@ -137,7 +137,7 @@ export function FormAnalyticsPanel({ form }: FormAnalyticsPanelProps) {
           }}
           type="button"
         >
-          <ArrowsClockwise
+          <ArrowsClockwiseIcon
             className={loading ? "animate-spin motion-reduce:animate-none" : ""}
             size={15}
           />
@@ -149,7 +149,7 @@ export function FormAnalyticsPanel({ form }: FormAnalyticsPanelProps) {
           }}
           type="button"
         >
-          <Printer size={15} /> <span className="hidden sm:inline">Print report</span>
+          <PrinterIcon size={15} /> <span className="hidden sm:inline">Print report</span>
         </button>
       </div>
 

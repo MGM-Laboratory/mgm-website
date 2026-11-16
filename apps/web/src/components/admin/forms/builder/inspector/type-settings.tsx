@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, X } from "@phosphor-icons/react";
+import { PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import {
@@ -320,7 +320,7 @@ function ItemsEditor({
               }}
               type="button"
             >
-              <X size={13} weight="bold" />
+              <XIcon size={13} weight="bold" />
             </button>
           </li>
         ))}
@@ -333,7 +333,7 @@ function ItemsEditor({
         }}
         type="button"
       >
-        <Plus size={13} weight="bold" />
+        <PlusIcon size={13} weight="bold" />
         Add {label.toLowerCase().replace(/s$/, "")}
       </button>
     </div>

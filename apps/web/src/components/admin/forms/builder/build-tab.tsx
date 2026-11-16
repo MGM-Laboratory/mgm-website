@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, SidebarSimple, X } from "@phosphor-icons/react";
+import { PlusIcon, SidebarSimpleIcon, XIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
@@ -85,7 +85,7 @@ function Sheet({
             onClick={onClose}
             type="button"
           >
-            <X size={18} weight="bold" />
+            <XIcon size={18} weight="bold" />
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
@@ -385,7 +385,7 @@ export function BuildTab({
               }}
               type="button"
             >
-              <Plus size={16} weight="bold" />
+              <PlusIcon size={16} weight="bold" />
               Add block
             </button>
             {!medium ? (
@@ -396,7 +396,7 @@ export function BuildTab({
                 }}
                 type="button"
               >
-                <SidebarSimple size={16} />
+                <SidebarSimpleIcon size={16} />
                 Inspector
               </button>
             ) : null}
