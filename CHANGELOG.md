@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.4](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.3...v1.4.4) (2026-11-16)
+
+
+### Bug Fixes
+
+* **articles:** give the legal links a 44 px tall touch target ([037d362](https://github.com/MGM-Laboratory/mgm-website/commit/037d36219637d23d32e64105f0381808c87e8e7f))
+* **articles:** give the legal links a 44 px tall touch target ([93fa983](https://github.com/MGM-Laboratory/mgm-website/commit/93fa983436727b4395d0130b023c0cd6303af09c))
+* **shortlinks:** answer 409 when a unique index refuses a link or domain write ([8bcc453](https://github.com/MGM-Laboratory/mgm-website/commit/8bcc453dd1b5ecc9cba1204c26085337a5e6ac5b))
+* **shortlinks:** answer 409 when a unique index refuses a link or domain write ([c56ed05](https://github.com/MGM-Laboratory/mgm-website/commit/c56ed05c5bc23eb0bf53ddb5c743d0cde2ff147d))
+
 ## [1.4.3](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.2...v1.4.3) (2026-11-14)
 
 
