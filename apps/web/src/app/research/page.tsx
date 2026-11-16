@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ArticleCover } from "@/components/articles/article-cover";
 import Link from "next/link";
-import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import { FlairShape, PatternTile } from "@/components/process/pattern-tile";
 import { ResearchExplorer } from "@/components/research/research-explorer";
@@ -420,7 +420,7 @@ export default async function ResearchPage() {
                               ) : null}
                               <span className="mt-auto inline-flex items-center gap-1 pt-2 text-[11px] font-semibold text-brand-blue">
                                 Read more
-                                <ArrowRight aria-hidden="true" size={12} weight="bold" />
+                                <ArrowRightIcon aria-hidden="true" size={12} weight="bold" />
                               </span>
                             </div>
                           </div>

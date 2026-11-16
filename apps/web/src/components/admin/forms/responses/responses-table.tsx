@@ -2,13 +2,13 @@
 
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
-  CaretDown,
-  Flag,
-  PencilSimpleLine,
-  Prohibit,
-  Star,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CaretDownIcon,
+  FlagIcon,
+  PencilSimpleLineIcon,
+  ProhibitIcon,
+  StarIcon,
 } from "@phosphor-icons/react";
 import type { FormAnswerValue } from "@repo/shared";
 
@@ -414,10 +414,10 @@ function HeaderCell({
         ) : null}
         <span className="truncate normal-case tracking-normal text-[12px]">{column.label}</span>
         {sort === "asc" ? (
-          <ArrowUp aria-hidden className="shrink-0 text-brand-blue" size={12} weight="bold" />
+          <ArrowUpIcon aria-hidden className="shrink-0 text-brand-blue" size={12} weight="bold" />
         ) : null}
         {sort === "desc" ? (
-          <ArrowDown aria-hidden className="shrink-0 text-brand-blue" size={12} weight="bold" />
+          <ArrowDownIcon aria-hidden className="shrink-0 text-brand-blue" size={12} weight="bold" />
         ) : null}
       </button>
       <button
@@ -428,7 +428,7 @@ function HeaderCell({
         }}
         type="button"
       >
-        <CaretDown size={12} weight="bold" />
+        <CaretDownIcon size={12} weight="bold" />
       </button>
       <span
         aria-hidden
@@ -534,20 +534,20 @@ const Row = memo(function Row({
         />
         <span className="flex flex-col items-center gap-0.5">
           {record.admin.starred ? (
-            <Star aria-label="Starred" className="text-[#e0a82a]" size={11} weight="fill" />
+            <StarIcon aria-label="Starred" className="text-[#e0a82a]" size={11} weight="fill" />
           ) : null}
           {record.admin.flagged ? (
-            <Flag aria-label="Flagged" className="text-brand-red" size={11} weight="fill" />
+            <FlagIcon aria-label="Flagged" className="text-brand-red" size={11} weight="fill" />
           ) : null}
           {record.admin.editedAt ? (
             <span title={`Edited ${new Date(record.admin.editedAt).toLocaleString()}`}>
-              <PencilSimpleLine aria-label="Edited" className="text-[#8a93a6]" size={11} />
+              <PencilSimpleLineIcon aria-label="Edited" className="text-[#8a93a6]" size={11} />
             </span>
           ) : null}
         </span>
         {record.spam ? (
           <span title="Marked as spam">
-            <Prohibit aria-label="Spam" className="text-brand-red" size={12} weight="bold" />
+            <ProhibitIcon aria-label="Spam" className="text-brand-red" size={12} weight="bold" />
           </span>
         ) : null}
       </div>

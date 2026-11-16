@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowSquareOut, Paperclip } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, PaperclipIcon } from "@phosphor-icons/react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { CmsContactInquiryRecord } from "@/lib/contact-inquiries-cms";
@@ -106,7 +106,7 @@ export function ContactInquiriesInbox({
           href={`mailto:${record.inquiry.email}`}
           rel="noreferrer"
         >
-          <ArrowSquareOut size={15} weight="bold" />
+          <ArrowSquareOutIcon size={15} weight="bold" />
           Reply
         </a>
       )}
@@ -118,7 +118,7 @@ export function ContactInquiriesInbox({
             {unread ? <span className="size-1.5 shrink-0 rounded-full bg-brand-blue" /> : null}
             <span className="truncate">{record.inquiry.name}</span>
             {record.inquiry.attachmentKeys.length ? (
-              <Paperclip className="size-3.5 shrink-0 text-[#9ba4b5]" />
+              <PaperclipIcon className="size-3.5 shrink-0 text-[#9ba4b5]" />
             ) : null}
           </span>
           <span className="mt-0.5 block truncate text-xs text-[#778299] dark:text-white/45">

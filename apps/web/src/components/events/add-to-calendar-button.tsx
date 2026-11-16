@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  AppleLogo,
-  CalendarPlus,
-  DownloadSimple,
-  GoogleLogo,
-  MicrosoftOutlookLogo,
+  AppleLogoIcon,
+  CalendarPlusIcon,
+  DownloadSimpleIcon,
+  GoogleLogoIcon,
+  MicrosoftOutlookLogoIcon,
 } from "@phosphor-icons/react";
 import gsap from "gsap";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -75,7 +75,7 @@ export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        <CalendarPlus size={16} weight="bold" />
+        <CalendarPlusIcon size={16} weight="bold" />
         Add to calendar
       </button>
       <div
@@ -91,7 +91,7 @@ export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
           role="menuitem"
           target="_blank"
         >
-          <GoogleLogo size={17} weight="bold" /> Google Calendar
+          <GoogleLogoIcon size={17} weight="bold" /> Google Calendar
         </a>
         <a
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--surface-muted)] dark:text-white dark:hover:bg-white/[0.06]"
@@ -101,7 +101,7 @@ export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
           role="menuitem"
           target="_blank"
         >
-          <MicrosoftOutlookLogo size={17} weight="bold" /> Outlook
+          <MicrosoftOutlookLogoIcon size={17} weight="bold" /> Outlook
         </a>
         <a
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--surface-muted)] dark:text-white dark:hover:bg-white/[0.06]"
@@ -111,7 +111,7 @@ export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
           role="menuitem"
           target="_blank"
         >
-          <AppleLogo size={17} weight="fill" /> Apple / iCal
+          <AppleLogoIcon size={17} weight="fill" /> Apple / iCal
         </a>
         <a
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--surface-muted)] dark:text-white dark:hover:bg-white/[0.06]"
@@ -121,7 +121,7 @@ export function AddToCalendarButton({ event }: { event: CmsEventRecord }) {
           role="menuitem"
           target="_blank"
         >
-          <DownloadSimple size={17} weight="bold" /> Download .ics
+          <DownloadSimpleIcon size={17} weight="bold" /> Download .ics
         </a>
       </div>
     </div>

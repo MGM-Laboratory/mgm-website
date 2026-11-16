@@ -1,6 +1,12 @@
 "use client";
 
-import { Archive, Envelope, EnvelopeOpen, MagnifyingGlass, Trash } from "@phosphor-icons/react";
+import {
+  ArchiveIcon,
+  EnvelopeIcon,
+  EnvelopeOpenIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
 import {
   useMemo,
   useRef,
@@ -313,7 +319,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
             ))}
           </div>
           <div className="relative">
-            <MagnifyingGlass
+            <MagnifyingGlassIcon
               className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[#8490a5]"
               size={16}
             />
@@ -354,7 +360,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                   title="Archive"
                   type="button"
                 >
-                  <Archive size={14} weight="bold" />
+                  <ArchiveIcon size={14} weight="bold" />
                 </button>
                 <button
                   className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-blue hover:text-brand-blue dark:border-white/10 dark:text-white/55"
@@ -364,7 +370,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                   title="Mark unread"
                   type="button"
                 >
-                  <Envelope size={14} weight="bold" />
+                  <EnvelopeIcon size={14} weight="bold" />
                 </button>
                 <button
                   className="rounded-lg border border-[#d9dfeb] px-2.5 py-1.5 text-xs font-semibold text-[#5d687d] transition hover:border-brand-red/40 hover:text-brand-red dark:border-white/10 dark:text-white/55"
@@ -374,7 +380,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                   title="Delete"
                   type="button"
                 >
-                  <Trash size={14} weight="bold" />
+                  <TrashIcon size={14} weight="bold" />
                 </button>
               </div>
             ) : (
@@ -446,7 +452,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                   }}
                   type="button"
                 >
-                  <Envelope size={15} weight="bold" />
+                  <EnvelopeIcon size={15} weight="bold" />
                   Move to inbox
                 </button>
               ) : !readOnly ? (
@@ -457,7 +463,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                   }}
                   type="button"
                 >
-                  <Archive size={15} weight="bold" />
+                  <ArchiveIcon size={15} weight="bold" />
                   Archive
                 </button>
               ) : null}
@@ -472,12 +478,12 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                   >
                     {getState(selected).read ? (
                       <>
-                        <Envelope size={15} weight="bold" />
+                        <EnvelopeIcon size={15} weight="bold" />
                         Mark unread
                       </>
                     ) : (
                       <>
-                        <EnvelopeOpen size={15} weight="bold" />
+                        <EnvelopeOpenIcon size={15} weight="bold" />
                         Mark read
                       </>
                     )}
@@ -487,7 +493,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
                     onClick={() => deleteOne(selected.slug)}
                     type="button"
                   >
-                    <Trash size={15} weight="bold" />
+                    <TrashIcon size={15} weight="bold" />
                     Delete
                   </button>
                 </>
@@ -498,7 +504,7 @@ export function ResourceInboxShell<TRecord extends InboxRecord>({
         ) : (
           <div className="grid h-full min-h-[420px] place-items-center text-center">
             <div>
-              <EnvelopeOpen className="mx-auto text-[#c3cad9] dark:text-white/20" size={36} />
+              <EnvelopeOpenIcon className="mx-auto text-[#c3cad9] dark:text-white/20" size={36} />
               <p className="mt-4 font-display text-lg font-semibold tracking-[-0.03em]">
                 {emptyDetailCopy.title}
               </p>

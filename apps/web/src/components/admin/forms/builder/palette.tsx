@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { memo, useMemo, useState } from "react";
 
 import type { FormFieldType } from "@repo/shared";
@@ -50,7 +50,7 @@ export const Palette = memo(function Palette({
   return (
     <div className="flex min-h-0 flex-col">
       <div className="relative shrink-0">
-        <MagnifyingGlass
+        <MagnifyingGlassIcon
           aria-hidden="true"
           className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[#8490a5]"
           size={15}

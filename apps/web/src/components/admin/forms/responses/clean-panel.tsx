@@ -4,14 +4,14 @@ import { useMemo, useState } from "react";
 import { Reorder, useDragControls } from "motion/react";
 import { toast } from "sonner";
 import {
-  Broom,
-  CaretDown,
-  CaretRight,
-  DotsSixVertical,
-  Plus,
-  Sparkle,
-  Trash,
-  X,
+  BroomIcon,
+  CaretDownIcon,
+  CaretRightIcon,
+  DotsSixVerticalIcon,
+  PlusIcon,
+  SparkleIcon,
+  TrashIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import type { FormRecord } from "@repo/shared";
 
@@ -137,7 +137,7 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
       data-testid="clean-panel"
     >
       <header className="flex items-center gap-2 border-b border-[#eef0f4] px-4 py-3 dark:border-white/5">
-        <Broom className="text-brand-green" size={18} weight="duotone" />
+        <BroomIcon className="text-brand-green" size={18} weight="duotone" />
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-bold">Clean data</h3>
           <p className="text-[11px] text-[#8a93a6]">
@@ -150,7 +150,7 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
           onClick={onClose}
           type="button"
         >
-          <X size={16} />
+          <XIcon size={16} />
         </button>
       </header>
 
@@ -207,7 +207,7 @@ export function CleanPanel({ form, steps, result, baseColumns, canWrite, onClose
             }}
             type="button"
           >
-            <Plus size={14} weight="bold" /> Add a step
+            <PlusIcon size={14} weight="bold" /> Add a step
           </button>
           {adding ? (
             <div className="mt-2 grid grid-cols-2 gap-1.5 rounded-xl border border-[#e4e8f0] p-2 dark:border-white/10">
@@ -348,7 +348,7 @@ function StepCard({
             controls.start(event);
           }}
         >
-          <DotsSixVertical size={14} weight="bold" />
+          <DotsSixVerticalIcon size={14} weight="bold" />
         </span>
         <button
           aria-expanded={expanded}
@@ -356,7 +356,7 @@ function StepCard({
           onClick={onToggleOpen}
           type="button"
         >
-          {expanded ? <CaretDown size={12} /> : <CaretRight size={12} />}
+          {expanded ? <CaretDownIcon size={12} /> : <CaretRightIcon size={12} />}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-xs font-bold">
               {index + 1}. {STEP_LABELS[step.kind]}
@@ -390,7 +390,7 @@ function StepCard({
           onClick={onRemove}
           type="button"
         >
-          <Trash size={13} />
+          <TrashIcon size={13} />
         </button>
       </div>
       {expanded ? (
@@ -570,7 +570,7 @@ function FormulaInput({
       {preview.length ? (
         <div className="rounded-lg bg-[#f7f8fa] p-2 dark:bg-white/5">
           <p className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#8a93a6]">
-            <Sparkle size={11} /> Preview
+            <SparkleIcon size={11} /> Preview
           </p>
           <ol className="space-y-0.5 font-mono text-[11px]">
             {preview.map((text, index) => (
@@ -928,7 +928,7 @@ function StandardizeEditor({
                       }}
                       type="button"
                     >
-                      <X size={9} weight="bold" />
+                      <XIcon size={9} weight="bold" />
                     </button>
                   </span>
                 ))}
@@ -954,7 +954,7 @@ function StandardizeEditor({
                   }}
                   type="button"
                 >
-                  <Trash size={12} />
+                  <TrashIcon size={12} />
                 </button>
               </label>
             </li>

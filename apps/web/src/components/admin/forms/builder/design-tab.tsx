@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Eye, EyeSlash } from "@phosphor-icons/react";
+import { CheckIcon, EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { useId, useRef, useState } from "react";
 
 import {
@@ -112,7 +112,7 @@ function TileGroup<T extends string>({
               ) : null}
               {selected ? (
                 <span className="absolute top-1 right-1 grid size-4 place-items-center rounded-full bg-brand-blue text-white shadow">
-                  <Check size={9} weight="bold" />
+                  <CheckIcon size={9} weight="bold" />
                 </span>
               ) : null}
             </button>
@@ -885,7 +885,7 @@ export function DesignTab({
           }}
           type="button"
         >
-          {showPreview ? <EyeSlash size={16} /> : <Eye size={16} />}
+          {showPreview ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
           {showPreview ? "Hide preview" : "Show preview"}
         </button>
         {showPreview ? <div className="h-[80dvh] min-w-0 xl:hidden">{preview}</div> : null}

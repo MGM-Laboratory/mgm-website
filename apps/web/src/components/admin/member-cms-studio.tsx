@@ -1,34 +1,34 @@
 "use client";
 
 import {
-  ArrowSquareOut,
-  Books,
-  Briefcase,
-  CalendarBlank,
-  Camera,
-  CaretUpDown,
-  ClipboardText,
-  Check,
-  Envelope,
-  EnvelopeOpen,
-  FloppyDisk,
-  Flask,
-  GearSix,
-  GraduationCap,
-  House,
-  ImageSquare,
-  LinkSimple,
-  Lock,
-  MagnifyingGlass,
-  MonitorPlay,
-  Newspaper,
-  Plus,
-  ShieldCheck,
-  SignOut,
-  Star,
-  Trash,
-  UsersThree,
-  X,
+  ArrowSquareOutIcon,
+  BooksIcon,
+  BriefcaseIcon,
+  CalendarBlankIcon,
+  CameraIcon,
+  CaretUpDownIcon,
+  ClipboardTextIcon,
+  CheckIcon,
+  EnvelopeIcon,
+  EnvelopeOpenIcon,
+  FloppyDiskIcon,
+  FlaskIcon,
+  GearSixIcon,
+  GraduationCapIcon,
+  HouseIcon,
+  ImageSquareIcon,
+  LinkSimpleIcon,
+  LockIcon,
+  MagnifyingGlassIcon,
+  MonitorPlayIcon,
+  NewspaperIcon,
+  PlusIcon,
+  ShieldCheckIcon,
+  SignOutIcon,
+  StarIcon,
+  TrashIcon,
+  UsersThreeIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import Cropper, { type Area } from "react-easy-crop";
@@ -184,35 +184,35 @@ const SECTION_PAGE: Partial<Record<EditorialSection, AdminPageId>> = {
 function WorkspaceIcon({ section, size = 18 }: { section: EditorialSection; size?: number }) {
   switch (section) {
     case "articles":
-      return <Newspaper size={size} weight="duotone" />;
+      return <NewspaperIcon size={size} weight="duotone" />;
     case "projects":
-      return <Briefcase size={size} weight="duotone" />;
+      return <BriefcaseIcon size={size} weight="duotone" />;
     case "publications":
-      return <Books size={size} weight="duotone" />;
+      return <BooksIcon size={size} weight="duotone" />;
     case "research":
-      return <Flask size={size} weight="duotone" />;
+      return <FlaskIcon size={size} weight="duotone" />;
     case "members":
-      return <UsersThree size={size} weight="duotone" />;
+      return <UsersThreeIcon size={size} weight="duotone" />;
     case "careers":
-      return <GraduationCap size={size} weight="duotone" />;
+      return <GraduationCapIcon size={size} weight="duotone" />;
     case "contact":
-      return <Envelope size={size} weight="duotone" />;
+      return <EnvelopeIcon size={size} weight="duotone" />;
     case "contact-inquiries":
-      return <EnvelopeOpen size={size} weight="duotone" />;
+      return <EnvelopeOpenIcon size={size} weight="duotone" />;
     case "events":
-      return <CalendarBlank size={size} weight="duotone" />;
+      return <CalendarBlankIcon size={size} weight="duotone" />;
     case "links":
-      return <LinkSimple size={size} weight="duotone" />;
+      return <LinkSimpleIcon size={size} weight="duotone" />;
     case "forms":
-      return <ClipboardText size={size} weight="duotone" />;
+      return <ClipboardTextIcon size={size} weight="duotone" />;
     case "home":
-      return <MonitorPlay size={size} weight="duotone" />;
+      return <MonitorPlayIcon size={size} weight="duotone" />;
     case "other":
-      return <GearSix size={size} weight="duotone" />;
+      return <GearSixIcon size={size} weight="duotone" />;
     case "administration":
-      return <ShieldCheck size={size} weight="duotone" />;
+      return <ShieldCheckIcon size={size} weight="duotone" />;
     default:
-      return <House size={size} weight="duotone" />;
+      return <HouseIcon size={size} weight="duotone" />;
   }
 }
 
@@ -259,7 +259,7 @@ function CropPreview({ source, profile }: { profile: CmsMemberProfile; source?: 
         />
       ) : (
         <div className="grid h-full place-items-center text-[#6d778d]">
-          <ImageSquare size={36} weight="duotone" />
+          <ImageSquareIcon size={36} weight="duotone" />
         </div>
       )}
       <div className="pointer-events-none absolute inset-3 rounded-xl border border-white/75 shadow-[inset_0_0_0_1px_rgba(10,20,38,0.12)]" />
@@ -400,7 +400,7 @@ function PhotoEditorDialog({
             onClick={onClose}
             type="button"
           >
-            <X size={20} />
+            <XIcon size={20} />
           </button>
         </div>
         <div className="grid gap-6 p-5 sm:grid-cols-[minmax(0,1fr)_12rem] sm:p-7">
@@ -444,7 +444,7 @@ function PhotoEditorDialog({
               type="button"
             >
               {isApplying ? "Preparing…" : "Use this photo"}
-              <Check size={17} weight="bold" />
+              <CheckIcon size={17} weight="bold" />
             </button>
           </div>
         </div>
@@ -478,7 +478,7 @@ function EditRow({ children, onRemove }: { children: React.ReactNode; onRemove: 
         onClick={onRemove}
         type="button"
       >
-        <Trash size={16} />
+        <TrashIcon size={16} />
       </button>
       <div className="pr-7">{children}</div>
     </article>
@@ -837,7 +837,7 @@ export function MemberCmsStudio({
                   MGM Laboratory CMS
                 </span>
               </span>
-              <CaretUpDown
+              <CaretUpDownIcon
                 aria-hidden="true"
                 className="mr-1 shrink-0 text-[#768096] transition group-aria-expanded:rotate-180 dark:text-white/45"
                 size={16}
@@ -904,7 +904,7 @@ export function MemberCmsStudio({
                 title="Sign out"
                 type="submit"
               >
-                <SignOut size={19} />
+                <SignOutIcon size={19} />
               </button>
             </form>
           </div>
@@ -961,7 +961,7 @@ export function MemberCmsStudio({
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
                   <div className="relative">
-                    <MagnifyingGlass
+                    <MagnifyingGlassIcon
                       className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                       size={17}
                     />
@@ -977,7 +977,7 @@ export function MemberCmsStudio({
                     onClick={startNewArticle}
                     type="button"
                   >
-                    <Plus size={17} weight="bold" />
+                    <PlusIcon size={17} weight="bold" />
                     New article
                   </button>
                   <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
@@ -1018,7 +1018,7 @@ export function MemberCmsStudio({
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
                   <div className="relative">
-                    <MagnifyingGlass
+                    <MagnifyingGlassIcon
                       className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                       size={17}
                     />
@@ -1034,7 +1034,7 @@ export function MemberCmsStudio({
                     onClick={startNewPublication}
                     type="button"
                   >
-                    <Plus size={17} weight="bold" />
+                    <PlusIcon size={17} weight="bold" />
                     New publication
                   </button>
                   <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
@@ -1075,7 +1075,7 @@ export function MemberCmsStudio({
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
                   <div className="relative">
-                    <MagnifyingGlass
+                    <MagnifyingGlassIcon
                       className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                       size={17}
                     />
@@ -1091,7 +1091,7 @@ export function MemberCmsStudio({
                     onClick={startNewResearch}
                     type="button"
                   >
-                    <Plus size={17} weight="bold" />
+                    <PlusIcon size={17} weight="bold" />
                     New initiative
                   </button>
                   <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
@@ -1138,7 +1138,7 @@ export function MemberCmsStudio({
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
                   <div className="relative">
-                    <MagnifyingGlass
+                    <MagnifyingGlassIcon
                       className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                       size={17}
                     />
@@ -1154,7 +1154,7 @@ export function MemberCmsStudio({
                     onClick={startNewProject}
                     type="button"
                   >
-                    <Plus size={17} weight="bold" />
+                    <PlusIcon size={17} weight="bold" />
                     New project
                   </button>
                   <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
@@ -1197,7 +1197,7 @@ export function MemberCmsStudio({
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
                   <div className="relative">
-                    <MagnifyingGlass
+                    <MagnifyingGlassIcon
                       className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                       size={17}
                     />
@@ -1213,7 +1213,7 @@ export function MemberCmsStudio({
                     onClick={startNew}
                     type="button"
                   >
-                    <Plus size={17} weight="bold" />
+                    <PlusIcon size={17} weight="bold" />
                     New member
                   </button>
                   <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
@@ -1256,7 +1256,7 @@ export function MemberCmsStudio({
                           <span className="flex items-center gap-1 truncate text-sm font-semibold">
                             {member.name}
                             {member.highlighted ? (
-                              <Star
+                              <StarIcon
                                 aria-label="Highlighted"
                                 className="shrink-0 text-brand-yellow"
                                 size={12}
@@ -1291,7 +1291,7 @@ export function MemberCmsStudio({
               <div className="flex min-h-0 flex-col lg:h-full">
                 <div className="shrink-0">
                   <div className="relative">
-                    <MagnifyingGlass
+                    <MagnifyingGlassIcon
                       className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8490a5]"
                       size={17}
                     />
@@ -1307,7 +1307,7 @@ export function MemberCmsStudio({
                     onClick={() => window.dispatchEvent(new Event("mgm:links-focus-form"))}
                     type="button"
                   >
-                    <Plus size={17} weight="bold" />
+                    <PlusIcon size={17} weight="bold" />
                     Shorten a link
                   </button>
                   <p className="mt-6 px-2 font-mono text-[10px] font-bold tracking-[0.16em] text-[#7e899d] uppercase dark:text-white/35">
@@ -1573,7 +1573,7 @@ function DeniedScreen({ onBack }: { onBack: () => void }) {
     <div className="admin-editor-enter mx-auto grid min-h-[calc(100dvh-69px)] w-full max-w-[1680px] place-items-center px-5 py-16">
       <div className="w-full max-w-md rounded-2xl border border-[#dfe4ee] bg-white p-8 text-center shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
         <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-brand-red-50 text-brand-red">
-          <Lock size={24} weight="duotone" />
+          <LockIcon size={24} weight="duotone" />
         </div>
         <h2 className="mt-5 font-display text-2xl font-semibold tracking-[-0.03em]">
           You don&apos;t have permission
@@ -1634,9 +1634,9 @@ function SettingsSubNav({
                 }
               >
                 {item.id === "home" ? (
-                  <MonitorPlay size={18} weight="duotone" />
+                  <MonitorPlayIcon size={18} weight="duotone" />
                 ) : (
-                  <Envelope size={18} weight="duotone" />
+                  <EnvelopeIcon size={18} weight="duotone" />
                 )}
               </span>
               <span className="flex-1">{item.label}</span>
@@ -1892,7 +1892,7 @@ function MemberEditor({
               href={`/member/${initialMember.slug}`}
               target="_blank"
             >
-              <ArrowSquareOut size={15} />
+              <ArrowSquareOutIcon size={15} />
               View profile
             </Link>
             <button
@@ -1900,7 +1900,7 @@ function MemberEditor({
               onClick={() => void remove()}
               type="button"
             >
-              <Trash size={15} />
+              <TrashIcon size={15} />
               Delete
             </button>
           </div>
@@ -1921,9 +1921,9 @@ function MemberEditor({
             type="button"
           >
             {status === "saved" ? (
-              <Check size={18} weight="bold" />
+              <CheckIcon size={18} weight="bold" />
             ) : (
-              <FloppyDisk size={18} weight="bold" />
+              <FloppyDiskIcon size={18} weight="bold" />
             )}
             {status === "saving"
               ? "Saving…"
@@ -2016,7 +2016,7 @@ function ProfileTab({
             onClick={() => fileInput.current?.click()}
             type="button"
           >
-            <Camera size={17} />
+            <CameraIcon size={17} />
             Replace photo
           </button>
         </div>
@@ -2082,7 +2082,7 @@ function ProfileTab({
       <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
         <div>
           <p className="flex items-center gap-1.5 text-sm font-semibold">
-            <Star
+            <StarIcon
               size={15}
               weight={draft.highlighted ? "fill" : "regular"}
               className="text-brand-yellow"
@@ -2166,7 +2166,7 @@ function TagEditor({
               onClick={() => onChange(values.filter((_, itemIndex) => itemIndex !== index))}
               type="button"
             >
-              <X size={14} weight="bold" />
+              <XIcon size={14} weight="bold" />
             </button>
           </span>
         ))}
@@ -2214,7 +2214,7 @@ function LinkEditor({
           onClick={() => onChange([...values, { label: "", url: "" }])}
           type="button"
         >
-          <Plus size={16} />
+          <PlusIcon size={16} />
           Add
         </button>
       </div>
@@ -2284,7 +2284,7 @@ function ExperienceTab({
           }
           type="button"
         >
-          <Plus size={16} weight="bold" />
+          <PlusIcon size={16} weight="bold" />
           Add role
         </button>
       </div>
@@ -2406,7 +2406,7 @@ function EducationTab({
           }
           type="button"
         >
-          <Plus size={16} weight="bold" />
+          <PlusIcon size={16} weight="bold" />
           Add education
         </button>
       </div>
@@ -2674,7 +2674,7 @@ function SimpleCollection<T extends object>({
           onClick={onAdd}
           type="button"
         >
-          <Plus size={16} weight="bold" />
+          <PlusIcon size={16} weight="bold" />
           Add
         </button>
       </div>

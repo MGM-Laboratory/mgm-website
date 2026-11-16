@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  ArrowCounterClockwise,
-  CaretDown,
-  Eye,
-  EyeSlash,
-  LockSimple,
-  LockSimpleOpen,
-  Trash,
-  X,
+  ArrowCounterClockwiseIcon,
+  CaretDownIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  LockSimpleIcon,
+  LockSimpleOpenIcon,
+  TrashIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -168,7 +168,7 @@ function EmailChips({
               }}
               type="button"
             >
-              <X size={10} weight="bold" />
+              <XIcon size={10} weight="bold" />
             </button>
           </span>
         ))}
@@ -273,9 +273,9 @@ function PassphraseCard({
           className={`grid size-9 place-items-center rounded-xl ${record.hasPassphrase ? "bg-brand-green-50 text-brand-green dark:bg-brand-green/15" : "bg-[#eef1f6] text-[#5d687d] dark:bg-white/10 dark:text-white/55"}`}
         >
           {record.hasPassphrase ? (
-            <LockSimple size={17} weight="bold" />
+            <LockSimpleIcon size={17} weight="bold" />
           ) : (
-            <LockSimpleOpen size={17} weight="bold" />
+            <LockSimpleOpenIcon size={17} weight="bold" />
           )}
         </span>
         <div className="min-w-0 flex-1">
@@ -342,7 +342,7 @@ function PassphraseCard({
                   }}
                   type="button"
                 >
-                  {show ? <EyeSlash size={15} /> : <Eye size={15} />}
+                  {show ? <EyeSlashIcon size={15} /> : <EyeIcon size={15} />}
                 </button>
               </div>
             </label>
@@ -554,7 +554,7 @@ export function SettingsTab({
                       : "Buttons and hints use the defaults for the chosen language."}
                   </span>
                 </span>
-                <CaretDown
+                <CaretDownIcon
                   className={`shrink-0 text-[#8490a5] transition ${labelsOpen ? "rotate-180" : ""}`}
                   size={15}
                 />
@@ -595,7 +595,7 @@ export function SettingsTab({
                     }}
                     type="button"
                   >
-                    <ArrowCounterClockwise size={15} />
+                    <ArrowCounterClockwiseIcon size={15} />
                     Reset all
                   </button>
                 </div>
@@ -971,7 +971,7 @@ export function SettingsTab({
                 title={canDelete ? undefined : "Your account can't delete forms"}
                 type="button"
               >
-                <Trash size={16} />
+                <TrashIcon size={16} />
                 Delete this form
               </button>
             </div>

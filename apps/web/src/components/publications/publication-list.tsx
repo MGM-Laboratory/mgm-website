@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -63,7 +63,7 @@ export function PublicationList({ records }: { records: CmsPublicationRecord[] }
     <div>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full max-w-sm">
-          <MagnifyingGlass
+          <MagnifyingGlassIcon
             className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-3)]"
             size={16}
           />

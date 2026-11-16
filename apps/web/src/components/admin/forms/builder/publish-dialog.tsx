@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowsClockwise, Check, CircleNotch, Copy, TextAa, Warning } from "@phosphor-icons/react";
+import {
+  ArrowsClockwiseIcon,
+  CheckIcon,
+  CircleNotchIcon,
+  CopyIcon,
+  TextAaIcon,
+  WarningIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 
@@ -183,7 +190,7 @@ export function PublishDialog({
       type="button"
     >
       {busy && busy === (key as FormStatus | "slug") ? (
-        <CircleNotch className="animate-spin motion-reduce:animate-none" size={15} />
+        <CircleNotchIcon className="animate-spin motion-reduce:animate-none" size={15} />
       ) : null}
       {label}
     </button>
@@ -244,7 +251,7 @@ export function PublishDialog({
       case "available":
         return (
           <span className="inline-flex items-center gap-1 text-brand-green">
-            <Check size={12} weight="bold" /> Available
+            <CheckIcon size={12} weight="bold" /> Available
           </span>
         );
       case "taken":
@@ -340,7 +347,7 @@ export function PublishDialog({
               title="A random link"
               type="button"
             >
-              <ArrowsClockwise size={15} />
+              <ArrowsClockwiseIcon size={15} />
               Random
             </button>
             <button
@@ -352,7 +359,7 @@ export function PublishDialog({
               title="Make the link from the title"
               type="button"
             >
-              <TextAa size={15} />
+              <TextAaIcon size={15} />
               From title
             </button>
           </div>
@@ -384,7 +391,7 @@ export function PublishDialog({
             }}
             type="button"
           >
-            {copied ? <Check size={14} weight="bold" /> : <Copy size={14} />}
+            {copied ? <CheckIcon size={14} weight="bold" /> : <CopyIcon size={14} />}
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
@@ -399,7 +406,7 @@ export function PublishDialog({
             className="flex gap-2 rounded-xl bg-brand-red-50 p-3 text-xs leading-5 text-brand-red dark:bg-brand-red/15"
             role="alert"
           >
-            <Warning className="mt-0.5 shrink-0" size={14} weight="fill" />
+            <WarningIcon className="mt-0.5 shrink-0" size={14} weight="fill" />
             The form has {problemCount} problem{problemCount === 1 ? "" : "s"} to fix before it can
             go live. The Problems list in the builder shows each one.
           </p>

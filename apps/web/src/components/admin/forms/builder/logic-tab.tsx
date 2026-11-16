@@ -1,17 +1,17 @@
 "use client";
 
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowsClockwise,
-  CaretDown,
-  CaretRight,
-  Eye,
-  EyeSlash,
-  Files,
-  Flag,
-  Plus,
-  Trash,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ArrowsClockwiseIcon,
+  CaretDownIcon,
+  CaretRightIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  FilesIcon,
+  FlagIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useMemo, useState } from "react";
 
@@ -197,7 +197,7 @@ function JumpEditor({
                   }}
                   type="button"
                 >
-                  <ArrowUp size={14} />
+                  <ArrowUpIcon size={14} />
                 </button>
                 <button
                   aria-label={`Move jump ${index + 1} down`}
@@ -208,7 +208,7 @@ function JumpEditor({
                   }}
                   type="button"
                 >
-                  <ArrowDown size={14} />
+                  <ArrowDownIcon size={14} />
                 </button>
                 <button
                   aria-label={`Remove jump ${index + 1}`}
@@ -218,7 +218,7 @@ function JumpEditor({
                   }}
                   type="button"
                 >
-                  <Trash size={14} />
+                  <TrashIcon size={14} />
                 </button>
               </span>
             )}
@@ -251,7 +251,7 @@ function JumpEditor({
           onClick={add}
           type="button"
         >
-          <Plus size={13} weight="bold" />
+          <PlusIcon size={13} weight="bold" />
           Add a jump
         </button>
       ) : null}
@@ -275,7 +275,7 @@ function PageFlowSection({
   return (
     <SectionCard
       description="Pages follow each other in order. At the end of a page, jumps can skip ahead to a later page, straight to submit, or to one ending. The first jump whose rules match wins; jumps only go forward."
-      icon={<Files size={18} weight="duotone" />}
+      icon={<FilesIcon size={18} weight="duotone" />}
       id="logic-flow"
       title="Page flow"
     >
@@ -320,7 +320,7 @@ function PageFlowSection({
                   open={open}
                 >
                   <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
-                    <CaretRight
+                    <CaretRightIcon
                       className="transition group-open:rotate-90 motion-reduce:transition-none"
                       size={13}
                     />
@@ -418,7 +418,7 @@ const VisibilityRow = memo(function VisibilityRow({
           }}
           type="button"
         >
-          {expanded ? <CaretDown size={13} /> : <CaretRight size={13} />}
+          {expanded ? <CaretDownIcon size={13} /> : <CaretRightIcon size={13} />}
           {readOnly ? "View" : summary ? "Edit" : "Add rule"}
         </button>
       </div>
@@ -487,7 +487,7 @@ function VisibilitySection({
         </div>
       }
       description={`A block with rules shows only while they match. ${withRules} of ${rows.length} blocks have rules.`}
-      icon={<Eye size={18} weight="duotone" />}
+      icon={<EyeIcon size={18} weight="duotone" />}
       id="logic-visibility"
       title="Question visibility"
     >
@@ -534,7 +534,7 @@ function EndingsSection({
   return (
     <SectionCard
       description="After submitting, endings are checked in order and the first whose rules match is shown. The first ending without rules is the default."
-      icon={<Flag size={18} weight="duotone" />}
+      icon={<FlagIcon size={18} weight="duotone" />}
       id="logic-endings"
       title="Endings"
     >
@@ -621,7 +621,7 @@ function ScoringSection({
         </div>
       }
       description="Each chosen option adds its points to the score. Rules and endings can use the score, and an ending can show it."
-      icon={<ArrowsClockwise size={18} weight="duotone" />}
+      icon={<ArrowsClockwiseIcon size={18} weight="duotone" />}
       id="logic-scoring"
       title="Scoring"
     >
@@ -950,9 +950,9 @@ function TestPanel({ document }: { document: FormDocument }) {
                 htmlFor={`test-${field.id}`}
               >
                 {shown ? (
-                  <Eye className="shrink-0 text-brand-green" size={12} weight="bold" />
+                  <EyeIcon className="shrink-0 text-brand-green" size={12} weight="bold" />
                 ) : (
-                  <EyeSlash className="shrink-0 text-[#8490a5]" size={12} weight="bold" />
+                  <EyeSlashIcon className="shrink-0 text-[#8490a5]" size={12} weight="bold" />
                 )}
                 <span className="truncate">
                   {field.label ||

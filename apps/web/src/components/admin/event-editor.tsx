@@ -1,15 +1,15 @@
 "use client";
 
 import {
-  ArrowSquareOut,
-  Buildings,
-  Camera,
-  Check,
-  FloppyDisk,
-  MapPin,
-  Plus,
-  Trash,
-  X,
+  ArrowSquareOutIcon,
+  BuildingsIcon,
+  CameraIcon,
+  CheckIcon,
+  FloppyDiskIcon,
+  MapPinIcon,
+  PlusIcon,
+  TrashIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import Cropper, { type Area } from "react-easy-crop";
@@ -163,7 +163,7 @@ function ThumbnailCropDialog({
             onClick={onClose}
             type="button"
           >
-            <X size={17} />
+            <XIcon size={17} />
           </button>
         </div>
         <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-xl bg-[#e8ecf4] dark:bg-[#1a202b]">
@@ -204,7 +204,7 @@ function ThumbnailCropDialog({
             onClick={() => void confirm()}
             type="button"
           >
-            <Check size={16} weight="bold" />
+            <CheckIcon size={16} weight="bold" />
             {busy ? "Cropping…" : "Use thumbnail"}
           </button>
         </div>
@@ -575,7 +575,7 @@ export function EventEditor({
             onClick={() => void save()}
             type="button"
           >
-            <FloppyDisk size={15} weight="bold" />
+            <FloppyDiskIcon size={15} weight="bold" />
             {status === "saving" ? "Saving…" : "Save event"}
           </button>
           {initialRecord ? (
@@ -585,7 +585,7 @@ export function EventEditor({
               rel="noreferrer"
               target="_blank"
             >
-              <ArrowSquareOut size={15} weight="bold" />
+              <ArrowSquareOutIcon size={15} weight="bold" />
               See event
             </a>
           ) : null}
@@ -595,7 +595,7 @@ export function EventEditor({
               onClick={() => void remove()}
               type="button"
             >
-              <Trash size={15} weight="bold" />
+              <TrashIcon size={15} weight="bold" />
               Delete
             </button>
           ) : null}
@@ -799,7 +799,7 @@ export function EventEditor({
       <div className="space-y-3 rounded-2xl border border-[#eef1f7] p-4 dark:border-white/[0.06]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="flex items-center gap-2 text-[11px] font-bold tracking-[0.08em] text-[#687187] uppercase dark:text-white/45">
-            <MapPin size={14} weight="bold" /> Location on the map
+            <MapPinIcon size={14} weight="bold" /> Location on the map
           </p>
           <button
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-blue transition hover:underline disabled:opacity-60"
@@ -807,7 +807,7 @@ export function EventEditor({
             onClick={() => void fillMgmLaboratoryAddress()}
             type="button"
           >
-            <Buildings size={13} weight="bold" />
+            <BuildingsIcon size={13} weight="bold" />
             Use MGM Laboratory
           </button>
         </div>
@@ -911,7 +911,7 @@ export function EventEditor({
             onClick={addSpeaker}
             type="button"
           >
-            <Plus size={13} weight="bold" /> Add speaker
+            <PlusIcon size={13} weight="bold" /> Add speaker
           </button>
         </div>
         <div className="space-y-3">
@@ -933,7 +933,7 @@ export function EventEditor({
                   <img alt="" className="size-full object-cover" src={mediaUrl(speaker.photoKey)} />
                 ) : (
                   <span className="grid size-full place-items-center text-[#9ba4b5] dark:text-white/35">
-                    <Camera size={15} weight="bold" />
+                    <CameraIcon size={15} weight="bold" />
                   </span>
                 )}
                 <input
@@ -963,7 +963,7 @@ export function EventEditor({
                 onClick={() => removeSpeaker(index)}
                 type="button"
               >
-                <X size={14} weight="bold" />
+                <XIcon size={14} weight="bold" />
               </button>
             </div>
           ))}
@@ -983,7 +983,7 @@ export function EventEditor({
             onClick={addRundownItem}
             type="button"
           >
-            <Plus size={13} weight="bold" /> Add item
+            <PlusIcon size={13} weight="bold" /> Add item
           </button>
         </div>
         <div className="space-y-2">
@@ -1011,7 +1011,7 @@ export function EventEditor({
                 onClick={() => removeRundownItem(index)}
                 type="button"
               >
-                <X size={14} weight="bold" />
+                <XIcon size={14} weight="bold" />
               </button>
             </div>
           ))}

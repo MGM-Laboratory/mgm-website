@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Play, Star, Flag } from "@phosphor-icons/react";
+import { PlayIcon, StarIcon, FlagIcon } from "@phosphor-icons/react";
 import { isAnswered } from "@repo/shared";
 
 import { formFileUrl } from "@/lib/forms/admin-api";
@@ -52,10 +52,20 @@ export function CardsView({
                   {formatDateTime(row.record.createdAt)}
                 </button>
                 {row.record.admin.starred ? (
-                  <Star aria-label="Starred" className="text-[#e0a82a]" size={13} weight="fill" />
+                  <StarIcon
+                    aria-label="Starred"
+                    className="text-[#e0a82a]"
+                    size={13}
+                    weight="fill"
+                  />
                 ) : null}
                 {row.record.admin.flagged ? (
-                  <Flag aria-label="Flagged" className="text-brand-red" size={13} weight="fill" />
+                  <FlagIcon
+                    aria-label="Flagged"
+                    className="text-brand-red"
+                    size={13}
+                    weight="fill"
+                  />
                 ) : null}
                 {row.record.spam ? (
                   <span className="rounded bg-brand-red-50 px-1 text-[9px] font-bold text-brand-red uppercase">
@@ -201,7 +211,7 @@ export function GalleryView({
                   />
                   <span className="absolute inset-0 flex items-center justify-center">
                     <span className="inline-flex size-10 items-center justify-center rounded-full bg-[#0e1116]/60 text-white">
-                      <Play size={18} weight="fill" />
+                      <PlayIcon size={18} weight="fill" />
                     </span>
                   </span>
                 </span>

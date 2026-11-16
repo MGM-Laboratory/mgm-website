@@ -1,6 +1,6 @@
 "use client";
 
-import { FloppyDisk, Trash, X } from "@phosphor-icons/react";
+import { FloppyDiskIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -238,7 +238,7 @@ export function CareersJobEditor({
             onClick={() => void save()}
             type="button"
           >
-            <FloppyDisk size={15} weight="bold" />
+            <FloppyDiskIcon size={15} weight="bold" />
             {status === "saving" ? "Saving…" : "Save role"}
           </button>
           {initialRecord ? (
@@ -247,7 +247,7 @@ export function CareersJobEditor({
               onClick={() => void remove()}
               type="button"
             >
-              <Trash size={15} weight="bold" />
+              <TrashIcon size={15} weight="bold" />
               Delete
             </button>
           ) : null}
@@ -393,7 +393,7 @@ export function CareersJobEditor({
                     }
                     type="button"
                   >
-                    <X size={12} weight="bold" />
+                    <XIcon size={12} weight="bold" />
                   </button>
                 </span>
               ))}

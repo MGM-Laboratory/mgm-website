@@ -1,18 +1,18 @@
 "use client";
 
 import {
-  ArrowsClockwise,
-  CheckCircle,
-  Copy,
-  Eye,
-  EyeSlash,
-  Key,
-  PencilSimple,
-  Plus,
-  Prohibit,
-  ShieldCheck,
-  Trash,
-  X,
+  ArrowsClockwiseIcon,
+  CheckCircleIcon,
+  CopyIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  KeyIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  ProhibitIcon,
+  ShieldCheckIcon,
+  TrashIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -153,7 +153,7 @@ export function AdminManagementPanel({ initialAdmins = [] }: { initialAdmins?: C
           onClick={() => setEditing("new")}
           type="button"
         >
-          <Plus size={17} weight="bold" />
+          <PlusIcon size={17} weight="bold" />
           New admin
         </button>
       </div>
@@ -161,7 +161,7 @@ export function AdminManagementPanel({ initialAdmins = [] }: { initialAdmins?: C
       <div className="mt-10 space-y-3">
         <div className="flex items-center gap-4 rounded-2xl border border-[#dfe4ee] bg-white p-4 shadow-[0_12px_35px_-32px_rgba(20,32,58,0.55)] dark:border-white/10 dark:bg-white/[0.035]">
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-blue text-white">
-            <ShieldCheck size={22} weight="duotone" />
+            <ShieldCheckIcon size={22} weight="duotone" />
           </span>
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-2 font-display text-lg font-semibold tracking-[-0.03em]">
@@ -185,7 +185,7 @@ export function AdminManagementPanel({ initialAdmins = [] }: { initialAdmins?: C
               key={record.slug}
             >
               <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-green-50 text-brand-green">
-                <Key size={22} weight="duotone" />
+                <KeyIcon size={22} weight="duotone" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 font-display text-lg font-semibold tracking-[-0.03em]">
@@ -231,7 +231,7 @@ export function AdminManagementPanel({ initialAdmins = [] }: { initialAdmins?: C
                   title={`Edit ${record.name}`}
                   type="button"
                 >
-                  <PencilSimple size={18} />
+                  <PencilSimpleIcon size={18} />
                 </button>
                 <button
                   className="inline-flex rounded-lg p-2 text-[#667187] transition hover:bg-brand-blue-50 hover:text-brand-blue dark:text-white/55 dark:hover:bg-brand-blue/20"
@@ -239,7 +239,7 @@ export function AdminManagementPanel({ initialAdmins = [] }: { initialAdmins?: C
                   title={`Rotate ${record.name}'s passphrase`}
                   type="button"
                 >
-                  <ArrowsClockwise size={18} />
+                  <ArrowsClockwiseIcon size={18} />
                 </button>
                 <button
                   className={`inline-flex rounded-lg p-2 transition ${record.active ? "text-[#667187] hover:bg-brand-yellow-50 hover:text-[#a97b1c] dark:text-white/55 dark:hover:bg-brand-yellow/20" : "text-[#667187] hover:bg-brand-green-50 hover:text-brand-green dark:text-white/55 dark:hover:bg-brand-green/20"}`}
@@ -247,7 +247,7 @@ export function AdminManagementPanel({ initialAdmins = [] }: { initialAdmins?: C
                   title={record.active ? `Revoke ${record.name}` : `Restore ${record.name}`}
                   type="button"
                 >
-                  {record.active ? <Prohibit size={18} /> : <CheckCircle size={18} />}
+                  {record.active ? <ProhibitIcon size={18} /> : <CheckCircleIcon size={18} />}
                 </button>
                 <button
                   className="inline-flex rounded-lg p-2 text-[#667187] transition hover:bg-brand-red-50 hover:text-brand-red dark:text-white/55 dark:hover:bg-brand-red/20"
@@ -255,7 +255,7 @@ export function AdminManagementPanel({ initialAdmins = [] }: { initialAdmins?: C
                   title={`Delete ${record.name}`}
                   type="button"
                 >
-                  <Trash size={18} />
+                  <TrashIcon size={18} />
                 </button>
               </div>
             </div>
@@ -341,7 +341,7 @@ function Modal({
             onClick={onClose}
             type="button"
           >
-            <X size={17} />
+            <XIcon size={17} />
           </button>
         </div>
         {children}
@@ -470,7 +470,7 @@ function AdminAccountDialog({
                   onClick={() => setShowPassphrase((current) => !current)}
                   type="button"
                 >
-                  {showPassphrase ? <EyeSlash size={16} /> : <Eye size={16} />}
+                  {showPassphrase ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
                 </button>
               </div>
               <button
@@ -484,7 +484,7 @@ function AdminAccountDialog({
                 }}
                 type="button"
               >
-                <ArrowsClockwise size={15} />
+                <ArrowsClockwiseIcon size={15} />
                 Generate
               </button>
             </div>
@@ -527,7 +527,7 @@ function AdminAccountDialog({
                   onClick={() => setShowPassphrase((current) => !current)}
                   type="button"
                 >
-                  {showPassphrase ? <EyeSlash size={16} /> : <Eye size={16} />}
+                  {showPassphrase ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
                 </button>
               </div>
               <button
@@ -541,7 +541,7 @@ function AdminAccountDialog({
                 }}
                 type="button"
               >
-                <ArrowsClockwise size={15} />
+                <ArrowsClockwiseIcon size={15} />
                 Generate
               </button>
             </div>
@@ -686,7 +686,7 @@ function RotateDialog({
               onClick={() => setShowPassphrase((current) => !current)}
               type="button"
             >
-              {showPassphrase ? <EyeSlash size={16} /> : <Eye size={16} />}
+              {showPassphrase ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
             </button>
           </div>
           <button
@@ -697,7 +697,7 @@ function RotateDialog({
             }}
             type="button"
           >
-            <ArrowsClockwise size={15} />
+            <ArrowsClockwiseIcon size={15} />
             Generate
           </button>
         </div>
@@ -761,7 +761,7 @@ function ShowOnceDialog({
             onClick={copy}
             type="button"
           >
-            <Copy size={15} />
+            <CopyIcon size={15} />
             {copied ? "Copied" : "Copy"}
           </button>
         </div>

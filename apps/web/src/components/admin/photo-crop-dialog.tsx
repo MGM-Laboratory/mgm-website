@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, X } from "@phosphor-icons/react";
+import { CheckIcon, XIcon } from "@phosphor-icons/react";
 import Cropper, { type Area } from "react-easy-crop";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -138,7 +138,7 @@ export function PhotoCropDialog({
             onClick={onClose}
             type="button"
           >
-            <X size={20} />
+            <XIcon size={20} />
           </button>
         </div>
         <div className="grid gap-6 p-5 sm:grid-cols-[minmax(0,1fr)_12rem] sm:p-7">
@@ -185,7 +185,7 @@ export function PhotoCropDialog({
               type="button"
             >
               {isApplying ? "Preparing…" : "Use this photo"}
-              <Check size={17} weight="bold" />
+              <CheckIcon size={17} weight="bold" />
             </button>
           </div>
         </div>

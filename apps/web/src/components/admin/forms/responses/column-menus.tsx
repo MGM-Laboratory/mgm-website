@@ -3,7 +3,14 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Reorder, useDragControls } from "motion/react";
-import { ArrowDown, ArrowUp, DotsSixVertical, EyeSlash, PushPin, X } from "@phosphor-icons/react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  DotsSixVerticalIcon,
+  EyeSlashIcon,
+  PushPinIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 
 import { AdminDatePicker } from "../builder/admin-pickers";
 import { cellIds, countryLabel, type DataColumn, type WorkingRow } from "@/lib/forms/data/columns";
@@ -149,7 +156,7 @@ export function FilterEditor({
             }}
             type="button"
           >
-            <X size={14} />
+            <XIcon size={14} />
           </button>
         ) : null}
       </div>
@@ -313,7 +320,7 @@ export function ColumnMenu({
           }}
           type="button"
         >
-          <ArrowUp size={14} /> Sort ascending
+          <ArrowUpIcon size={14} /> Sort ascending
         </button>
         <button
           className={item}
@@ -322,13 +329,13 @@ export function ColumnMenu({
           }}
           type="button"
         >
-          <ArrowDown size={14} /> Sort descending
+          <ArrowDownIcon size={14} /> Sort descending
         </button>
         <button className={item} onClick={onPin} type="button">
-          <PushPin size={14} /> {pinned ? "Unpin column" : "Pin up to here"}
+          <PushPinIcon size={14} /> {pinned ? "Unpin column" : "Pin up to here"}
         </button>
         <button className={item} onClick={onHide} type="button">
-          <EyeSlash size={14} /> Hide column
+          <EyeSlashIcon size={14} /> Hide column
         </button>
       </div>
       <p className={`${labelClass} mb-2 px-1`}>Filter</p>
@@ -370,7 +377,7 @@ function ColumnItem({
           controls.start(event);
         }}
       >
-        <DotsSixVertical size={14} weight="bold" />
+        <DotsSixVerticalIcon size={14} weight="bold" />
       </span>
       <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
         <input

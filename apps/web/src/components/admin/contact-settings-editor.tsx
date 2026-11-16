@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  ArrowDown,
-  ArrowUp,
-  CaretDown,
-  Check,
-  DotsSixVertical,
-  FloppyDisk,
-  Plus,
-  Trash,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CaretDownIcon,
+  CheckIcon,
+  DotsSixVerticalIcon,
+  FloppyDiskIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -98,7 +98,7 @@ function Listbox<T extends string>({
         type="button"
       >
         <span className="truncate">{selected?.label ?? "Select…"}</span>
-        <CaretDown
+        <CaretDownIcon
           className={cn(
             "size-3.5 shrink-0 text-[#69748a] transition-transform duration-200 dark:text-white/40",
             open && "rotate-180",
@@ -138,7 +138,7 @@ function Listbox<T extends string>({
                   type="button"
                 >
                   {option.label}
-                  {option.value === value ? <Check size={14} weight="bold" /> : null}
+                  {option.value === value ? <CheckIcon size={14} weight="bold" /> : null}
                 </button>
               ))}
             </div>
@@ -324,7 +324,7 @@ function EmailListEditor({
             onClick={() => onChange(emails.filter((_, i) => i !== index))}
             type="button"
           >
-            <Trash size={16} weight="bold" />
+            <TrashIcon size={16} weight="bold" />
           </button>
         </div>
       ))}
@@ -334,7 +334,7 @@ function EmailListEditor({
         onClick={() => onChange([...emails, ""])}
         type="button"
       >
-        <Plus size={14} weight="bold" /> Add recipient
+        <PlusIcon size={14} weight="bold" /> Add recipient
       </button>
     </div>
   );
@@ -384,7 +384,7 @@ function ProviderOrderList({
           }}
         >
           <span className="flex items-center gap-2 font-medium text-[#171b25] dark:text-white">
-            <DotsSixVertical
+            <DotsSixVerticalIcon
               className={cn(
                 "size-4 text-[#9aa3b5] dark:text-white/30",
                 disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing",
@@ -404,7 +404,7 @@ function ProviderOrderList({
               onClick={() => onReorder(index, index - 1)}
               type="button"
             >
-              <ArrowUp size={14} weight="bold" />
+              <ArrowUpIcon size={14} weight="bold" />
             </button>
             <button
               aria-label={`Move ${MAIL_PROVIDER_LABELS[id]} down`}
@@ -413,7 +413,7 @@ function ProviderOrderList({
               onClick={() => onReorder(index, index + 1)}
               type="button"
             >
-              <ArrowDown size={14} weight="bold" />
+              <ArrowDownIcon size={14} weight="bold" />
             </button>
           </span>
         </div>
@@ -735,9 +735,9 @@ function SaveBar({
             type="button"
           >
             {status === "saved" && !isDirty ? (
-              <Check size={18} weight="bold" />
+              <CheckIcon size={18} weight="bold" />
             ) : (
-              <FloppyDisk size={18} weight="bold" />
+              <FloppyDiskIcon size={18} weight="bold" />
             )}
             {saveLabel}
           </button>

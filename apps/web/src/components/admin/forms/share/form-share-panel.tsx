@@ -3,19 +3,19 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  ArrowSquareOut,
-  CalendarBlank,
-  Envelope,
-  FacebookLogo,
-  Info,
-  LinkedinLogo,
-  Lock,
-  PaperPlaneTilt,
-  RocketLaunch,
-  ShareNetwork,
-  TelegramLogo,
-  WhatsappLogo,
-  XLogo,
+  ArrowSquareOutIcon,
+  CalendarBlankIcon,
+  EnvelopeIcon,
+  FacebookLogoIcon,
+  InfoIcon,
+  LinkedinLogoIcon,
+  LockIcon,
+  PaperPlaneTiltIcon,
+  RocketLaunchIcon,
+  ShareNetworkIcon,
+  TelegramLogoIcon,
+  WhatsappLogoIcon,
+  XLogoIcon,
 } from "@phosphor-icons/react";
 import type { FormRecord } from "@repo/shared";
 
@@ -58,13 +58,13 @@ function Notices({ form, now }: { form: FormRecord; now: number }) {
   if (form.status === "draft")
     notes.push({
       tone: "warn",
-      icon: <Info size={15} />,
+      icon: <InfoIcon size={15} />,
       text: "This form is a draft: the link answers 404 until it is published.",
     });
   if (form.status === "closed")
     notes.push({
       tone: "warn",
-      icon: <Lock size={15} />,
+      icon: <LockIcon size={15} />,
       text: "This form is closed: visitors see its closed screen.",
     });
   const opens = settings.opensAt ? Date.parse(settings.opensAt) : NaN;
@@ -72,13 +72,13 @@ function Notices({ form, now }: { form: FormRecord; now: number }) {
   if (Number.isFinite(opens) && opens > now)
     notes.push({
       tone: "info",
-      icon: <CalendarBlank size={15} />,
+      icon: <CalendarBlankIcon size={15} />,
       text: `Scheduled: it opens ${new Date(opens).toLocaleString()}.`,
     });
   if (Number.isFinite(closes))
     notes.push({
       tone: closes < now ? "warn" : "info",
-      icon: <CalendarBlank size={15} />,
+      icon: <CalendarBlankIcon size={15} />,
       text:
         closes < now
           ? `It closed on ${new Date(closes).toLocaleString()}.`
@@ -88,7 +88,7 @@ function Notices({ form, now }: { form: FormRecord; now: number }) {
     const left = settings.responseLimit - form.stats.responses;
     notes.push({
       tone: left <= 0 ? "warn" : "info",
-      icon: <Info size={15} />,
+      icon: <InfoIcon size={15} />,
       text:
         left <= 0
           ? `The limit of ${settings.responseLimit} responses is reached, so it no longer accepts answers.`
@@ -98,7 +98,7 @@ function Notices({ form, now }: { form: FormRecord; now: number }) {
   if (form.hasPassphrase)
     notes.push({
       tone: "info",
-      icon: <Lock size={15} />,
+      icon: <LockIcon size={15} />,
       text: "Visitors need the passphrase to open it.",
     });
   if (!notes.length) return null;
@@ -179,28 +179,28 @@ export function FormSharePanel({
   const shareTargets = [
     {
       label: "WhatsApp",
-      icon: WhatsappLogo,
+      icon: WhatsappLogoIcon,
       href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${formUrl}`)}`,
     },
     {
       label: "Telegram",
-      icon: TelegramLogo,
+      icon: TelegramLogoIcon,
       href: `https://t.me/share/url?url=${encoded}&text=${text}`,
     },
-    { label: "X", icon: XLogo, href: `https://x.com/intent/post?url=${encoded}&text=${text}` },
+    { label: "X", icon: XLogoIcon, href: `https://x.com/intent/post?url=${encoded}&text=${text}` },
     {
       label: "LinkedIn",
-      icon: LinkedinLogo,
+      icon: LinkedinLogoIcon,
       href: `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`,
     },
     {
       label: "Facebook",
-      icon: FacebookLogo,
+      icon: FacebookLogoIcon,
       href: `https://www.facebook.com/sharer/sharer.php?u=${encoded}`,
     },
     {
       label: "Email",
-      icon: Envelope,
+      icon: EnvelopeIcon,
       href: `mailto:?subject=${text}&body=${encodeURIComponent(`${shareText}\n\n${formUrl}`)}`,
     },
   ];
@@ -237,7 +237,7 @@ export function FormSharePanel({
               rel="noreferrer"
               target="_blank"
             >
-              <ArrowSquareOut size={15} /> Open
+              <ArrowSquareOutIcon size={15} /> Open
             </a>
             {form.status !== "published" && canWrite ? (
               <button
@@ -246,7 +246,7 @@ export function FormSharePanel({
                 onClick={() => void publish()}
                 type="button"
               >
-                <RocketLaunch size={15} />{" "}
+                <RocketLaunchIcon size={15} />{" "}
                 {publishing ? "Publishing…" : form.status === "closed" ? "Reopen" : "Publish now"}
               </button>
             ) : null}
@@ -300,7 +300,7 @@ export function FormSharePanel({
               }}
               type="button"
             >
-              <ShareNetwork aria-hidden size={18} /> More…
+              <ShareNetworkIcon aria-hidden size={18} /> More…
             </button>
           ) : null}
         </div>
@@ -370,8 +370,8 @@ export function FormSharePanel({
               <p className={labelClass}>Full-page link</p>
               <SnippetBox code={linkSnippet} what="Link code" />
               <p className="flex items-center gap-1.5 text-[11px] text-[#8a93a6]">
-                <PaperPlaneTilt size={12} /> Opens the immersive full-page form, the best experience
-                on phones.
+                <PaperPlaneTiltIcon size={12} /> Opens the immersive full-page form, the best
+                experience on phones.
               </p>
             </div>
           </div>

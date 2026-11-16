@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, FloppyDisk, VideoCamera } from "@phosphor-icons/react";
+import { CheckIcon, FloppyDiskIcon, VideoCameraIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { HomeContent } from "@repo/shared";
@@ -96,7 +96,7 @@ function VideoUploadField({
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-blue-50 text-brand-blue dark:bg-brand-blue/15">
-              <VideoCamera size={20} weight="duotone" />
+              <VideoCameraIcon size={20} weight="duotone" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold">
@@ -133,7 +133,7 @@ function VideoUploadField({
           onClick={() => videoInput.current?.click()}
           type="button"
         >
-          <VideoCamera className="text-brand-blue" size={30} weight="duotone" />
+          <VideoCameraIcon className="text-brand-blue" size={30} weight="duotone" />
           <span className="text-sm font-semibold text-brand-blue">Upload the video</span>
           <span className="font-mono text-[10px] tracking-[0.12em] text-[#8490a5] uppercase">
             MP4 or WebM · up to {videoLimitMb} MB
@@ -331,9 +331,9 @@ export function HomeSettingsEditor({
             type="button"
           >
             {status === "saved" && !isDirty ? (
-              <Check size={18} weight="bold" />
+              <CheckIcon size={18} weight="bold" />
             ) : (
-              <FloppyDisk size={18} weight="bold" />
+              <FloppyDiskIcon size={18} weight="bold" />
             )}
             {saveLabel}
           </button>
