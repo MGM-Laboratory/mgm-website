@@ -53,7 +53,7 @@ const permissionsSchema = z
 const adminCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
   passphrase: z.union([z.literal("generate"), z.string().min(8).max(200)]).optional(),
-  expiresAt: z.string().datetime().nullable().optional(),
+  expiresAt: z.iso.datetime().nullable().optional(),
   permissions: permissionsSchema.optional(),
 });
 

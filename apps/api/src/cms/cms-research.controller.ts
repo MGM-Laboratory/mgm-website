@@ -52,7 +52,7 @@ const blockSchema = z
     content: z.unknown().optional(),
     children: z.array(z.unknown()).optional(),
   })
-  .passthrough();
+  .loose();
 
 // Site paths (a single leading slash, never protocol-relative) and http(s)
 // URLs only; javascript:, data:, and every other scheme are refused.

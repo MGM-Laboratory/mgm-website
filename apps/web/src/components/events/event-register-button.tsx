@@ -86,7 +86,7 @@ function RegisterModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!fullName.trim() || !email.trim() || !phoneNumber.trim()) {
       toast.error("Please fill in your name, email, and phone number.");

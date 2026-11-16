@@ -46,7 +46,7 @@ const blockSchema = z
     content: z.unknown().optional(),
     children: z.array(z.unknown()).optional(),
   })
-  .passthrough();
+  .loose();
 
 // Paths that belong to routes on this controller (and the applications
 // namespace in the companion service); a job can never claim one as its URL.

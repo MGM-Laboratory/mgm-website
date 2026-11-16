@@ -19,8 +19,8 @@ export const contactFormSchema = z.object({
     .string()
     .trim()
     .min(1, "Please enter your email.")
-    .email("Enter a valid email address.")
-    .max(320, "Email is too long."),
+    .max(320, "Email is too long.")
+    .pipe(z.email("Enter a valid email address.")),
   company: z.string().trim().max(200, "Company name is too long.").optional(),
   message: z
     .string()
@@ -103,7 +103,7 @@ export type MailProviderLimits = z.infer<typeof mailProviderLimitsSchema>;
 // apps/api/.env), since these are ordinary business info, not secrets.
 const contactSettingsShape = z.object({
   emails: z
-    .array(z.string().trim().min(1).email("Enter a valid email address."))
+    .array(z.string().trim().min(1).pipe(z.email("Enter a valid email address.")))
     .min(1, "Add at least one recipient email."),
   address: z.string().trim().min(1, "Please enter an address."),
   lat: z.number().min(-90).max(90),
