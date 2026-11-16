@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { OrthographicCamera, Scene, Texture, WebGLRenderer } from "three";
 
 /**

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * A small .xlsx (Office Open XML spreadsheet) writer: one sheet, a bold
  * frozen header row, column widths, and typed cells (numbers, booleans,

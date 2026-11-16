@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import gsap from "gsap";
 import { LinearSRGBColorSpace, OrthographicCamera, Scene, WebGLRenderer } from "three";
 

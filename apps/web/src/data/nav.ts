@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { PatternKind, PatternTone } from "@/components/process/pattern-tile";
 
 export type NavLink = { label: string; href: string };

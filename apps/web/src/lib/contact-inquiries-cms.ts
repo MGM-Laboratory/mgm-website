@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 export type CmsContactInquiryRecord = {
   slug: string;
   inquiry: {

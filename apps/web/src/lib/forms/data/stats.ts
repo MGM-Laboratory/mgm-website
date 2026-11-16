@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Descriptive and inferential statistics for the forms analysis lab. Pure
  * functions over plain number arrays, no React and no DOM, so they can be

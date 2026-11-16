@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The shape of a theme switch's front, shared by the GPU and the DOM.
  *

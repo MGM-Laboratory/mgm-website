@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Types for the link shortener workspace, shared by the server fetch and the editor. */
 
 export type DomainRecords = {

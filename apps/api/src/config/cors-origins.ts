@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The origins of `CORS_ORIGIN`. The setting is a comma separated list, and a
  * space after a comma or an empty entry must not become an origin that no

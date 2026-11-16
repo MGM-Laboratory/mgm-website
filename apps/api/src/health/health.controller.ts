@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Controller, Get, ServiceUnavailableException } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { healthResponseSchema, type HealthResponse } from "@repo/shared";

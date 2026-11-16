@@ -148,6 +148,8 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Format check
         run: pnpm format:check
+      - name: License headers
+        run: node .github/scripts/check-license-headers.mjs
       - name: Test automation and workflow policy
         if: needs.changes.outputs.automation == 'true'
         run: node --test .github/scripts/*.test.mjs

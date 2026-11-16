@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { FocusStoryRows } from "../shared/focus-story-rows";
 import { HISTORY_HIGHLIGHTS } from "@/data/mobile-focus";
 

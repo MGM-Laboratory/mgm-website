@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Signals shared by the project zoom transition (the overlay that carries a
  * card's cover from /projects into /projects/<slug> and back,

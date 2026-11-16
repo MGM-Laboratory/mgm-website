@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { expect, test } from "@playwright/test";
 
 test.describe("Content-Security-Policy-Report-Only", () => {

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { test, expect } from "@playwright/test";
 
 // Regression coverage for the bugs documented in docs/testing-verification.md.

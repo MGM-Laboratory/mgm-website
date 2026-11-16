@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Whether an Accept header names `text/html` with a quality above zero. A
  * wildcard does not count, so a script that sends a star gets JSON, and

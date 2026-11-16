@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * A small, safe formula language for computed columns in the data cleaner.
  * It is tokenized, parsed into a tree and interpreted here: no `eval`, no

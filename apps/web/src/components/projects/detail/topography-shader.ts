@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * GLSL ES 3.00 for the project detail pages' topography background, ported
  * from React Bits' "Topography" (MIT, https://reactbits.dev).

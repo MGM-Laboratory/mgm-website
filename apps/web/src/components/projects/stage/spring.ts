@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * A second-order spring (the "procedural animation" system t3ssel8r
  * popularised, also what lusion.co drives its card focus with), described

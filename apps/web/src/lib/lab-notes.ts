@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Lab notes: the short, friendly asides the homepage says at story moments
  * (a first magnet moved, the reel watched to the end, a visitor who went

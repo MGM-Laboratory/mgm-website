@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { FormAnswers } from "./answers.js";
 import type { FormDocument, FormStatus, PublicFormDocument } from "./schema.js";
 

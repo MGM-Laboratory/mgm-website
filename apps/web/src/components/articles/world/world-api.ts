@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The library world's public contract: what the articles pages, the
  * transitions and the header may ask of the WebGL engine. Types only, so

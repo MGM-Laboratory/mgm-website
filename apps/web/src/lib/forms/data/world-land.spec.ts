@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { describe, expect, it } from "vitest";
 
 import { LAND_BITS, LAND_BOTTOM, LAND_COLUMNS, LAND_ROWS, LAND_TOP } from "./world-land";

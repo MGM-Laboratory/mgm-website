@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { test, expect, type Locator, type Page } from "@playwright/test";
 
 function cardFor(page: Page, name: RegExp) {

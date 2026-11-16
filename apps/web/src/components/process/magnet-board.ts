@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import gsap from "gsap";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";

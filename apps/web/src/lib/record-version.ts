@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The header that carries the `updatedAt` of the record that an editor loaded.
  * The API answers 409 when the stored record is newer, so a save cannot

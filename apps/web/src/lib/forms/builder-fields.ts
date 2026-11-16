@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The form builder's field catalog: every block type the palette offers,
  * grouped into families, with a one-line description and the defaults a

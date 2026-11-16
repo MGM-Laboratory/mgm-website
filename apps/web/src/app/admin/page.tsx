@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { redirect } from "next/navigation";
 
 import { MemberCmsStudio } from "@/components/admin/member-cms-studio";

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Content for the /ux Focus page. See docs/project-overview.md for how this
 // fits the other three Focus pages (/game, /website, /mobile). Process
 // stages live in focus-pipelines.ts instead of here — see that file for why.

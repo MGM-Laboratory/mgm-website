@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Moments the scene reacts to without re-rendering React: a question got
  * focus (a gentle pulse), validation failed (a small shudder), a piece

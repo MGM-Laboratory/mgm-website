@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { RevealSection } from "@/components/about/reveal-section";
 import { CompetencyMotifShape } from "@/components/sections/competency-motif";
 import { PLATFORM_ITEMS, XR_STATS } from "@/data/game-focus";

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Universitas Brawijaya faculties, FILKOM pinned first because the lab lives
  * there. Names follow the current official faculty naming.

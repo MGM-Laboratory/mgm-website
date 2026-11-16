@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Exports of the responses: CSV (UTF-8 with a BOM, RFC 4180 quoting), TSV,
  * JSON (raw records or flat rows), Markdown and .xlsx. They all start from

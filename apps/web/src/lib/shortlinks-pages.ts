@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The public short-link pages (passphrase gate, expired, not found) as
  * complete standalone HTML documents. They are served from route handlers,

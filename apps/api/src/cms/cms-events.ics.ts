@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Builds a public iCalendar (RFC 5545) feed of published events. Calendar
 // apps (Google, Apple, Outlook) poll this feed's URL to keep a subscribed
 // calendar in sync, so it must stay a stable, well-formed VCALENDAR document

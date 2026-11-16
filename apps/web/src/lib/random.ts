@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Randomness for decorative motion only (idle beats, glyph scrambles,
  * camera jolts), never for anything security-relevant. A small mulberry32

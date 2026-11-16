@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // One conservative file-to-workload policy shared by all CI callers.
 export const SCOPES = [
   "api",

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Vector3, type PerspectiveCamera } from "three";
 
 import { frontRadiusAlong, type ThemeFront } from "@/components/articles/world/fx/theme-front";

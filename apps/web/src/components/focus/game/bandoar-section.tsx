@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { FocusStoryRows } from "../shared/focus-story-rows";
 import { BANDOAR_HIGHLIGHT } from "@/data/game-focus";
 

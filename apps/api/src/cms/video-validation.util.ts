@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { BadRequestException } from "@nestjs/common";
 import type { Request, Response } from "express";
 

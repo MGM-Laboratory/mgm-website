@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { describe, expect, it } from "vitest";
 
 import { buildIcsFeed, buildSingleEventIcs, type IcsEventRecord } from "./cms-events.ics.js";

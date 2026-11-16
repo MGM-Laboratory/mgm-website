@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";

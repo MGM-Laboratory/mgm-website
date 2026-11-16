@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { readLimitedText } from "@/lib/read-limited-text";
 
 export const dynamic = "force-dynamic";

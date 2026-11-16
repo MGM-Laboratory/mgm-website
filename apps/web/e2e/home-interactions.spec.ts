@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { expect, test, type Page } from "@playwright/test";
 
 // Two complete entrances plus a route round-trip can exceed the default

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The reel's shaders. Screen space throughout: positions are CSS pixels
  * with y down (the DOM's convention) until the very last step, which flips

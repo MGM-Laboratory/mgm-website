@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * A dependency-free stand-in for the CMS API's public project, article and
  * member reads, for the Playwright suite (playwright.config.ts starts it as a

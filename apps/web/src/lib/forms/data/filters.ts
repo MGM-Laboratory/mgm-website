@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The responses view: quick segments, a global search, per-column filters
  * and one sort, applied after the cleaning pipeline. The Analytics tab reads

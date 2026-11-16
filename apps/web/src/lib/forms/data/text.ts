@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Word statistics for free-text answers: top words and two-word phrases,
  * with English and Indonesian stop words removed (forms here are written in

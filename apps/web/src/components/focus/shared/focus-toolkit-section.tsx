@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { RevealSection } from "@/components/about/reveal-section";
 
 export type ToolkitRole = { role: string; tagline: string; story: string };

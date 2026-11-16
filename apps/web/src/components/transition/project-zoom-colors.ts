@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Colour plumbing for the project zoom: resolving any CSS colour (hex,
  * `var()` chains, `color-mix()`) to sRGB through a hidden probe element,

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { isIP } from "node:net";
 
 const KEYWORDS = new Set(["loopback", "linklocal", "uniquelocal"]);

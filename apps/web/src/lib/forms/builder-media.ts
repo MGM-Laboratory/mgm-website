@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Media helpers for the form builder: YouTube and Vimeo link parsing, their
  * thumbnails, and the best URL to preview a form media item with. Uploads

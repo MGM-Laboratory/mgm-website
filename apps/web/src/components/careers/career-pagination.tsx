@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import Link from "next/link";
 
 export const JOB_PAGE_SIZES = [9, 18, 45] as const;

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { readFileSync, appendFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { ghPaginate } from "./gh-api.mjs";

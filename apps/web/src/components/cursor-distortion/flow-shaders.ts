@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * GLSL for the cursor flow (see flow-engine.ts): a low-resolution paint
  * field the cursor stamps and that flows along its own velocity, and a

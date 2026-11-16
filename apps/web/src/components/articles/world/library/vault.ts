@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { ExtrudeGeometry, Group, Shape, type ShaderMaterial } from "three";
 
 import { BAY, NEAR_Z, SPRING_Y } from "@/components/articles/world/library/layout";
