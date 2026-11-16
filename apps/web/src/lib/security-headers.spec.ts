@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { createRequire } from "node:module";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
