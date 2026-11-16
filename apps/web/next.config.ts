@@ -39,6 +39,9 @@ function contentSecurityPolicy() {
   ].join("; ");
 }
 
+/** Matches every path except `/forms/...`, the pages that other sites embed. */
+export const FRAME_PROTECTED_SOURCE = "/((?!forms/).*)";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   // The image build sets BUILD_ID to the commit, so two builds of one commit give the same build id. Without it Next.js makes a
@@ -53,7 +56,7 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      // Only the production build sends it, because the dev server needs a websocket and inline eval that the policy would report all day
+      // Only the production build sends them, because the dev server needs a websocket and inline eval that the policy would report all day
       ...(process.env.NODE_ENV === "production"
         ? [
             {
@@ -63,7 +66,15 @@ const nextConfig: NextConfig = {
                   key: "Content-Security-Policy-Report-Only",
                   value: contentSecurityPolicy(),
                 },
+                { key: "X-Content-Type-Options", value: "nosniff" },
+                // One year, and no includeSubDomains, because other hosts of the lab may not all serve HTTPS
+                { key: "Strict-Transport-Security", value: "max-age=31536000" },
               ],
+            },
+            // Every page except the public forms refuses to sit in a frame of another site. The forms are meant to be embedded
+            {
+              source: FRAME_PROTECTED_SOURCE,
+              headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
             },
           ]
         : []),
