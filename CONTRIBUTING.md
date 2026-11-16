@@ -49,7 +49,7 @@ Every change goes through a pull request and the required checks. This section s
 
 ### How a review is done
 
-- The code owner named in `.github/CODEOWNERS` reviews each pull request from a contributor and has to approve it before it can merge.
+- The code owner named in `.github/CODEOWNERS` reviews each pull request from a contributor and has to approve it before it can merge. Three files have no owner because bots rewrite them, which are `pnpm-lock.yaml`, `CHANGELOG.md` and `.release-please-manifest.json`. A pull request that changes only those files does not ask the code owner for a review, and it still needs the one approval that the ruleset requires.
 - A member of the maintainer team can merge a pull request without that approval, through the ruleset bypass. The required checks and the signed commits still apply in full. The ruleset does not guarantee a second person for such a pull request, so a maintainer may ask another member of the team to look at a larger change.
 - An automated review bot, CodeRabbit, comments on pull requests from people. It does not replace the review of a person.
 - The reviewer reads the whole diff, reads the result of every check, and runs the change when it touches behavior that the checks do not cover.
