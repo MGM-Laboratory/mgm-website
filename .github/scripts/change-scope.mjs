@@ -75,6 +75,11 @@ export function classifyChanges(files, { force = false } = {}) {
       enable("docker_api", "docker_web", "trivy");
       continue;
     }
+    // The typecheck of every workspace runs this script, so a change to it must run both jobs.
+    if (file === ".github/scripts/check-deprecated.mjs") {
+      enable("automation", "codeql", "trivy", "api", "web");
+      continue;
+    }
     if (/^\.github\/scripts\//.test(file)) {
       enable("automation", "codeql", "trivy");
       continue;
