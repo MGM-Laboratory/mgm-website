@@ -17,7 +17,7 @@ If you need logo, it's available in lovo.svg (./logo.svg). If you need to genera
 ```css
 :root {
   /* Surfaces */
-  --bg: #ffffff; /* page background, almost always this */
+  --bg: #ffffff; /* plain white, used for fades. Pages sit on --background (#f7f7f5, #15181e in dark) */
   --surface: #ffffff; /* card / panel surface */
   --surface-muted: #f7f7f5; /* very subtle off-white for zoning */
   --surface-inverse: #0e1116; /* near-black for inverted sections */
