@@ -29,6 +29,10 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=""
 # hadolint ignore=DL3064
 ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+# The build id is the commit, so two builds of one commit write the same ids into the build output. An empty value keeps the
+# default random id of Next.js.
+ARG BUILD_ID=""
+ENV BUILD_ID=${BUILD_ID}
 RUN pnpm turbo run build --filter=web
 
 # 3. Final runtime image — Next.js standalone output is already self-contained
