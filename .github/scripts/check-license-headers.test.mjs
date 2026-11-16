@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -37,6 +40,7 @@ test("a header is found only in the first lines", () => {
   assert.ok(hasHeader(`#!/usr/bin/env node\n${text}`));
   assert.ok(!hasHeader("export {};\n"));
   assert.ok(!hasHeader(`${"\n".repeat(10)}${text}`));
+  assert.ok(!hasHeader(`const note = "${COPYRIGHT}";\nconst id = "${LICENSE}";\n`));
 });
 
 test("a header keeps a shebang on the first line and adds comments by file type", () => {

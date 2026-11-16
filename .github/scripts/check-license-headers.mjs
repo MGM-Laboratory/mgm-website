@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Checks that every source file of the repository starts with a copyright and a license line.
 // Run it from the repository root. `--fix` adds the two lines to the files that lack them.
 // It keeps the OpenSSF criteria `copyright_per_file` and `license_per_file` true.
@@ -19,10 +22,11 @@ export function filesNeedingHeader(paths) {
   );
 }
 
-/** True when both lines sit in the first lines of the text, after an optional shebang. */
+/** True when both lines sit as comment lines in the first lines of the text, after an optional shebang. */
 export function hasHeader(text) {
-  const head = text.split("\n", 6).join("\n");
-  return head.includes(COPYRIGHT) && head.includes(LICENSE);
+  const lines = text.split("\n", 6).map((line) => line.trim());
+  const has = (value) => lines.includes(`// ${value}`) || lines.includes(`/* ${value} */`);
+  return has(COPYRIGHT) && has(LICENSE);
 }
 
 /** The text with the header added, kept below a shebang line. */
