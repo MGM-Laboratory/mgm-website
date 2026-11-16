@@ -545,8 +545,8 @@ function requestFor(testCase: Case) {
 }
 
 async function call(testCase: Case) {
-  const module = await testCase.load();
-  const handler = module[testCase.method] as Handler | undefined;
+  const routeModule = await testCase.load();
+  const handler = routeModule[testCase.method] as Handler | undefined;
   if (!handler) throw new Error(`${testCase.name} has no ${testCase.method} handler`);
   const context = { params: Promise.resolve(testCase.params ?? {}) } as never;
   return handler(requestFor(testCase), context);
