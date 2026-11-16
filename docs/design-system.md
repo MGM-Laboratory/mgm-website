@@ -8,7 +8,7 @@ Tailwind v4 CSS-first theming. Raw values on `:root`, dark overrides on `.dark` 
 
 ```css
 :root {
-  --background: #ffffff;
+  --background: #f7f7f5;
   --foreground: #0e1116;
   --brand-blue: #3a6dc5;
   --brand-yellow: #f7bf33;
@@ -26,7 +26,7 @@ Tailwind v4 CSS-first theming. Raw values on `:root`, dark overrides on `.dark` 
   --pattern-canvas: var(--surface-muted);
 }
 .dark {
-  --background: #0e1116;
+  --background: #15181e;
   --foreground: #ededed;
   --line: #262a33;
   --surface-muted: #15181e;
