@@ -222,11 +222,49 @@ jobs:
           version: 44.181.7
         run: npx --yes --package "renovate@${version}" renovate-config-validator --strict
 
+  # The spec is the source of the API documentation site, so a spec that does not lint or a site that does not build is found here
+  # and not after the merge, when Cloudflare runs the same build
+  openapi:
+    name: OpenAPI lint and docs build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install the docs tools
+        working-directory: docs-site
+        run: npm ci --ignore-scripts
+
+      - name: Lint the spec
+        working-directory: docs-site
+        run: npm run lint
+
+      - name: Build the site
+        working-directory: docs-site
+        run: npm run build
+
+      - name: Check the built files
+        working-directory: docs-site
+        run: |
+          test -s dist/index.html
+          test -s dist/_headers
+          test -s dist/favicon.ico
+
   # The one check that the ruleset requires, so a job can be added or renamed here without a change of the ruleset
   gate:
     name: Config gate
     if: always()
-    needs: [actionlint, zizmor, hadolint, dotenv, compose, shellcheck, names, renovate]
+    needs: [actionlint, zizmor, hadolint, dotenv, compose, shellcheck, names, renovate, openapi]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
