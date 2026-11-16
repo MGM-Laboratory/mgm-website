@@ -11,7 +11,7 @@ import {
   Trash,
   Warning,
 } from "@phosphor-icons/react";
-import type { DragControls } from "framer-motion";
+import type { DragControls } from "motion/react";
 import { memo } from "react";
 
 import type { FormField } from "@repo/shared";

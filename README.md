@@ -20,7 +20,7 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Flabmgm.org&label=labmgm.org)](https://labmgm.org)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5%20and%206-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5%2C%206%20and%207-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![Turbo](https://img.shields.io/badge/Turbo-monorepo-EF4444?logo=turborepo&logoColor=white)](https://turbo.build)
@@ -52,8 +52,9 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 | Site                   | Uptime                                                                                                                                                                                                                                                                                                      |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Website (`labmgm.org`) | [![health](https://status.labmgm.org/api/v1/endpoints/core_mgm-website/health/badge.svg)](https://status.labmgm.org/endpoints/core_mgm-website) [![uptime 30-day](https://status.labmgm.org/api/v1/endpoints/core_mgm-website/uptimes/30d/badge.svg)](https://status.labmgm.org/endpoints/core_mgm-website) |
+| API (`api.labmgm.org`) | [![health](https://status.labmgm.org/api/v1/endpoints/core_mgm-api/health/badge.svg)](https://status.labmgm.org/endpoints/core_mgm-api) [![uptime 30-day](https://status.labmgm.org/api/v1/endpoints/core_mgm-api/uptimes/30d/badge.svg)](https://status.labmgm.org/endpoints/core_mgm-api)                 |
 
-Status page: [status.labmgm.org](https://status.labmgm.org)
+Status page of the MGM Laboratory services, with each copy of the web app and the API of this site: [status.labmgm.org](https://status.labmgm.org)
 
 ## Stack
 

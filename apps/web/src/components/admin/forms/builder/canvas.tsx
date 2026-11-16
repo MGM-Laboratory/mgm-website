@@ -1,7 +1,7 @@
 "use client";
 
 import { Asterisk, Copy, Flag, HandWaving, Plus, Trash, X } from "@phosphor-icons/react";
-import { Reorder, useDragControls } from "framer-motion";
+import { Reorder, useDragControls } from "motion/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
