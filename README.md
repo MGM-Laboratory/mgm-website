@@ -52,8 +52,9 @@ The website and CMS of MGM Laboratory, the Media, Game and Mobile laboratory at 
 | Site                   | Uptime                                                                                                                                                                                                                                                                                                      |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Website (`labmgm.org`) | [![health](https://status.labmgm.org/api/v1/endpoints/core_mgm-website/health/badge.svg)](https://status.labmgm.org/endpoints/core_mgm-website) [![uptime 30-day](https://status.labmgm.org/api/v1/endpoints/core_mgm-website/uptimes/30d/badge.svg)](https://status.labmgm.org/endpoints/core_mgm-website) |
+| API (`api.labmgm.org`) | [![health](https://status.labmgm.org/api/v1/endpoints/core_mgm-api/health/badge.svg)](https://status.labmgm.org/endpoints/core_mgm-api) [![uptime 30-day](https://status.labmgm.org/api/v1/endpoints/core_mgm-api/uptimes/30d/badge.svg)](https://status.labmgm.org/endpoints/core_mgm-api)                 |
 
-Status page: [status.labmgm.org](https://status.labmgm.org)
+Status page, with each copy of the web app and the API: [status.labmgm.org](https://status.labmgm.org)
 
 ## Stack
 
