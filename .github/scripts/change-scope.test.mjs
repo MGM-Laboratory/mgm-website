@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyChanges, SCOPES } from "./change-scope.mjs";
@@ -19,6 +22,10 @@ test("web source runs all browser projects and Lighthouse but no API build", () 
   const result = classifyChanges(["apps/web/src/app/page.tsx"]);
   assert.ok(result.web && result.e2e && result.lighthouse && result.docker_web);
   assert.ok(!result.api && !result.docker_api);
+});
+test("the deprecation check script runs the typecheck jobs of both applications", () => {
+  const result = classifyChanges([".github/scripts/check-deprecated.mjs"]);
+  assert.ok(result.api && result.web && result.automation);
 });
 test("shared packages and lockfile changes exercise both applications", () => {
   for (const file of ["packages/shared/src/index.ts", "pnpm-lock.yaml", "turbo.json"]) {

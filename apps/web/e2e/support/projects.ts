@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 import fixture from "../fixtures/cms/projects.json";

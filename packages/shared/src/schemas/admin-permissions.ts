@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Every /api/admin/** RBAC page id — the vocabulary the web app's permission
 // gates and the API's admin-account schema both have to agree on. This list
 // drifting out of sync between the two apps (a page added only on the web

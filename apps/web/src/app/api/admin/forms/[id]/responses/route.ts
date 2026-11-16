@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { gateAdminRequest } from "@/lib/admin-proxy";
 
 import { formPath, forwardJson } from "../../_lib/forward";

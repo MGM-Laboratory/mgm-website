@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The request body as text, read chunk by chunk and abandoned as soon as it
  * passes `limit` bytes (null then), so an oversized or endless body can't

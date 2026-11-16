@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Small, allocation-free maths for the reel: remapping, the easing curves
  * its timing is built on, the eased pin offset and a tiny spring. Shared by

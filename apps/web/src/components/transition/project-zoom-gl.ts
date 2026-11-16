@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { encodedSource, whenLoaded } from "@/components/projects/stage/cover-textures";
 import { toUnit, type Rgb } from "@/components/transition/project-zoom-colors";
 import {

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Small brand shapes the reel player scatters and spins: the end burst,
  * the buffering shapes chasing round the playhead, and the plus marks in

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "../generated/prisma/client.js";

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The story's scroll reveals. Each block marked `data-ad-reveal` appears as
  * it comes into view: paragraphs dissolve in along a diagonal, headings rise

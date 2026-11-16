@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { Logger } from "@nestjs/common";
 
 import type { MailService } from "./mail.service.js";

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The contract between the /projects cards and the page-level cover stage
  * (the one full-screen WebGL canvas that draws every card's cover, lusion

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // The facts here come from MGM Laboratory's own public pages and FILKOM's
 // news archive. Told plainly, as a story, not as a spec sheet.
 

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The reel player cursor's shapes, all drawn as one closed outline of the
  * same number of points so any shape can melt into any other: the close

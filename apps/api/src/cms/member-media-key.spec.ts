@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { describe, expect, it } from "vitest";
 
 import { MEMBER_MEDIA_KEY_PATTERN } from "./member-media-key.js";

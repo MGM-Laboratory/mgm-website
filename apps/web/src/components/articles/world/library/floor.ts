@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Color, Mesh, PlaneGeometry, ShaderMaterial } from "three";
 
 import { FLOOR_Y, NEAR_Z, farZ } from "@/components/articles/world/library/layout";

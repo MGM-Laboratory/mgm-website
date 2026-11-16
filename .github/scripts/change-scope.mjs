@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // One conservative file-to-workload policy shared by all CI callers.
 export const SCOPES = [
   "api",
@@ -73,6 +76,11 @@ export function classifyChanges(files, { force = false } = {}) {
     }
     if (file === ".dockerignore" || /^docker-compose|^compose\./.test(file)) {
       enable("docker_api", "docker_web", "trivy");
+      continue;
+    }
+    // The typecheck of every workspace runs this script, so a change to it must run both jobs.
+    if (file === ".github/scripts/check-deprecated.mjs") {
+      enable("automation", "codeql", "trivy", "api", "web");
       continue;
     }
     if (/^\.github\/scripts\//.test(file)) {

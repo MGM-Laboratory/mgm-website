@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { DEFAULT_CONTACT_SETTINGS } from "@repo/shared";
 
 // The footer (site-wide, rendered inside the animation-heavy nav/header

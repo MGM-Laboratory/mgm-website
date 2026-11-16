@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { test, expect, type Page } from "@playwright/test";
 
 // The suite's CMS fixture API (e2e/fixtures/cms) serves three projects, so

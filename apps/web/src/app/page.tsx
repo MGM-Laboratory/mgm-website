@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Hero } from "@/components/hero/hero";
 import { ProcessSection } from "@/components/process/process-section";
 import { CoreCompetenciesSection } from "@/components/sections/core-competencies";

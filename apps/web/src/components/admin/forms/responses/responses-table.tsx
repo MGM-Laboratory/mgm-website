@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 "use client";
 
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";

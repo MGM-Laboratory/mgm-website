@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Shared "browser window" chrome strip — three dots, reused across the
 // Focus/Website sections so every card reads as its own little browser tab
 // without redrawing the same three circles in five different files.

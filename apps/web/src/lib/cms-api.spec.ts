@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // vi.mock runs before the rest of the file, so the spy has to be made in a hoisted block

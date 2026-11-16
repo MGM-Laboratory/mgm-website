@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The key that a limit counts an address under. An IPv4 address counts alone. A visitor on IPv6 owns a whole /64 prefix of
  * addresses, so counting the full address would let one caller rotate its address for every try. The first four groups name

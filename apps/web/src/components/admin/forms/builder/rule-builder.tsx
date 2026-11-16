@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 "use client";
 
 import { PlusIcon, TrashIcon, WarningIcon } from "@phosphor-icons/react";

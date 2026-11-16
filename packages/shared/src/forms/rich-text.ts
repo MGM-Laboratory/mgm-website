@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Rich text for forms: a whitelisted subset of the tiptap (ProseMirror) JSON
  * document. The admin editor writes it, the API stores it after

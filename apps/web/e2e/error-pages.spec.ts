@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { expect, test } from "@playwright/test";
 
 // The fixture API (e2e/fixtures/cms-fixture-server.mjs) drops the connection

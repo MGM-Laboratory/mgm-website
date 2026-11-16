@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The calendar arithmetic, formatting and lenient parsing behind the date
  * and time pickers. Answers keep the native shapes: dates `YYYY-MM-DD`,

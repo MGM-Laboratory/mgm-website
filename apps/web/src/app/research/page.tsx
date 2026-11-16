@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { Metadata } from "next";
 import { ArticleCover } from "@/components/articles/article-cover";
 import Link from "next/link";

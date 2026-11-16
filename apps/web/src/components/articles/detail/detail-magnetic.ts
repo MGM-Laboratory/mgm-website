@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Small magnetism for the article's links (categories, authors, source
  * chips, inline links): the one under a fine pointer drifts a few pixels

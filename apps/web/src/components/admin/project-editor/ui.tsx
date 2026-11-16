@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Form primitives shared by the project editor and its detail-page panels. */
 
 export const inputClass =

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The column model shared by the responses table, the cleaner, the charts
  * and every export: one column per answer (from `answerColumns`), the

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Every Focus page's toolkit-role content lives in one place instead of one
 // array per page — /website, /mobile, and /game's role lists share the exact
 // same {role, tagline, story} shape (by design, so they render through the

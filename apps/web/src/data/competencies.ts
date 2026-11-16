@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 export type CompetencyColor = "blue" | "red" | "yellow" | "green";
 export type CompetencyMotif = "ring" | "bracket" | "cross" | "chevron";
 

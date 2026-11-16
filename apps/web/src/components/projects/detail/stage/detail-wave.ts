@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { createScrollDeltaFilter } from "@/components/projects/stage/scroll-jump";
 import { Spring } from "@/components/projects/stage/spring";
 

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { FocusToolkitSection } from "../shared/focus-toolkit-section";
 import { toolkitRolesFor } from "@/data/focus-toolkits";
 

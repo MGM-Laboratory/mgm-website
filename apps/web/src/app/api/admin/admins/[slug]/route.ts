@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { gateSuperadminRequest, proxyJson } from "@/lib/admin-proxy";
 
 type Context = { params: Promise<{ slug: string }> };

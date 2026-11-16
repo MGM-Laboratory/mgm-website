@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * A complete table keyed by a string union, as a read-only Map: lookups go
  * through `get()` instead of indexing an object with a runtime key.

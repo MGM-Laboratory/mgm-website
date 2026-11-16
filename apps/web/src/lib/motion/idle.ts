@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * "The visitor has stopped doing anything" as a shared signal, for the
  * little waiting moments (a shape that dozes off, a note that says take your

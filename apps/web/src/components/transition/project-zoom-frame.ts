@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The project zoom's motion, as pure functions of progress: where the
  * picture's quad sits, how far the picture inside it is zoomed, and how

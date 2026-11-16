@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { BadRequestException, ConflictException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
 

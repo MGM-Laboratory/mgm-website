@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { NextFunction, Request, Response } from "express";
 
 import { safeEqual } from "./cms/admin-auth.util.js";

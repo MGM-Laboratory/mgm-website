@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Fisher-Yates in place, drawing from `random` once per step from the end,
  * so a seeded generator gives the same order every time. The swap goes

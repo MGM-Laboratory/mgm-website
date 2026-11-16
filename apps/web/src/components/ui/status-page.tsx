@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { ReactNode } from "react";
 
 // The plain full-height message used by the error and not-found pages. It

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The contract between the homepage reel (the section that plays the
  * company profile video in the page) and the full-screen player that opens

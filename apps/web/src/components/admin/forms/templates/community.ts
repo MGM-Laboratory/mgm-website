@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { choices } from "./helpers";
 import { rt } from "./rich";
 import type { FormTemplate } from "./types";

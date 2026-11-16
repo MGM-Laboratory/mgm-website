@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Copy for the homepage reel (components/reel): the chapter that introduces
  * the lab with its company profile video. Static on purpose, the video

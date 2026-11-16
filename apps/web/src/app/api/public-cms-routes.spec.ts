@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { createHash } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";

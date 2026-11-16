@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * A gentle nudge for mistyped email domains (gmial.com, yaho.co.id,
  * hotmail.con): the closest common domain within two edits.
