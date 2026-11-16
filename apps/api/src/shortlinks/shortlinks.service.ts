@@ -41,6 +41,17 @@ export class ShortlinksError extends Error {
   }
 }
 
+function slugTakenError() {
+  return new ShortlinksError("That short code is already taken on this domain.", 409);
+}
+
+/** A unique index refused the write, which is how a lost race against another request looks. */
+function isUniqueViolation(error: unknown) {
+  return (
+    typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2002"
+  );
+}
+
 type VisitMeta = {
   ip?: string | null;
   userAgent?: string | null;
@@ -208,13 +219,19 @@ export class ShortlinksService implements OnApplicationBootstrap {
 
     const provider = (await isCloudflareHost(host)) ? "cloudflare" : "manual";
 
-    const domain = await this.prisma.shortLinkDomain.create({
-      data: {
-        hostname: host,
-        provider,
-        verifyToken: randomBytes(16).toString("hex"),
-      },
-    });
+    const domain = await this.prisma.shortLinkDomain
+      .create({
+        data: {
+          hostname: host,
+          provider,
+          verifyToken: randomBytes(16).toString("hex"),
+        },
+      })
+      .catch((error: unknown) => {
+        if (isUniqueViolation(error))
+          throw new ShortlinksError("That domain is already added.", 409);
+        throw error;
+      });
     return { domain: this.toDomainDto(domain, 0) };
   }
 
@@ -400,7 +417,7 @@ export class ShortlinksService implements OnApplicationBootstrap {
       where: { domainId_slug: { domainId, slug } },
       select: { id: true },
     });
-    if (taken) throw new ShortlinksError("That short code is already taken on this domain.", 409);
+    if (taken) throw slugTakenError();
   }
 
   async createLink(input: {
@@ -418,17 +435,23 @@ export class ShortlinksService implements OnApplicationBootstrap {
     const { expiresAt, maxClicks } = expiryFromOption(input.expiresIn);
     const passphrase = input.passphrase ? await hashPassphrase(input.passphrase) : null;
 
-    const link = await this.prisma.shortLink.create({
-      data: {
-        slug,
-        longUrl: input.longUrl,
-        domainId: domain.id,
-        expiresAt,
-        maxClicks,
-        passphraseSalt: passphrase?.salt ?? null,
-        passphraseHash: passphrase?.hash ?? null,
-      },
-    });
+    // A custom code can lose a race against another request between the check above and this write.
+    const link = await this.prisma.shortLink
+      .create({
+        data: {
+          slug,
+          longUrl: input.longUrl,
+          domainId: domain.id,
+          expiresAt,
+          maxClicks,
+          passphraseSalt: passphrase?.salt ?? null,
+          passphraseHash: passphrase?.hash ?? null,
+        },
+      })
+      .catch((error: unknown) => {
+        if (input.slug && isUniqueViolation(error)) throw slugTakenError();
+        throw error;
+      });
     await this.prisma.shortLinkDomain.update({
       where: { id: domain.id },
       data: { lastUsedAt: new Date() },
@@ -504,20 +527,25 @@ export class ShortlinksService implements OnApplicationBootstrap {
     });
 
     const longUrlChanged = input.longUrl !== undefined && input.longUrl !== link.longUrl;
-    const updated = await this.prisma.shortLink.update({
-      where: { id },
-      data: {
-        slug,
-        domainId: domain.id,
-        longUrl: input.longUrl ?? link.longUrl,
-        expiresAt: expiry ? expiry.expiresAt : undefined,
-        maxClicks: expiry ? expiry.maxClicks : undefined,
-        passphraseSalt: passphrase?.salt ?? null,
-        passphraseHash: passphrase?.hash ?? null,
-        ...(longUrlChanged ? { longUrlStatus: null, longUrlCheckedAt: null } : {}),
-      },
-      include: { domain: true },
-    });
+    const updated = await this.prisma.shortLink
+      .update({
+        where: { id },
+        data: {
+          slug,
+          domainId: domain.id,
+          longUrl: input.longUrl ?? link.longUrl,
+          expiresAt: expiry ? expiry.expiresAt : undefined,
+          maxClicks: expiry ? expiry.maxClicks : undefined,
+          passphraseSalt: passphrase?.salt ?? null,
+          passphraseHash: passphrase?.hash ?? null,
+          ...(longUrlChanged ? { longUrlStatus: null, longUrlCheckedAt: null } : {}),
+        },
+        include: { domain: true },
+      })
+      .catch((error: unknown) => {
+        if (isUniqueViolation(error)) throw slugTakenError();
+        throw error;
+      });
     if (input.domainId && input.domainId !== link.domainId) {
       await this.prisma.shortLinkDomain.update({
         where: { id: input.domainId },
