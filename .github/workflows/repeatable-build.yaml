@@ -118,11 +118,13 @@ jobs:
 
       # Each list is turned into "path, hash" lines sorted by path, then joined on the path. A path that only one build has gets
       # the hash MISSING on the other side, and a path with two different hashes is a changed file.
-      # The two images still differ in a few known files, and the job summary lists them, so a difference does not fail the check yet.
-      # Remove the next line when the differences are gone, so that the check fails on a new one.
+      # Next.js makes new random keys on every build. They are secrets by design, so they must differ between two builds and they
+      # are the only known differences. The pattern below lists their files, and a difference anywhere else fails the check.
+      #   prerender-manifest.json and server/preview-props.json hold the keys of the preview mode.
+      #   server/server-reference-manifest.js and .json hold the encryption key of the Server Actions.
       - name: Compare the two builds
-        continue-on-error: true
         env:
+          KNOWN: ^app/apps/web/\.next/(prerender-manifest\.json|server/(preview-props\.json|server-reference-manifest\.(js|json)))$
           IMAGE: ${{ matrix.image }}
           LISTS: ${{ runner.temp }}/lists
           OUT: ${{ runner.temp }}/differences.tsv
@@ -138,10 +140,11 @@ jobs:
           keyed() {
             sed -E -e "s/^([0-9a-f]{64})  \.\/(.*)$/\2${tab}\1/" -e "s/^link  \.\/(.*) -> (.*)$/\1${tab}link:\2/" "$1" | sort -t "$tab" -k1,1
           }
-          join -t "$tab" -a 1 -a 2 -e MISSING -o 0,1.2,2.2 <(keyed "$a") <(keyed "$b") | awk -F "$tab" '$2 != $3' > "$OUT"
-          echo "files in build a: $(wc -l < "$a"), files in build b: $(wc -l < "$b"), paths that differ: $(wc -l < "$OUT")"
+          join -t "$tab" -a 1 -a 2 -e MISSING -o 0,1.2,2.2 <(keyed "$a") <(keyed "$b") | awk -F "$tab" '$2 != $3' > "${OUT}.all"
+          awk -F "$tab" '$1 !~ ENVIRON["KNOWN"]' "${OUT}.all" > "$OUT"
+          echo "files in build a: $(wc -l < "$a"), files in build b: $(wc -l < "$b"), paths that differ: $(wc -l < "${OUT}.all"), of which new: $(wc -l < "$OUT")"
           if [ ! -s "$OUT" ]; then
-            echo "The two ${IMAGE} builds have the same file contents and symlink targets." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "The two ${IMAGE} builds have the same file contents and symlink targets, apart from the random keys of Next.js ($(wc -l < "${OUT}.all") files)." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           {
