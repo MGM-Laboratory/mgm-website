@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { BRAND, escapeHtml, renderEmailShell } from "./email-shell.js";
 
 // Compares calendar dates in UTC, not the API host's local timezone - start

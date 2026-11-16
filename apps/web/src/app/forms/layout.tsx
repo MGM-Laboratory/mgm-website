@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { FORMS_NOSCRIPT_CSS } from "@/components/forms/noscript";
 
 import { fraunces } from "./fonts";

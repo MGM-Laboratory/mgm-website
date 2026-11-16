@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { ArticlesWorldApi } from "@/components/articles/world/world-api";
 import { getArticlesWorld, getWorldMode } from "@/components/articles/world/world-registry";
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { Metadata } from "next";
 import { ArrowLeft, ArrowRight, CalendarClock } from "lucide-react";
 import Link from "next/link";

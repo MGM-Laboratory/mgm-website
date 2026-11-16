@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { ArticleReturn } from "@/lib/article-transition";
 
 /** Where the fold starts under the head, as the cards layer puts it (share of the viewport). */

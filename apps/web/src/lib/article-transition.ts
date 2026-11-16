@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Signals shared by the articles world and everything it connects: the
  * library world under app/articles/layout.tsx (which plays the list to

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Tilt and shake for the toy box. Gravity follows the phone's tilt and a
  * shake throws everything up. Browsers that gate these sensors behind a

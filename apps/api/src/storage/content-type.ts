@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Types that a browser runs or renders as a page when it opens the file from a site address.
 const ACTIVE_CONTENT_TYPE =
   /^(?:text\/(?:html|xml|xsl|javascript|ecmascript|jscript|livescript|x-javascript|x-ecmascript)|application\/(?:javascript|x-javascript|ecmascript|x-ecmascript|xml|[\w.+-]*\+xml)|image\/svg\+xml)$/i;

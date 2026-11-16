@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";

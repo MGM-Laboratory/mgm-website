@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { BadRequestException, ConflictException } from "@nestjs/common";
 
 export const EXPECTED_VERSION_HEADER = "x-cms-expected-updated-at";

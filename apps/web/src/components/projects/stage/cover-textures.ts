@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Cover texture preparation for the WebGL stage, kept free of three.js so
  * it can run (and warm up) before the renderer exists.

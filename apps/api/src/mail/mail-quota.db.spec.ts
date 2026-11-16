@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { MailProviderId, MailProviderLimitConfig } from "@repo/shared";
 

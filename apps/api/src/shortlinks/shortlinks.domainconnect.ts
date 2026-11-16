@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { createSign } from "node:crypto";
 
 import { zoneCandidates } from "./shortlinks.utils.js";

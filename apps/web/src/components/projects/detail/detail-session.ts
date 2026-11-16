@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Detail page state that outlives one page instance. Module state survives
  * client-side navigation and resets on a hard load, like

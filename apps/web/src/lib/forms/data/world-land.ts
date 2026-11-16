@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Land of the world as a dot matrix for the forms analytics map: an
  * equirectangular grid of 192 x 72 cells from 84°N to 60°S, one bit per

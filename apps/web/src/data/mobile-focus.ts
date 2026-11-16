@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Content for the /mobile Focus page. Same rule as website-focus.ts: casual,
 // specific, written for a working mobile developer — not a capability deck.
 // See docs/project-overview.md for how this fits the other three Focus pages

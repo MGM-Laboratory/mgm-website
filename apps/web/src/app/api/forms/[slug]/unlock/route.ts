@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { FORM_TOKEN_MAX_AGE_SECONDS, formTokenCookieName } from "@/lib/forms/public-server";
 
 import { forwardPublicJson, type SlugContext } from "../../_lib/public";

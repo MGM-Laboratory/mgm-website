@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { addFrameCallback } from "@/components/projects/stage/frame-loop";
 import { setPageScroller, type PageScrollOptions, type PageScrollTarget } from "@/lib/page-scroll";
 import { isScrollLocked, onScrollLockChange } from "@/lib/scroll-lock";

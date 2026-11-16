@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { formatArticleDate, slugify as slugifyText, type ArticleBlock } from "@/lib/article-cms";
 import type { Member } from "@/data/members";
 

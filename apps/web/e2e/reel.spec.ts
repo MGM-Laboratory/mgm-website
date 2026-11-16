@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { expect, test } from "@playwright/test";
 
 // The homepage reel (components/reel). The CMS fixture has no home video, so

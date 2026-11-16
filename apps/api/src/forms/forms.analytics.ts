@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { FormAnalyticsRange } from "@repo/shared";
 
 import { referrerHost } from "./forms.utils.js";

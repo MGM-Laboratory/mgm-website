@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { CtaFooter } from "@/components/sections/cta-footer";
 import { FlairShape, type PatternKind, type PatternTone } from "@/components/process/pattern-tile";
 

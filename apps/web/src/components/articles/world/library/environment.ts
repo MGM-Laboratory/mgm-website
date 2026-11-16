@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Group, Vector3, type Camera } from "three";
 
 import { createAtmosphere } from "@/components/articles/world/library/atmosphere";

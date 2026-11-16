@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = process.env.PORT ?? "3000";

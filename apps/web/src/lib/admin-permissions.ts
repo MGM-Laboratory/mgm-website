@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Shared IAM vocabulary for the admin panel. This file is client-safe: the
  * studio imports it directly, and the server session lib builds on it.

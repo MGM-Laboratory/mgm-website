@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Shared types and citation tooling for the publications editorial workflow. */
 
 export type PublicationType =

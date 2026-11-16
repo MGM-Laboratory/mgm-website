@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The cursor lens over the detail media: a small magnifying bulge that
  * eases in while a fine pointer rests over a media item, follows it with a

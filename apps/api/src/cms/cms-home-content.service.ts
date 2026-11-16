@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { Injectable } from "@nestjs/common";
 import { DEFAULT_HOME_CONTENT, homeContentSchema, type HomeContent } from "@repo/shared";
 

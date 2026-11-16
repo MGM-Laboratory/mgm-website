@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";

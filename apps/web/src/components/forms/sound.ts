@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Soft generated sounds (no files): a tick when a piece lands, a pair of
  * notes on a pick, a low bump on an error, a small glide between pages and

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The non-destructive cleaning pipeline: an ordered list of steps the admin
  * builds in the Clean data panel, replayed in the browser over the loaded

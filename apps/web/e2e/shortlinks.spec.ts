@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
 // The public short-link pages, rendered from the CMS fixture API's

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { runTextEffect } from "@/components/projects/card-text/ticker";
 import { randomInt } from "@/lib/random";
 

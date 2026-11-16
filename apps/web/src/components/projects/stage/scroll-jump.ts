@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Tells scroll motion apart from scroll jumps for the cards' physics (the
  * lens, the bend, the DOM lean). A jump moves the page without gliding: the

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";

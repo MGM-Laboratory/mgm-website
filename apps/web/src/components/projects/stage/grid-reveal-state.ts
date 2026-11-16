@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The project list's reveal, shared between the grid (which fades and
  * lifts the DOM list in) and the WebGL cover stage (whose canvas lives at

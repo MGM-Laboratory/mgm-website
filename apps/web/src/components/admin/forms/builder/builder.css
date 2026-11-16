@@ -1,3 +1,6 @@
+/* Copyright (c) MGM Laboratory contributors */
+/* SPDX-License-Identifier: GPL-3.0-only */
+
 /* Micro-interactions of the form builder (reduced motion turns them off). */
 @keyframes builder-fade-in {
   from {

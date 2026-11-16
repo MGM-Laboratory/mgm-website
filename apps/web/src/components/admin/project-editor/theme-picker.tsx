@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 "use client";
 
 import { ArrowUpRightIcon, CheckIcon, SparkleIcon } from "@phosphor-icons/react";

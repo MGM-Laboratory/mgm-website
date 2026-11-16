@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { test, expect, type Page } from "@playwright/test";
 
 // Featured project covers are lazy-loaded and their scroll reveal only

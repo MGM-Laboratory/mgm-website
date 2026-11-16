@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Whether the page is still scrolling, for the covers' hover effects.
  * Browsers fire mouseenter on every element a scroll slides under a resting

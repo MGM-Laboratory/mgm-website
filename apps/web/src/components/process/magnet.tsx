@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { PROCESS_COPY, type ProcessMagnet } from "@/data/process-magnets";
 import { cn } from "@/lib/utils";
 

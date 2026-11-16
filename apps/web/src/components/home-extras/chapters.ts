@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The homepage is told as a short story in chapters (hello, how we think,
  * meet the lab, what we do, and so on), and each section from the reel on

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { toCss } from "@/components/transition/project-zoom-colors";
 import {
   FIELD_OF_VIEW,

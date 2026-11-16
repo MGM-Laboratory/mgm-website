@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The article cover's picture for the world, free of three.js: read as a
  * Blob from its same-origin URL (the article media route, or bundled seed

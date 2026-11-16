@@ -1,3 +1,6 @@
+/* Copyright (c) MGM Laboratory contributors */
+/* SPDX-License-Identifier: GPL-3.0-only */
+
 /* The cursor flow (cursor-flow.tsx). While the stage is up, the page's
    full-width surfaces in the page colour turn transparent so the flow
    canvas under them shows through (flow-surfaces.ts marks them). The canvas

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Immutable document edits the builder dispatches: every function returns a
  * new document and leaves untouched fields as the same objects, so memoized

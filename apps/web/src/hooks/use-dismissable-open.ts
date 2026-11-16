@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { useEffect, type Dispatch, type RefObject, type SetStateAction } from "react";
 
 /**

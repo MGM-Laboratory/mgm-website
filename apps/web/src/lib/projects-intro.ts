@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Choreography signals for the /projects page, shared by siblings that the
  * server-rendered page composes independently (the hero and the grid):

@@ -1,3 +1,6 @@
+// Copyright (c) MGM Laboratory contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { formatArticleDate, type ArticleBlock } from "@/lib/article-cms";
 
 export const JOB_COMMITMENTS = [
