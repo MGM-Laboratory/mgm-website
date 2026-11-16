@@ -28,6 +28,9 @@ describe.skipIf(!databaseUrl)("mail outbox on PostgreSQL", () => {
   beforeAll(async () => {
     prisma = new PrismaService({ getOrThrow: () => databaseUrl } as never);
     await prisma.onModuleInit();
+    await prisma.mailOutbox.deleteMany({
+      where: { id: { in: ["outbox-spec-claim", "outbox-spec-fail"] } },
+    });
     outbox = new MailOutboxService(prisma, { sendEmail } as never);
   });
 
