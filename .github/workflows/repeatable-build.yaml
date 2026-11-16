@@ -10,7 +10,6 @@ on:
     paths:
       - "apps/api/Dockerfile"
       - "apps/web/Dockerfile"
-      - "pnpm-lock.yaml"
       - "apps/web/next.config.ts"
       - ".github/scripts/hash-image-files.sh"
       - ".github/workflows/repeatable-build.yaml"
@@ -103,8 +102,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
+    # The weekly run reports the differences and stays green, so a known difference does not turn the schedule red every week.
+    continue-on-error: ${{ github.event_name == 'schedule' }}
+    permissions: {}
     strategy:
       fail-fast: false
       matrix:
@@ -116,25 +116,56 @@ jobs:
           pattern: manifest-${{ matrix.image }}-*
           path: ${{ runner.temp }}/lists
 
+      # Each list is turned into "path, hash" lines sorted by path, then joined on the path. A path that only one build has gets
+      # the hash MISSING on the other side, and a path with two different hashes is a changed file.
       - name: Compare the two builds
         env:
           IMAGE: ${{ matrix.image }}
           LISTS: ${{ runner.temp }}/lists
+          OUT: ${{ runner.temp }}/differences.tsv
         run: |
           a="${LISTS}/manifest-${IMAGE}-a/manifest-${IMAGE}-a.txt"
           b="${LISTS}/manifest-${IMAGE}-b/manifest-${IMAGE}-b.txt"
-          echo "files in build a: $(wc -l < "$a"), files in build b: $(wc -l < "$b")"
-          if diff -u "$a" "$b" > "${RUNNER_TEMP}/diff.txt"; then
-            echo "The two ${IMAGE} builds have the same files." | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ ! -s "$a" ] || [ ! -s "$b" ]; then
+            echo "Could not compare the ${IMAGE} builds, a file list is missing or empty." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 2
+          fi
+          export LC_ALL=C
+          tab=$(printf '\t')
+          keyed() {
+            sed -E -e "s/^([0-9a-f]{64})  \.\/(.*)$/\2${tab}\1/" -e "s/^link  \.\/(.*) -> (.*)$/\1${tab}link:\2/" "$1" | sort -t "$tab" -k1,1
+          }
+          join -t "$tab" -a 1 -a 2 -e MISSING -o 0,1.2,2.2 <(keyed "$a") <(keyed "$b") | awk -F "$tab" '$2 != $3' > "$OUT"
+          echo "files in build a: $(wc -l < "$a"), files in build b: $(wc -l < "$b"), paths that differ: $(wc -l < "$OUT")"
+          if [ ! -s "$OUT" ]; then
+            echo "The two ${IMAGE} builds have the same file contents and symlink targets." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           {
             echo "### The two ${IMAGE} builds differ"
             echo
-            echo "Paths that differ, first 80:"
-            echo
-            echo '```text'
-            grep -E '^[-+][^-+]' "${RUNNER_TEMP}/diff.txt" | sed -E 's/^([-+])[0-9a-f]{64}  /\1 /' | sed -E 's/^([-+]) \.\//\1 /' | sort -k2 -u | head -80
-            echo '```'
+            for kind in changed "only in build a" "only in build b"; do
+              case "$kind" in
+                changed) list=$(awk -F "$tab" '$2 != "MISSING" && $3 != "MISSING" {print $1}' "$OUT") ;;
+                "only in build a") list=$(awk -F "$tab" '$3 == "MISSING" {print $1}' "$OUT") ;;
+                *) list=$(awk -F "$tab" '$2 == "MISSING" {print $1}' "$OUT") ;;
+              esac
+              [ -n "$list" ] || continue
+              echo "${kind}: $(printf '%s\n' "$list" | wc -l) paths, first 40"
+              echo
+              echo '```text'
+              printf '%s\n' "$list" | head -40
+              echo '```'
+              echo
+            done
           } | tee -a "$GITHUB_STEP_SUMMARY"
           exit 1
+
+      - name: Upload the differences
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: differences-${{ matrix.image }}
+          path: ${{ runner.temp }}/differences.tsv
+          if-no-files-found: ignore
+          retention-days: 14
