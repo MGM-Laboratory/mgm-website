@@ -93,7 +93,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/repo" "$(bash ./.github/tools/image.sh gitleaks)" \
             detect --source /repo --gitleaks-ignore-path /repo/.gitleaksignore \
-              --report-format sarif --report-path /repo/gitleaks-results.sarif -v
+              --report-format sarif --report-path /repo/gitleaks-results.sarif --redact=100 -v
 
       - name: Upload gitleaks results to code scanning
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
