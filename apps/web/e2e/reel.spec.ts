@@ -1,7 +1,8 @@
 // Copyright (c) MGM Laboratory contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./support/csp-guard";
 
 // The homepage reel (components/reel). The CMS fixture has no home video, so
 // the section keeps its chapter, draws its test card and says the film is on

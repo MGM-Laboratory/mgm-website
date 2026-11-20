@@ -55,6 +55,18 @@ describe("security headers of the web app", () => {
     expect(pathToRegexp(FRAME_PROTECTED_SOURCE).test("/forms/a")).toBe(false);
   });
 
+  it("lets images and media come from the API origin, because the form media route redirects there", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:4000/api");
+    const policy =
+      valuesFor(await headerRules(), "/forms/open-day").get(
+        "Content-Security-Policy-Report-Only",
+      ) ?? "";
+    expect(policy).toMatch(/img-src [^;]*http:\/\/localhost:4000/);
+    expect(policy).toMatch(/media-src [^;]*http:\/\/localhost:4000/);
+    expect(policy).toMatch(/connect-src [^;]*http:\/\/localhost:4000/);
+  });
+
   it("sends none of them from the development server", async () => {
     vi.stubEnv("NODE_ENV", "development");
     const sent = valuesFor(await headerRules(), "/about");

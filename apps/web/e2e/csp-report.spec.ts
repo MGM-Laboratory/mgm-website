@@ -1,7 +1,8 @@
 // Copyright (c) MGM Laboratory contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./support/csp-guard";
 
 test.describe("Content-Security-Policy-Report-Only", () => {
   test("pages send the policy as a report only header", async ({ request }) => {

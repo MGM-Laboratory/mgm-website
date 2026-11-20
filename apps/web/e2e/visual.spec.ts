@@ -1,7 +1,8 @@
 // Copyright (c) MGM Laboratory contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./support/csp-guard";
 
 // Featured project covers are lazy-loaded and their scroll reveal only
 // plays once the section actually crosses into the viewport, so a fullPage

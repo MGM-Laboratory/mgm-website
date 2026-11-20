@@ -25,14 +25,15 @@ function apiOrigin() {
  * gate posts to this site and is answered with a redirect to another site.
  */
 function contentSecurityPolicy() {
-  const connect = ["'self'", apiOrigin()].filter((value): value is string => Boolean(value));
+  const api = [apiOrigin()].filter((value): value is string => Boolean(value));
+  const connect = ["'self'", ...api];
   return [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https:",
-    "media-src 'self' blob: https:",
+    `img-src ${["'self'", "data:", "blob:", "https:", ...api].join(" ")}`,
+    `media-src ${["'self'", "blob:", "https:", ...api].join(" ")}`,
     `connect-src ${connect.join(" ")}`,
     "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com",
     "worker-src 'self' blob:",
