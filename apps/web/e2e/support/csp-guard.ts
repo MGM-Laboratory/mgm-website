@@ -28,8 +28,10 @@ export const test = base.extend({
       });
     });
     await provideContext(context);
-    // A round trip to each page flushes the reports that are still on their way from the browser
-    for (const page of context.pages()) await page.evaluate(() => 0).catch(() => undefined);
+    // A round trip to every frame of every page flushes the reports that are still on their way from the browser
+    for (const page of context.pages()) {
+      for (const frame of page.frames()) await frame.evaluate(() => 0).catch(() => undefined);
+    }
     expect([...violations], "Content-Security-Policy violations").toEqual([]);
   },
 });

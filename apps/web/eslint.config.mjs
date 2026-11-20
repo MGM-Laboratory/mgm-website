@@ -19,7 +19,7 @@ const eslintConfig = defineConfig([
           paths: [
             {
               name: "@playwright/test",
-              importNames: ["test"],
+              importNames: ["test", "default"],
               message:
                 "Import test from ./support/csp-guard so that the Content-Security-Policy guard runs.",
             },
