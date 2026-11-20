@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.4...v1.5.0) (2026-11-20)
+
+
+### Features
+
+* **web:** send nosniff, HSTS and X-Frame-Options from the production build ([ecba41e](https://github.com/MGM-Laboratory/mgm-website/commit/ecba41e963a8bbf047bf70933040283600d2cda4))
+* **web:** send nosniff, HSTS and X-Frame-Options from the production build ([cac56b9](https://github.com/MGM-Laboratory/mgm-website/commit/cac56b99b0b7ba51f2258c520a1dfcb80dd4e744))
+
+
+### Bug Fixes
+
+* **web:** stop the Zod eval probe and allow the API origin for media in the policy ([ef417e3](https://github.com/MGM-Laboratory/mgm-website/commit/ef417e3e649a5657b716aedbaf6259edafcf0dfe))
+
 ## [1.4.4](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.3...v1.4.4) (2026-11-16)
 
 
