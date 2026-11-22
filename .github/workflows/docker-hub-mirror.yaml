@@ -168,11 +168,13 @@ jobs:
             if other="$(docker buildx imagetools inspect "${GHCR_IMAGE}:${candidate}" --format '{{.Manifest.Digest}}' 2> "${RUNNER_TEMP}/inspect.err")"; then
               if [ "$other" = "$digest" ]; then
                 TAGS="${TAGS} ${candidate}"
+              else
+                echo "::notice::${GHCR_IMAGE}:${candidate} points at ${other}, so it is not moved by this run"
               fi
             elif grep -q -i 'not found' "${RUNNER_TEMP}/inspect.err"; then
               echo "::notice::${GHCR_IMAGE}:${candidate} does not exist, so it is not copied"
             else
-              echo "::warning::${GHCR_IMAGE}:${candidate} could not be read ($(head -c 200 "${RUNNER_TEMP}/inspect.err" | tr '\n' ' ')), so it is not moved by this run"
+              echo "::warning::${GHCR_IMAGE}:${candidate} could not be read ($(head -c 200 "${RUNNER_TEMP}/inspect.err" | tr -c '[:print:]' ' ')), so it is not moved by this run"
             fi
           done
           cosign verify \
