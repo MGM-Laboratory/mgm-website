@@ -94,8 +94,13 @@ jobs:
                 esac
                 # A run of an older release that is started again must not move 1.2 or 1 back, so a floating tag is only a
                 # candidate when no higher version exists in its line
-                versions="$(gh api "repos/${REPOSITORY}/git/matching-refs/tags/v${major}." --paginate --jq '.[].ref' \
-                  | sed -n 's|^refs/tags/v||p' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true)"
+                # A failed call is a warning and not an empty list, so a release never skips its floating tags without a trace.
+                # The exact version tag is still copied, because the deploy pulls it
+                if ! refs="$(gh api "repos/${REPOSITORY}/git/matching-refs/tags/v${major}." --paginate --jq '.[].ref')"; then
+                  echo "::warning::The tag list of GitHub could not be read, so ${major}.${minor} and ${major} are not moved by this run"
+                  refs=""
+                fi
+                versions="$(sed -n 's|^refs/tags/v||p' <<< "$refs" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true)"
                 highest_minor="$(grep -E "^${major}\.${minor}\." <<< "$versions" | sort -V | tail -n 1 || true)"
                 highest_major="$(sort -V <<< "$versions" | tail -n 1)"
                 candidates=""
@@ -157,10 +162,19 @@ jobs:
           digest="$(docker buildx imagetools inspect "${GHCR_IMAGE}:${SOURCE}" --format '{{.Manifest.Digest}}')"
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "GitHub Container Registry holds ${digest} for ${SOURCE}"
+          # A tag that does not exist is skipped quietly. Any other failure is a warning, so a call that failed does not look like
+          # a tag that points at another image. The exact version tag is still copied
           for candidate in $CANDIDATES; do
-            other="$(docker buildx imagetools inspect "${GHCR_IMAGE}:${candidate}" --format '{{.Manifest.Digest}}' 2>/dev/null || true)"
-            if [ "$other" = "$digest" ]; then
-              TAGS="${TAGS} ${candidate}"
+            if other="$(docker buildx imagetools inspect "${GHCR_IMAGE}:${candidate}" --format '{{.Manifest.Digest}}' 2> "${RUNNER_TEMP}/inspect.err")"; then
+              if [ "$other" = "$digest" ]; then
+                TAGS="${TAGS} ${candidate}"
+              else
+                echo "::notice::${GHCR_IMAGE}:${candidate} points at ${other}, so it is not moved by this run"
+              fi
+            elif grep -q -i 'not found' "${RUNNER_TEMP}/inspect.err"; then
+              echo "::notice::${GHCR_IMAGE}:${candidate} does not exist, so it is not copied"
+            else
+              echo "::warning::${GHCR_IMAGE}:${candidate} could not be read ($(head -c 200 "${RUNNER_TEMP}/inspect.err" | tr -c '[:print:]' ' ')), so it is not moved by this run"
             fi
           done
           cosign verify \
