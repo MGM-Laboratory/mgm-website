@@ -72,6 +72,7 @@ The code of the web app has no advertising and no analytics script. The main sit
 - The superadmin can read everything in the admin workspace.
 - A delegated editor reads a kind of data only with the permission for its page. The contact inbox needs `contact-inquiries` read. Applications need `careers`. Registrations need `events`. Form responses and form visits need `forms`. Short link visits need `links`.
 - The person who runs the site can read the database, the object storage and the API logs. The API request log holds the method, the path, the status, the timing and the request headers. The values of `authorization`, `cookie`, `x-cms-passphrase` and `x-form-token` are replaced with `[redacted]`, and the other headers are logged as they arrive.
+- The person who runs the site also reads the log of the web app. For each report of the Content-Security-Policy, which the browser sends by itself, it holds one line with the page address without its query string, the blocked source, the directive and the first 160 characters of the user agent. The line holds no IP address. The log of a container is rotated by size and not by age.
 - The mail providers and the recipients of the notification mails see the mail text.
 - A signed download link opens a stored file for anyone who holds the link until it expires. The lifetime is 15 minutes for most files, and 7 days in the contact notification mail. These lifetimes hold when `REDIS_URL` is not set, because the cache of signed URLs is keyed by the object key alone.
 

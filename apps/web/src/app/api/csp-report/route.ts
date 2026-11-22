@@ -27,8 +27,12 @@ function clip(value: unknown, length = 200) {
   return typeof value === "string" ? value.slice(0, length) : undefined;
 }
 
-/** The fields of a report that help to fix a policy. No query string and no fragment of a page address is kept. */
-function summarize(report: Record<string, unknown>) {
+/**
+ * The fields of a report that help to fix a policy. No query string and no fragment of a page address is kept. The user agent
+ * of the browser that sent the report is kept, cut short, because a violation that only some browsers cause cannot be
+ * reproduced without knowing which browser it was.
+ */
+function summarize(report: Record<string, unknown>, userAgent: string | null) {
   const page = (value: unknown) => clip(typeof value === "string" ? value.split(/[?#]/)[0] : value);
   return {
     page: page(report["document-uri"] ?? report.documentURL),
@@ -38,6 +42,7 @@ function summarize(report: Record<string, unknown>) {
     source: page(report["source-file"] ?? report.sourceFile),
     line: typeof report["line-number"] === "number" ? report["line-number"] : undefined,
     disposition: clip(report.disposition),
+    userAgent: clip(userAgent ?? undefined, 160),
   };
 }
 
@@ -62,7 +67,7 @@ export async function POST(request: Request) {
     const inner = (entry["csp-report"] ?? entry.body) as Record<string, unknown> | undefined;
     if (!inner || typeof inner !== "object") continue;
     if (!allowLine(Date.now())) break;
-    console.warn("csp-report", JSON.stringify(summarize(inner)));
+    console.warn("csp-report", JSON.stringify(summarize(inner, request.headers.get("user-agent"))));
   }
 
   return new Response(null, { status: 204 });
