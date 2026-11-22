@@ -880,6 +880,33 @@ describe("POST /api/csp-report", () => {
 
   const logged = () => warn.mock.calls.map((call) => JSON.parse(String(call[1])));
 
+  it("adds the user agent of the browser to the line and cuts it to 160 characters", async () => {
+    const body = { "csp-report": { "document-uri": "https://labmgm.org/", "blocked-uri": "eval" } };
+
+    await report(body, { "user-agent": "TestBrowser/1.2 (X11)" });
+    await report(body, { "user-agent": "a".repeat(500) });
+
+    const [short, long] = logged();
+    expect(short.userAgent).toBe("TestBrowser/1.2 (X11)");
+    expect(long.userAgent).toHaveLength(160);
+  });
+
+  it("leaves the user agent out of the line when the browser sends none", async () => {
+    await report({
+      "csp-report": { "document-uri": "https://labmgm.org/", "blocked-uri": "eval" },
+    });
+
+    expect(logged()[0]).not.toHaveProperty("userAgent");
+  });
+
+  it("keeps a user agent with control characters on one log line", async () => {
+    await report({ "csp-report": { "blocked-uri": "eval" } }, { "user-agent": "a\tb" });
+
+    const line = String(warn.mock.calls[0]?.[1]);
+    expect(line).not.toMatch(/[\u0000-\u001f]/);
+    expect(JSON.parse(line).userAgent).toBe("a\tb");
+  });
+
   it("writes one line for a report of the report-uri format and drops the query string", async () => {
     const response = await report({
       "csp-report": {
