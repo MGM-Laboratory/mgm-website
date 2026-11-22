@@ -16,8 +16,10 @@ overrides:
   # minimatch 10, and the fix is in 11. Exact versions on purpose, like above.
   vite: "8.2.6"
   "minimatch@^10": "11.0.8"
-  # @prisma/config pins effect to 3.20.0 and the newest prisma still does, so the fix for the advisory of effect cannot come from
-  # a prisma update. Exact version on purpose, like above. Remove it once prisma pins a patched effect.
+  # @prisma/config pins effect to 3.20.0 and the newest 7.x prisma still
+  # does, so the fix for the advisory of effect cannot come from a 7.x
+  # update. Exact version on purpose, like above. Remove it once prisma
+  # pins a patched effect or stops using it.
   effect: "3.22.1"
 allowBuilds:
   "@prisma/engines": true
