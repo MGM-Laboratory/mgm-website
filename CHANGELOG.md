@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.6.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.5.0...v1.6.0) (2026-11-23)
+
+
+### Features
+
+* **web:** log the user agent of each CSP report ([71af68c](https://github.com/MGM-Laboratory/mgm-website/commit/71af68c435003a25d082dffc878f7b499a49791d))
+* **web:** log the user agent of each CSP report ([868f963](https://github.com/MGM-Laboratory/mgm-website/commit/868f96399c396f4426730a967893835faba7cb50))
+
+
+### Bug Fixes
+
+* **ci:** strip control characters from the registry text and note a moved tag ([d042a64](https://github.com/MGM-Laboratory/mgm-website/commit/d042a64b240b3898ad228c77a9d8d4c856cc57aa))
+* **ci:** warn when the Docker Hub mirror cannot read a tag lookup ([9c8717f](https://github.com/MGM-Laboratory/mgm-website/commit/9c8717fbc99cd0002e25aef15177d9be93ab48f1))
+* **ci:** warn when the Docker Hub mirror cannot read a tag lookup ([5bc9732](https://github.com/MGM-Laboratory/mgm-website/commit/5bc973267adaaefcc4038c10bb8c7ca22b9cab6c))
+* **deps:** bump next to 16.4.6 for the open advisories ([79aa508](https://github.com/MGM-Laboratory/mgm-website/commit/79aa508e999964d3e623bc77a7aa36f55c387521))
+* **deps:** bump next to 16.4.6 for the open advisories ([0bae90c](https://github.com/MGM-Laboratory/mgm-website/commit/0bae90cbdc3e6b3f975e97ff0eb0bee40e1bafac))
+* **deps:** pin effect to 3.22.1 for the open advisory ([dd45b77](https://github.com/MGM-Laboratory/mgm-website/commit/dd45b77ecf3c96a537341ff2687630eb02d8470f))
+* **deps:** pin effect to 3.22.1 for the open advisory ([d32c580](https://github.com/MGM-Laboratory/mgm-website/commit/d32c5800e6393ab96c59d3c0a9e9deb11bdcabec))
+* **deps:** say 7.x in the comment of the effect override ([f67eee7](https://github.com/MGM-Laboratory/mgm-website/commit/f67eee7a1aea4ae2ad1a1fd2b6c72b4eff57642d))
+
 ## [1.5.0](https://github.com/MGM-Laboratory/mgm-website/compare/v1.4.4...v1.5.0) (2026-11-20)
 
 
