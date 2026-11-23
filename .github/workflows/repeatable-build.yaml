@@ -127,6 +127,7 @@ jobs:
       # printed in the summary, and the file lists in the artifact let a reader compare them by hand.
       # A listed path counts only when both builds have it as a regular file. A missing path or a symlink still fails the check.
       - name: Compare the two builds
+        shell: bash
         env:
           KNOWN: ^app/apps/web/\.next/(prerender-manifest\.json|server/(preview-props\.json|server-reference-manifest\.(js|json)))$
           IMAGE: ${{ matrix.image }}
@@ -144,7 +145,16 @@ jobs:
           keyed() {
             sed -E -e "s/^([0-9a-f]{64})  \.\/(.*)$/\2${tab}\1/" -e "s/^link  \.\/(.*) -> (.*)$/\1${tab}link:\2/" "$1" | sort -t "$tab" -k1,1
           }
-          join -t "$tab" -a 1 -a 2 -e MISSING -o 0,1.2,2.2 <(keyed "$a") <(keyed "$b") | awk -F "$tab" '$2 != $3' > "${OUT}.all"
+          join -t "$tab" -a 1 -a 2 -e MISSING -o 0,1.2,2.2 <(keyed "$a") <(keyed "$b") > "${OUT}.joined"
+          # A failed join inside a process substitution is not seen by the shell, so the line count is the guard. The joined list has
+          # at least as many lines as the longer file list, or something went wrong and the check must not pass.
+          longest=$(wc -l < "$a")
+          [ "$(wc -l < "$b")" -le "$longest" ] || longest=$(wc -l < "$b")
+          if [ "$(wc -l < "${OUT}.joined")" -lt "$longest" ]; then
+            echo "Could not compare the ${IMAGE} builds, the joined list has fewer lines than a file list." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 2
+          fi
+          awk -F "$tab" '$2 != $3' "${OUT}.joined" > "${OUT}.all"
           awk -F "$tab" '!($1 ~ ENVIRON["KNOWN"] && $2 != "MISSING" && $3 != "MISSING" && $2 !~ /^link:/ && $3 !~ /^link:/)' "${OUT}.all" > "$OUT"
           awk -F "$tab" '$1 ~ ENVIRON["KNOWN"] && $2 != "MISSING" && $3 != "MISSING" && $2 !~ /^link:/ && $3 !~ /^link:/ {print $1}' "${OUT}.all" > "${OUT}.ignored"
           echo "files in build a: $(wc -l < "$a"), files in build b: $(wc -l < "$b"), paths that differ: $(wc -l < "${OUT}.all"), ignored: $(wc -l < "${OUT}.ignored"), not ignored: $(wc -l < "$OUT")"
